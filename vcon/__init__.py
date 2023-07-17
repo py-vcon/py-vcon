@@ -10,6 +10,7 @@ import typing
 import sys
 import os
 import logging
+import copy
 import logging.config
 import pythonjsonlogger.jsonlogger
 
@@ -822,7 +823,7 @@ class Vcon():
 
     self._vcon_dict[Vcon.ANALYSIS].append(analysis_element)
 
-  def dumps(self, signed = True) -> str:
+  def dumps(self, signed : bool = True) -> str:
     """
     Dump the vCon as a JSON string.
 
@@ -835,27 +836,57 @@ class Vcon():
     Returns:
              String containing JSON representation of the vCon.
     """
+    return(json.dumps(self.dumpd(signed, False), default=lambda o: o.__dict__, **dumps_options))
+
+  def dumpd(self, signed : bool = True, deepcopy : bool = True) -> dict:
+    """
+    Dump the vCon as a dict respreenting JSON.
+
+    Parameters:
+
+    signed (Boolean): If the vCon is signed locally or verfied,
+        True: serialize the signed version
+        False: serialize the unsigned version
+
+    deepcopy (boolean): make a deep copy of the dict so that 
+        the Vcon data is not much with.
+        True (default): make deep copy of the dict holding Vcon JSON data (highly recommended)
+        False: pass reference to Vcon data as dict (dangerous)
+
+    Returns:
+             dict containing JSON representation of the vCon.
+    """
+
+
 
     # TODO: Should it throw an acception if its not signed?  Could have argument to
     # not throw if it not signed.
+    vcon_dict = None
 
     if(self._state == VconStates.UNSIGNED):
       if(self.uuid is None or len(self.uuid) < 1):
         raise InvalidVconState("vCon has no UUID set.  Use set_uuid method.")
+      vcon_dict = self._vcon_dict
 
-      return(json.dumps(self._vcon_dict, default=lambda o: o.__dict__, **dumps_options))
 
-    if(self._state in [VconStates.SIGNED, VconStates.UNVERIFIED, VconStates.VERIFIED]):
+    elif(self._state in [VconStates.SIGNED, VconStates.UNVERIFIED, VconStates.VERIFIED]):
       if(signed is False and self._state != VconStates.UNVERIFIED):
-        return(json.dumps(self._vcon_dict, default=lambda o: o.__dict__, **dumps_options))
-      return(json.dumps(self._jws_dict, default=lambda o: o.__dict__, **dumps_options))
+        vcon_dict = self._vcon_dict
+      else:
+        vcon_dict = self._jws_dict
 
-    if(self._state in [VconStates.ENCRYPTED, VconStates.DECRYPTED]):
+    elif(self._state in [VconStates.ENCRYPTED, VconStates.DECRYPTED]):
       if(signed is False):
         raise AttributeError("not supported: unsigned JSON output for encrypted vCon")
-      return(json.dumps(self._jwe_dict, default=lambda o: o.__dict__, **dumps_options))
+      vcon_dict = self._jwe_dict
 
-    raise InvalidVconState("vCon state: {} is not valid for dumps".format(self._state))
+    else:
+      raise InvalidVconState("vCon state: {} is not valid for dumps".format(self._state))
+
+    if(deepcopy):
+      return(copy.deepcopy(vcon_dict))
+
+    return(vcon_dict)
 
   def load(self, file_handle: typing.TextIO) -> None:
     """
