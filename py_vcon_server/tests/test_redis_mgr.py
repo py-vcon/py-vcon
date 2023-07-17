@@ -5,6 +5,7 @@ import pytest
 import pytest_asyncio
 import random
 import string
+sys.path.append("..")
 sys.path.append("py_vcon_server")
 sys.path.append("py_vcon_server/db")
 sys.path.append("py_vcon_server/db/redis")
