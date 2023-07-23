@@ -840,7 +840,7 @@ class Vcon():
 
   def dumpd(self, signed : bool = True, deepcopy : bool = True) -> dict:
     """
-    Dump the vCon as a dict respreenting JSON.
+    Dump the vCon as a dict representing JSON.
 
     Parameters:
 
