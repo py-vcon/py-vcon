@@ -47,7 +47,7 @@ class VconStorage():
     await VconStorage._vcon_storage_binding.set(save_vcon)
   
   @staticmethod
-  async def get(vcon_uuid : str) -> vcon.Vcon:
+  async def get(vcon_uuid : str) -> typing.Union[None, vcon.Vcon]:
     """ Get a Vcon from storage using its UUID as the key """
     if(VconStorage._vcon_storage_binding is None):
       raise(Exception("Vcon storage implementation not setup"))
@@ -80,6 +80,14 @@ class VconStorage():
 
     query_result = await VconStorage._vcon_storage_binding.json_path_query(vcon_uuid, json_path_query_string)
     return(query_result)
+
+  @staticmethod
+  async def delete(vcon_uuid : str) -> None:
+    """ Delete the Vcon from storage identified by its UUID as the key """
+    if(VconStorage._vcon_storage_binding is None):
+      raise(Exception("Vcon storage implementation not setup"))
+
+    await VconStorage._vcon_storage_binding.delete(vcon_uuid)
 
 
   # TODO: Need connection status method
