@@ -34,7 +34,9 @@ class RedisMgr():
       else:
           logger.info("Creating Redis pool...")
           self._redis_pool_initialization_count += 1
-          self._redis_pool = redis.asyncio.connection.ConnectionPool.from_url(self._redis_url)
+          options = {"decode_responses": True}
+          self._redis_pool = redis.asyncio.connection.ConnectionPool.from_url(self._redis_url,
+            **options)
           logger.info(
               "Redis pool created. redis connection: host: {} port: {} max connections: {} initialization count: {}".format(
                   self._redis_pool.connection_kwargs.get("host", "None"),
