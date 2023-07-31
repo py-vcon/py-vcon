@@ -103,13 +103,11 @@ class ServerState:
           server_json_string))
 
     # save to a redis hash
-    logger.info("setting server states: {}".format(server_dict))
+    logger.info("setting server state: {}".format(server_dict))
     await redis_con.hset(self._hash_key, self.server_key(), value = json.dumps(server_dict))
 
   async def unregister(self) -> None:
-    redis_con = self._redis_mgr.get_client()
-    # Remove server from hash
-    await redis_con.hdel(self._hash_key, self.server_key())
+    await self.delete_server_state(self.server_key())
 
     if(self._redis_mgr is not None):
       await self._redis_mgr.shutdown_pool()
@@ -129,7 +127,7 @@ class ServerState:
     self._state = self._states[3]
     await self.register(True)
 
-  async def get_servers(self) -> typing.Dict[str, dict]:
+  async def get_server_states(self) -> typing.Dict[str, dict]:
     redis_con = self._redis_mgr.get_client()
     server_key_value_pairs = await redis_con.hgetall(self._hash_key)
     logger.info("Got servers: {}".format(server_key_value_pairs))
@@ -137,5 +135,10 @@ class ServerState:
     return(server_key_value_pairs)
 
   # TODO queue/working
+
+  async def delete_server_state(self, server_key: str) -> None:
+    redis_con = self._redis_mgr.get_client()
+    # Remove server from hash
+    await redis_con.hdel(self._hash_key, server_key)
 
 
