@@ -6,7 +6,7 @@ from py_vcon_server.db import VconStorage
 import vcon
 from common_setup import UUID, make_2_party_tel_vcon
 
-# invoike only once for all the unit test in this module
+# invoke only once for all the unit test in this module
 @pytest_asyncio.fixture(autouse=True)
 async def setup():
   # Setup Vcon storage connection before test
