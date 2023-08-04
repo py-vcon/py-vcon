@@ -60,10 +60,8 @@ class RedisVconStorage:
     if(vcon_dict is None):
       return(None)
 
-    # TODO:  add method to construct Vcon from dict as this is very inefficient
-    vcon_string = json.dumps(vcon_dict)
     vCon = vcon.Vcon()
-    vCon.loads(vcon_string)
+    vCon.loadd(vcon_dict)
 
     return(vCon)
 
