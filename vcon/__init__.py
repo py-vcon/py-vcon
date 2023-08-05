@@ -896,6 +896,28 @@ class Vcon():
     vcon_json_string = file_handle.read()
     self.loads(vcon_json_string)
 
+  def loadd(self, vcon_dict : dict) -> None:
+    """
+    Load the vCon from the JSON style dict.
+    Assumes that this vCon is an empty vCon as it is not cleared.
+
+    Decision as to what json form to be deserialized is:
+    1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+    2) JWS vCon must have a payload and signatures
+    3) JWE vCon must have a cyphertext and recipients
+
+    Parameters:
+      vcon_dict (dict): dict containing JSON representation of a vCon
+
+    Returns: none
+    """
+
+    # TODO:  Should refactor this and loads to work with dict.  This is very
+    # inefficient as we are serializing and then deserializing.
+    vcon_string = json.dumps(vcon_dict)
+
+    return(self.loads(vcon_string))
+
   def loads(self, vcon_json : str) -> None:
     """
     Load the vCon from a JSON string.
