@@ -22,13 +22,7 @@ for finder, module_name, is_package in pkgutil.iter_modules(py_vcon_server.db.__
   logger.info("db module load: {}".format(module_name))
   importlib.import_module(module_name)
 
-server_state = py_vcon_server.states.ServerState(
-  py_vcon_server.settings.REST_URL,
-  py_vcon_server.settings.STATE_DB_URL,
-  py_vcon_server.settings.LAUNCH_ADMIN_API,
-  py_vcon_server.settings.LAUNCH_VCON_API,
-  {},
-  py_vcon_server.settings.NUM_WORKERS)
+server_state = None
 
 import py_vcon_server.vcon_api
 import py_vcon_server.admin_api
@@ -37,18 +31,30 @@ restapi = fastapi.FastAPI()
 
 @restapi.on_event("startup")
 async def startup():
+  global server_state
   logger.info("event startup")
+  server_state = py_vcon_server.states.ServerState(
+    py_vcon_server.settings.REST_URL,
+    py_vcon_server.settings.STATE_DB_URL,
+    py_vcon_server.settings.LAUNCH_ADMIN_API,
+    py_vcon_server.settings.LAUNCH_VCON_API,
+    {},
+    py_vcon_server.settings.NUM_WORKERS)
   await server_state.starting()
   await py_vcon_server.db.VconStorage.setup(py_vcon_server.settings.VCON_STORAGE_TYPE,
     py_vcon_server.settings.VCON_STORAGE_URL)
   await server_state.running()
+  logger.info("event startup completed")
 
 @restapi.on_event("shutdown")
 async def shutdown():
+  global server_state
   logger.info("event shutdown")
   await server_state.shutting_down()
   await py_vcon_server.db.VconStorage.teardown()
   await server_state.unregister()
+  server_state = None
+  logger.info("event shutdown completed")
 
 # Enable Admin entry points
 if(py_vcon_server.settings.LAUNCH_ADMIN_API):
