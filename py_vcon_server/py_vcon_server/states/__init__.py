@@ -43,9 +43,6 @@ import py_vcon_server.logging_utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
-STATE_INTERFACE = None
-
-
 
 class ServerState:
   # key for hash of all servers
@@ -60,10 +57,12 @@ class ServerState:
                      queues: dict,
                      num_workers: int):
     # Connect
+    logger.debug("ServerState intializing RedisMgr")
     self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_uri)
 
     # Setup connection pool
     self._redis_mgr.create_pool()
+    logger.debug("ServerState intializing RedisMgr pool created")
 
     # Intialize
     self._pid = os.getpid()
@@ -74,6 +73,7 @@ class ServerState:
     self._queues = queues
     self._num_workers = num_workers
     self._state = self._states[1]
+    logger.info("Server state intialized")
 
   def server_key(self) -> str:
     return("{}:{}:{}".format(self._host, self._port, self._pid))
@@ -113,6 +113,8 @@ class ServerState:
       await self._redis_mgr.shutdown_pool()
       self._redis_mgr = None
 
+    logger.info("Server state unregistered")
+
   async def update_heartbeat(self) -> None:
     self.register(True)
 
@@ -140,5 +142,6 @@ class ServerState:
     redis_con = self._redis_mgr.get_client()
     # Remove server from hash
     await redis_con.hdel(self._hash_key, server_key)
+    logger.debug("Deleted server state for: {}".format(server_key))
 
 
