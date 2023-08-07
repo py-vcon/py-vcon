@@ -16,7 +16,7 @@ def init_logger(name : str) -> logging.Logger:
 
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
-    formatter = pythonjsonlogger.jsonlogger.JsonFormatter( "%(timestamp)s %(levelname)s %(message)s ", timestamp=True)
+    formatter = pythonjsonlogger.jsonlogger.JsonFormatter( "%(timestamp)s %(levelname)s %(message)s %(pathname)s %(module)s %(lineno)d", timestamp=True)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
