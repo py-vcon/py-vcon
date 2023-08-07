@@ -14,8 +14,8 @@ class QueueProperties(pydantic.BaseModel):
 
 
 def init(restapi):
-  @restapi.get("/version")
-  async def get_version():
+  @restapi.get("/server/version")
+  async def get_server_version():
     try:
       logger.debug("getting version")
       versions = {

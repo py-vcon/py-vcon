@@ -6,10 +6,10 @@ import vcon
 import fastapi.testclient
 
 @pytest.mark.asyncio
-async def test_get_version():
+async def test_get_server_version():
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     get_response = client.get(
-      "/version",
+      "/server/version",
       headers={"accept": "application/json"},
       )
     assert(get_response.status_code == 200)
