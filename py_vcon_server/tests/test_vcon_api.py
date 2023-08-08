@@ -8,7 +8,7 @@ from common_setup import UUID, make_2_party_tel_vcon
 
 @pytest.mark.asyncio
 async def test_set_get_delete(make_2_party_tel_vcon: vcon.Vcon):
-  vCon = await make_2_party_tel_vcon
+  vCon = make_2_party_tel_vcon
 
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
 
@@ -39,7 +39,7 @@ async def test_set_get_delete(make_2_party_tel_vcon: vcon.Vcon):
 
 @pytest.mark.asyncio
 async def test_jq(make_2_party_tel_vcon: vcon.Vcon):
-  vCon = await make_2_party_tel_vcon
+  vCon = make_2_party_tel_vcon
 
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
 
@@ -63,7 +63,7 @@ async def test_jq(make_2_party_tel_vcon: vcon.Vcon):
 
 @pytest.mark.asyncio
 async def test_jsonpath(make_2_party_tel_vcon: vcon.Vcon):
-  vCon = await make_2_party_tel_vcon
+  vCon = make_2_party_tel_vcon
 
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
 

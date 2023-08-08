@@ -27,7 +27,7 @@ def vcon_data() -> dict:
 @pytest.mark.asyncio
 async def test_conversions(make_2_party_tel_vcon: vcon.Vcon):
   # Create our test Vcon and put it in the DB so that it can be retrived via UUID
-  vcon_object = await make_2_party_tel_vcon
+  vcon_object = make_2_party_tel_vcon
   await py_vcon_server.db.VconStorage.set(vcon_object)
 
   vcon_json = vcon_object.dumps()

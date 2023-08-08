@@ -26,7 +26,7 @@ def test_redis_reg():
 
 @pytest.mark.asyncio
 async def test_redis_set_get(make_2_party_tel_vcon: vcon.Vcon):
-  vCon = await make_2_party_tel_vcon
+  vCon = make_2_party_tel_vcon
 
   # Save the vcon
   await VconStorage.set(vCon)
@@ -40,7 +40,7 @@ async def test_redis_set_get(make_2_party_tel_vcon: vcon.Vcon):
 
 @pytest.mark.asyncio
 async def test_redis_jq(make_2_party_tel_vcon: vcon.Vcon):
-  vCon = await make_2_party_tel_vcon
+  vCon = make_2_party_tel_vcon
 
   # Save the vcon
   await VconStorage.set(vCon)
@@ -53,7 +53,7 @@ async def test_redis_jq(make_2_party_tel_vcon: vcon.Vcon):
 
 @pytest.mark.asyncio
 async def test_redis_jsonpath(make_2_party_tel_vcon: vcon.Vcon):
-  vCon = await make_2_party_tel_vcon
+  vCon = make_2_party_tel_vcon
 
   # Save the vcon
   await VconStorage.set(vCon)
@@ -66,7 +66,7 @@ async def test_redis_jsonpath(make_2_party_tel_vcon: vcon.Vcon):
 
 @pytest.mark.asyncio
 async def test_redis_delete(make_2_party_tel_vcon: vcon.Vcon):
-  vCon = await make_2_party_tel_vcon
+  vCon = make_2_party_tel_vcon
 
   # Save the vcon
   await VconStorage.set(vCon)

@@ -5,7 +5,7 @@ import vcon
 UUID = "01855517-ac4e-8edf-84fd-77776666acbe"
 
 @pytest.fixture(scope="function")
-async def make_2_party_tel_vcon() -> vcon.Vcon:
+def make_2_party_tel_vcon() -> vcon.Vcon:
   vCon = vcon.Vcon()
   # Hack a known UUID so that we do not poluted the DB
   vCon._vcon_dict["uuid"] = UUID
