@@ -21,11 +21,13 @@ class MultifariousVcon():
   def __init__(self):
     self._vcon_forms = {}
 
-  def update_vcon(self, new_vcon: typing.Union[str, vcon.Vcon],
+  def update_vcon(self,
+    new_vcon: typing.Union[str, vcon.Vcon],
     vcon_uuid: str = None,
     vcon_json: str = None,
     vcon_dict: dict = None,
-    vcon_object: vcon.Vcon = None) -> None:
+    vcon_object: vcon.Vcon = None
+    ) -> None:
 
     vcon_type = self.get_vcon_type(new_vcon)
     if(vcon_type == VconTypes.UNKNOWN):
@@ -67,7 +69,7 @@ class MultifariousVcon():
 
     # Clean out any Nones
     #logger.debug("keys: {}".format(self._vcon_forms.keys()))
-    for form in self._vcon_forms:
+    for form in list(self._vcon_forms):
       if(self._vcon_forms[form] is None):
         logger.debug("removing null: {}".format(form))
         del self._vcon_forms[form]
@@ -209,29 +211,126 @@ class PipelineIO():
   """ Abstract input for a pipeline processor """
   def __init__(self):
     self._vcons = []
+    self._vcon_locks = []
+    self._vcon_update = []
 
-  def get_vcon(self,
+  async def get_vcon(self,
     index: int = 0,
     vcon_type: VconTypes = VconTypes.OBJECT
     ) -> typing.Union[str, dict, vcon.Vcon, None]:
-    """ Get the indicated Vcon in the form indicated by vcon_type """
+    """ Get the Vcon at index in the form indicated by vcon_type """
 
-    return(self._vcons[index].get_vcon(vcon_type))
+    if(index >= len(self._vcons)):
+      return(None)
 
-  def update_vcon(self,
+    return(await self._vcons[index].get_vcon(vcon_type))
+
+
+  async def add_vcon(self,
+    vcon_to_add: typing.Union[str, dict, vcon.Vcon],
+    lock_key: str = None,
+    readonly: bool = True
+    ) -> int:
+    """
+    Add the given Vcon to this PipelineIO object.
+    It will NOT add the Vcon to storage as the time this 
+    method is invoked.
+
+    If the lock_key is provied, the vCon will be updated in
+    VconStorage at the end of the pipeline processing,
+    only if the vCon is modified via the update_vcon
+    method.
+
+    If no lock_key is provided AND the readonly == False,
+    the Vcon will be added to VconStorage after all of the 
+    pipeline processing has occurred.  If a vCon with the 
+    same UUID exist in the VconStorage, prior to the
+    VconStorage add, the VconStorage add will result in an
+    error.
+
+    returns: index of the added vCon
+    """
+
+    # Storage actions after pipeline processing
+    #
+    #      | Readonly
+    # Lock |    T | F
+    # ---------------------------------------------
+    #    T |  N/A | Persist if modfied AFTER add
+    #    F |  NOP | Persist, this is new to storage
+    #
+    # N/A - not allowed
+    # NOP - no operation/storage
+
+    mVcon = MultifariousVcon()
+    mVcon.update_vcon(vcon_to_add)
+    if(lock_key == ""):
+      lock_key = None
+    if(lock_key is not None and readonly):
+      raise Exception("Should not lock readonly vCon")
+
+    # Make sure no vCon with same UUID
+    new_uuid = await mVcon.get_vcon(VconTypes.UUID)
+    for index, vCon in enumerate(self._vcons):
+      exists_uuid = await vCon.get_vcon(VconTypes.UUID)
+      if(exists_uuid == new_uuid):
+        raise Exception("Cannot add duplicate vCon to PipelineIO, same uuid: {} at index: {}",
+          new_uuid, index)
+
+    self._vcons.append(mVcon)
+    self._vcon_locks.append(lock_key)
+    self._vcon_update.append(not readonly and lock_key is None)
+    
+
+    return(len(self._vcons) - 1)
+
+  async def update_vcon(self,
     modified_vcon: typing.Union[str, dict, vcon.Vcon],
-    index: int = 0) -> None:
+    ) -> int:
     """
-    Update the indecated Vcon in this PipelineIO object, does NOT update stored Vcon.
-    The update of the Vcon occurs at the end of the pipeline if the Vcon was updated.
+    Update an existing vCon in the PipelineIO object.
+    Does not update the Vcon in storage.
+    The update of the stored Vcon occurs at the end of the pipeline if the Vcon was updated.
+
+    Returns: index of updated vCon or None
     """
 
-    raise Exception("Not iplemented")
+    mVcon = MultifariousVcon()
+    mVcon.update_vcon(modified_vcon)
+
+    uuid = await mVcon.get_vcon(VconTypes.UUID)
+
+    for index, vCon in enumerate(self._vcons):
+      if(await vCon.get_vcon(VconTypes.UUID) == uuid):
+        # If there is no lock and this vCon is not marked for update, its readonly
+        if(self._vcon_locks[index] is None and not self._vcon_update[index]):
+          raise Exception("vCon {} index: {} has no write lock".format(
+            uuid,
+            index))
+
+        self._vcons[index] = mVcon
+        self._vcon_update[index] = True
+        return(index)
+
+    raise Exception("vCon {} not found in PipelineIO".format(uuid))
+
+
 
 class PipelineProcessor():
   def __init__(self):
     raise Exception("Not iplemented")
 
-  async def process(self, process_input: PipelineIO):
-    raise Exception("Not iplemented")
+  def __init__(self, **options):
+    logger.debug("PipelineProcessor({}).__init__".format(self.__class__.__name__))
+
+  async def process(self, 
+    process_input: PipelineIO,
+    **options
+    ) -> PipelineIO:
+    raise Exception("Abstract PipelineProcessor.process method Not iplemented by {}".format(
+      self.__class__.__name__))
+
+  def __del__(self):
+    logger.debug("PipelineProcessor({}).__del__".format(self.__class__.__name__))
+
 
