@@ -76,7 +76,9 @@ class ServerState:
     logger.info("Server state intialized")
 
   def server_key(self) -> str:
-    return("{}:{}:{}".format(self._host, self._port, self._pid))
+    # a new container may get the same pid repeatedly
+    # need to add something else to add uniqueness e.g. start time
+    return("{}:{}:{}:{}".format(self._host, self._port, self._pid, self._start_time))
 
   async def register(self, may_exist: bool = False) -> None:
     server_key = self.server_key()
