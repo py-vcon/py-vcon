@@ -44,7 +44,7 @@ def init(restapi):
 
     try:
       logger.debug("getting servers")
-      server_dict = await py_vcon_server.server_state.get_server_states()
+      server_dict = await py_vcon_server.states.SERVER_STATE.get_server_states()
 
     except Exception as e:
       logger.info("Error: {}".format(e))
@@ -69,7 +69,7 @@ def init(restapi):
 
     try:
       logger.debug("deleting server state: {}".format(server_key))
-      server_dict = await py_vcon_server.server_state.delete_server_state(server_key)
+      server_dict = await py_vcon_server.states.SERVER_STATE.delete_server_state(server_key)
 
     except Exception as e:
       logger.info("Error: {}".format(e))
@@ -94,8 +94,8 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=queue_info))
 
 
-  @restapi.post("/server/queue")
-  async def post_server_queue(properties: QueueProperties, name: str) -> None:
+  @restapi.post("/server/queue/{name}")
+  async def set_server_queue_properties(properties: QueueProperties, name: str) -> None:
     """
     Set the properties on the named queue on this server.
 
@@ -241,7 +241,7 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content = jobs))
 
 
-  @restapi.get("/jobs/in_progress")
+  @restapi.get("/in_progress")
   async def get_in_progress_jobs() -> typing.Dict[int, dict]:
     """
     Get the list of jobs which are dequeued and supposed to be work in progress on a server."
@@ -270,7 +270,7 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content = jobs))
 
 
-  @restapi.put("/jobs/in_progress/{job_id}")
+  @restapi.put("/in_progress/{job_id}")
   async def requeue_in_progress_job(job_id: int) -> None:
     """
     Requeue the in process job indicated by its job id and
@@ -294,7 +294,7 @@ def init(restapi):
     # No return, should respond with 204
 
 
-  @restapi.delete("/jobs/in_progress/{job_id}")
+  @restapi.delete("/in_progress/{job_id}")
   async def remove_in_progress_job(job_id: int) -> None:
     """
     Remove the in process job indicated by its job id and
