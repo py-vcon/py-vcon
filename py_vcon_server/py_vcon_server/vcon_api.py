@@ -1,16 +1,19 @@
 import typing
 import pydantic
 import datetime
+import time
 import fastapi.responses
 import py_vcon_server.db
 import py_vcon_server.logging_utils
+import vcon
+import vcon.utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 class Vcon(pydantic.BaseModel, extra=pydantic.Extra.allow):
-  vcon: str
+  vcon: str = vcon.Vcon.CURRENT_VCON_VERSION
   uuid: str
-  created_at: typing.Union[int, str, datetime.datetime] = pydantic.Field(default_factory=lambda: datetime.now().timestamp())
+  created_at: typing.Union[int, str, datetime.datetime] = pydantic.Field(default_factory=lambda: vcon.utils.cannonize_date(time.time()))
   subject: str = None
   redacted: dict = None
   appended: dict = None
@@ -23,6 +26,12 @@ class Vcon(pydantic.BaseModel, extra=pydantic.Extra.allow):
 def init(restapi):
   @restapi.get("/vcon/{vcon_uuid}")
   async def get_vcon(vcon_uuid: str):
+    """
+    Get the vCon object identified by the given UUID.
+
+    Returns: dict - vCon object which may be in the unencrypted, signed or encrypted JSON forms
+    """
+
     try:
       logger.debug("getting vcon UUID: {}".format(vcon_uuid))
       vCon = await py_vcon_server.db.VconStorage.get(vcon_uuid)
@@ -40,7 +49,9 @@ def init(restapi):
 
   @restapi.post("/vcon")
   async def post_vcon(inbound_vcon: Vcon, vcon_uuid: typing.Union[str, None] = None):
-    """ Store the given vCon in VconStorage, replace if it exists for the given UUID """
+    """
+    Store the given vCon in VconStorage, replace if it exists for the given UUID
+    """
     try:
       logger.debug("setting vcon UUID: {}".format(vcon_uuid))
       vcon = await py_vcon_server.db.VconStorage.set(inbound_vcon.dict())
@@ -51,7 +62,9 @@ def init(restapi):
 
   @restapi.delete("/vcon/{vcon_uuid}")
   async def delete_vcon(vcon_uuid: str):
-    """ Delete the vCon idenfied by the given UUID from VconStorage """
+    """
+    Delete the vCon idenfied by the given UUID from VconStorage
+    """
     try:
       logger.debug("deleting vcon UUID: {}".format(vcon_uuid))
       await py_vcon_server.db.VconStorage.delete(vcon_uuid)
@@ -66,7 +79,11 @@ def init(restapi):
 
   @restapi.get("/vcon/{vcon_uuid}/jq")
   async def get_vcon_jq_transform(vcon_uuid: str, jq_transform: str):
-    """ Appliy the given jq transfor to the vCon identified by the given UUID and return the results """
+    """
+    Apply the given jq transform to the vCon identified by the given UUID and return the results.
+
+    Returns: list - containing jq tranform of the vCon.
+    """
     try:
       logger.info("vcon UID: {} jq transform string: {}".format(vcon_uuid, jq_transform))
       transform_result = await py_vcon_server.db.VconStorage.jq_query(vcon_uuid, jq_transform)
@@ -80,7 +97,12 @@ def init(restapi):
 
   @restapi.get("/vcon/{vcon_uuid}/jsonpath")
   async def get_vcon_jsonpath_query(vcon_uuid: str, path_string: str):
-    """ Apply the given JSONpath query to the vCon idntified by the given UUID """
+    """
+    Apply the given JSONpath query to the vCon idntified by the given UUID.
+
+    Returns: list - the JSONpath query results
+    """
+
     try:
       logger.info("vcon UID: {} jsonpath query string: {}".format(vcon_uuid, path_string))
       query_result = await py_vcon_server.db.VconStorage.json_path_query(vcon_uuid, path_string)
