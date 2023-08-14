@@ -43,6 +43,7 @@ import py_vcon_server.logging_utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
+SERVER_STATE = None
 
 class ServerState:
   # key for hash of all servers
@@ -146,4 +147,11 @@ class ServerState:
     await redis_con.hdel(self._hash_key, server_key)
     logger.debug("Deleted server state for: {}".format(server_key))
 
+  def pid(self) -> str:
+    """ Return the server prociess id """
+    return( self._pid )
+
+  def start_time(self) -> float:
+    """ Return the start time (epoch seconds) for the server """
+    return(self._start_time)
 
