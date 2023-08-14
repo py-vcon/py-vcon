@@ -135,6 +135,11 @@ class ServerState:
   async def get_server_states(self) -> typing.Dict[str, dict]:
     redis_con = self._redis_mgr.get_client()
     server_key_value_pairs = await redis_con.hgetall(self._hash_key)
+
+    # Need to deserialize the values for each server
+    for server in server_key_value_pairs:
+      server_key_value_pairs[server] = json.loads(server_key_value_pairs[server])
+
     logger.info("Got servers: {}".format(server_key_value_pairs))
 
     return(server_key_value_pairs)
