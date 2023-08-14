@@ -19,7 +19,18 @@ class QueueJob(pydantic.BaseModel): # may need to add extra=pydantic.Extra.allow
 def init(restapi):
 
   @restapi.get("/server/info")
-  async def get_server_info():
+  async def get_server_info() -> typing.Dict[str, str]:
+    """
+    Get information about the server running at this host and port.
+
+    Returns: dict - attributes of this server.  Keys:
+
+        py_vcon_server: str - vcon server package version
+        vcon: str - vcon package version
+        start_time: float - epoch seconds UTC
+        pid: str - running server process id
+    """
+
     try:
       logger.debug("getting server info")
       info = {
@@ -40,7 +51,39 @@ def init(restapi):
 
   @restapi.get("/servers")
   async def get_server_states():
-    """ Get a JSON dictionary of running server states """
+    """
+    Get a JSON dictionary of running server states
+
+    Returns: dict where keys are server_keys of the format host:port:pid:start_time.
+    <br> The value associated with the server key is a dict containing the following keys:
+
+        host: str - host name upon which this server has bound the REST API
+        port: int - port upon which REST API is bound
+        pid: py_vcon_server.states.SERVER_STATE.pid()
+        start_time: py_vcon_server.states.SERVER_STATE.start_time(),
+        num_workers: int - configured number of worker threads
+        state: str ("starting_up", "running", shutting_down", "unknown")
+        last_heartbeat: float - epoch time in seconds
+
+    The list may contain servers which did not gracefully shutdown.
+    It is up to the user to remove these stale server states and
+    clean up and requeue any in_progress jobs which the server did
+    not complete.  A pipeline of well behaved processors does not
+    commit changes until all of the pipeline's processor have
+    completed.  Assuming this is the case,
+    the following pseudo code will clean up appropriately:
+    NOTE: This is not done automatically as it is a DEV OPS 
+    policy issue and is dependent upon potentially custom or
+    proprietary processors behavor.
+
+        get the list of server states from the /servers entry point
+        for each unique pair of server hosts and ports:
+            get the active server key from the /server/info entry point
+            for stale server_keys (all other server keys with the same host:port prefix):
+               for all of the in_progress jobs having the stale server_key (entry point: /in_progress):
+                   requeue the job (entry point: put /_in_progress/{job_id}
+               remove the stale server (entry point: delete /servers/{server_key}
+    """
 
     try:
       logger.debug("getting servers")
@@ -61,7 +104,11 @@ def init(restapi):
   async def delete_server_state(server_key: str):
     """
     Delete the server state entry for the given server_key.
-    <br><i> This should generally only used to clean up server states for servers that did not gracefully shutdown.</i>
+    <br><i> This should generally only be used to clean up server states for servers that did not gracefully shutdown.</i>
+
+    Before doing this, you may want to check to see if
+    there are in progress jobs (via the /in_progress entry
+    point) left over for this server and requeue them.
 
     The server key is composed as: "host:port:pid:start_time".
     <br>  host and port are from the REST_URL setting.
@@ -82,7 +129,23 @@ def init(restapi):
 
   @restapi.get("/server/queues")
   async def get_server_queues():
-    """ Get the list of queues and related configuration for for this server """
+    """
+    Get the list of queues and related configuration for
+    for this server.
+
+    This is the list names of queues that this server is
+    actively popping jobs from and running the pipeline
+    processors assocated with the queue name.
+
+    Returns: dict[str, dict] - dict with keys being queue names and values are a dict of queue properties
+
+    keys for queue properties:
+
+        weight: int - number of times to pull a job out of the
+            named queue, before iterating to the next name
+            queue configured for this server.
+    """
+
     try:
       logger.debug("getting server queue info")
       queue_info = py_vcon_server.settings.WORK_QUEUES
@@ -99,10 +162,19 @@ def init(restapi):
     """
     Set the properties on the named queue on this server.
 
-    <br> Currently the only queue property is the "weight".
+    This adds or updated the properties for the queue and
+    identifies the queue to be processed by this server
+    using the pipeline processors associated with this
+    queue name.
+
+    Currently the only queue property is the "weight".
     weight must be an integer value and indicates how many
-    items should be de-queued from the given queue before
-    rotating to hte nex queue.
+    jobs should be popped from the named queue before
+    iterating to the next queue configured for this server.
+    Jobs are popped one at a time by the server such that
+    the configured NUM_WORKERS are each busy on one job at
+    a time.  These jobs that the server is busy on are 
+    called in_progress jobs.
     """
 
     try:
@@ -122,7 +194,10 @@ def init(restapi):
   @restapi.delete("/server/queue/{name}")
   async def delete_server_queue(name: str):
     """
-    Remove the named queue from the list of queues to process on this server
+    Remove the named queue from the list of queues to process on this server.
+
+    This indicates, to this server, to ignore the queue deleted from the server's queue list.
+    This does not remove or modify the queue itself or the jobs contained in the queue.
     """
 
     try:
@@ -143,7 +218,21 @@ def init(restapi):
 
   @restapi.get("/queues")
   async def get_job_queue_names():
-    """ Get a list of the names of all the job queues """
+    """
+    Get a list of the names of all the job queues.
+
+    Jobs are added to queues from which they are popped
+    to run through a pipeline (set of processors).
+    The jobs pipeline server(s) pop jobs from the list
+    of names of queues, configured for the server to watch.
+    The server runs the set of processors configured in
+    the pipeline, having the same name as the queue.
+    Most pipeline processors create, operate on or modify
+    a vCon and have zero or more vCons as input and zero
+    or more vCons as output.
+
+    Returns: list[str] - queue names
+    """
 
     try:
       logger.debug("getting queue names")
@@ -163,10 +252,16 @@ def init(restapi):
     """
     Get the jobs queued in the named queue.
 
-    <br> Note: this is only for montoring purposes,
+    These jobs are input to the pipeline, having
+    the same name as the queue, when a pipeline
+    server worker is available to work on it.
+
+    Note: this is only for montoring purposes,
     Do not use this to operate on a queue as removing a job
-    and placing it in an inprogress state should be an atomic
+    and placing it in an in progress state should be an atomic
     operation.
+
+    Returns: list[dict] - list of job objects in the queue
     """
 
     try:
@@ -184,7 +279,16 @@ def init(restapi):
 
   @restapi.put("/queue/{name}")
   async def add_queue_job(name: str, job: QueueJob):
-    """ Add the given job to the named queue """
+    """
+    Add the given job to the named job queue.
+
+    Currently only one job_type is supported: "vcon_uuid"
+    which has an array of vCon UUIDs contained in
+    vcon_uuids.  vcon_uuids is currently liimited to
+    exactly one vCon UUID.
+
+    Returns: int - the positiion of the added job in the queue.
+    """
 
     try:
       logger.debug("adding job: {} to queue: {}".format(job, name))
@@ -206,7 +310,18 @@ def init(restapi):
 
   @restapi.post("/queue/{name}")
   async def create_new_job_queue(name: str):
-    """ Create the named new queue """
+    """
+    Create the named new job queue.
+
+    You must also define a pipeline of processors (entry point
+    post /pipeline) with the same name as this new queue.
+    You must then configure one or more pipeline servers
+    to perform the pipeline processing for the jobs in the
+    queue, by adding the queue name to the set of queues
+    for the server to monitor (entry point /server/queues).
+    Without defining a pipeline and one or more servers to
+    perform them, the jobs will just sit in the queue.
+    """
 
     try:
       logger.debug("Creating new queue: {}".format(name))
@@ -226,6 +341,8 @@ def init(restapi):
   async def delete_job_queue(name: str) -> typing.List[dict]:
     """
     Delete the named job queue and return any jobs that were in the queue.
+
+    Returns: list[dict] - list of jobs that were in the queue
     """
 
     try:
@@ -244,15 +361,17 @@ def init(restapi):
   @restapi.get("/in_progress")
   async def get_in_progress_jobs() -> typing.Dict[int, dict]:
     """
-    Get the list of jobs which are dequeued and supposed to be work in progress on a server."
+    Get the list of jobs which are dequeued and supposed to be work in progress on a pipeline server.
 
-    Returns: dict - dict of in progress job data (dict) where key is the unique int job id.
-      The job data dict contains the following keys:
-        jobid: int - unique job id for this job on the given server
+    Returns: dict - dict of in progress job objects (dict) where the keys are the unique int job id.
+
+    An in progress job object dict contains the following keys:
+
+        jobid: int - unique job id for this job on the given pipeline server
         queue: str - name of the queue from which the job was popped
         job: dict - queue job object (keys: job_type: str and job type specific keys)
         start: float - epoch time UTC when the job was dequeued
-        server: str - server_key: "<host>:<port>:<pid>:start_time>" for server
+        server: str - server_key: "<host>:<port>:<pid>:start_time>" for pipeline server
           which will run the job, this is attained from the "/servers" entry 
           point in the admin REST API or from ServerState.server_key()
     """
@@ -274,7 +393,8 @@ def init(restapi):
   async def requeue_in_progress_job(job_id: int) -> None:
     """
     Requeue the in process job indicated by its job id and
-    put it at the front of the queue from which it came.
+    put it at the front (first to be worked on) of the job
+    queue from which it came.
     """
 
     try:
@@ -297,11 +417,16 @@ def init(restapi):
   @restapi.delete("/in_progress/{job_id}")
   async def remove_in_progress_job(job_id: int) -> None:
     """
-    Remove the in process job indicated by its job id and
-    do NOTE add it back to the queue from which it came.
-    This does not cancel the job if it is still in progress.
+    Remove the in progress job indicated by its job id and
+    do NOT add it back to the queue from which it came.
+
+    WARNING: This does not cancel the job if it is still in
+    progress.
+    Removing an in progress job while a pipeline server is
+    still working on it will have unpredictable results.
+    
     This is typically used to cancel, rather than reschedule,
-    jobs from  a server that has stalled or died.
+    jobs from  a server that has hung or died.
     """
 
     try:
