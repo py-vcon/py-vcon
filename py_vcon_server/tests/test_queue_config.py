@@ -64,8 +64,7 @@ async def test_queue_config():
     assert(queue_dict["G"]["weight"] == 14)
 
     post_response = client.post(
-      "/server/queue",
-      params = {"name": "Q"}, 
+      "/server/queue/Q",
       json = {"weight": 9},
       headers={"accept": "application/json"}
       )
