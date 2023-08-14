@@ -34,6 +34,7 @@ async def test_queue_lifecycle(job_queue):
   queues = await job_queue.get_queue_names()
   print("queues: {}".format(queues))
   # don't assume this is the process using the queue db
+  assert(isinstance(queues, set))
   assert(q1 not in queues)
 
   num_queues = await job_queue.create_new_queue(q1)
@@ -41,11 +42,13 @@ async def test_queue_lifecycle(job_queue):
 
   queues = await job_queue.get_queue_names()
   print("queues: {}".format(queues))
+  assert(isinstance(queues, set))
   assert(q1 in queues)
 
   jobs = await job_queue.delete_queue(q1)
   queues = await job_queue.get_queue_names()
   print("queues: {}".format(queues))
+  assert(isinstance(queues, set))
   assert(q1 not in queues)
   assert(isinstance(jobs, list))
   assert(len(jobs) == 0)
@@ -61,7 +64,7 @@ async def test_queue_lifecycle(job_queue):
   num_queues = await job_queue.create_new_queue(q1)
   assert(num_queues >= 1)
 
-  server_key = "pytest_run:-1:-1"
+  server_key = "pytest_run:-1:-1:{}".format(time.time())
   try:
     in_progress_job = await job_queue.pop_queued_job(q1, server_key)
     raise Exception("Expect exception as the queue is empty")
@@ -108,6 +111,7 @@ async def test_queue_lifecycle(job_queue):
   assert(jobs[1]["vcon_uuid"] == uuids2)
 
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  first_in_progress_job = in_progress_job
   assert(isinstance(in_progress_job, dict))
   assert(in_progress_job["queue"] == q1)
   assert(in_progress_job["server"] == server_key)
@@ -164,6 +168,7 @@ async def test_queue_lifecycle(job_queue):
 
   queue_names = await job_queue.get_queue_names()
   print("queues: {}".format(queue_names))
+  assert(isinstance(queue_names, set))
   assert(q1 in queue_names)
 
   await job_queue.requeue_in_progress_job(in_progress_job["jobid"])
@@ -191,6 +196,7 @@ async def test_queue_lifecycle(job_queue):
       raise e
 
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  second_in_progress_job = in_progress_job
   # Now:
   # q1 had uuids2 job
   # in progress has uuids
@@ -220,6 +226,26 @@ async def test_queue_lifecycle(job_queue):
   assert(len(in_progress_jobs) >= 1)
   # Make sure our job was removed
   assert(in_progress_jobs.get(in_progress_job["jobid"], None) is None)
+
+  # Create the queue again.
+  num_queues = await job_queue.create_new_queue(q1)
+  # we add a job to the queue
+  num_jobs = await job_queue.push_vcon_uuid_queue_job(q1, uuids2)
+  assert(num_jobs == 1)
+  # make the job in progress
+  in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  third_in_progress_job = in_progress_job 
+  jobs_before = await job_queue.get_queue_jobs(q1)
+  assert(len(jobs_before) == 0)
+  # Remove it and make sure it did not get added to the queue
+  assert(third_in_progress_job["queue"] == q1)
+  await job_queue.remove_in_progress_job(third_in_progress_job["jobid"])
+  jobs_after = await job_queue.get_queue_jobs(q1)
+  # Queue should not have changed
+  assert(len(jobs_before) == len(jobs_after))
+  in_progress_jobs = await job_queue.get_in_progress_jobs()
+  # make sure job was removed
+  assert(third_in_progress_job["jobid"] not in in_progress_jobs)
 
   # TODO:
   # add info logging in JobQueue??
