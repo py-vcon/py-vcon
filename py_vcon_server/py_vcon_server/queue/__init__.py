@@ -205,7 +205,7 @@ class JobQueue():
     return(await redis_con.smembers(QUEUE_NAMES_KEY))
 
 
-  async def get_queue_jobs(self, name: str) -> typing.List[str]:
+  async def get_queue_jobs(self, name: str) -> typing.List[dict]:
     """ Get the list of all jobs in the named queue """
 
     keys = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name ]
@@ -269,7 +269,7 @@ class JobQueue():
 
     Returns: an in progress job object (dict) or None
       keys:
-        job_id: int - unique job id for this job on the given server
+        jobid: int - unique job id for this job on the given server
         queue: str - name of the queue from which the job was popped
         job: dict - queue job object
         start: float - epoch time UTC when the job was dequeued
