@@ -1,4 +1,4 @@
-name: Python conserver unit test
+name: Python vCon server unit test
 on: 
   push:
     # all
@@ -110,10 +110,10 @@ jobs:
           pip freeze | grep whisper
           python3 -c "import stable_whisper;print(stable_whisper.__version__)"
 
-      - name: Test conserver package with pytest
+      - name: Test py_vcon_server package with pytest
         run: |
-          # Run all Vcon package unit tests
-          (cd server; pytest -v -rP tests)
+          # Run all Vcon server package unit tests
+          (cd py_vcon_server; pytest -v -rP tests)
 
       - name: fix pip cache issue by creating dir
         run: |
