@@ -219,6 +219,8 @@ class Vcon():
   MIMETYPE_VIDEO_OGG = "video/ogg"
   MIMETYPE_MULTIPART = "multipart/mixed"
 
+  CURRENT_VCON_VERSION = "0.0.1"
+
   # Dict keys
   VCON_VERSION = "vcon"
   UUID = "uuid"
@@ -317,7 +319,7 @@ class Vcon():
     self._jwe_dict = None
 
     self._vcon_dict = {}
-    self._vcon_dict[Vcon.VCON_VERSION] = "0.0.1"
+    self._vcon_dict[Vcon.VCON_VERSION] = Vcon.CURRENT_VCON_VERSION
     self._vcon_dict[Vcon.GROUP] = []
     self._vcon_dict[Vcon.PARTIES] = []
     self._vcon_dict[Vcon.DIALOG] = []
