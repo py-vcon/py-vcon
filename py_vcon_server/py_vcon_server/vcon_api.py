@@ -10,6 +10,8 @@ import vcon.utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
+VCON_TAG = "vCon Storage CRUD"
+
 class Vcon(pydantic.BaseModel, extra=pydantic.Extra.allow):
   vcon: str = vcon.Vcon.CURRENT_VCON_VERSION
   uuid: str
@@ -24,7 +26,7 @@ class Vcon(pydantic.BaseModel, extra=pydantic.Extra.allow):
   attachments: typing.List[dict] = []
 
 def init(restapi):
-  @restapi.get("/vcon/{vcon_uuid}")
+  @restapi.get("/vcon/{vcon_uuid}", tags = [ VCON_TAG ])
   async def get_vcon(vcon_uuid: str):
     """
     Get the vCon object identified by the given UUID.
@@ -47,7 +49,7 @@ def init(restapi):
 
     return(fastapi.responses.JSONResponse(content=vCon.dumpd()))
 
-  @restapi.post("/vcon")
+  @restapi.post("/vcon", tags = [ VCON_TAG ])
   async def post_vcon(inbound_vcon: Vcon, vcon_uuid: typing.Union[str, None] = None):
     """
     Store the given vCon in VconStorage, replace if it exists for the given UUID
@@ -60,7 +62,7 @@ def init(restapi):
       return None
     return(fastapi.responses.JSONResponse(content=vcon))
 
-  @restapi.delete("/vcon/{vcon_uuid}")
+  @restapi.delete("/vcon/{vcon_uuid}", tags = [ VCON_TAG ])
   async def delete_vcon(vcon_uuid: str):
     """
     Delete the vCon idenfied by the given UUID from VconStorage
@@ -77,7 +79,7 @@ def init(restapi):
 
     # no return should cause 204, no content
 
-  @restapi.get("/vcon/{vcon_uuid}/jq")
+  @restapi.get("/vcon/{vcon_uuid}/jq", tags = [ VCON_TAG ])
   async def get_vcon_jq_transform(vcon_uuid: str, jq_transform: str):
     """
     Apply the given jq transform to the vCon identified by the given UUID and return the results.
@@ -95,7 +97,7 @@ def init(restapi):
 
     return(fastapi.responses.JSONResponse(content=transform_result))
 
-  @restapi.get("/vcon/{vcon_uuid}/jsonpath")
+  @restapi.get("/vcon/{vcon_uuid}/jsonpath", tags = [ VCON_TAG ])
   async def get_vcon_jsonpath_query(vcon_uuid: str, path_string: str):
     """
     Apply the given JSONpath query to the vCon idntified by the given UUID.
