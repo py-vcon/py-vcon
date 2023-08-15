@@ -9,6 +9,23 @@ import vcon
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
+class ServerInfo(pydantic.BaseModel):
+    py_vcon_server: str
+    vcon: str
+    start_time: float
+    pid: int
+
+
+class ServerState(pydantic.BaseModel):
+    host: str
+    port: int
+    pid: int
+    start_time: float
+    num_workers: int
+    state: str
+    last_heartbeat: float
+
+
 class QueueProperties(pydantic.BaseModel):
     weight: int = 1
 
@@ -16,9 +33,16 @@ class QueueJob(pydantic.BaseModel): # may need to add extra=pydantic.Extra.allow
     job_type: str = "vcon_uuid"
     vcon_uuids: typing.List[str] = []
 
+class InProgressJob(pydantic.BaseModel):
+    jobid: int
+    queue: str
+    job: QueueJob
+    start: float
+    server: str
+
 def init(restapi):
 
-  @restapi.get("/server/info")
+  @restapi.get("/server/info", response_model = ServerInfo)
   async def get_server_info() -> typing.Dict[str, str]:
     """
     Get information about the server running at this host and port.
@@ -49,7 +73,7 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=info))
 
 
-  @restapi.get("/servers")
+  @restapi.get("/servers", response_model = typing.Dict[str, ServerState])
   async def get_server_states():
     """
     Get a JSON dictionary of running server states
@@ -127,8 +151,8 @@ def init(restapi):
     # no return should cause 204, no content
 
 
-  @restapi.get("/server/queues")
-  async def get_server_queues():
+  @restapi.get("/server/queues", response_model = typing.Dict[str, QueueProperties])
+  async def get_server_queues_names():
     """
     Get the list of queues and related configuration for
     for this server.
@@ -157,7 +181,7 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=queue_info))
 
 
-  @restapi.post("/server/queue/{name}")
+  @restapi.post("/server/queue/{name}", response_model = None)
   async def set_server_queue_properties(properties: QueueProperties, name: str) -> None:
     """
     Set the properties on the named queue on this server.
@@ -175,6 +199,8 @@ def init(restapi):
     the configured NUM_WORKERS are each busy on one job at
     a time.  These jobs that the server is busy on are 
     called in_progress jobs.
+
+    Returns: None
     """
 
     try:
@@ -216,7 +242,7 @@ def init(restapi):
     # no return should cause 204, no content
 
 
-  @restapi.get("/queues")
+  @restapi.get("/queues", response_model = typing.List[str])
   async def get_job_queue_names():
     """
     Get a list of the names of all the job queues.
@@ -247,7 +273,7 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=queue_names))
 
 
-  @restapi.get("/queue/{name}")
+  @restapi.get("/queue/{name}", response_model = typing.List[QueueJob])
   async def get_queued_jobs(name: str):
     """
     Get the jobs queued in the named queue.
@@ -277,7 +303,7 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=jobs))
 
 
-  @restapi.put("/queue/{name}")
+  @restapi.put("/queue/{name}", response_model = int)
   async def add_queue_job(name: str, job: QueueJob):
     """
     Add the given job to the named job queue.
@@ -337,8 +363,8 @@ def init(restapi):
     # no return should cause 204, no content
 
 
-  @restapi.delete("/queue/{name}")
-  async def delete_job_queue(name: str) -> typing.List[dict]:
+  @restapi.delete("/queue/{name}", response_model = typing.List[QueueJob])
+  async def delete_job_queue(name: str) -> typing.List[QueueJob]:
     """
     Delete the named job queue and return any jobs that were in the queue.
 
@@ -358,8 +384,8 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content = jobs))
 
 
-  @restapi.get("/in_progress")
-  async def get_in_progress_jobs() -> typing.Dict[int, dict]:
+  @restapi.get("/in_progress", response_model = typing.Dict[int, InProgressJob])
+  async def get_in_progress_jobs() -> typing.Dict[int, InProgressJob]:
     """
     Get the list of jobs which are dequeued and supposed to be work in progress on a pipeline server.
 
@@ -427,6 +453,8 @@ def init(restapi):
     
     This is typically used to cancel, rather than reschedule,
     jobs from  a server that has hung or died.
+
+    Returns: None
     """
 
     try:
@@ -444,3 +472,4 @@ def init(restapi):
     logger.debug( "job: {} removed from in progress hash".format(job_id))
 
     # No return, should respond with 204
+
