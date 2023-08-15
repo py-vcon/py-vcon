@@ -1,4 +1,6 @@
 import typing
+import time
+import os
 import fastapi.responses
 import pydantic
 import py_vcon_server
@@ -9,50 +11,127 @@ import vcon
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
+SERVER_TAG = "Admin: Servers"
+QUEUE_TAG = "Admin: Job Queues"
+IN_PROGRESS_TAG = "Admin: In Progress Jobs"
+
 class ServerInfo(pydantic.BaseModel):
-    py_vcon_server: str
-    vcon: str
-    start_time: float
-    pid: int
+    py_vcon_server: str = pydantic.Field(
+      title = "server version",
+      description= "Python package py_vcon_server version number",
+      default = py_vcon_server.__version__
+      )
+    vcon: str  = pydantic.Field(
+      title = "vcon version",
+      description = "Python package **py_vcon** version number",
+      default = vcon.__version__
+      )
+    start_time: float = pydantic.Field(
+      title = "server start time",
+      description = "epoch seconds time at which this server started",
+      example = time.time()
+      )
+    pid: int = pydantic.Field(
+      title = "server process id",
+      example = os.getpid()
+      )
 
 
 class ServerState(pydantic.BaseModel):
-    host: str
-    port: int
-    pid: int
-    start_time: float
-    num_workers: int
-    state: str
-    last_heartbeat: float
+    host: str = pydantic.Field(
+      title = "server host",
+      description = "the server's host as configured in the REST_URL",
+      examples = ["locahost", "192.168.0.23", "example.com"]
+      )
+    port: int = pydantic.Field(
+      title = "server port",
+      description = "the server's port as configured in the REST_URL",
+      example = 8000
+      )
+    pid: int = pydantic.Field(
+      title = "server process id",
+      example = os.getpid()
+      )
+    start_time: float = pydantic.Field(
+      title = "server start up time",
+      description = "epoch seconds time at which this server started",
+      example = time.time()
+      )
+    num_workers: int = pydantic.Field(
+      title = "number of server worker processes",
+      description = "the number of pipeline worker processes configured in NUM_WORKERS for this server",
+      example = 4
+      )
+    state: str = pydantic.Field(
+      title = "server state",
+      examples = ["starting_up", "running", "shutting_down", "unknown"],
+      example = "running"
+      )
+    last_heartbeat: float = pydantic.Field(
+      title = "heartbeat time stamp",
+      description = "epoch seconds time for the last heartbeat on this server",
+      example = time.time()
+      )
 
 
 class QueueProperties(pydantic.BaseModel):
-    weight: int = 1
+    weight: int = pydantic.Field(
+      title = "server's queue weight",
+      description = "number of times that the pipeline server should pop a job from this queue before iterating to the server's next queue.",
+      default = 1
+      )
+
 
 class QueueJob(pydantic.BaseModel): # may need to add extra=pydantic.Extra.allow
-    job_type: str = "vcon_uuid"
-    vcon_uuids: typing.List[str] = []
+    job_type: str = pydantic.Field(
+      description = "queue job type (currently only \"vcon_uuid\" allowed)",
+      default = "vcon_uuid"
+      )
+    vcon_uuids: typing.List[str] = pydantic.Field(
+      title = "vCon UUIDs",
+      description = "array of vCon UUIDs (currently must be exactly 1)",
+      example = ["0185656d-fake-UUID-84fd-5b4de1ef42b4"],
+      default = []
+      )
+
 
 class InProgressJob(pydantic.BaseModel):
-    jobid: int
-    queue: str
-    job: QueueJob
-    start: float
-    server: str
+    jobid: int = pydantic.Field(
+      title = "job id",
+      description = "unique (across all pipeline servers) integer job id for this in progress job",
+      example = 3456
+      )
+    queue: str = pydantic.Field(
+      title = "job queue name",
+      description = "the job queue name from which this in progress job was popped"
+      )
+    job: QueueJob = pydantic.Field(
+      description = "the queue job that was popped by the pipeline server and initiated this in progress job"
+      )
+    start: float = pydantic.Field(
+      title = "job start time",
+      description = "epoch seconds time at which this in progress job started",
+      example = time.time()
+      )
+    server: str = pydantic.Field(
+      title = "server key",
+      description = "the server key to the pipeline server upon which this in progress job is running."
+      + "<br> server_keys are of the format host:port:pid:start_time"
+      + "<br> to iterate server keys see entry point get /servers.",
+      example = "localhost:8000:765:1692125691.2032259"
+      )
+
 
 def init(restapi):
 
-  @restapi.get("/server/info", response_model = ServerInfo)
-  async def get_server_info() -> typing.Dict[str, str]:
+  @restapi.get("/server/info",
+    response_model = ServerInfo,
+    tags = [ SERVER_TAG ])
+  async def get_server_info() -> ServerInfo:
     """
     Get information about the server running at this host and port.
 
-    Returns: dict - attributes of this server.  Keys:
-
-        py_vcon_server: str - vcon server package version
-        vcon: str - vcon package version
-        start_time: float - epoch seconds UTC
-        pid: str - running server process id
+    Returns: ServerInfo - attributes of this server.
     """
 
     try:
@@ -73,21 +152,15 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=info))
 
 
-  @restapi.get("/servers", response_model = typing.Dict[str, ServerState])
-  async def get_server_states():
+  @restapi.get("/servers",
+    response_model = typing.Dict[str, ServerState],
+    tags = [ SERVER_TAG ])
+  async def get_server_states() -> ServerState:
     """
     Get a JSON dictionary of running server states
 
-    Returns: dict where keys are server_keys of the format host:port:pid:start_time.
-    <br> The value associated with the server key is a dict containing the following keys:
-
-        host: str - host name upon which this server has bound the REST API
-        port: int - port upon which REST API is bound
-        pid: py_vcon_server.states.SERVER_STATE.pid()
-        start_time: py_vcon_server.states.SERVER_STATE.start_time(),
-        num_workers: int - configured number of worker threads
-        state: str ("starting_up", "running", shutting_down", "unknown")
-        last_heartbeat: float - epoch time in seconds
+    Returns: dict[server_key, ServerState] where keys are server_keys 
+    <br> The value associated with the server key is a dict containing server info 
 
     The list may contain servers which did not gracefully shutdown.
     It is up to the user to remove these stale server states and
@@ -124,7 +197,8 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=server_dict))
 
 
-  @restapi.delete("/servers/{server_key}")
+  @restapi.delete("/servers/{server_key}",
+    tags = [ SERVER_TAG ])
   async def delete_server_state(server_key: str):
     """
     Delete the server state entry for the given server_key.
@@ -151,7 +225,9 @@ def init(restapi):
     # no return should cause 204, no content
 
 
-  @restapi.get("/server/queues", response_model = typing.Dict[str, QueueProperties])
+  @restapi.get("/server/queues",
+    response_model = typing.Dict[str, QueueProperties],
+    tags = [ QUEUE_TAG ])
   async def get_server_queues_names():
     """
     Get the list of queues and related configuration for
@@ -181,7 +257,9 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=queue_info))
 
 
-  @restapi.post("/server/queue/{name}", response_model = None)
+  @restapi.post("/server/queue/{name}",
+    response_model = None,
+    tags = [ QUEUE_TAG ])
   async def set_server_queue_properties(properties: QueueProperties, name: str) -> None:
     """
     Set the properties on the named queue on this server.
@@ -217,7 +295,8 @@ def init(restapi):
     # no return should cause 204, no content
 
 
-  @restapi.delete("/server/queue/{name}")
+  @restapi.delete("/server/queue/{name}",
+    tags = [ QUEUE_TAG ])
   async def delete_server_queue(name: str):
     """
     Remove the named queue from the list of queues to process on this server.
@@ -242,7 +321,9 @@ def init(restapi):
     # no return should cause 204, no content
 
 
-  @restapi.get("/queues", response_model = typing.List[str])
+  @restapi.get("/queues",
+    response_model = typing.List[str],
+    tags = [ QUEUE_TAG ])
   async def get_job_queue_names():
     """
     Get a list of the names of all the job queues.
@@ -273,7 +354,9 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=queue_names))
 
 
-  @restapi.get("/queue/{name}", response_model = typing.List[QueueJob])
+  @restapi.get("/queue/{name}",
+    response_model = typing.List[QueueJob],
+    tags = [ QUEUE_TAG ])
   async def get_queued_jobs(name: str):
     """
     Get the jobs queued in the named queue.
@@ -303,7 +386,9 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=jobs))
 
 
-  @restapi.put("/queue/{name}", response_model = int)
+  @restapi.put("/queue/{name}",
+    response_model = int,
+    tags = [ QUEUE_TAG ])
   async def add_queue_job(name: str, job: QueueJob):
     """
     Add the given job to the named job queue.
@@ -334,7 +419,8 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content = queue_length))
 
 
-  @restapi.post("/queue/{name}")
+  @restapi.post("/queue/{name}",
+    tags = [ QUEUE_TAG ])
   async def create_new_job_queue(name: str):
     """
     Create the named new job queue.
@@ -363,7 +449,9 @@ def init(restapi):
     # no return should cause 204, no content
 
 
-  @restapi.delete("/queue/{name}", response_model = typing.List[QueueJob])
+  @restapi.delete("/queue/{name}",
+    response_model = typing.List[QueueJob],
+    tags = [ QUEUE_TAG ])
   async def delete_job_queue(name: str) -> typing.List[QueueJob]:
     """
     Delete the named job queue and return any jobs that were in the queue.
@@ -384,22 +472,14 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content = jobs))
 
 
-  @restapi.get("/in_progress", response_model = typing.Dict[int, InProgressJob])
+  @restapi.get("/in_progress",
+    response_model = typing.Dict[int, InProgressJob],
+    tags = [ IN_PROGRESS_TAG ])
   async def get_in_progress_jobs() -> typing.Dict[int, InProgressJob]:
     """
     Get the list of jobs which are dequeued and supposed to be work in progress on a pipeline server.
 
     Returns: dict - dict of in progress job objects (dict) where the keys are the unique int job id.
-
-    An in progress job object dict contains the following keys:
-
-        jobid: int - unique job id for this job on the given pipeline server
-        queue: str - name of the queue from which the job was popped
-        job: dict - queue job object (keys: job_type: str and job type specific keys)
-        start: float - epoch time UTC when the job was dequeued
-        server: str - server_key: "<host>:<port>:<pid>:start_time>" for pipeline server
-          which will run the job, this is attained from the "/servers" entry 
-          point in the admin REST API or from ServerState.server_key()
     """
 
     try:
@@ -415,12 +495,21 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content = jobs))
 
 
-  @restapi.put("/in_progress/{job_id}")
+  @restapi.put("/in_progress/{job_id}",
+    tags = [ IN_PROGRESS_TAG ])
   async def requeue_in_progress_job(job_id: int) -> None:
     """
     Requeue the in process job indicated by its job id and
     put it at the front (first to be worked on) of the job
     queue from which it came.
+
+    WARNING: This does not cancel the job if it is still in
+    progress.
+    Requeing an in progress job while a pipeline server is
+    still working on it will have unpredictable results.
+    
+    This is typically used to reschedule, rather than cancel,
+    jobs from  a server that has hung or died (see entry point get /servers).
     """
 
     try:
@@ -440,7 +529,8 @@ def init(restapi):
     # No return, should respond with 204
 
 
-  @restapi.delete("/in_progress/{job_id}")
+  @restapi.delete("/in_progress/{job_id}",
+    tags = [ IN_PROGRESS_TAG ])
   async def remove_in_progress_job(job_id: int) -> None:
     """
     Remove the in progress job indicated by its job id and
@@ -452,7 +542,8 @@ def init(restapi):
     still working on it will have unpredictable results.
     
     This is typically used to cancel, rather than reschedule,
-    jobs from  a server that has hung or died.
+    jobs from  a server that has hung or died
+    (see entry point get /servers).
 
     Returns: None
     """
