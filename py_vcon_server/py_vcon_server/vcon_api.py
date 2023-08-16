@@ -4,6 +4,7 @@ import datetime
 import time
 import fastapi.responses
 import py_vcon_server.db
+import py_vcon_server.pipeline
 import py_vcon_server.logging_utils
 import vcon
 import vcon.utils
@@ -11,6 +12,7 @@ import vcon.utils
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 VCON_TAG = "vCon Storage CRUD"
+PROCESSOR_TAG = "vCon Processors"
 
 class Vcon(pydantic.BaseModel, extra=pydantic.Extra.allow):
   vcon: str = vcon.Vcon.CURRENT_VCON_VERSION
@@ -62,10 +64,14 @@ def init(restapi):
       return None
     return(fastapi.responses.JSONResponse(content=vcon))
 
-  @restapi.delete("/vcon/{vcon_uuid}", tags = [ VCON_TAG ])
+  @restapi.delete("/vcon/{vcon_uuid}",
+    status_code = 204,
+    tags = [ VCON_TAG ])
   async def delete_vcon(vcon_uuid: str):
     """
     Delete the vCon idenfied by the given UUID from VconStorage
+
+    Returns: None
     """
     try:
       logger.debug("deleting vcon UUID: {}".format(vcon_uuid))
@@ -97,7 +103,8 @@ def init(restapi):
 
     return(fastapi.responses.JSONResponse(content=transform_result))
 
-  @restapi.get("/vcon/{vcon_uuid}/jsonpath", tags = [ VCON_TAG ])
+  @restapi.get("/vcon/{vcon_uuid}/jsonpath",
+    tags = [ VCON_TAG ])
   async def get_vcon_jsonpath_query(vcon_uuid: str, path_string: str):
     """
     Apply the given JSONpath query to the vCon idntified by the given UUID.
@@ -115,4 +122,92 @@ def init(restapi):
         return None
 
     return(fastapi.responses.JSONResponse(content=query_result))
+
+
+  class VconProcessorOptions(pydantic.BaseModel):
+    """ Base class options for vCon processors """
+    input_vcon_index: int = pydantic.Field(
+      title = "PipelineIO input vCon index",
+      description = "Index to which vCon in the PipelineIO is to be used for input",
+      default = 0
+      )
+
+  class AOptions(VconProcessorOptions):
+    """ input options for the A vCon processor """
+    a: int = pydantic.Field(
+      title = "A's a",
+      description = "A bunch of A stuff for a",
+      example = 7
+      )
+    b: int = pydantic.Field(
+      title = "A's b",
+      description = "A bunch of A stuff for b",
+      example = 1111 
+      )
+
+  class B(VconProcessorOptions):
+    MM: str = pydantic.Field(
+      title = "B's a",
+      description = "A bunch of B stuff for MM",
+      example = "ddddddd"
+      )
+    NN: str = pydantic.Field(
+      title = "B's NN",
+      description = "A bunch of B stuff for NN",
+      example = "fffffff ff"
+      )
+    OO: str = pydantic.Field(
+      title = "B's OO",
+      description = "A bunch of N stuff for OO",
+      example = "aa dd gg"
+      )
+
+  class C(VconProcessorOptions):
+    a: int = pydantic.Field(
+      title = "C's a",
+      description = "A bunch of C stuff for a",
+      example = 9
+      )
+    b: int = pydantic.Field(
+      title = "C's b",
+      description = "A bunch of C stuff for b",
+      example = 2222 
+      )
+
+  import enum
+  processor_types = (AOptions, B, C)
+  processor_names = {"A": "A", "B": "B", "C": "C"}
+  processor_name_dict = {"A": AOptions, "B": B, "C": C}
+  processor_type_dict = {AOptions: "A", B: "B", C: "C"}
+  processor_name_enum = enum.Enum("DynamicEnum", processor_names)
+  processor_doc = {
+    "A": "A does special stuff with a and b",
+    "B": "B does special suff with MM, NN and OO",
+    "C": "C does special stuff with a and b"
+    }
+
+  for processor_name in processor_names:
+    @restapi.post("/vcon/{{vcon_uuid}}/{}".format(processor_name),
+      summary = "Run the {} Processor on vCon".format(processor_name),
+      tags = [ PROCESSOR_TAG ])
+    async def run_vcon_processor(
+      options: processor_name_dict[processor_name],
+      vcon_uuid: str,
+      request: fastapi.Request,
+      save_result: bool = True
+      ) -> str:
+      processor_name = processor_type_dict[type(options)]
+      path = request.url.path
+      logger.debug("type: {} path: {} ({}) prop: {}".format(processor_name, path, type(options), options))
+
+      pipeline_input = py_vcon_server.pipeline.PipelineIO()
+      pipeline_input.add_vcon(vcon_uuid)
+
+      # TODO remove this, its only for testing
+      # get vcon to test if the UUID is a valid one
+      vcon_object = await pipeline_input.get_vcon(options.input_vcon_index)
+      #assert(isinstance(vcon_object, vcon.Vcon))
+      logger.debug("got type: {} vcon: {}".format(type(vcon_object), vcon_object))
+
+      return(fastapi.responses.JSONResponse(content = vcon_object))
 
