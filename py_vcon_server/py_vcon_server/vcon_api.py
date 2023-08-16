@@ -205,7 +205,8 @@ def init(restapi):
 
       # TODO remove this, its only for testing
       # get vcon to test if the UUID is a valid one
-      vcon_object = await pipeline_input.get_vcon(options.input_vcon_index)
+      vcon_object = await pipeline_input.get_vcon(options.input_vcon_index,
+        py_vcon_server.pipeline.VconTypes.OBJECT)
       #assert(isinstance(vcon_object, vcon.Vcon))
       logger.debug("got type: {} vcon: {}".format(type(vcon_object), vcon_object))
 

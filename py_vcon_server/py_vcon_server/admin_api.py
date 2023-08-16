@@ -6,6 +6,7 @@ import pydantic
 import py_vcon_server
 import py_vcon_server.logging_utils
 import py_vcon_server.settings
+import py_vcon_server.restful_api
 from . import __version__
 import vcon
 
@@ -17,18 +18,6 @@ def log_exception(exception: Exception):
 SERVER_TAG = "Admin: Servers"
 QUEUE_TAG = "Admin: Job Queues"
 IN_PROGRESS_TAG = "Admin: In Progress Jobs"
-
-class HttpErrorResponseBody(pydantic.BaseModel):
-  detail: str
-
-ERROR_RESPONSES = {
-  404: {
-    "model" : HttpErrorResponseBody
-    },
-  500: {
-    "model" : HttpErrorResponseBody
-    }
-}
 
 class ServerInfo(pydantic.BaseModel):
     py_vcon_server: str = pydantic.Field(
@@ -137,17 +126,6 @@ class InProgressJob(pydantic.BaseModel):
       )
 
 
-class NotFoundResponse(fastapi.responses.JSONResponse):
-  def __init__(self, detail: str):
-    super().__init__(status_code = 404,
-      content = {"detail": detail})
-
-class InternalErrorResponse(fastapi.responses.JSONResponse):
-  def __init__(self, exception: Exception):
-    super().__init__(status_code = 500,
-      content = {"detail": str(exception)})
-
-
 def init(restapi):
 
   @restapi.get("/server/info",
@@ -171,7 +149,7 @@ def init(restapi):
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "Returning server info")
 
@@ -206,7 +184,7 @@ def init(restapi):
     
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     return(fastapi.responses.JSONResponse(content=queue_info))
 
@@ -244,7 +222,7 @@ def init(restapi):
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     # no return should cause 204, no content
 
@@ -267,13 +245,13 @@ def init(restapi):
 
       if(py_vcon_server.settings.WORK_QUEUES.get(name, None) is None):
         logger.info("Error: queue: {} not found".format(name))
-        return(NotFoundResponse("queue: {} not found".format(name)))
+        return(py_vcon_server.restful_api.NotFoundResponse("queue: {} not found".format(name)))
 
       del py_vcon_server.settings.WORK_QUEUES[name]
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     # no return should cause 204, no content
 
@@ -314,7 +292,7 @@ def init(restapi):
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "Returning {} servers".format(len(server_dict)))
     logger.debug( "servers type: {}".format(type(server_dict)))
@@ -347,7 +325,7 @@ def init(restapi):
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug("Deleted server state: {}".format(server_key))
 
@@ -380,7 +358,7 @@ def init(restapi):
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "Returning queues: {} ".format(queue_names))
 
@@ -389,7 +367,7 @@ def init(restapi):
 
   @restapi.get("/queue/{name}",
     response_model = typing.List[QueueJob],
-    responses = ERROR_RESPONSES,
+    responses = py_vcon_server.restful_api.ERROR_RESPONSES,
     tags = [ QUEUE_TAG ])
   async def get_queued_jobs(name: str):
     """
@@ -413,11 +391,11 @@ def init(restapi):
 
     except py_vcon_server.queue.QueueDoesNotExist as e:
       log_exception(e)
-      return(NotFoundResponse("queue: {} not found".format(name)))
+      return(py_vcon_server.restful_api.NotFoundResponse("queue: {} not found".format(name)))
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "Returning queue: {} jobs: {}".format(name, jobs))
 
@@ -449,7 +427,7 @@ def init(restapi):
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "job: {} added to queue: {}".format(job, name))
 
@@ -483,11 +461,11 @@ def init(restapi):
 
     except py_vcon_server.queue.QueueDoesNotExist as e:
       log_exception(e)
-      return(NotFoundResponse("queue: {} not found".format(name)))
+      return(py_vcon_server.restful_api.NotFoundResponse("queue: {} not found".format(name)))
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "Created new queue: {}".format(name))
 
@@ -496,7 +474,7 @@ def init(restapi):
 
   @restapi.delete("/queue/{name}",
     response_model = typing.List[QueueJob],
-    responses = ERROR_RESPONSES,
+    responses = py_vcon_server.restful_api.ERROR_RESPONSES,
     tags = [ QUEUE_TAG ])
   async def delete_job_queue(name: str) -> typing.List[QueueJob]:
     """
@@ -511,11 +489,11 @@ def init(restapi):
 
     except py_vcon_server.queue.QueueDoesNotExist as e:
       log_exception(e)
-      return(NotFoundResponse("queue: {} not found".format(name)))
+      return(py_vcon_server.restful_api.NotFoundResponse("queue: {} not found".format(name)))
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "Deleted queue: {}, {} jobs removed from queue.".format(name, len(jobs)))
 
@@ -538,7 +516,7 @@ def init(restapi):
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "Got in progress jobs: {}.".format(jobs))
 
@@ -575,19 +553,19 @@ def init(restapi):
 
     except py_vcon_server.queue.JobNotFound as e:
       log_exception(e)
-      return(NotFoundResponse("job: {} not found".format(job_id)))
+      return(py_vcon_server.restful_api.NotFoundResponse("job: {} not found".format(job_id)))
 
     except py_vcon_server.queue.QueueDoesNotExist as e:
       log_exception(e)
-      return(NotFoundResponse("queue: not found for in progress job: {}".format(job_id)))
+      return(py_vcon_server.restful_api.NotFoundResponse("queue: not found for in progress job: {}".format(job_id)))
 
     except py_vcon_server.queue.JobNotFound as e:
       log_exception(e)
-      return(NotFoundResponse("job: {} not found".format(job_id)))
+      return(py_vcon_server.restful_api.NotFoundResponse("job: {} not found".format(job_id)))
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "job: {} added to front of queue".format(job_id))
 
@@ -628,7 +606,7 @@ def init(restapi):
 
     except Exception as e:
       log_exception(e)
-      return(InternalErrorResponse(e))
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug( "job: {} removed from in progress hash".format(job_id))
 
