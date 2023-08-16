@@ -25,10 +25,11 @@ async def test_queue_lifecycle(job_queue):
   try:
     # This is to clean up if queue reminents exist from prior test run
     await job_queue.delete_queue(q1)
+  except py_vcon_server.queue.QueueDoesNotExist as e:
+    # ignore if delete failed due to queue not existing
+    pass
   except Exception as e:
-    # ignore if delete failed
-    if("queue does not exist" not in str(e)):
-      raise e
+    raise e
 
 
   queues = await job_queue.get_queue_names()
@@ -57,9 +58,11 @@ async def test_queue_lifecycle(job_queue):
   try:
     num_jobs = await job_queue.push_vcon_uuid_queue_job(q1, uuids)
     raise Exception("Q1 no longer exist, so expect exception here")
+  except py_vcon_server.queue.QueueDoesNotExist as e:
+    # expected
+    pass
   except Exception as e:
-    if("queue does not exist" not in str(e)):
-      raise e
+    raise e
 
   num_queues = await job_queue.create_new_queue(q1)
   assert(num_queues >= 1)
@@ -162,9 +165,11 @@ async def test_queue_lifecycle(job_queue):
   try:
     await job_queue.requeue_in_progress_job(bad_job_id)
     raise Exception("Expect exception as we gave an invalide job id")
+  except py_vcon_server.queue.JobDoesNotExist as e:
+    # expected
+    pass
   except Exception as e:
-    if("job does not exist" not in str(e)):
-      raise e
+    raise e
 
   queue_names = await job_queue.get_queue_names()
   print("queues: {}".format(queue_names))
@@ -184,16 +189,20 @@ async def test_queue_lifecycle(job_queue):
   try:
     await job_queue.remove_in_progress_job(in_progress_job["jobid"])
     raise Exception("should have an exception here as job was pushed back into the queue")
+  except py_vcon_server.queue.JobDoesNotExist as e:
+    # expected
+    pass
   except Exception as e:
-    if("job does not exist" not in str(e)):
-      raise e
+    raise e
 
   try:
     await job_queue.requeue_in_progress_job(in_progress_job["jobid"])
     raise Exception("should have an exception here as job was pushed back into the queue")
+  except py_vcon_server.queue.JobDoesNotExist as e:
+    # expected
+    pass
   except Exception as e:
-    if("job does not exist" not in str(e)):
-      raise e
+    raise e
 
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
   second_in_progress_job = in_progress_job
@@ -214,9 +223,11 @@ async def test_queue_lifecycle(job_queue):
   try:
     await job_queue.requeue_in_progress_job(in_progress_job["jobid"])
     raise Exception("should have an exception here as queue was deleted")
+  except py_vcon_server.queue.QueueDoesNotExist as e:
+    # expected
+    pass
   except Exception as e:
-    if("queue: {} does not exist".format(q1) not in str(e)):
-      raise e
+    raise e
 
   # complete in progress job
   await job_queue.remove_in_progress_job(in_progress_job["jobid"])

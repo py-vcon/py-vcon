@@ -11,9 +11,24 @@ import vcon
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
+def log_exception(exception: Exception):
+  logger.info("Error: Exception: {} {}".format(exception.__class__.__name__, exception))
+
 SERVER_TAG = "Admin: Servers"
 QUEUE_TAG = "Admin: Job Queues"
 IN_PROGRESS_TAG = "Admin: In Progress Jobs"
+
+class HttpErrorResponseBody(pydantic.BaseModel):
+  detail: str
+
+ERROR_RESPONSES = {
+  404: {
+    "model" : HttpErrorResponseBody
+    },
+  500: {
+    "model" : HttpErrorResponseBody
+    }
+}
 
 class ServerInfo(pydantic.BaseModel):
     py_vcon_server: str = pydantic.Field(
@@ -87,7 +102,7 @@ class QueueJob(pydantic.BaseModel): # may need to add extra=pydantic.Extra.allow
       description = "queue job type (currently only \"vcon_uuid\" allowed)",
       default = "vcon_uuid"
       )
-    vcon_uuids: typing.List[str] = pydantic.Field(
+    vcon_uuid: typing.List[str] = pydantic.Field(
       title = "vCon UUIDs",
       description = "array of vCon UUIDs (currently must be exactly 1)",
       example = ["0185656d-fake-UUID-84fd-5b4de1ef42b4"],
@@ -122,6 +137,17 @@ class InProgressJob(pydantic.BaseModel):
       )
 
 
+class NotFoundResponse(fastapi.responses.JSONResponse):
+  def __init__(self, detail: str):
+    super().__init__(status_code = 404,
+      content = {"detail": detail})
+
+class InternalErrorResponse(fastapi.responses.JSONResponse):
+  def __init__(self, exception: Exception):
+    super().__init__(status_code = 500,
+      content = {"detail": str(exception)})
+
+
 def init(restapi):
 
   @restapi.get("/server/info",
@@ -144,12 +170,108 @@ def init(restapi):
         }
 
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "Returning server info")
 
     return(fastapi.responses.JSONResponse(content=info))
+
+
+  @restapi.get("/server/queues",
+    response_model = typing.Dict[str, QueueProperties],
+    tags = [ SERVER_TAG ])
+  async def get_server_queues_names():
+    """
+    Get the list of queues and related configuration for
+    for this server.
+
+    This is the list names of queues that this server is
+    actively popping jobs from and running the pipeline
+    processors assocated with the queue name.
+
+    Returns: dict[str, dict] - dict with keys being queue names and values are a dict of queue properties
+
+    keys for queue properties:
+
+        weight: int - number of times to pull a job out of the
+            named queue, before iterating to the next name
+            queue configured for this server.
+    """
+
+    try:
+      logger.debug("getting server queue info")
+      queue_info = py_vcon_server.settings.WORK_QUEUES
+    
+    except Exception as e:
+      log_exception(e)
+      return(InternalErrorResponse(e))
+
+    return(fastapi.responses.JSONResponse(content=queue_info))
+
+
+  @restapi.post("/server/queue/{name}",
+    response_model = None,
+    tags = [ SERVER_TAG ])
+  async def set_server_queue_properties(properties: QueueProperties, name: str) -> None:
+    """
+    Set the properties on the named queue on this server.
+
+    This adds or updated the properties for the queue and
+    identifies the queue to be processed by this server
+    using the pipeline processors associated with this
+    queue name.
+
+    Currently the only queue property is the "weight".
+    weight must be an integer value and indicates how many
+    jobs should be popped from the named queue before
+    iterating to the next queue configured for this server.
+    Jobs are popped one at a time by the server such that
+    the configured NUM_WORKERS are each busy on one job at
+    a time.  These jobs that the server is busy on are 
+    called in_progress jobs.
+
+    Returns: None
+    """
+
+    try:
+      logger.debug("setting queue: {} property: {}".format(name, properties))
+      if(not isinstance(properties, QueueProperties)):
+        raise Exception("Invalid type: {} for queue: {} properties: {}".format(type(properties), name, properties))
+      py_vcon_server.settings.WORK_QUEUES[name] = dict(properties)
+      logger.debug("WORK_QUEUES: {}".format(py_vcon_server.settings.WORK_QUEUES))
+
+    except Exception as e:
+      log_exception(e)
+      return(InternalErrorResponse(e))
+
+    # no return should cause 204, no content
+
+
+  @restapi.delete("/server/queue/{name}",
+    tags = [ SERVER_TAG ])
+  async def delete_server_queue(name: str):
+    """
+    Remove the named queue from the list of queues to process on this server.
+
+    This indicates, to this server, to ignore the queue deleted from the server's queue list.
+    This does not remove or modify the queue itself or the jobs contained in the queue.
+    """
+
+    try:
+      logger.debug("removing queue: {} from WORK_QUEUES".format(name))
+
+      if(py_vcon_server.settings.WORK_QUEUES.get(name, None) is None):
+        logger.info("Error: queue: {} not found".format(name))
+        return(NotFoundResponse("queue: {} not found".format(name)))
+
+      del py_vcon_server.settings.WORK_QUEUES[name]
+
+    except Exception as e:
+      log_exception(e)
+      return(InternalErrorResponse(e))
+
+    # no return should cause 204, no content
 
 
   @restapi.get("/servers",
@@ -187,8 +309,8 @@ def init(restapi):
       server_dict = await py_vcon_server.states.SERVER_STATE.get_server_states()
 
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "Returning {} servers".format(len(server_dict)))
     logger.debug( "servers type: {}".format(type(server_dict)))
@@ -217,106 +339,10 @@ def init(restapi):
       server_dict = await py_vcon_server.states.SERVER_STATE.delete_server_state(server_key)
 
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return 500
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug("Deleted server state: {}".format(server_key))
-
-    # no return should cause 204, no content
-
-
-  @restapi.get("/server/queues",
-    response_model = typing.Dict[str, QueueProperties],
-    tags = [ QUEUE_TAG ])
-  async def get_server_queues_names():
-    """
-    Get the list of queues and related configuration for
-    for this server.
-
-    This is the list names of queues that this server is
-    actively popping jobs from and running the pipeline
-    processors assocated with the queue name.
-
-    Returns: dict[str, dict] - dict with keys being queue names and values are a dict of queue properties
-
-    keys for queue properties:
-
-        weight: int - number of times to pull a job out of the
-            named queue, before iterating to the next name
-            queue configured for this server.
-    """
-
-    try:
-      logger.debug("getting server queue info")
-      queue_info = py_vcon_server.settings.WORK_QUEUES
-    
-    except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
-
-    return(fastapi.responses.JSONResponse(content=queue_info))
-
-
-  @restapi.post("/server/queue/{name}",
-    response_model = None,
-    tags = [ QUEUE_TAG ])
-  async def set_server_queue_properties(properties: QueueProperties, name: str) -> None:
-    """
-    Set the properties on the named queue on this server.
-
-    This adds or updated the properties for the queue and
-    identifies the queue to be processed by this server
-    using the pipeline processors associated with this
-    queue name.
-
-    Currently the only queue property is the "weight".
-    weight must be an integer value and indicates how many
-    jobs should be popped from the named queue before
-    iterating to the next queue configured for this server.
-    Jobs are popped one at a time by the server such that
-    the configured NUM_WORKERS are each busy on one job at
-    a time.  These jobs that the server is busy on are 
-    called in_progress jobs.
-
-    Returns: None
-    """
-
-    try:
-      logger.debug("setting queue: {} property: {}".format(name, properties))
-      if(not isinstance(properties, QueueProperties)):
-        raise Exception("Invalid type: {} for queue: {} properties: {}".format(type(properties), name, properties))
-      py_vcon_server.settings.WORK_QUEUES[name] = dict(properties)
-      logger.debug("WORK_QUEUES: {}".format(py_vcon_server.settings.WORK_QUEUES))
-
-    except Exception as e:
-        logger.info("Error: {}".format(e))
-        return None
-
-    # no return should cause 204, no content
-
-
-  @restapi.delete("/server/queue/{name}",
-    tags = [ QUEUE_TAG ])
-  async def delete_server_queue(name: str):
-    """
-    Remove the named queue from the list of queues to process on this server.
-
-    This indicates, to this server, to ignore the queue deleted from the server's queue list.
-    This does not remove or modify the queue itself or the jobs contained in the queue.
-    """
-
-    try:
-      logger.debug("removing queue: {} from WORK_QUEUES".format(name))
-
-      if(py_vcon_server.settings.WORK_QUEUES.get(name, None) is None):
-        raise(fastapi.HTTPException(status_code=404,
-          detail="queue: {} not found".format(name)))
-
-      del py_vcon_server.settings.WORK_QUEUES[name]
-
-    except Exception as e:
-        logger.info("Error: {}".format(e))
-        return None
 
     # no return should cause 204, no content
 
@@ -346,8 +372,8 @@ def init(restapi):
       queue_names = list(await py_vcon_server.queue.JOB_QUEUE.get_queue_names())
 
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "Returning queues: {} ".format(queue_names))
 
@@ -356,6 +382,7 @@ def init(restapi):
 
   @restapi.get("/queue/{name}",
     response_model = typing.List[QueueJob],
+    responses = ERROR_RESPONSES,
     tags = [ QUEUE_TAG ])
   async def get_queued_jobs(name: str):
     """
@@ -377,9 +404,13 @@ def init(restapi):
       logger.debug("getting jobs in queue: {}".format(name))
       jobs = await py_vcon_server.queue.JOB_QUEUE.get_queue_jobs(name)
 
+    except py_vcon_server.queue.QueueDoesNotExist as e:
+      log_exception(e)
+      return(NotFoundResponse("queue: {} not found".format(name)))
+
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "Returning queue: {} jobs: {}".format(name, jobs))
 
@@ -395,7 +426,7 @@ def init(restapi):
 
     Currently only one job_type is supported: "vcon_uuid"
     which has an array of vCon UUIDs contained in
-    vcon_uuids.  vcon_uuids is currently liimited to
+    vcon_uuid.  vcon_uuid is currently limited to
     exactly one vCon UUID.
 
     Returns: int - the positiion of the added job in the queue.
@@ -404,14 +435,14 @@ def init(restapi):
     try:
       logger.debug("adding job: {} to queue: {}".format(job, name))
       # TODO should error if queue does not exist???
-      if(job.job_type is not "vcon_uuid"):
+      if(job.job_type != "vcon_uuid"):
         logger.info("Error: unsupport job type: {}".format(job.job_type))
 
-      queue_length = await py_vcon_server.queue.JOB_QUEUE.push_vcon_uuid_queue_job(name, job.vcon_uuids)
+      queue_length = await py_vcon_server.queue.JOB_QUEUE.push_vcon_uuid_queue_job(name, job.vcon_uuid)
 
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "job: {} added to queue: {}".format(job, name))
 
@@ -440,9 +471,13 @@ def init(restapi):
       # TODO should error if queue exists
       await py_vcon_server.queue.JOB_QUEUE.create_new_queue(name)
 
+    except py_vcon_server.queue.QueueDoesNotExist as e:
+      log_exception(e)
+      return(NotFoundResponse("queue: {} not found".format(name)))
+
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "Created new queue: {}".format(name))
 
@@ -451,6 +486,7 @@ def init(restapi):
 
   @restapi.delete("/queue/{name}",
     response_model = typing.List[QueueJob],
+    responses = ERROR_RESPONSES,
     tags = [ QUEUE_TAG ])
   async def delete_job_queue(name: str) -> typing.List[QueueJob]:
     """
@@ -461,11 +497,15 @@ def init(restapi):
 
     try:
       logger.debug("Delete job queue: {}".format(name))
-      jobs = await py_vcon_server.queue.JOB_QUEUE.delete_job_queue(name)
+      jobs = await py_vcon_server.queue.JOB_QUEUE.delete_queue(name)
+
+    except py_vcon_server.queue.QueueDoesNotExist as e:
+      log_exception(e)
+      return(NotFoundResponse("queue: {} not found".format(name)))
 
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "Deleted queue: {}, {} jobs removed from queue.".format(name, len(jobs)))
 
@@ -487,8 +527,8 @@ def init(restapi):
       jobs = await py_vcon_server.queue.JOB_QUEUE.get_in_progress_jobs()
 
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "Got in progress jobs: {}.".format(jobs))
 
@@ -520,9 +560,21 @@ def init(restapi):
 
       await py_vcon_server.queue.JOB_QUEUE.requeue_in_progress_job(job_id)
 
+    except py_vcon_server.queue.JobNotFound as e:
+      log_exception(e)
+      return(NotFoundResponse("job: {} not found".format(job_id)))
+
+    except py_vcon_server.queue.QueueDoesNotExist as e:
+      log_exception(e)
+      return(NotFoundResponse("queue: not found for in progress job: {}".format(job_id)))
+
+    except py_vcon_server.queue.JobNotFound as e:
+      log_exception(e)
+      return(NotFoundResponse("job: {} not found".format(job_id)))
+
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "job: {} added to front of queue".format(job_id))
 
@@ -556,9 +608,13 @@ def init(restapi):
 
       await py_vcon_server.queue.JOB_QUEUE.requeue_in_progress_job(job_id)
 
+    except py_vcon_server.queue.JobNotFound as e:
+      log_exception(e)
+      return(NotFoundResponse("job: {} not found".format(job_id)))
+
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      log_exception(e)
+      return(InternalErrorResponse(e))
 
     logger.debug( "job: {} removed from in progress hash".format(job_id))
 

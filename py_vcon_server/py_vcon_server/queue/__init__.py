@@ -21,8 +21,18 @@ QUEUE_NAMES_KEY = "queues"
 IN_PROGRESS_JOBS_KEY = "inprogress"
 QUEUE_NAME_PREFIX = "queue:"
 
+JOB_QUEUE = None
+
 class EmptyJobQueue(Exception):
   """ Raised when trying to pop a job from an empty queue """
+
+
+class QueueDoesNotExist(Exception):
+  """ Raised when attempting to operate on a queue which does not exist. """
+
+class JobDoesNotExist(Exception):
+  """ Raised when attempting to operate on an in progress job which does not exist. """
+
 
 class JobQueue():
   def __init__(self, redis_url: str):
@@ -212,7 +222,7 @@ class JobQueue():
     args = [ name ]
     jobs = queue_count = await self._do_lua_get_queue_jobs(keys = keys, args = args)
     if(jobs == -1):
-      raise Exception("get_queue_jobs({}): queue does not exist".format(name))
+      raise QueueDoesNotExist("get_queue_jobs({}): queue does not exist".format(name))
 
     job_dicts = []
     for job in jobs:
@@ -249,7 +259,7 @@ class JobQueue():
     args = [ name ]
     jobs = await self._do_lua_delete_queue(keys = keys, args = args)
     if(jobs == -1):
-      raise Exception("delete_queue({}): queue does not exist".format(name))
+      raise QueueDoesNotExist("delete_queue({}): queue does not exist".format(name))
 
     job_dicts = []
     for job in jobs:
@@ -282,7 +292,7 @@ class JobQueue():
     args = [ name, server_key ]
     job = await self._do_lua_pop_queued_job(keys = keys, args = args)
     if(job == -1):
-      raise Exception("pop_queue_job({}) queue does not exist".format(name))
+      raise QueueDoesNotExist("pop_queue_job({}) queue does not exist".format(name))
 
     if(job == 0):
       raise EmptyJobQueue("No jobs in queue: {}".format(name))
@@ -337,10 +347,10 @@ class JobQueue():
     args = [ job_id, QUEUE_NAME_PREFIX ]
     result = await self._do_lua_requeue_in_progress_job(keys = keys, args = args)
     if(result == -1):
-      raise Exception("requeue_in_progress_job({}): job does not exist".format(job_id))
+      raise JobDoesNotExist("requeue_in_progress_job({}): job does not exist".format(job_id))
 
     if(isinstance(result, list) and result[0] == -2):
-      raise Exception("requeue_in_progress_job({}): queue: {} does not exist".format(job_id, result[1]))
+      raise QueueDoesNotExist("requeue_in_progress_job({}): queue: {} does not exist".format(job_id, result[1]))
 
     if(result != 0):
       raise Exception("requeue_in_progress_job({}): unknown error: {}".format(job_id, result))
@@ -359,7 +369,7 @@ class JobQueue():
     job_json = await self._do_lua_remove_in_progress_job(keys = keys, args = args)
 
     if(job_json == -1):
-      raise Exception("requeue_in_progress_job({}): job does not exist".format(job_id))
+      raise JobDoesNotExist("requeue_in_progress_job({}): job does not exist".format(job_id))
 
     if(isinstance(job_json, int) and job_json != 0):
       raise Exception("requeue_in_progress_job({}): unknown error: {}".format(job_id, job_json))
@@ -409,7 +419,7 @@ class JobQueue():
     args = [ name, json.dumps(job_json)]
     num_jobs = await self._do_lua_push_vcon_uuid_queue_job(keys = keys, args = args)
     if(num_jobs == -1):
-      raise Exception("push_vcon_uuid_queue_job({}): queue does not exist".format(name))
+      raise QueueDoesNotExist("push_vcon_uuid_queue_job({}): queue does not exist".format(name))
 
     return(num_jobs)
 
