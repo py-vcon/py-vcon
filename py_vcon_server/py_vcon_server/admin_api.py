@@ -15,9 +15,6 @@ logger = py_vcon_server.logging_utils.init_logger(__name__)
 def log_exception(exception: Exception):
   logger.info("Error: Exception: {} {}".format(exception.__class__.__name__, exception))
 
-SERVER_TAG = "Admin: Servers"
-QUEUE_TAG = "Admin: Job Queues"
-IN_PROGRESS_TAG = "Admin: In Progress Jobs"
 
 class ServerInfo(pydantic.BaseModel):
     py_vcon_server: str = pydantic.Field(
@@ -130,7 +127,7 @@ def init(restapi):
 
   @restapi.get("/server/info",
     response_model = ServerInfo,
-    tags = [ SERVER_TAG ])
+    tags = [ py_vcon_server.restful_api.SERVER_TAG ])
   async def get_server_info() -> ServerInfo:
     """
     Get information about the server running at this host and port.
@@ -158,7 +155,7 @@ def init(restapi):
 
   @restapi.get("/server/queues",
     response_model = typing.Dict[str, QueueProperties],
-    tags = [ SERVER_TAG ])
+    tags = [ py_vcon_server.restful_api.SERVER_TAG ])
   async def get_server_queues_names():
     """
     Get the list of queues and related configuration for
@@ -192,7 +189,7 @@ def init(restapi):
   @restapi.post("/server/queue/{name}",
     status_code = 204,
     response_model = None,
-    tags = [ SERVER_TAG ])
+    tags = [ py_vcon_server.restful_api.SERVER_TAG ])
   async def set_server_queue_properties(properties: QueueProperties, name: str) -> None:
     """
     Set the properties on the named queue on this server.
@@ -229,7 +226,7 @@ def init(restapi):
 
   @restapi.delete("/server/queue/{name}",
     status_code = 204,
-    tags = [ SERVER_TAG ])
+    tags = [ py_vcon_server.restful_api.SERVER_TAG ])
   async def delete_server_queue(name: str):
     """
     Remove the named queue from the list of queues to process on this server.
@@ -258,7 +255,7 @@ def init(restapi):
 
   @restapi.get("/servers",
     response_model = typing.Dict[str, ServerState],
-    tags = [ SERVER_TAG ])
+    tags = [ py_vcon_server.restful_api.SERVER_TAG ])
   async def get_server_states() -> ServerState:
     """
     Get a JSON dictionary of running server states
@@ -303,7 +300,7 @@ def init(restapi):
 
   @restapi.delete("/servers/{server_key}",
     status_code = 204,
-    tags = [ SERVER_TAG ])
+    tags = [ py_vcon_server.restful_api.SERVER_TAG ])
   async def delete_server_state(server_key: str):
     """
     Delete the server state entry for the given server_key.
@@ -334,7 +331,7 @@ def init(restapi):
 
   @restapi.get("/queues",
     response_model = typing.List[str],
-    tags = [ QUEUE_TAG ])
+    tags = [ py_vcon_server.restful_api.QUEUE_TAG ])
   async def get_job_queue_names():
     """
     Get a list of the names of all the job queues.
@@ -368,7 +365,7 @@ def init(restapi):
   @restapi.get("/queue/{name}",
     response_model = typing.List[QueueJob],
     responses = py_vcon_server.restful_api.ERROR_RESPONSES,
-    tags = [ QUEUE_TAG ])
+    tags = [ py_vcon_server.restful_api.QUEUE_TAG ])
   async def get_queued_jobs(name: str):
     """
     Get the jobs queued in the named queue.
@@ -404,7 +401,7 @@ def init(restapi):
 
   @restapi.put("/queue/{name}",
     response_model = int,
-    tags = [ QUEUE_TAG ])
+    tags = [ py_vcon_server.restful_api.QUEUE_TAG ])
   async def add_queue_job(name: str, job: QueueJob):
     """
     Add the given job to the named job queue.
@@ -437,7 +434,7 @@ def init(restapi):
 
   @restapi.post("/queue/{name}",
     status_code = 204,
-    tags = [ QUEUE_TAG ])
+    tags = [ py_vcon_server.restful_api.QUEUE_TAG ])
   async def create_new_job_queue(name: str):
     """
     Create the named new job queue.
@@ -475,7 +472,7 @@ def init(restapi):
   @restapi.delete("/queue/{name}",
     response_model = typing.List[QueueJob],
     responses = py_vcon_server.restful_api.ERROR_RESPONSES,
-    tags = [ QUEUE_TAG ])
+    tags = [ py_vcon_server.restful_api.QUEUE_TAG ])
   async def delete_job_queue(name: str) -> typing.List[QueueJob]:
     """
     Delete the named job queue and return any jobs that were in the queue.
@@ -502,7 +499,7 @@ def init(restapi):
 
   @restapi.get("/in_progress",
     response_model = typing.Dict[int, InProgressJob],
-    tags = [ IN_PROGRESS_TAG ])
+    tags = [ py_vcon_server.restful_api.IN_PROGRESS_TAG ])
   async def get_in_progress_jobs() -> typing.Dict[int, InProgressJob]:
     """
     Get the list of jobs which are dequeued and supposed to be work in progress on a pipeline server.
@@ -525,7 +522,7 @@ def init(restapi):
 
   @restapi.put("/in_progress/{job_id}",
     status_code = 204,
-    tags = [ IN_PROGRESS_TAG ])
+    tags = [ py_vcon_server.restful_api.IN_PROGRESS_TAG ])
   async def requeue_in_progress_job(job_id: int) -> None:
     """
     Requeue the in process job indicated by its job id and
@@ -574,7 +571,7 @@ def init(restapi):
 
   @restapi.delete("/in_progress/{job_id}",
     status_code = 204,
-    tags = [ IN_PROGRESS_TAG ])
+    tags = [ py_vcon_server.restful_api.IN_PROGRESS_TAG ])
   async def remove_in_progress_job(job_id: int) -> None:
     """
     Remove the in progress job indicated by its job id and
