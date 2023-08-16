@@ -211,6 +211,7 @@ def init(restapi):
 
 
   @restapi.post("/server/queue/{name}",
+    status_code = 204,
     response_model = None,
     tags = [ SERVER_TAG ])
   async def set_server_queue_properties(properties: QueueProperties, name: str) -> None:
@@ -249,6 +250,7 @@ def init(restapi):
 
 
   @restapi.delete("/server/queue/{name}",
+    status_code = 204,
     tags = [ SERVER_TAG ])
   async def delete_server_queue(name: str):
     """
@@ -256,6 +258,8 @@ def init(restapi):
 
     This indicates, to this server, to ignore the queue deleted from the server's queue list.
     This does not remove or modify the queue itself or the jobs contained in the queue.
+
+    Returns: None
     """
 
     try:
@@ -320,6 +324,7 @@ def init(restapi):
 
 
   @restapi.delete("/servers/{server_key}",
+    status_code = 204,
     tags = [ SERVER_TAG ])
   async def delete_server_state(server_key: str):
     """
@@ -332,6 +337,8 @@ def init(restapi):
 
     The server key is composed as: "host:port:pid:start_time".
     <br>  host and port are from the REST_URL setting.
+
+    Returns: None
     """
 
     try:
@@ -451,6 +458,7 @@ def init(restapi):
 
 
   @restapi.post("/queue/{name}",
+    status_code = 204,
     tags = [ QUEUE_TAG ])
   async def create_new_job_queue(name: str):
     """
@@ -464,6 +472,8 @@ def init(restapi):
     for the server to monitor (entry point /server/queues).
     Without defining a pipeline and one or more servers to
     perform them, the jobs will just sit in the queue.
+
+    Returns: None
     """
 
     try:
@@ -536,6 +546,7 @@ def init(restapi):
 
 
   @restapi.put("/in_progress/{job_id}",
+    status_code = 204,
     tags = [ IN_PROGRESS_TAG ])
   async def requeue_in_progress_job(job_id: int) -> None:
     """
@@ -550,6 +561,8 @@ def init(restapi):
     
     This is typically used to reschedule, rather than cancel,
     jobs from  a server that has hung or died (see entry point get /servers).
+
+    Returns: None
     """
 
     try:
@@ -582,6 +595,7 @@ def init(restapi):
 
 
   @restapi.delete("/in_progress/{job_id}",
+    status_code = 204,
     tags = [ IN_PROGRESS_TAG ])
   async def remove_in_progress_job(job_id: int) -> None:
     """
