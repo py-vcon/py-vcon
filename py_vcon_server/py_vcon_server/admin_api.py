@@ -187,8 +187,9 @@ def init(restapi):
     for this server.
 
     This is the list names of queues that this server is
-    actively popping jobs from and running the pipeline
-    processors assocated with the queue name.
+    actively popping jobs from and running the vCon
+    processors configured in the pipeline assocated with
+    the queue name.
 
     Returns: dict[str, dict] - dict with keys being queue names and values are a dict of queue properties
 
@@ -218,10 +219,9 @@ def init(restapi):
     """
     Set the properties on the named queue on this server.
 
-    This adds or updated the properties for the queue and
+    This adds or updates the properties for the queue and
     identifies the queue to be processed by this server
-    using the pipeline processors associated with this
-    queue name.
+    using the pipeline associated with this queue name.
 
     Currently the only queue property is the "weight".
     weight must be an integer value and indicates how many
@@ -291,13 +291,13 @@ def init(restapi):
     The list may contain servers which did not gracefully shutdown.
     It is up to the user to remove these stale server states and
     clean up and requeue any in_progress jobs which the server did
-    not complete.  A pipeline of well behaved processors does not
-    commit changes until all of the pipeline's processor have
+    not complete.  A pipeline of well behaved vCon processors does not
+    commit changes until all of the pipeline's vCon processor have
     completed.  Assuming this is the case,
     the following pseudo code will clean up appropriately:
     NOTE: This is not done automatically as it is a DEV OPS 
     policy issue and is dependent upon potentially custom or
-    proprietary processors behavor.
+    proprietary vCon processors behavor.
 
         get the list of server states from the /servers entry point
         for each unique pair of server hosts and ports:
@@ -362,12 +362,12 @@ def init(restapi):
     Get a list of the names of all the job queues.
 
     Jobs are added to queues from which they are popped
-    to run through a pipeline (set of processors).
+    to run through a pipeline (set of vCon processors).
     The jobs pipeline server(s) pop jobs from the list
     of names of queues, configured for the server to watch.
-    The server runs the set of processors configured in
+    The server runs the set of vCon processors configured in
     the pipeline, having the same name as the queue.
-    Most pipeline processors create, operate on or modify
+    Most vCon processors create, operate on or modify
     a vCon and have zero or more vCons as input and zero
     or more vCons as output.
 

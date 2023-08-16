@@ -208,7 +208,7 @@ class MultifariousVcon():
     return(vcon_type)
 
 class PipelineIO():
-  """ Abstract input for a pipeline processor """
+  """ Abstract input for a pipeline of vCon processors """
   def __init__(self):
     self._vcons = []
     self._vcon_locks = []
