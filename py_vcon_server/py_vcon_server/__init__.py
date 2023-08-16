@@ -58,6 +58,14 @@ openapi_tags = [
     #   "description": "online docs",
     #   "url": None
     # }
+  },
+  {
+    "name": py_vcon_server.vcon_api.PROCESSOR_TAG,
+    "description": "Entry points to run a single processor on a vCon"
+    # "externalDocs": {
+    #   "description": "online docs",
+    #   "url": None
+    # }
   }
 ]
 
