@@ -64,7 +64,8 @@ async def test_server_queue_config():
       json = props,
       headers={"accept": "application/json"},
       )
-    assert(post_response.status_code == 200)
+    assert(post_response.status_code == 204)
+    assert(post_response.text == "") 
 
 
     # get the list of queues for this server
@@ -83,7 +84,8 @@ async def test_server_queue_config():
       "/server/queue/{}".format(TEST_Q1),
       headers={"accept": "application/json"},
       )
-    assert(delete_response.status_code == 200)
+    assert(delete_response.status_code == 204)
+    assert(delete_response.text == "") 
 
     # get the list of queues for this server
     get_response = client.get(
@@ -142,8 +144,8 @@ async def test_job_queue():
       "/queue/{}".format(TEST_Q1),
       headers={"accept": "application/json"},
       )
-    assert(post_response.status_code == 200)
-    assert(post_response.json() == None)
+    assert(post_response.status_code == 204)
+    assert(post_response.text == "")
 
     # get list of queue names
     get_response = client.get(

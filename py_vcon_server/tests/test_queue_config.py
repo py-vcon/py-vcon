@@ -69,7 +69,8 @@ async def test_queue_config():
       headers={"accept": "application/json"}
       )
 
-    assert(post_response.status_code == 200)
+    assert(post_response.status_code == 204)
+    assert(post_response.text == "")
 
     assert(len(py_vcon_server.settings.WORK_QUEUES.items()) == 7)
     assert(py_vcon_server.settings.WORK_QUEUES["A"]["weight"] == 4)
@@ -81,7 +82,8 @@ async def test_queue_config():
     assert(py_vcon_server.settings.WORK_QUEUES["Q"]["weight"] == 9)
 
     delete_response = client.delete("/server/queue/{}".format("DDD"))
-    assert(delete_response.status_code == 200)
+    assert(delete_response.status_code == 204)
+    assert(delete_response.text == "")
 
     assert(len(py_vcon_server.settings.WORK_QUEUES.items()) == 6)
     assert(py_vcon_server.settings.WORK_QUEUES["A"]["weight"] == 4)

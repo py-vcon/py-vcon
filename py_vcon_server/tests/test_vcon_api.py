@@ -29,7 +29,8 @@ async def test_set_get_delete(make_2_party_tel_vcon: vcon.Vcon):
     assert(got_vcon.parties[1]["tel"] == "5678")
 
     delete_response = client.delete("/vcon/{}".format(UUID))
-    assert(delete_response.status_code == 200)
+    assert(delete_response.status_code == 204)
+    assert(delete_response.text == "")
 
     get2_response = client.get(
       "/vcon/{}".format(UUID),
