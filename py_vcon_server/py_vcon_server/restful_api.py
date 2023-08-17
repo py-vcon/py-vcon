@@ -2,6 +2,10 @@
 import pydantic
 import fastapi
 from py_vcon_server import __version__
+import py_vcon_server.logging_utils
+
+logger = py_vcon_server.logging_utils.init_logger(__name__)
+
 
 class HttpErrorResponseBody(pydantic.BaseModel):
   """ Error return type object for APIs """
@@ -28,6 +32,11 @@ class InternalErrorResponse(fastapi.responses.JSONResponse):
   def __init__(self, exception: Exception):
     super().__init__(status_code = 500,
       content = {"detail": str(exception)})
+
+
+def log_exception(exception: Exception):
+  """ General exception logger for APIs """
+  logger.info("Error: Exception: {} {}".format(exception.__class__.__name__, exception))
 
 # These are used to label different sections or groups of FastAPI entry points
 SERVER_TAG = "Admin: Servers"
