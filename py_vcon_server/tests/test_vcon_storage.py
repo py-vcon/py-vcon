@@ -76,7 +76,11 @@ async def test_redis_delete(make_2_party_tel_vcon: vcon.Vcon):
 
   await VconStorage.delete(UUID)
 
-  retrieved_vcon = await VconStorage.get(UUID)
-  assert(retrieved_vcon is None)
+  try:
+    retrieved_vcon = await VconStorage.get(UUID)
+    raise Exception("vCon deleted, this should fail")
+  except py_vcon_server.db.VconNotFound as e:
+    # expected
+    pass
 
 
