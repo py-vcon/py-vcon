@@ -1,7 +1,9 @@
+import os
 import typing
 import pydantic
 import datetime
 import time
+import enum
 import fastapi.responses
 import py_vcon_server.db
 import py_vcon_server.pipeline
@@ -15,7 +17,7 @@ logger = py_vcon_server.logging_utils.init_logger(__name__)
 class Vcon(pydantic.BaseModel, extra=pydantic.Extra.allow):
   vcon: str = vcon.Vcon.CURRENT_VCON_VERSION
   uuid: str
-  created_at: typing.Union[int, str, datetime.datetime] = pydantic.Field(default_factory=lambda: vcon.utils.cannonize_date(time.time()))
+  created_at: typing.Union[int, float, str, datetime.datetime] = pydantic.Field(default_factory=lambda: vcon.utils.cannonize_date(time.time()))
   subject: str = None
   redacted: dict = None
   appended: dict = None
@@ -26,7 +28,9 @@ class Vcon(pydantic.BaseModel, extra=pydantic.Extra.allow):
   attachments: typing.List[dict] = []
 
 def init(restapi):
-  @restapi.get("/vcon/{vcon_uuid}", tags = [ py_vcon_server.restful_api.VCON_TAG ])
+  @restapi.get("/vcon/{vcon_uuid}",
+    responses = py_vcon_server.restful_api.ERROR_RESPONSES,
+    tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def get_vcon(vcon_uuid: str):
     """
     Get the vCon object identified by the given UUID.
@@ -38,18 +42,25 @@ def init(restapi):
       logger.debug("getting vcon UUID: {}".format(vcon_uuid))
       vCon = await py_vcon_server.db.VconStorage.get(vcon_uuid)
 
+    except py_vcon_server.db.VconNotFound as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
+
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
     logger.debug(
-        "Returning whole vcon for {} found: {}".format(vcon_uuid, vCon is not None)
-    )
+      "Returning whole vcon for {} found: {}".format(vcon_uuid, vCon is not None))
+
     if(vCon is None):
       raise(fastapi.HTTPException(status_code=404, detail="Vcon not found"))
 
     return(fastapi.responses.JSONResponse(content=vCon.dumpd()))
 
-  @restapi.post("/vcon", tags = [ py_vcon_server.restful_api.VCON_TAG ])
+  @restapi.post("/vcon",
+    responses = py_vcon_server.restful_api.ERROR_RESPONSES,
+    tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def post_vcon(inbound_vcon: Vcon, vcon_uuid: typing.Union[str, None] = None):
     """
     Store the given vCon in VconStorage, replace if it exists for the given UUID
@@ -57,13 +68,16 @@ def init(restapi):
     try:
       logger.debug("setting vcon UUID: {}".format(vcon_uuid))
       vcon = await py_vcon_server.db.VconStorage.set(inbound_vcon.dict())
+
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return None
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
     return(fastapi.responses.JSONResponse(content=vcon))
 
   @restapi.delete("/vcon/{vcon_uuid}",
     status_code = 204,
+    responses = py_vcon_server.restful_api.ERROR_RESPONSES,
     tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def delete_vcon(vcon_uuid: str):
     """
@@ -76,14 +90,16 @@ def init(restapi):
       await py_vcon_server.db.VconStorage.delete(vcon_uuid)
 
     except Exception as e:
-      logger.info("Error: {}".format(e))
-      return 500
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug("Deleted vcon: UUID={}".format(vcon_uuid))
 
     # no return should cause 204, no content
 
-  @restapi.get("/vcon/{vcon_uuid}/jq", tags = [ py_vcon_server.restful_api.VCON_TAG ])
+  @restapi.get("/vcon/{vcon_uuid}/jq",
+    responses = py_vcon_server.restful_api.ERROR_RESPONSES,
+    tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def get_vcon_jq_transform(vcon_uuid: str, jq_transform: str):
     """
     Apply the given jq transform to the vCon identified by the given UUID and return the results.
@@ -96,12 +112,13 @@ def init(restapi):
       logger.debug("jq  transform result: {}".format(transform_result))
 
     except Exception as e:
-        logger.info("Error: {}".format(e))
-        return None
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     return(fastapi.responses.JSONResponse(content=transform_result))
 
   @restapi.get("/vcon/{vcon_uuid}/jsonpath",
+    responses = py_vcon_server.restful_api.ERROR_RESPONSES,
     tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def get_vcon_jsonpath_query(vcon_uuid: str, path_string: str):
     """
@@ -116,8 +133,8 @@ def init(restapi):
       logger.debug("jsonpath query result: {}".format(query_result))
 
     except Exception as e:
-        logger.info("Error: {}".format(e))
-        return None
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     return(fastapi.responses.JSONResponse(content=query_result))
 
@@ -172,7 +189,6 @@ def init(restapi):
       example = 2222 
       )
 
-  import enum
   processor_types = (AOptions, B, C)
   processor_names = {"A": "A", "B": "B", "C": "C"}
   processor_name_dict = {"A": AOptions, "B": B, "C": C}
@@ -187,6 +203,7 @@ def init(restapi):
   for processor_name in processor_names:
     @restapi.post("/vcon/{{vcon_uuid}}/{}".format(processor_name),
       summary = "Run the {} Processor on vCon".format(processor_name),
+      responses = py_vcon_server.restful_api.ERROR_RESPONSES,
       tags = [ py_vcon_server.restful_api.PROCESSOR_TAG ])
     async def run_vcon_processor(
       options: processor_name_dict[processor_name],
@@ -194,19 +211,32 @@ def init(restapi):
       request: fastapi.Request,
       save_result: bool = True
       ) -> str:
-      processor_name = processor_type_dict[type(options)]
-      path = request.url.path
-      logger.debug("type: {} path: {} ({}) prop: {}".format(processor_name, path, type(options), options))
 
-      pipeline_input = py_vcon_server.pipeline.PipelineIO()
-      pipeline_input.add_vcon(vcon_uuid)
+      try:
+        processor_name = processor_type_dict[type(options)]
+        path = request.url.path
+        processor_name_from_path = os.path.basename(path)
 
-      # TODO remove this, its only for testing
-      # get vcon to test if the UUID is a valid one
-      vcon_object = await pipeline_input.get_vcon(options.input_vcon_index,
-        py_vcon_server.pipeline.VconTypes.OBJECT)
-      #assert(isinstance(vcon_object, vcon.Vcon))
-      logger.debug("got type: {} vcon: {}".format(type(vcon_object), vcon_object))
+        logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
+          processor_name, path, type(options), options, processor_name_from_path))
+
+        pipeline_input = py_vcon_server.pipeline.PipelineIO()
+        await pipeline_input.add_vcon(vcon_uuid)
+
+        # TODO remove this, its only for testing
+        # get vcon to test if the UUID is a valid one
+        vcon_object = await pipeline_input.get_vcon(options.input_vcon_index,
+          py_vcon_server.pipeline.VconTypes.OBJECT)
+        #assert(isinstance(vcon_object, vcon.Vcon))
+        logger.debug("got type: {} vcon: {}".format(type(vcon_object), vcon_object))
+
+      except py_vcon_server.db.VconNotFound as e:
+        py_vcon_server.restful_api.log_exception(e)
+        return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
+
+      except Exception as e:
+        py_vcon_server.restful_api.log_exception(e)
+        return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
       return(fastapi.responses.JSONResponse(content = vcon_object))
 

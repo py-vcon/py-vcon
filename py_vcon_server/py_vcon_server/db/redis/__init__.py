@@ -58,7 +58,7 @@ class RedisVconStorage:
     vcon_dict = await redis_con.json().get("vcon:{}".format(vcon_uuid))
     # logger.debug("Got {} vcon: {}".format(vcon_uuid, vcon_dict))
     if(vcon_dict is None):
-      return(None)
+      raise py_vcon_server.db.VconNotFound("vCon not found for UUID: {}".format(vcon_uuid))
 
     vCon = vcon.Vcon()
     vCon.loadd(vcon_dict)

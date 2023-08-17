@@ -4,6 +4,10 @@ import py_vcon_server.logging_utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
+class VconNotFound(Exception):
+  """ Rasied when the vCon for the given UUID does not exist """
+
+
 # Should this be a class or global methods??
 class VconStorage():
   _vcon_storage_implementations = {}
