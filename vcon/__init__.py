@@ -1393,7 +1393,11 @@ class Vcon():
 
     # Translate transcriptions to body for consistency with dialog and attachments
     for index, analysis in enumerate(old_vcon.get("analysis", [])):
-      if(analysis['type'] == "transcript"):
+      analysis_type = analysis.get('type', None)
+      if(analysis_type == None):
+        raise InvalidVconJson("analysis object: {} has no type field".format(index))
+
+      if(analysis_type == "transcript"):
         if("transcript" in analysis):
           analysis['body'] = analysis.pop('transcript')
 
