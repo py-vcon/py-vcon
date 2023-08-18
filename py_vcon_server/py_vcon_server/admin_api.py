@@ -55,7 +55,7 @@ class ServerState(pydantic.BaseModel):
       description = "epoch seconds time at which this server started",
       example = time.time()
       )
-    num_workers: int = pydantic.Field(
+    num_workers: pydantic.StrictInt = pydantic.Field(
       title = "number of server worker processes",
       description = "the number of pipeline worker processes configured in NUM_WORKERS for this server",
       example = 4
