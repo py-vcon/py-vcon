@@ -984,8 +984,11 @@ class Vcon():
 
     # Unknown
     else:
-      raise InvalidVconJson("Not recognized as a unsigned, signed or encrypted JSON vCon")
-
+      raise InvalidVconJson("Not recognized as a unsigned , signed or encrypted form of JSON vCon." +
+        "  Unsigned vcon must have vcon version and at least one of: parties, dialog, analyisis or attachment object arrays." +
+        "  Signed vcon must have payload and signatures fields." +
+        "  Encrypted vcon must have cyphertext and recipients fields."
+        )
 
   def sign(self, private_key_pem_file_name : str, cert_chain_pem_file_names : typing.List[str]) -> None:
     """
