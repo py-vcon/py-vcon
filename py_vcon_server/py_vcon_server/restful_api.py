@@ -27,6 +27,12 @@ class NotFoundResponse(fastapi.responses.JSONResponse):
     super().__init__(status_code = 404,
       content = {"detail": detail})
 
+class ValidationError(fastapi.responses.JSONResponse):
+  """ Helper class to handle 422 validation error case"""
+  def __init__(self, detail: str):
+    super().__init__(status_code = 422,
+      content = {"detail": detail})
+
 class InternalErrorResponse(fastapi.responses.JSONResponse):
   """ Helper class to handle 500 internal server error case """
   def __init__(self, exception: Exception):
@@ -36,7 +42,10 @@ class InternalErrorResponse(fastapi.responses.JSONResponse):
 
 def log_exception(exception: Exception):
   """ General exception logger for APIs """
-  logger.info("Error: Exception: {} {}".format(exception.__class__.__name__, exception))
+  # Brief:
+  #logger.info("Error: Exception: {} {}".format(exception.__class__.__name__, exception))
+  # Full:
+  logger.exception(exception)
 
 # These are used to label different sections or groups of FastAPI entry points
 SERVER_TAG = "Admin: Servers"
