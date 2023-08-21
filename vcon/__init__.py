@@ -389,7 +389,7 @@ class Vcon():
                   (-1 indicates a new party should be added)
 
     Returns:
-    int: if success, opsitive int index of party in list
+    int: if success, positive int index of party in list
     """
 
     self._attempting_modify()
