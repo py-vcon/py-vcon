@@ -13,7 +13,7 @@ async def test_set_get_delete(make_2_party_tel_vcon: vcon.Vcon):
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
 
     set_response = client.post("/vcon", json=vCon.dumpd())
-    assert(set_response.status_code == 200)
+    assert(set_response.status_code == 204)
 
     get_response = client.get(
       "/vcon/{}".format(UUID),
@@ -45,7 +45,7 @@ async def test_jq(make_2_party_tel_vcon: vcon.Vcon):
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
 
     set_response = client.post("/vcon", json=vCon.dumpd())
-    assert(set_response.status_code == 200)
+    assert(set_response.status_code == 204)
 
     query = {}
     query["jq_transform"] = ".parties[]"
@@ -69,7 +69,7 @@ async def test_jsonpath(make_2_party_tel_vcon: vcon.Vcon):
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
 
     set_response = client.post("/vcon", json=vCon.dumpd())
-    assert(set_response.status_code == 200)
+    assert(set_response.status_code == 204)
 
     query = {}
     query["path_string"] = "$.parties"
