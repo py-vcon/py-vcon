@@ -3,7 +3,7 @@
 import pytest
 import pytest_asyncio
 import itertools
-import py_vcon_server.pipeline
+import py_vcon_server.processor
 from py_vcon_server.db import VconStorage
 from common_setup import UUID, make_2_party_tel_vcon
 import vcon
@@ -35,22 +35,22 @@ async def test_conversions(make_2_party_tel_vcon: vcon.Vcon):
   vcon_uuid = vcon_object.uuid
 
   all_forms = {}
-  all_forms[py_vcon_server.pipeline.VconTypes.OBJECT] = vcon_object
-  all_forms[py_vcon_server.pipeline.VconTypes.DICT] = vcon_dict
-  all_forms[py_vcon_server.pipeline.VconTypes. JSON] = vcon_json
-  all_forms[py_vcon_server.pipeline.VconTypes.UUID] = vcon_uuid
+  all_forms[py_vcon_server.processor.VconTypes.OBJECT] = vcon_object
+  all_forms[py_vcon_server.processor.VconTypes.DICT] = vcon_dict
+  all_forms[py_vcon_server.processor.VconTypes. JSON] = vcon_json
+  all_forms[py_vcon_server.processor.VconTypes.UUID] = vcon_uuid
 
   forms = [
-    py_vcon_server.pipeline.VconTypes.UUID,
-    py_vcon_server.pipeline.VconTypes.JSON,
-    py_vcon_server.pipeline.VconTypes.DICT,
-    py_vcon_server.pipeline.VconTypes.OBJECT
+    py_vcon_server.processor.VconTypes.UUID,
+    py_vcon_server.processor.VconTypes.JSON,
+    py_vcon_server.processor.VconTypes.DICT,
+    py_vcon_server.processor.VconTypes.OBJECT
     ]
 
   for length in range(len(forms) + 1):
     for subset in itertools.combinations(forms, length):
       print("set vcon forms: {}".format(subset))
-      mVcon = py_vcon_server.pipeline.MultifariousVcon()
+      mVcon = py_vcon_server.processor.MultifariousVcon()
       if(len(subset) == 0):
         pass
 
@@ -60,14 +60,14 @@ async def test_conversions(make_2_party_tel_vcon: vcon.Vcon):
         vcon_json = None
         vcon_dict = None
         vcon_object = None
-        if(py_vcon_server.pipeline.VconTypes.UUID in extra_data):
-          vcon_uuid = all_forms[py_vcon_server.pipeline.VconTypes.UUID]
-        if(py_vcon_server.pipeline.VconTypes.JSON in extra_data):
-          vcon_json = all_forms[py_vcon_server.pipeline.VconTypes.JSON]
-        if(py_vcon_server.pipeline.VconTypes.DICT in extra_data):
-          vcon_dict = all_forms[py_vcon_server.pipeline.VconTypes.DICT]
-        if(py_vcon_server.pipeline.VconTypes.OBJECT in extra_data):
-          vcon_object = all_forms[py_vcon_server.pipeline.VconTypes.OBJECT]
+        if(py_vcon_server.processor.VconTypes.UUID in extra_data):
+          vcon_uuid = all_forms[py_vcon_server.processor.VconTypes.UUID]
+        if(py_vcon_server.processor.VconTypes.JSON in extra_data):
+          vcon_json = all_forms[py_vcon_server.processor.VconTypes.JSON]
+        if(py_vcon_server.processor.VconTypes.DICT in extra_data):
+          vcon_dict = all_forms[py_vcon_server.processor.VconTypes.DICT]
+        if(py_vcon_server.processor.VconTypes.OBJECT in extra_data):
+          vcon_object = all_forms[py_vcon_server.processor.VconTypes.OBJECT]
 
         mVcon.update_vcon(all_forms[subset[0]],
           vcon_uuid = vcon_uuid,
