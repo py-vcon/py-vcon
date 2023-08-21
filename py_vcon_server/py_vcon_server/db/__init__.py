@@ -1,4 +1,6 @@
 import typing
+import pkgutil
+import importlib
 import vcon
 import py_vcon_server.logging_utils
 
@@ -6,6 +8,16 @@ logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 class VconNotFound(Exception):
   """ Rasied when the vCon for the given UUID does not exist """
+
+
+def import_bindings(path: str, module_prefix: str, label: str):
+  """ Import the modules and interface registrations """
+  for finder, module_name, is_package in pkgutil.iter_modules(
+    path,
+    module_prefix
+    ):
+    logger.info("{} module load: {}".format(label, module_name))
+    importlib.import_module(module_name)
 
 
 # Should this be a class or global methods??

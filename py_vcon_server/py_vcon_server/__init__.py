@@ -1,6 +1,4 @@
 import sys
-import pkgutil
-import importlib
 import asyncio
 import fastapi
 
@@ -17,12 +15,15 @@ logger = init_logger(__name__)
 
 __version__ = "0.1"
 
-# Import the db modules and interface registrations
-for finder, module_name, is_package in pkgutil.iter_modules(py_vcon_server.db.__path__, 
-  py_vcon_server.db.__name__ + "."):
-  logger.info("db module load: {}".format(module_name))
-  importlib.import_module(module_name)
+# Load the VconStorage DB bindings
+py_vcon_server.db.import_db_bindings(
+  py_vcon_server.db.__path__, # path
+  py_vcon_server.db.__name__ + ".", # binding module name prefix
+  "DB" # label
+  )
 
+# The following imports depend upon the DB binding.
+# So they must be done afterwards
 import py_vcon_server.vcon_api
 import py_vcon_server.admin_api
 
