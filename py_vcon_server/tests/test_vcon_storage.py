@@ -1,15 +1,17 @@
-import asyncio
+""" Unit tests for **VconStorage** """
+
 import pytest
 import pytest_asyncio
+from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 import py_vcon_server
+import py_vcon_server.processor
 from py_vcon_server.db import VconStorage
 import vcon
-from common_setup import UUID, make_2_party_tel_vcon
 
 # invoke only once for all the unit test in this module
 @pytest_asyncio.fixture(autouse=True)
 async def setup():
-  # Setup Vcon storage connection before test
+  """ Setup Vcon storage connection before test """
   await VconStorage.setup()
 
   # wait until teardown time
@@ -19,6 +21,7 @@ async def setup():
   await VconStorage.teardown()
 
 def test_redis_reg():
+  """ Test DB binding registration for redis """
   print(VconStorage._vcon_storage_implementations)
   class_type = VconStorage._vcon_storage_implementations["redis"]
   assert(class_type is not None)
@@ -26,6 +29,7 @@ def test_redis_reg():
 
 @pytest.mark.asyncio
 async def test_redis_set_get(make_2_party_tel_vcon: vcon.Vcon):
+  """ Test get and set of a **Vcon** using the redis DB binding """
   vCon = make_2_party_tel_vcon
 
   # Save the vcon
@@ -40,6 +44,7 @@ async def test_redis_set_get(make_2_party_tel_vcon: vcon.Vcon):
 
 @pytest.mark.asyncio
 async def test_redis_jq(make_2_party_tel_vcon: vcon.Vcon):
+  """ Test the jq query on **VconStorage.get** method """
   vCon = make_2_party_tel_vcon
 
   # Save the vcon
@@ -53,6 +58,7 @@ async def test_redis_jq(make_2_party_tel_vcon: vcon.Vcon):
 
 @pytest.mark.asyncio
 async def test_redis_jsonpath(make_2_party_tel_vcon: vcon.Vcon):
+  """ Test the JSONPath query on the get of a **Vcon** from the **VconStorage** """
   vCon = make_2_party_tel_vcon
 
   # Save the vcon
@@ -66,6 +72,7 @@ async def test_redis_jsonpath(make_2_party_tel_vcon: vcon.Vcon):
 
 @pytest.mark.asyncio
 async def test_redis_delete(make_2_party_tel_vcon: vcon.Vcon):
+  """ Test redis delete of a **Vcon** in the **VconStorage** """
   vCon = make_2_party_tel_vcon
 
   # Save the vcon
@@ -83,4 +90,48 @@ async def test_redis_delete(make_2_party_tel_vcon: vcon.Vcon):
     # expected
     pass
 
+@pytest.mark.asyncio
+async def test_processor_io_commit(
+  make_2_party_tel_vcon: vcon.Vcon,
+  make_inline_audio_vcon: vcon.Vcon
+  ):
+  """
+  Test the commit of (set on modified **Vcon**s in)
+  a **VconProcessorIO** object to the **VconStorage**.
+  """
+  vcon1 = make_2_party_tel_vcon
+  vcon1.set_party_parameter("tel", "444", 0)
+  vcon1.set_party_parameter("tel", "888", 1)
+  assert(len(vcon1.parties) == 2)
+  assert(vcon1.parties[0]["tel"] == "444")
+  assert(vcon1.parties[1]["tel"] == "888")
+  assert(vcon1.uuid == UUID)
+  vcon2 = make_inline_audio_vcon
+  # need different UUIDs
+  vcon2.set_uuid("py-vcon.org", True)
+  assert(vcon2.uuid != UUID)
+
+  io_object = py_vcon_server.processor.VconProcessorIO()
+  await io_object.add_vcon(vcon2) # read only
+  await io_object.add_vcon(vcon1, None, False) # new/commit
+  assert(not io_object.is_vcon_modified(0))
+  assert(io_object.is_vcon_modified(1))
+
+  await VconStorage.commit(io_object)
+
+  assert(vcon1.uuid == UUID)
+  retrieved_vcon = await VconStorage.get(vcon1.uuid)
+  assert(len(retrieved_vcon.parties) == 2)
+  assert(retrieved_vcon.parties[0]["tel"] == "444")
+  assert(retrieved_vcon.parties[1]["tel"] == "888")
+
+  try:
+    retrieved_vcon = await VconStorage.get(vcon2.uuid)
+    raise Exception("second vcon UUID: {} should not have been saved".format(
+      vcon2.uuid
+      ))
+
+  except py_vcon_server.db.VconNotFound as e:
+    # expected
+    pass
 
