@@ -376,7 +376,11 @@ class Vcon():
     # has defininte joine time for each party, but is not captured in the vcon.
     raise Exception("not implemented")
 
-  def set_party_parameter(self, parameter_name : str, parameter_value : str, party_index : int =-1) -> int:
+  def set_party_parameter(self,
+    parameter_name : str,
+    parameter_value : str,
+    party_index : int =-1
+    ) -> int:
     """
     Set the named parameter for the given party index.  If the index is not provided,
     add a new party to the vCon Parties Object array.
@@ -825,6 +829,20 @@ class Vcon():
 
     self._vcon_dict[Vcon.ANALYSIS].append(analysis_element)
 
+
+  def dump(self, vconfile: typing.Union[str, typing.TextIO]) -> None:
+    """ dump vcon in JSON form to given file """
+    if(isinstance(vconfile, str)):
+      file_handle = open(vconfile, "w")
+    else:
+      file_handle = vconfile
+
+    file_handle.write(self.dumps())
+
+    if(isinstance(vconfile, str)):
+      file_handle.close()
+
+
   def dumps(self, signed : bool = True) -> str:
     """
     Dump the vCon as a JSON string.
@@ -890,12 +908,21 @@ class Vcon():
 
     return(vcon_dict)
 
-  def load(self, file_handle: typing.TextIO) -> None:
+  def load(self, vconfile: typing.Union[str, typing.TextIO]) -> None:
     """
     Load the Vcon JSON from the given file_handle and deserialize it.
     see Vcon.loads for more details.
     """
+    if(isinstance(vconfile, str)):
+      file_handle = open(vconfile, "rb")
+    else:
+      file_handle = vconfile
+
     vcon_json_string = file_handle.read()
+
+    if(isinstance(vconfile, str)):
+      file_handle.close()
+
     self.loads(vcon_json_string)
 
   def loadd(self, vcon_dict : dict) -> None:
