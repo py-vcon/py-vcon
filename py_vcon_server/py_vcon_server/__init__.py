@@ -16,7 +16,7 @@ logger = init_logger(__name__)
 __version__ = "0.1"
 
 # Load the VconStorage DB bindings
-py_vcon_server.db.import_db_bindings(
+py_vcon_server.db.import_bindings(
   py_vcon_server.db.__path__, # path
   py_vcon_server.db.__name__ + ".", # binding module name prefix
   "DB" # label
@@ -27,6 +27,12 @@ py_vcon_server.db.import_db_bindings(
 import py_vcon_server.vcon_api
 import py_vcon_server.admin_api
 
+# Load the VconProcessor bindings
+py_vcon_server.db.import_bindings(
+  py_vcon_server.processor.__path__, # path
+  py_vcon_server.processor.__name__ + ".", # binding module name prefix
+  "VconProcessor" # label
+  )
 restapi = py_vcon_server.restful_api.init()
 
 @restapi.on_event("startup")
