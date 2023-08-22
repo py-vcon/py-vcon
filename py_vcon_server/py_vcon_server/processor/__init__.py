@@ -242,7 +242,7 @@ class MultifariousVcon():
 
     return(vcon_type)
 
-class VconProcessorInitOptions:
+class VconProcessorInitOptions(pydantic.BaseModel):
   """
   Base class to options passed to initalize a **VconProcessor**
   derived class in the **VconProcessorRegistry**
@@ -563,6 +563,10 @@ class VconProcessorRegistry:
       self._module_not_found = False
       self._processor_instance = None
 
+      logger.debug("Loading module: {} for VconProcessor: {}".format(
+        self._module_name,
+        self._name
+        ))
       # load module
       if(self.load_module()):
       
@@ -646,6 +650,7 @@ class VconProcessorRegistry:
     description: str = None
     ):
 
+    logger.debug("Registering VconProcessor: {}".format(name))
     processor_registration = VconProcessorRegistry.VconProcessorRegistration(
       init_options,
       name,
@@ -656,6 +661,7 @@ class VconProcessorRegistry:
       )
 
     VCON_PROCESSOR_REGISTRY[name] = processor_registration
+    logger.info("Registered VconProcessor: {}".format(name))
 
   @staticmethod
   def get_processor_names(successfully_loaded: bool = True) -> typing.List[str]:
