@@ -74,6 +74,9 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
     output_types = options.get("output_options", ["vendor", "word_srt", "word_ass"])
     logger.info("whisper output_types: {}".format(output_types))
 
+    if(in_vcon.dialog is None):
+      return(out_vcon)
+
     for dialog_index, dialog in enumerate(in_vcon.dialog):
       # TODO assuming none of the dialogs have been transcribed
       #print("dialog keys: {}".format(dialog.keys()))
