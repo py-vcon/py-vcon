@@ -1,13 +1,16 @@
 """ Common test data and tools for conserver unit tests """
-import os 
+
+import os
 import datetime
+import copy
 import pytest
 import vcon
 
-UUID = "01855517-ac4e-8edf-84fd-77776666acbe"
+UUID = "01855517-test-fake-uuid-77776666acbe"
 
 @pytest.fixture(scope="function")
 def make_2_party_tel_vcon() -> vcon.Vcon:
+  """ test fixture to create a simple **Vcon** with two parties """
   vCon = vcon.Vcon()
   # Hack a known UUID so that we do not poluted the DB
   vCon._vcon_dict["uuid"] = UUID
@@ -21,7 +24,8 @@ def make_2_party_tel_vcon() -> vcon.Vcon:
 
 @pytest.fixture(scope="function")
 def make_inline_audio_vcon(make_2_party_tel_vcon: vcon.Vcon) -> vcon.Vcon:
-  vCon = make_2_party_tel_vcon
+  """ test figure to create a Vcon with a very small inline audio dialog """
+  vCon = copy.deepcopy(make_2_party_tel_vcon)
 
   file_path = "tests/hello.wav"
   file_content = b""
@@ -30,11 +34,15 @@ def make_inline_audio_vcon(make_2_party_tel_vcon: vcon.Vcon) -> vcon.Vcon:
     print("body length: {}".format(len(file_content)))
     assert(len(file_content) > 10000)
 
-    vCon.add_dialog_inline_recording(file_content,
-    datetime.datetime.utcnow(),
-    0, # duration TODO
-    [0,1],
-    vcon.Vcon.MIMETYPE_AUDIO_WAV,
-    os.path.basename(file_path))
+  vCon.add_dialog_inline_recording(file_content,
+  datetime.datetime.utcnow(),
+  0, # duration TODO
+  [0,1],
+  vcon.Vcon.MIMETYPE_AUDIO_WAV,
+  os.path.basename(file_path))
+
+  save_as = "tests/hello.vcon"
+  if( not os.path.isfile(save_as)):
+    vCon.dump(save_as)
 
   return(vCon)
