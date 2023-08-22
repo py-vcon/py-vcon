@@ -139,3 +139,26 @@ def test_whisper_transcribe_external_dialog():
     out_vcon.set_uuid("vcon.net")
 
   out_vcon_json = out_vcon.dumps()
+
+
+def test_whisper_no_dialog():
+  in_vcon = vcon.Vcon()
+  vcon_json = """
+  {
+    "vcon": "0.0.1",
+    "uuid": "my_fake_uuid",
+    "created_at": "2023-08-18T07:14:45.894+00:00",
+    "parties": [
+      {
+        "tel": "+1 123 456 7890"
+      }
+    ]
+  }
+  """
+  in_vcon.loads(vcon_json)
+
+  options = {"llanguage" : "en", "model_size" : "base", "output_options" : ["vendor", "word_srt", "word_ass"], "whisper" : { "language" : "en"} }
+
+  assert(in_vcon.dialog is None)
+  out_vcon = in_vcon.transcribe(**options)
+  assert(in_vcon.analysis is None)
