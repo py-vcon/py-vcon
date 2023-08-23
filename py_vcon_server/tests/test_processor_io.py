@@ -22,14 +22,15 @@ import vcon
 async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   vcon_object = make_2_party_tel_vcon
   assert(vcon_object.uuid == UUID)
- 
+
   io_object = py_vcon_server.processor.VconProcessorIO()
+  assert(io_object.num_vcons() == 0)
   await io_object.add_vcon(vcon_object)
   assert(len(io_object._vcons) == 1)
   assert(len(io_object._vcon_locks) == 1)
   assert(len(io_object._vcon_update) == 1)
-  assert(io_object._vcon_locks[0] == None)
-  assert(io_object._vcon_update[0] == False)
+  assert(io_object._vcon_locks[0] is None)
+  assert(not io_object._vcon_update[0])
 
   vcon2_object = copy.deepcopy(vcon_object)
   assert(vcon2_object.uuid == UUID)
@@ -48,12 +49,20 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
 
   # different UUID should now be allowed
   vcon3_object = vcon.Vcon()
+  vcon3_object.set_uuid("py-vcon.org")
   await io_object.add_vcon(vcon3_object)
   assert(len(io_object._vcons) == 2)
+  assert(io_object.num_vcons() == 2)
   assert(len(io_object._vcon_locks) == 2)
   assert(len(io_object._vcon_update) == 2)
-  assert(io_object._vcon_locks[1] == None)
-  assert(io_object._vcon_update[1] == False)
+  assert(io_object._vcon_locks[1] is None)
+  assert(not io_object._vcon_update[1])
+
+  output = await io_object.get_output()
+  assert(len(output.vcons) == 2)
+  assert(len(output.vcons_modified) == 2)
+  assert(not output.vcons_modified[0])
+  assert(not output.vcons_modified[1])
 
   try:
     await io_object.update_vcon(vcon_object)
@@ -85,7 +94,7 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   assert(len(rw_io_object._vcon_locks) == 1)
   assert(len(rw_io_object._vcon_update) == 1)
   assert(rw_io_object._vcon_locks[0] == "fake_key")
-  assert(rw_io_object._vcon_update[0] == False)
+  assert(not rw_io_object._vcon_update[0])
 
 
   await rw_io_object.update_vcon(vcon2_object)
@@ -93,7 +102,7 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   assert(len(rw_io_object._vcon_locks) == 1)
   assert(len(rw_io_object._vcon_update) == 1)
   assert(rw_io_object._vcon_locks[0] == "fake_key")
-  assert(rw_io_object._vcon_update[0] == True)
+  assert(rw_io_object._vcon_update[0])
   assert((await rw_io_object.get_vcon()).parties[0]["tel"] == "abcd")
   assert((await rw_io_object.get_vcon()).parties[1]["tel"] == "efgh")
 
@@ -104,8 +113,8 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   assert(len(rw_io_object._vcon_locks) == 2)
   assert(len(rw_io_object._vcon_update) == 2)
   assert(rw_io_object._vcon_locks[0] == "fake_key")
-  assert(rw_io_object._vcon_locks[1] == None)
-  assert(rw_io_object._vcon_update[0] == True)
-  assert(rw_io_object._vcon_update[1] == True)
+  assert(rw_io_object._vcon_locks[1] is None)
+  assert(rw_io_object._vcon_update[0])
+  assert(rw_io_object._vcon_update[1])
   assert(len((await rw_io_object.get_vcon(1)).parties) == 0)
 
