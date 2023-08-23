@@ -1,10 +1,7 @@
+""" Implementaiton of the Vcon API entry points """
+
 import os
 import typing
-import pydantic
-import datetime
-import time
-import enum
-import logging
 import fastapi
 import fastapi.responses
 import py_vcon_server.db
@@ -15,46 +12,10 @@ import vcon.utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
-class VconPartiesObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
-  tel: str = pydantic.Field(
-    title = "tel URI",
-    description = "a telephone number",
-    example = "+1 123 456 7890"
-    )
-
-date_examples = [ int(time.time()),
-  time.time(),
-  "Wed, 14 May 2022 18:16:19 -0000",
-  vcon.utils.cannonize_date(time.time()),
-  "2022-05-14T18:16:19.000+00:00"
-  ]
-
-class VconObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
-  vcon: str = pydantic.Field(
-    title = "vCon format version",
-    #description = "vCon format version,
-    default = vcon.Vcon.CURRENT_VCON_VERSION
-    )
-  uuid: str
-  created_at: typing.Union[pydantic.PositiveInt, pydantic.PositiveFloat, str, datetime.datetime] = pydantic.Field(
-    title = "vCon format version",
-    #description = "vCon format version,
-    default_factory=lambda: vcon.utils.cannonize_date(time.time()),
-    example = date_examples[3],
-    examples = date_examples
-    )
-
-  # subject: str = None
-  # redacted: typing.Optional[typing.Union[typing.List[dict], None]] = None
-  # appended: typing.Optional[typing.Union[typing.List[dict], None]] = None
-  # group: typing.Optional[typing.Union[typing.List[dict], None]] = None
-  parties: typing.Optional[typing.Union[typing.List[VconPartiesObject], None]] = None
-  dialog: typing.Optional[typing.Union[typing.List[dict], None]] = None
-  analysis: typing.Optional[typing.Union[typing.List[dict], None]] = None
-  attachments: typing.Optional[typing.Union[typing.List[dict], None]] = None
 
 def init(restapi):
   @restapi.get("/vcon/{vcon_uuid}",
+    response_model = py_vcon_server.processor.VconObject,
     responses = py_vcon_server.restful_api.ERROR_RESPONSES,
     tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def get_vcon(vcon_uuid: str):
@@ -88,7 +49,7 @@ def init(restapi):
     status_code = 204,
     responses = py_vcon_server.restful_api.ERROR_RESPONSES,
     tags = [ py_vcon_server.restful_api.VCON_TAG ])
-  async def post_vcon(inbound_vcon: VconObject):
+  async def post_vcon(inbound_vcon: py_vcon_server.processor.VconObject):
     """
     Store the given vCon in VconStorage, replace if it exists for the given UUID
     """
@@ -180,74 +141,27 @@ def init(restapi):
     return(fastapi.responses.JSONResponse(content=query_result))
 
 
-  class AOptions(py_vcon_server.processor.VconProcessorOptions):
-    """ input options for the A vCon processor """
-    a: int = pydantic.Field(
-      title = "A's a",
-      description = "A bunch of A stuff for a",
-      example = 7
-      )
-    b: int = pydantic.Field(
-      title = "A's b",
-      description = "A bunch of A stuff for b",
-      example = 1111 
-      )
-
-  class B(py_vcon_server.processor.VconProcessorOptions):
-    MM: str = pydantic.Field(
-      title = "B's a",
-      description = "A bunch of B stuff for MM",
-      example = "ddddddd"
-      )
-    NN: str = pydantic.Field(
-      title = "B's NN",
-      description = "A bunch of B stuff for NN",
-      example = "fffffff ff"
-      )
-    OO: str = pydantic.Field(
-      title = "B's OO",
-      description = "A bunch of N stuff for OO",
-      example = "aa dd gg"
-      )
-
-  class C(py_vcon_server.processor.VconProcessorOptions):
-    a: int = pydantic.Field(
-      title = "C's a",
-      description = "A bunch of C stuff for a",
-      example = 9
-      )
-    b: int = pydantic.Field(
-      title = "C's b",
-      description = "A bunch of C stuff for b",
-      example = 2222 
-      )
-
-  processor_types = (AOptions, B, C)
-  processor_names = {"A": "A", "B": "B", "C": "C"}
-  processor_name_dict = {"A": AOptions, "B": B, "C": C}
-  processor_type_dict = {AOptions: "A", B: "B", C: "C"}
-  processor_name_enum = enum.Enum("DynamicEnum", processor_names)
-  processor_doc = {
-    "A": "A does special stuff with a and b",
-    "B": "B does special suff with MM, NN and OO",
-    "C": "C does special stuff with a and b"
-    }
-
+  processor_names = py_vcon_server.processor.VconProcessorRegistry.get_processor_names()
   for processor_name in processor_names:
-    @restapi.post("/vcon/{{vcon_uuid}}/{}".format(processor_name),
-      summary = "Run the {} Processor on vCon".format(processor_name),
-      response_model = VconObject,
+    processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
+      processor_name)
+
+    @restapi.post("/process/{{vcon_uuid}}/{}".format(processor_name),
+      summary = processor_inst.title(),
+      description = processor_inst.description(),
+      response_model = py_vcon_server.processor.VconProcessorOutput,
       responses = py_vcon_server.restful_api.ERROR_RESPONSES,
       tags = [ py_vcon_server.restful_api.PROCESSOR_TAG ])
     async def run_vcon_processor(
-      options: processor_name_dict[processor_name],
+      options: processor_inst.processor_options_class(),
       vcon_uuid: str,
       request: fastapi.Request,
-      save_result: pydantic.StrictBool = True
+      commit_changes: bool = False,
+      return_whole_vcon: bool = True
       ) -> str:
 
       try:
-        processor_name = processor_type_dict[type(options)]
+        #processor_name = processor_type_dict[type(options)]
         path = request.url.path
         processor_name_from_path = os.path.basename(path)
 
@@ -255,18 +169,24 @@ def init(restapi):
           processor_name, path, type(options), options, processor_name_from_path))
 
         processor_input = py_vcon_server.processor.VconProcessorIO()
-        await processor_input.add_vcon(vcon_uuid)
+        await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
 
-        # TODO remove this, its only for testing
-        # get vcon to test if the UUID is a valid one
-        vcon_object = await processor_input.get_vcon(options.input_vcon_index,
-          py_vcon_server.processor.VconTypes.OBJECT)
-        #assert(isinstance(vcon_object, vcon.Vcon))
+        # Get the processor form the registry
+        processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
+          processor_name)
 
-        # Avoid serialization of Vcon if e are not logging debug
-        logger.debug("Effective level: {}".format(logger.getEffectiveLevel()))
-        if(logger.getEffectiveLevel() <= logging.DEBUG):
-          logger.debug("got type: {} vcon: {}".format(type(vcon_object), vcon_object.dumps()))
+        # Run the processor
+        processor_output = await processor_inst.process(
+          processor_input,
+          options)
+
+        if(commit_changes):
+          # Save changed Vcons
+          await py_vcon_server.db.VconStorage.commit(processor_output)
+
+        # Get serializable output
+        # TODO: don't return whole Vcon if not return_whole_vcon
+        response_output = await processor_output.get_output()
 
       except py_vcon_server.db.VconNotFound as e:
         py_vcon_server.restful_api.log_exception(e)
@@ -276,5 +196,5 @@ def init(restapi):
         py_vcon_server.restful_api.log_exception(e)
         return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
-      return(fastapi.responses.JSONResponse(content = vcon_object.dumpd()))
+      return(fastapi.responses.JSONResponse(content = response_output.dict(exclude_none = True)))
 
