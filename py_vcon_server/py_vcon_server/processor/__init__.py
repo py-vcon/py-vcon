@@ -2,6 +2,8 @@
 
 import enum
 import typing
+import time
+import datetime
 import asyncio
 import importlib
 import pydantic
@@ -10,6 +12,10 @@ import py_vcon_server.logging_utils
 import vcon
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
+
+
+class VconNotFound(Exception):
+  """ Exceptions in accessing or retrieving **Vcon**s """
 
 
 class InvalidInitClass(Exception):
@@ -58,9 +64,9 @@ class MultifariousVcon():
 
   def update_vcon(self,
     new_vcon: typing.Union[str, vcon.Vcon],
-    vcon_uuid: str = None,
-    vcon_json: str = None,
-    vcon_dict: dict = None,
+    vcon_uuid: typing.Union[str, None] = None,
+    vcon_json: typing.Union[str, None] = None,
+    vcon_dict: typing.Union[dict, None] = None,
     vcon_object: vcon.Vcon = None
     ) -> None:
 
@@ -79,7 +85,7 @@ class MultifariousVcon():
       self._vcon_forms[VconTypes.DICT] = vcon_dict
     if(vcon_object is not None and vcon_type != VconTypes.OBJECT):
       self._vcon_forms[VconTypes.OBJECT] = vcon_object
- 
+
     # Try to get the UUID if the given type is not a UUID
     if(vcon_type != VconTypes.UUID):
       if(vcon_uuid is not None):
@@ -93,7 +99,7 @@ class MultifariousVcon():
 
       # String JSON, don't parse to get UUID, wait until we need to
 
-  async def get_vcon(self, 
+  async def get_vcon(self,
     vcon_type: VconTypes
     ) -> typing.Union[str, dict, vcon.Vcon, None]:
 
@@ -150,7 +156,7 @@ class MultifariousVcon():
         self._vcon_forms[VconTypes.UUID] = uuid
       return(uuid)
 
-    elif(vcon_type == VconTypes.OBJECT):
+    if(vcon_type == VconTypes.OBJECT):
       vcon_object = None
       if(VconTypes.DICT in forms):
         vcon_object = vcon.Vcon()
@@ -165,10 +171,10 @@ class MultifariousVcon():
       # Cache the object
       if(vcon_object is not None):
         self._vcon_forms[VconTypes.OBJECT] = vcon_object
-  
+
       return(vcon_object)
 
-    elif(vcon_type == VconTypes.DICT):
+    if(vcon_type == VconTypes.DICT):
       vcon_dict = None
       if(VconTypes.OBJECT in forms):
         vcon_dict = self._vcon_forms[VconTypes.OBJECT].dumpd()
@@ -193,7 +199,7 @@ class MultifariousVcon():
 
       return(vcon_dict)
 
-    elif(vcon_type == VconTypes.JSON):
+    if(vcon_type == VconTypes.JSON):
       vcon_json = None
       if(VconTypes.OBJECT in forms and self._vcon_forms[VconTypes.OBJECT] is not None):
         vcon_json = self._vcon_forms[VconTypes.OBJECT].dumps()
@@ -217,12 +223,17 @@ class MultifariousVcon():
 
       return(vcon_json)
 
-    else:
-      return(None)
+    return(None)
 
 
   @staticmethod
   def get_vcon_type(a_vcon: typing.Union[str, dict, vcon.Vcon]):
+    """
+    Determine the form of the given **Vcon** 
+
+    Returns: enum of **VconTypes**
+    """
+
     if(isinstance(a_vcon, str)):
       # Determine if its a UUID or a JSON string
       if("{" in a_vcon):
@@ -242,6 +253,47 @@ class MultifariousVcon():
 
     return(vcon_type)
 
+
+class VconPartiesObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  tel: str = pydantic.Field(
+    title = "tel URI",
+    description = "a telephone number",
+    example = "+1 123 456 7890"
+    )
+
+
+date_examples = [ int(time.time()),
+  time.time(),
+  "Wed, 14 May 2022 18:16:19 -0000",
+  vcon.utils.cannonize_date(time.time()),
+  "2022-05-14T18:16:19.000+00:00"
+  ]
+
+
+class VconObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  vcon: str = pydantic.Field(
+    title = "vCon format version",
+    #description = "vCon format version,
+    default = vcon.Vcon.CURRENT_VCON_VERSION
+    )
+  uuid: str
+  created_at: typing.Union[pydantic.PositiveInt, pydantic.PositiveFloat, str, datetime.datetime] = pydantic.Field(
+    title = "vCon format version",
+    #description = "vCon format version,
+    default_factory=lambda: vcon.utils.cannonize_date(time.time()),
+    example = date_examples[3],
+    examples = date_examples
+    )
+  # subject: str = None
+  # redacted: typing.Optional[typing.Union[typing.List[dict], None]] = None
+  # appended: typing.Optional[typing.Union[typing.List[dict], None]] = None
+  # group: typing.Optional[typing.Union[typing.List[dict], None]] = None
+  parties: typing.Optional[typing.Union[typing.List[VconPartiesObject], None]] = None
+  dialog: typing.Optional[typing.Union[typing.List[dict], None]] = None
+  analysis: typing.Optional[typing.Union[typing.List[dict], None]] = None
+  attachments: typing.Optional[typing.Union[typing.List[dict], None]] = None
+
+
 class VconProcessorInitOptions(pydantic.BaseModel):
   """
   Base class to options passed to initalize a **VconProcessor**
@@ -258,12 +310,45 @@ class VconProcessorOptions(pydantic.BaseModel):
     )
   #rename_output: dict[str, str]
 
+class VconProcessorOutput(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """ Serializable Output results from a VconProcessor """
+  vcons: typing.List[VconObject] = pydantic.Field(
+    title = "array of **Vcon** objects",
+    default = []
+    )
+  vcons_modified: typing.List[bool] = pydantic.Field(
+    title = "boolean indicated if the **Vcon** in the **vcons** array has been modified from the input version",
+    default = []
+    )
+
+
 class VconProcessorIO():
   """ Abstract input and output for a VconProcessor """
   def __init__(self):
     self._vcons = []
     self._vcon_locks = []
     self._vcon_update = []
+
+  def is_vcon_modified(self,
+    index: int = 0
+    ) -> bool:
+    """
+    Get modified state of **Vcon** at given **index**.
+
+    Returns: tru/false if the **Vcon** at index is marked
+      as modified, meaning needing to be committed.
+    """
+
+    if(index >= len(self._vcons)):
+      raise Exception("Invalid index to Vcon")
+
+    return(self._vcon_update[index])
+
+
+  def num_vcons(self) -> int:
+    """ Return the number of **Vcons** in this **VconProcessorIO** object """
+    return(len(self._vcons))
+
 
   async def get_vcon(self,
     index: int = 0,
@@ -272,14 +357,23 @@ class VconProcessorIO():
     """ Get the Vcon at index in the form indicated by vcon_type """
 
     if(index >= len(self._vcons)):
-      return(None)
+      raise VconNotFound("index: {} is behond the end of the Vcon array of length: {}".format(
+        index,
+        len(self._vcons)))
 
-    return(await self._vcons[index].get_vcon(vcon_type))
+    vCon = await self._vcons[index].get_vcon(vcon_type)
+    if(vCon is None):
+      raise VconNotFound("Vcon type: {} at index: {} in Vcon array of length: {} not found".format(
+        vcon_type,
+        index,
+        len(self._vcons)))
+
+    return(vCon)
 
 
   async def add_vcon(self,
     vcon_to_add: typing.Union[str, dict, vcon.Vcon],
-    lock_key: str = None,
+    lock_key: typing.Union[str, None] = None,
     readonly: bool = True
     ) -> int:
     """
@@ -331,9 +425,9 @@ class VconProcessorIO():
     self._vcons.append(mVcon)
     self._vcon_locks.append(lock_key)
     self._vcon_update.append(not readonly and lock_key is None)
-    
 
     return(len(self._vcons) - 1)
+
 
   async def update_vcon(self,
     modified_vcon: typing.Union[str, dict, vcon.Vcon],
@@ -369,6 +463,21 @@ class VconProcessorIO():
     """
     set and output parameter value, applying the rename to the given name.
     """
+    raise Exception("not implemented")
+
+
+  async def get_output(self) -> VconProcessorOutput:
+    """ Get **VconProcessorOutput** serializable output form of **VconProcessorIO** """
+    out_vcons = []
+    for mVcon in self._vcons:
+      out_vcons.append(await mVcon.get_vcon(VconTypes.DICT))
+
+    response_output = VconProcessorOutput(
+      vcons = out_vcons,
+      vcons_modified = self._vcon_update
+      )
+
+    return(response_output)
 
 class VconProcessor:
   """
@@ -467,14 +576,14 @@ class VconProcessor:
         init_options.__class__.__name__,
         self.__class__.__name__,
         ))
-        
+
     if(processor_options_class is None or
       not issubclass(processor_options_class, VconProcessorOptions)):
       raise InvalidOptionsClass("processor_options_class type: {} for {} must be drived from: VconProcessorOptions".format(
         processor_options_class.__class__.__name__,
         self.__class__.__name__,
         ))
-        
+
     if(may_modify_vcons is None):
       raise MayModifyPolicyNotSet("processor method may modify Vcons policy not set for: {}".format(
         self.__class__.__name__
@@ -500,9 +609,16 @@ class VconProcessor:
     processor_input: VconProcessorIO,
     options: VconProcessorInitOptions
     ) -> VconProcessorIO:
+    """
+    Abstract method for processing a **Vcon**.  Must
+    be implemented in derived classes.
+    """
     raise InvalidVconProcessorClass("{}.process method NOT implemented".format(self.__class__.__name__))
 
   def version(self) -> str:
+    """
+    Get the module version of the derived **VconProcessor**.
+    """
     if(self._version is None or self._version == ""):
       raise Exception("{}._version NOT set".format(self.__class__.__name__))
 
@@ -510,12 +626,22 @@ class VconProcessor:
 
 
   def title(self):
+    """
+    Get the short description or title for the derived **VconProcessor**.
+    """
     return(self._title)
 
   def description(self):
+    """
+    Get the long description for the derived **VconProcessor**.
+    """
     return(self._description)
 
   def may_modify_vcons(self) -> bool:
+    """
+    Returns whether the derived **VconProcessor** may
+    modify any of the input **Vcon**s.
+    """
     if(self._may_modify_vcons is None):
       raise MayModifyPolicyNotSet("processor may modify input vcons policy not set for class: {}".format(
         self.__class__.__name__))
@@ -524,6 +650,10 @@ class VconProcessor:
 
 
   def processor_options_class(self):
+    """
+    Returns the class type of the expected options
+    argument to the derived **VconProcessor.process** method.
+    """
     return(self._processor_options_class)
 
 
@@ -544,11 +674,11 @@ class VconProcessorRegistry:
   class VconProcessorRegistration:
     def __init__(self,
       init_options: VconProcessorInitOptions,
-      name: str, 
+      name: str,
       module_name: str,
       class_name: str,
-      title: str = None,
-      description: str = None
+      title: typing.Union[str, None] = None,
+      description: typing.Union[str, None] = None
       ):
       """
       Instantiate **VconProcessor** with instance specific
@@ -569,13 +699,14 @@ class VconProcessorRegistry:
         ))
       # load module
       if(self.load_module()):
-      
+
         # instantiate **VconProcessor** with initialization options
         try:
           class_ = getattr(self._module, self._class_name)
           if(not issubclass(class_, VconProcessor)):
             raise InvalidVconProcessorClass("processor: {} class: {} must be derived from VconProcessor".format(
-              self._name
+              self._name,
+              self._class_name
               ))
           if(class_ == VconProcessor):
             raise InvalidVconProcessorClass(
@@ -585,8 +716,6 @@ class VconProcessorRegistry:
 
           try:
             self._processor_instance = class_(init_options)
-
-            self._processor_instance.title
 
             if(self._processor_instance.title() is None or
               self._processor_instance.title() == ""):
@@ -603,21 +732,20 @@ class VconProcessorRegistry:
               self._class_name
               )) from e
 
-          succeed = True
-
         except AttributeError as ae:
           raise ae
 
         # Override the default title and description if a
         # init options specific version was provided
         if(title is not None and title != ""):
-          self._processor_instance._title = title,
-        
+          self._processor_instance._title = title
+
         if(description is not None and description != ""):
-          self._processor_instance._description = description,
+          self._processor_instance._description = description
 
 
     def load_module(self) -> bool:
+      """ Load the registered module name for this **VconProcessor** """
       loaded = False
       if(not self._module_load_attempted):
         try:
@@ -643,11 +771,11 @@ class VconProcessorRegistry:
   @staticmethod
   def register(
     init_options: VconProcessorInitOptions,
-    name: str, 
+    name: str,
     module_name: str,
     class_name: str,
-    title: str = None,
-    description: str = None
+    title: typing.Union[str, None] = None,
+    description: typing.Union[str, None] = None
     ):
 
     logger.debug("Registering VconProcessor: {}".format(name))
@@ -679,7 +807,7 @@ class VconProcessorRegistry:
     if(successfully_loaded):
       filtered_names = []
       for name in names:
-        if(VCON_PROCESSOR_REGISTRY[name]._module_not_found == False and
+        if(not VCON_PROCESSOR_REGISTRY[name]._module_not_found and
           VCON_PROCESSOR_REGISTRY[name]._processor_instance is not None):
           filtered_names.append(name)
 
@@ -689,6 +817,9 @@ class VconProcessorRegistry:
 
   @staticmethod
   def get_processor_instance(name: str) -> VconProcessor:
+    """
+    Get the registered **VconProcessor** for the given name.
+    """
     # get VconProcessorRegistration for given name
     registration = VCON_PROCESSOR_REGISTRY.get(name, None)
 
@@ -696,10 +827,10 @@ class VconProcessorRegistry:
       raise VconProcessorNotRegistered("VconProcessor not registered under the name: {}".format(name))
 
     if(registration._processor_instance is None):
-      if(registration.self._module_load_attempted == False):
+      if(registration._module_load_attempted == False):
         raise VconProcessorNotInstantiated("VconProcessor {} not instantiated, load not attemtped".format(name))
 
-      if(registration.self._module_not_found == True):
+      if(registration._module_not_found == True):
         raise VconProcessorNotInstantiated("VconProcessor {} not instantiated, module: {} not found".format(
           name,
           registration._module_name
