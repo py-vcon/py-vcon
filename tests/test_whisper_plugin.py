@@ -2,32 +2,45 @@
 
 import os
 import datetime
-import pytest
 import json
 import vcon
 import vcon.filter_plugins
 
 def test_whisper_registration():
-  options = {"model_size" : "base"}
+  """ Test registration of Whisper plugin """
+  options = vcon.filter_plugins.TranscribeOptions(
+    model_size = "base",
+    #output_types = ["vendor", "word_srt", "word_ass"]
+    #whisper = { "language" : "en"}
+    )
 
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("whisper")
   assert(plugin is not None)
-  assert(plugin.import_plugin(**options) == True)
+  assert(plugin.import_plugin(options))
+
 
 def test_plugin_method_add():
   in_vcon = vcon.Vcon()
+  # TODO
+
 
 def test_whisper_transcribe_inline_dialog():
+  """ Test Whisper plugin with an inline audio dialog """
   in_vcon = vcon.Vcon()
 
-  options = {"llanguage" : "en", "model_size" : "base", "output_options" : ["vendor", "word_srt", "word_ass"], "whisper" : { "language" : "en"} }
+  options = vcon.filter_plugins.TranscribeOptions(
+    llanguage = "en", # non existing options
+    model_size = "base",
+    output_types = ["vendor", "word_srt", "word_ass"]
+    #whisper = { "language" : "en"}
+    )
   with open("examples/test.vcon", "r") as vcon_file:
     in_vcon.load(vcon_file)
 
   assert(len(in_vcon.dialog) > 0)
 
   anal_count = len(in_vcon.analysis)
-  out_vcon = in_vcon.whisper(**options)
+  out_vcon = in_vcon.whisper(options)
   assert(len(in_vcon.analysis) == anal_count + 3) # Whisper transcript, srt file and ass file
   assert(len(out_vcon.analysis) == anal_count + 3) # Whisper transcript, srt file and ass file
   #print(json.dumps(out_vcon.analysis[0], indent=2))
@@ -67,12 +80,15 @@ def test_whisper_transcribe_inline_dialog():
   if(out_vcon.uuid is None):
     out_vcon.set_uuid("vcon.net")
 
+  # Test that we still have a valid serializable Vcon
   out_vcon_json = out_vcon.dumps()
+  json.loads(out_vcon_json )
 
-  # TODO: should test more than one inokation of whisper plugin to be sure its ok to reuse
+  # TODO: should test more than one invokation of whisper plugin to be sure its ok to reuse
   # models for more than one transcription.
 
 def test_whisper_transcribe_external_dialog():
+  """ Test Whisper plugin with an externally referenced audio dialog """
   in_vcon = vcon.Vcon()
 
   # Add external ref
@@ -94,12 +110,17 @@ def test_whisper_transcribe_external_dialog():
 
   assert(dialog_index == 0)
 
-  options = {"llanguage" : "en", "model_size" : "base", "output_options" : ["vendor", "word_srt", "word_ass"], "whisper" : { "language" : "en"} }
+  options = vcon.filter_plugins.TranscribeOptions(
+    llanguage = "en",
+    model_size = "base",
+    output_types = ["vendor", "word_srt", "word_ass"],
+    whisper = { "language" : "en"}
+    )
 
   assert(len(in_vcon.dialog) > 0)
 
   anal_count = len(in_vcon.analysis)
-  out_vcon = in_vcon.transcribe(**options)
+  out_vcon = in_vcon.transcribe(options)
   assert(len(out_vcon.analysis) == anal_count + 3) # Whisper transcript, srt file and ass file
   #print(json.dumps(out_vcon.analysis[0], indent=2))
 
@@ -138,10 +159,13 @@ def test_whisper_transcribe_external_dialog():
   if(out_vcon.uuid is None):
     out_vcon.set_uuid("vcon.net")
 
+  # Test that we still have a valid serializable Vcon
   out_vcon_json = out_vcon.dumps()
+  json.loads(out_vcon_json )
 
 
 def test_whisper_no_dialog():
+  """ Test Whisper plugin on Vcon with no dialogs """
   in_vcon = vcon.Vcon()
   vcon_json = """
   {
@@ -157,8 +181,13 @@ def test_whisper_no_dialog():
   """
   in_vcon.loads(vcon_json)
 
-  options = {"llanguage" : "en", "model_size" : "base", "output_options" : ["vendor", "word_srt", "word_ass"], "whisper" : { "language" : "en"} }
+  options = vcon.filter_plugins.TranscribeOptions(
+    llanguage = "en",
+    model_size = "base",
+    output_types = ["vendor", "word_srt", "word_ass"],
+    whisper = { "language" : "en"}
+    )
 
   assert(in_vcon.dialog is None)
-  out_vcon = in_vcon.transcribe(**options)
-  assert(in_vcon.analysis is None)
+  out_vcon = in_vcon.transcribe(options)
+  assert(out_vcon.analysis is None)

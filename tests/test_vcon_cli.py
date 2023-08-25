@@ -5,17 +5,18 @@ unit tests for the vcon command line script
 import sys
 import io
 import os.path
-#import json
-import pytest
 
-IN_VCON_JSON = '{"uuid": "0183878b-dacf-8e27-973a-91e26eb8001b", "vcon": "0.0.1", "attachments": [], "parties": [{"name": "Alice", "tel": "+12345678901"}, {"name": "Bob", "tel": "+19876543210"}]}'
+IN_VCON_JSON = """
+{"uuid": "0183878b-dacf-8e27-973a-91e26eb8001b", "vcon": "0.0.1", "attachments": [], "parties": [{"name": "Alice", "tel": "+12345678901"}, {"name": "Bob", "tel": "+19876543210"}]}
+"""
+
 WAVE_FILE_NAME = "examples/agent_sample.wav"
 WAVE_FILE_URL = "https://github.com/vcon-dev/vcon/blob/main/examples/agent_sample.wav?raw=true"
 WAVE_FILE_SIZE = os.path.getsize(WAVE_FILE_NAME)
-VCON_WITH_DIALOG_FILE_NAME = "examples/test.vcon"
+VCON_WITH_DIALOG_FILE_NAME = "py_vcon_server/tests/hello.vcon"
 
 def test_vcon_new(capsys):
-  """test vcon -n"""
+  """ test vcon -n """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
   # Note: can provide stdin using:
@@ -41,28 +42,30 @@ def test_filter_plugin_register(capsys):
   """ Test cases for the register filter plugin CLI option -r """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
-  command_args = "-n -r foo2 doesnotexist.foo Foo filter foo2".format(VCON_WITH_DIALOG_FILE_NAME).split()
+  command_args = "-n -r foo2 doesnotexist.foo Foo filter foo2".split()
   # Filter registered, but module not found
-  # expect vcon.filter_plugins.PluginModuleNotFound
+  # expect vcon.filter_plugins.FilterPluginModuleNotFound
   assert(len(command_args) == 7)
 
   try:
     vcon.cli.main(command_args)
-    raise Exception("Expected this to throw vcon.filter_plugins.PluginModuleNotFound as the module name is wrong")
+    raise Exception("Expected this to throw vcon.filter_plugins.FilterPluginModuleNotFound as the module name is wrong")
 
-  except vcon.filter_plugins.PluginModuleNotFound as no_mod_error:
+  # TODO: don't know why gets FilterPluginNotRegistered
+
+  except vcon.filter_plugins.FilterPluginModuleNotFound as no_mod_error:
     print("Got {}".format(no_mod_error))
 
-  command_args = "-n -r foo2 tests.foo Foo filter foo2".format(VCON_WITH_DIALOG_FILE_NAME).split()
+  command_args = "-n -r foo2 tests.foo Foo filter foo2".split()
   # Filter register and loaded, but not completely implemented
-  # expect vcon.filter_plugins.PluginFilterNotImplemented
+  # expect vcon.filter_plugins.FilterPluginNotImplemented
   assert(len(command_args) == 7)
 
   try:
     vcon.cli.main(command_args)
-    raise Exception("Expected this to throw vcon.filter_plugins.PluginFilterNotImplemented as the module name is wrong")
+    raise Exception("Expected this to throw vcon.filter_plugins.FilterPluginNotImplemented as the module name is wrong")
 
-  except vcon.filter_plugins.PluginFilterNotImplemented as mod_not_impl_error:
+  except vcon.filter_plugins.FilterPluginNotImplemented as mod_not_impl_error:
     print("Got {}".format(mod_not_impl_error))
 
 def test_filter(capsys):
