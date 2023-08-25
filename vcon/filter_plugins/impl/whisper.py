@@ -1,8 +1,10 @@
 #import copy
 import os
 import sys
+import typing
 import tempfile
 import contextlib
+import pydantic
 import vcon
 import vcon.filter_plugins
 #import whisper
@@ -18,35 +20,73 @@ except Exception as e:
   logger.info("please install stable_whisper:  \"pip3 install stable-ts\"")
   raise e
 
+
+class WhisperInitOptions(vcon.filter_plugins.FilterPluginInitOptions):
+  model_size: str = pydantic.Field(
+    title = "**Whisper** model size name",
+    description = """
+Model size name to use for transcription", (e.g. "tiny", "base") as defined on
+https://github.com/openai/whisper#available-models-and-languages
+""",
+    default = "base",
+    examples = [ "tiny", "base" ]
+    )
+
+
+class WhisperOptions(vcon.filter_plugins.TranscribeOptions):
+  """
+  Options for transcibing the one or all dialogs in a **Vcon** using the **OpenAI Whisper** implementation.
+  """
+  output_types: typing.List[str] = pydantic.Field(
+    title = "transcription output types",
+    description = """
+List of output types to generate.  Current set of value supported are:
+
+  * "vendor" - add the Whisper specific JSON format transcript as an analysis object
+  * "word_srt" - add a .srt file with timing on a word or small phrase basis as an analysis object
+  * "word_ass" - add a .ass file with sentence and highlighted word timeing as an analysis object
+       Not specifing "output_type" assumes all of the above will be output, each as a separate analysis object.
+""",
+    default = ["vendor", "word_srt", "word_ass"]
+    )
+
+
 class Whisper(vcon.filter_plugins.FilterPlugin):
   """
-  PluginFilter to generate transcriptions for a Von
+  FilterPlugin to generate transcriptions for a Von
   """
+  init_options_type = WhisperInitOptions
+  supported_options = [ "language" ]
   _supported_media = [ vcon.Vcon.MIMETYPE_AUDIO_WAV ]
 
-  def __init__(self, **options):
+  def __init__(
+    self,
+    init_options: WhisperInitOptions
+    ):
     """
     Parameters:
       in_vcon the input Vcon containing dialog recordings
 
-      options (kwargs) - key word arguments containing options for how the transcription
-         is to be performed.
-
-         options["model_size"] (str) - model size name (e.g. "tiny", "base") as defined on
-           https://github.com/openai/whisper#available-models-and-languages
 
     Returns:
        copy or modified vcon with transcriptions added
 
     """
-    super().__init__(**options)
+    super().__init__(
+      init_options,
+      WhisperOptions
+      )
     # make model size configurable
-    self.whisper_model_size = options.get("model_size", "base")
+    self.whisper_model_size = init_options.model_size
     logger.info("Initializing whisper model size: {}".format(self.whisper_model_size))
     self.whisper_model = stable_whisper.load_model(self.whisper_model_size)
     #stable_whisper.modify_model(self.whisper_model)
 
-  def filter(self, in_vcon: vcon.Vcon, **options) -> vcon.Vcon:
+  def filter(
+    self,
+    in_vcon: vcon.Vcon,
+    options: WhisperOptions
+    ) -> vcon.Vcon:
     """
     Transcribe recording dialogs in given Vcon using the Whisper implementation
 `
@@ -54,9 +94,6 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
       options (kwargs)
         options["whisper"] (dict) are passed through to whisper.Whisper.transcribe
           See help(whisper.DecodingOptions) for pass through options
-
-         options["model_size"] (str) - model size name (e.g. "tiny", "base") as defined on
-           https://github.com/openai/whisper#available-models-and-languages
 
          options["output_types"] List[str] - list of output types to generate.  Current set
            of value supported are:
@@ -71,7 +108,9 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
     #TODO do we want to copy the Vcon or modify in placed
     #out_vcon = copy.deepcopy(in_vcon)
     out_vcon = in_vcon
-    output_types = options.get("output_options", ["vendor", "word_srt", "word_ass"])
+    output_types = options.output_types
+    if(output_types is None or len(output_types) == 0):
+      output_types = ["vendor", "word_srt", "word_ass"]
     logger.info("whisper output_types: {}".format(output_types))
 
     if(in_vcon.dialog is None):
@@ -104,13 +143,24 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
 
                 # whisper has some print statements that we want to go to stderr
                 with contextlib.redirect_stdout(sys.stderr):
-                  whisper_options = options.get("whisper", {})
-                  if(options.get("model_size", self.whisper_model_size) == self.whisper_model_size):
+                  if(options.model_size is None or
+                    options.model_size == self.whisper_model_size):
                     model = self.whisper_model
+                    pass
                   else:
+                    # loading a different model is expensive.  Its better to register
+                    # multiple instance of whisper plugin with different names and models.
                     raise Exception("Not implemented whisper model initialized with size: {} transcribe requested for size: {}".format(
-                      self.whisper_model_size, options["model_size"]))
-                    # TODO generate a one time use model for the requested size
+                      self.whisper_model_size,
+                      options.model_size
+                      ))
+
+                  whisper_options = {}
+                  for field_value in options:
+                    key = field_value[0]
+                    if(key in self.supported_options):
+                      whisper_options[key] = field_value[1]
+                  logger.debug("providing whisper options: {}".format(whisper_options))
 
                   transcript = model.transcribe(temp_audio_file.name, **whisper_options)
                   # dict_keys(['text', 'segments', 'language'])
@@ -130,6 +180,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                   with contextlib.redirect_stdout(sys.stderr):
                     stable_whisper.results_to_word_srt(transcript, temp_srt_file.name)
                   srt_bytes = temp_srt_file.read()
+                  # TODO: should body be json.loads'd
                   out_vcon.add_analysis_transcript(dialog_index, srt_bytes.decode("utf-8"), "Whisper", "whisper_word_srt", encoding = "none")
 
               if("word_ass" in output_types):
@@ -138,6 +189,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                   with tempfile.NamedTemporaryFile(prefix= temp_dir + os.sep, suffix=".ass") as temp_ass_file:
                     stable_whisper.results_to_sentence_word_ass(transcript, temp_ass_file.name)
                     ass_bytes = temp_ass_file.read()
+                    # TODO: should body be json.loads'd
                     out_vcon.add_analysis_transcript(dialog_index, ass_bytes.decode("utf-8"), "Whisper", "whisper_word_ass", encoding = "none")
 
           else:
