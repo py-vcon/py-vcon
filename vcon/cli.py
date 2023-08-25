@@ -6,7 +6,12 @@ script file so that it coould more easily be tested with pytest.
 import sys
 import pathlib
 import typing
-import contextlib
+import argparse
+import json
+import email
+import email.utils
+import socket
+import sox
 import vcon
 
 def get_mime_type(file_name):
@@ -19,20 +24,13 @@ def get_mime_type(file_name):
   if(extension == ".wav"):
     mimetype = vcon.Vcon.MIMETYPE_AUDIO_WAV
 
+  # TODO: add: mp3, mp4 aac, ogg, 
   else:
     raise Exception("MIME type not defined for extension: {}".format(extension))
 
   return(mimetype)
 
 def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
-  import argparse
-  import json
-  import sox
-  import email
-  import email.utils
-  import time
-  import socket
- 
   parser = argparse.ArgumentParser("vCon operations such as construction, signing, encryption, verification, decrytpion, filtering")
   input_group = parser.add_mutually_exclusive_group()
   input_group.add_argument("-i", "--infile", metavar='infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
@@ -40,7 +38,7 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
 
   parser.add_argument("-o", "--outfile", metavar='outfile', nargs='?', type=argparse.FileType('w'), default=sys.stdout)
 
-  parser.add_argument("-r", "--register-filter-plugin", nargs=3, 
+  parser.add_argument("-r", "--register-filter-plugin", nargs=3,
     action="append", type=str, default=[])
 
   subparsers_command = parser.add_subparsers(dest="command")
@@ -71,7 +69,7 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
   filter_parser = subparsers_command.add_parser("filter")
   fn_help = "Name of filter plugin or default type filter plugin name"
   filter_parser.add_argument("filter_name", metavar="filter_plugin_name", nargs=1, type=str, help=fn_help, default=None, action="append")
-  fo_help="JSON object (kwargs) with key name values which are options passed to the filter. (e.g. \'{\"a\" : 1, \"b\" : \"two\"}\' )"
+  fo_help="JSON dict/object (FilterPluginOptions) with key name values which are options passed to the filter. (e.g. \'{\"a\" : 1, \"b\" : \"two\"}\' )"
   filter_parser.add_argument("-fo", "--filter-options", metavar='filter_options', nargs=1, type=str, help=fo_help, action="append")
 
   sign_parser = subparsers_command.add_parser("sign")
@@ -96,11 +94,32 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
   print("command: {}".format(args.command), file=sys.stderr)
 
   for filter_plugin_registration in args.register_filter_plugin:
+    print("test cli got reg info pluging: {}".format(
+      filter_plugin_registration[0]
+      ),
+      file = sys.stderr
+      )
+    if(len(filter_plugin_registration) >= 5):
+      init_options_json = filter_plugin_registration[4]
+    else:
+      init_options_json = None
+    if(init_options_json is not None and init_options_json != ""):
+      init_options_dict = json.loads(init_options_json)
+      if(not isinstance(init_options_dict, dict)):
+        print("filter init options: {} ignored, must be a valid json dict string".format(
+          init_options_json),
+          file = sys.stderr
+          )
+        sys.exit(2)
+    else:
+      init_options_dict = {}
+
     vcon.filter_plugins.FilterPluginRegistry.register(
       filter_plugin_registration[0],
       filter_plugin_registration[1],
       filter_plugin_registration[2],
       filter_plugin_registration[0],
+      init_options_dict,
       replace=True)
 
   if(args.command == "sign"):
@@ -205,16 +224,20 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
       filter_options_dict = {}
     print("filter options: \"{}\"".format(filter_options_dict), file=sys.stderr)
     try:
-      plugin = vcon.filter_plugins.FilterPluginRegistry.get(plugin_name)
+      plugin = vcon.filter_plugins.FilterPluginRegistry.get(plugin_name, True, True)
       print("got plugin for: {}".format(plugin), file=sys.stderr)
+      if(plugin is None):
+        raise Exception("should not get here, exception should have been raised in get()")
     except Exception as pname_error:
-      try:
-        default_type = vcon.filter_plugins.FilterPluginRegistry.get_type_default_name(plugin_name)
-        print("got default type {} plugin for: {}".format(default_type, plugin_name), file=sys.stderr)
-      except Exception as ptype_error:
-        raise Exception(
-          "{} is neither a registered filter plugin name or a default filter plugin type name".format(
-         plugin_name)) from pname_error
+      names = vcon.filter_plugins.FilterPluginRegistry.get_names()
+      print("filter name: {} not found, the following filters are registered: {}".format(
+        plugin_name,
+        names
+        ),
+        file = sys.stdout
+        )
+
+      raise pname_error
 
     # send print statements that we want to go to stderr
     #
@@ -222,7 +245,12 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
     # like it that the unit test fails if there is any print to stdout
     # noise to force clean up.
     #with contextlib.redirect_stdout(sys.stderr):
-    in_vcon = in_vcon.filter(plugin_name, **filter_options_dict)
+
+    if(plugin is None):
+      raise Exception("Should not get here")
+
+    options = plugin.options_type(**filter_options_dict)
+    in_vcon = in_vcon.filter(plugin_name, options)
 
   elif(args.command == "encrypt"):
     print("state: {}".format(in_vcon._state), file=sys.stderr)
@@ -273,6 +301,7 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
         email_message.get_all("recent-cc", []))
 
       party_indices = []
+      sender_index = None
       for email_address in [sender] + recipients:
         print("email name: {} mailto: {}".format(email_address[0], email_address[1]), file=sys.stderr)
         parties_found = in_vcon.find_parties_by_parameter("mailto", email_address[1])
@@ -283,6 +312,11 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
           party_index = in_vcon.set_party_parameter("mailto", email_address[1])
           in_vcon.set_party_parameter("name", email_address[0], party_index)
           parties_found = [party_index]
+          if(sender_index is None):
+            sender_index = parties_found[0]
+
+        elif(sender_index is None):
+            sender_index = party_index
 
         party_indices.extend(parties_found)
 
@@ -308,7 +342,7 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
       else:
         email_body = email_message.get_payload()
 
-      in_vcon.add_dialog_inline_text(email_body, date, 0, party_indices, content_type, file_name)
+      in_vcon.add_dialog_inline_text(email_body, date, 0, sender_index, content_type, file_name)
 
   elif(args.command == "extract"):
     if(args.extract_command == "dialog"):
@@ -335,3 +369,4 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
     args.outfile.write(out_vcon_json)
 
   return(0)
+

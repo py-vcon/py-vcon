@@ -1,11 +1,13 @@
 """ Vcon module providing frameword for filter plugins which take a Von in and provide a Vcon output """
 from __future__ import annotations
 import importlib
-import typing
-import sys
 import os
+import copy
+import sys
+import typing
 import traceback
 import logging
+import pydantic
 import pythonjsonlogger.jsonlogger
 
 
@@ -36,29 +38,126 @@ def build_logger(name : str) -> logging.Logger:
     logger.addHandler(handler)
 
   return(logger)
+
 logger = build_logger(__name__)
 
-class PluginModuleNotFound(Exception):
+
+class FilterPluginModuleNotFound(Exception):
   """ Thrown when plugin modeule fails to load """
 
-class PluginClassNotFound(Exception):
+class FilterPluginClassNotFound(Exception):
   """ Thrown when plugin class is not found in plugin module """
 
-class PluginFilterNotImplemented(Exception):
+class FilterPluginNotImplemented(Exception):
   """ Thrown when plugin modeule and class are found, but methods are not implemented on filter"""
 
-class PluginFilterNotRegistered(Exception):
+class FilterPluginNotRegistered(Exception):
   """ Thrown when plugin is not found in the FilterPluginRegistry """
 
-class PluginFilterAlreadyRegistered(Exception):
+class FilterPluginAlreadyRegistered(Exception):
   """ Thrown when plugin already exists in the FilterPluginRegistry """
 
-class FilterPlugin:
-  """ Abstract Vcon filter plugin class.  Implementations derive from this clss and must implement the filter method """
-  def __init__(self, **options):
-    pass
 
-  def filter(self, in_vcon: Vcon, **options) -> Vcon:
+class FilterPluginInitOptions(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """ base class for **FilterPlugin** initialization options """
+
+
+class FilterPluginOptions(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """ base class for **FilterPlugin.filter** method options """
+
+
+class TranscribeOptions(FilterPluginOptions):
+  """ base class for all **FilterPlugins** that provide audio transcription """
+  language: str = pydantic.Field(
+    title = "transcription language",
+    default = "en"
+    )
+
+
+class FilterPlugin():
+  """
+  Base class for plugins to operate on a vcon.
+
+  **FilterPlugin** take a **Vcon* and some options as
+  input and output a **Vcon** which may be the input **Vcon**
+  modified.
+
+  A **FilterPlugin* as three primary operations:
+
+    * Initialization (*__init__**) which is invoked with a
+        derived class specific set of initialization 
+        options (derived from **FilterPluginInitOptions**(
+
+    * filtering (**filter**) which is the actual method 
+        that operates on a **Vcon**.
+
+    * teardown (**__del__**) which performs any shutdown or
+        release of resources for the plugin.
+
+  Initialization and teardown are only performed once.
+
+
+  **FilterPlugins** is an abstract class.  One must
+  implement a derived class to use it.  The derived class
+  must implement the following:
+
+    * **__init__** method SHOULD invoke super().__init__
+
+    * **filter** method to performe the actual **Vcon** operation
+
+    * **init_options_type** MUST be defined and set to a
+        derived class of **FilterPluginInitOptions** which
+        is the type of the only argument to the derived
+        class's **__init__** method.
+
+    To be used the derived class and a specific set of 
+    initialization options must be registered using
+    **FilterPluginRegistry.register**.  A **FilterPlugin**
+    is dynamically loaded only the first time that it
+    is actually used. It stays loaded until the system
+    exits.
+  """
+  def __init__(self,
+    options: FilterPluginInitOptions,
+    options_type: typing.Type[FilterPluginOptions]
+    ):
+    """
+    Instance stores the initialization options that were used.
+
+    Instance also stores the **FilterPluginOptions** type/class
+    that is used by the derived class's **filter** method.
+    This is used to enforce typing and defaults for the
+    options passed into the **filter** method.
+    """
+
+    if(not hasattr(self, "init_options_type")):
+      raise FilterPluginNotImplemented(
+        "derived class: {} has not set static attribute: init_options_type.  Value must be the type class derived from FilterPluginInitOptions.".format(
+        self.__class__.__name__
+        ))
+
+    if(not issubclass(self.init_options_type, FilterPluginInitOptions)):
+      raise FilterPluginNotImplemented(
+        "derived class: {} static attribute: init_options_type value must be derived from FilterPluginInitOptions.  Got: {}".format(
+        self.__class__.__name__,
+        self.init_options_type
+        ))
+
+    if(not issubclass(options_type, FilterPluginOptions)):
+      raise FilterPluginNotImplemented(
+        "options_type value must be derived from FilterPluginOptions".format(
+        self.__class__.__name__
+        ))
+
+    self._init_options = copy.deepcopy(options)
+    self.options_type = options_type
+
+
+  def filter(
+    self,
+    in_vcon: Vcon,
+    options: FilterPluginOptions
+    ) -> Vcon:
     """
     Abstract method which performs an operation on an input Vcon and 
     provides the modified Vcon as output.
@@ -70,15 +169,24 @@ class FilterPlugin:
     Returns:
       vcon.Vcon - the modified Vcon
     """
-    raise PluginFilterNotImplemented("{}.filter not implemented".format(type(self)))
+    raise FilterPluginNotImplemented("{}.filter not implemented".format(type(self)))
+
 
   def __del__(self):
     """ Teardown/uninitialization method for the plugin """
     print("deleting {}".format(self.__class__))
 
+
 class FilterPluginRegistration:
   """ Class containing info and heloer methods on the registration for a single named plugin filter """
-  def __init__(self, name: str, module_name: str, class_name: str, description: str):
+  def __init__(
+    self,
+    name: str,
+    module_name: str,
+    class_name: str,
+    description: str,
+    init_options: typing.Union[FilterPluginInitOptions, typing.Dict[str, typing.Any]]
+    ):
     self.name = name
     self._module_name = module_name
     self._module_load_attempted = False
@@ -86,9 +194,13 @@ class FilterPluginRegistration:
     self._class_not_found = False
     self._class_name = class_name
     self.description = description
+    self._init_options = init_options
     self._plugin : typing.Union[FilterPlugin, None] = None
 
-  def import_plugin(self, **options) -> bool:
+  def import_plugin(
+    self,
+    init_options: typing.Union[FilterPluginInitOptions, typing.Dict[str, typing.Any]]
+    ) -> bool:
     """
     Import the package which contains the implementation for the filter
     plugin and instantiate the plugin class.
@@ -98,7 +210,7 @@ class FilterPluginRegistration:
     and a class which gets instantiated upon import of the package.
 
     Parameters:
-      options (kwargs) - options input to the plugin class constructor
+      init_options - initialization options input to the plugin class constructor
 
     Returns:
       True/False if the plugin module imported successfully and the
@@ -114,7 +226,17 @@ class FilterPluginRegistration:
 
         try:
           class_ = getattr(module, self._class_name)
-          self._plugin = class_(**options)
+          if(isinstance(init_options, dict)):
+            # convert to proper init options type if a generic dict
+            if(not hasattr(class_, "init_options_type")):
+              raise FilterPluginNotImplemented(
+                "filter plugin class: {} in module: {} has not set init_options_type.  It should be the type/class derived form FiterPluginInitOptions".format(
+                self._class_name,
+                self._module_name
+                ))
+            init_options = class_.init_options_type(**init_options)
+            # TODO raise "filter_plugin class: {} has not set static attribute: init_options_type.  Should be a class Deribed from FilterPluginInitOptions".format(self._class_name)
+          self._plugin = class_(init_options)
           self._class_not_found = False
           succeed = True
 
@@ -132,30 +254,70 @@ class FilterPluginRegistration:
 
     return(succeed)
 
-  def plugin(self, **options) -> typing.Union[FilterPlugin, None]:
+  def plugin(
+    self,
+    init_options: typing.Union[FilterPluginInitOptions, None] = None
+    ) -> typing.Union[FilterPlugin, None]:
     """ Return the plugin filter class for this registration """
     if(not self._module_load_attempted):
-      self.import_plugin(**options)
+      if(init_options is None):
+        init_options = self._init_options
+      self.import_plugin(init_options)
 
     return(self._plugin)
 
-  def filter(self, in_vcon : vcon.Vcon, **options) -> vcon.Vcon:
-    if(not self._module_load_attempted):
-      self.import_plugin(**options)
+
+  def options_type(self, *args, **kwargs) -> FilterPluginOptions:
+    plugin = self.plugin()
 
     if(self._module_not_found is True):
       message = "plugin: {} not loaded as module: {} was not found".format(self.name, self._module_name)
-      raise PluginModuleNotFound(message)
+      raise FilterPluginModuleNotFound(message)
 
     if(self._class_not_found is True):
       message = "plugin: {} not loaded as class: {} not found in module: {}".format(self.name, self._class_name, self._module_name)
-      raise PluginClassNotFound(message)
+      raise FilterPluginClassNotFound(message)
 
-    plugin = self.plugin(**options)
     if(plugin is None):
+      logger.debug("plugin: {} from class: {} module: {} load failed".format(self.name, self._class_name, self._module_name))
       raise Exception("plugin: {} from class: {} module: {} load failed".format(self.name, self._class_name, self._module_name))
 
-    return(plugin.filter(in_vcon, **options))
+    return(plugin.options_type(*args, **kwargs))
+
+
+  def filter(
+    self,
+    in_vcon : vcon.Vcon,
+    options: FilterPluginOptions
+    ) -> vcon.Vcon:
+    if(not self._module_load_attempted):
+      self.import_plugin(self._init_options)
+
+    if(self._module_not_found is True):
+      message = "plugin: {} not loaded as module: {} was not found".format(self.name, self._module_name)
+      raise FilterPluginModuleNotFound(message)
+
+    if(self._class_not_found is True):
+      message = "plugin: {} not loaded as class: {} not found in module: {}".format(self.name, self._class_name, self._module_name)
+      raise FilterPluginClassNotFound(message)
+
+    plugin = self.plugin(self._init_options)
+    if(plugin is None):
+      logger.debug("plugin: {} from class: {} module: {} load failed".format(self.name, self._class_name, self._module_name))
+      raise Exception("plugin: {} from class: {} module: {} load failed".format(self.name, self._class_name, self._module_name))
+
+    if(isinstance(options, dict)):
+      options = plugin.options_type(**options)
+
+    if(not isinstance(options, FilterPluginOptions)):
+      raise FilterPluginNotImplemented(
+        "plugin: {} class: {} method: filter should take an instance of class derived from FilterPluginOptions, got: {}".format(
+        seld._name,
+        self._class_name,
+        type(options)
+        ))
+
+    return(plugin.filter(in_vcon, options))
 
 class FilterPluginRegistry:
   """ class/scope for Vcon filter plugin registrations and defaults for plugin types """
@@ -177,11 +339,17 @@ class FilterPluginRegistry:
          
       FilterPluginRegistry._registry[plugin.name] = plugin
     else:
-      raise PluginFilterAlreadyRegistered("Plugin {} already registered".format(plugin.name))
+      raise FilterPluginAlreadyRegistered("Plugin {} already registered".format(plugin.name))
 
 
   @staticmethod
-  def register(name: str, module_name: str, class_name: str, description: str, replace: bool = False) -> None:
+  def register(
+    name: str,
+    module_name: str,
+    class_name: str,
+    description: str,
+    init_options: typing.Union[FilterPluginInitOptions, typing.Dict[str, typing.Any]],
+    replace: bool = False) -> None:
     """
     Register a named filter plugin.
 
@@ -198,18 +366,40 @@ class FilterPluginRegistry:
                        if False throw an exception if a plugin of the same name is already register
     """
     logger.info("Registering FilterPlugin: {}".format(locals()))
-    entry = FilterPluginRegistration(name, module_name, class_name, description)
+    entry = FilterPluginRegistration(
+      name,
+      module_name,
+      class_name,
+      description,
+      init_options
+      )
     FilterPluginRegistry.__add_plugin(entry, replace)
 
 
   @staticmethod
-  def get(name: str) -> FilterPluginRegistration:
+  def get(name: str,
+    check_type_default: bool = False,
+    load_plugin: bool = False
+    ) -> FilterPluginRegistration:
+
     """
     Returns registration for named plugin
     """
     plugin_reg = FilterPluginRegistry._registry.get(name, None)
+    if(plugin_reg is None and not check_type_default):
+      raise FilterPluginNotRegistered("Filter plugin {} is not registered".format(name))
+
     if(plugin_reg is None):
-      raise PluginFilterNotRegistered("Filter plugin {} is not registered".format(name))
+      try:
+        plugin_reg = FilterPluginRegistry.get_type_default_plugin(name)
+
+      except FilterPluginNotRegistered as e:
+        raise FilterPluginNotRegistered("filter plugin name {} is not register and is not a type default".format(
+          name
+          ))
+
+    if(load_plugin):
+      plugin_reg.import_plugin(plugin_reg._init_options)
 
     return(plugin_reg)
 
@@ -241,20 +431,20 @@ class FilterPluginRegistry:
     return(FilterPluginRegistry._defaults.keys())
 
   @staticmethod
-  def get_type_default_plugin(plugin_type: str) -> typing.Union[FilterPluginRegistration, None]:
+  def get_type_default_plugin(plugin_type: str) -> FilterPluginRegistration:
     """ Get the default FilterPlauginRegistration for the named filter type """
     if(not isinstance(plugin_type, str)):
       raise AttributeError("plugin_type argument should be a string, not {}".format(type(plugin_type)))
 
     name = FilterPluginRegistry.get_type_default_name(plugin_type)
     if(name is None):
-      raise PluginFilterNotRegistered("Filter plugin default type name {} is not set".format(plugin_type))
+      raise FilterPluginNotRegistered("Filter plugin default type name {} is not set".format(plugin_type))
     return(FilterPluginRegistry.get(name))
 
-class TranscriptionFilter(FilterPlugin):
+#class TranscriptionFilter(FilterPlugin):
   # TODO abstraction of transcription filters, iterates through dialogs
-  def __init__(self, **options):
-    super().__init__(**options)
+  # def __init__(self, options):
+  #   super().__init__(options)
 
   def iterateDialogs(self, in_vcon: Vcon, scope: str ="new"):
     """

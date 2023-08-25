@@ -9,10 +9,25 @@ import pkgutil
 import typing
 import sys
 import os
-import logging
 import copy
+import logging
 import logging.config
+import enum
+import time
+import hashlib
+import inspect
+import functools
+import warnings
+import datetime
+import uuid6
+import requests
+import jose.utils
+import jose.jws
+import jose.jwe
 import pythonjsonlogger.jsonlogger
+import vcon.utils
+import vcon.security
+import vcon.filter_plugins
 
 __version__ = "0.2"
 
@@ -47,21 +62,6 @@ except Exception as import_error:
   dumps_options = {}
   logger.info("using json")
 
-import enum
-import time
-import hashlib
-import inspect
-import functools
-import warnings
-import datetime
-import uuid6
-import requests
-import vcon.utils
-import vcon.security
-import vcon.filter_plugins
-import jose.utils
-import jose.jws
-import jose.jwe
 
 _LAST_V8_TIMESTAMP = None
 
@@ -126,7 +126,7 @@ class InvalidVconSignature(Exception):
 
 class VconAttribute:
   """ descriptor base class for attributes in vcon """
-  def __init__(self, doc : str = None):
+  def __init__(self, doc : typing.Union[str, None] = None):
     self._type_name = ""
     self.name = None
     if(doc is not None):
@@ -154,21 +154,21 @@ class VconAttribute:
 
 class VconString(VconAttribute):
   """ descriptor for String attributes in vcon """
-  def __init__(self, doc : str = None):
+  def __init__(self, doc : typing.Union[str, None] = None):
     super().__init__(doc = doc)
     self._type_name = "String"
 
 class VconDict(VconAttribute):
   """ descriptor for Lists of dicts in vcon """
 
-  def __init__(self, doc : str = None):
+  def __init__(self, doc : typing.Union[str, None] = None):
     super().__init__(doc = doc)
     self._type_name = "Dict"
 
 class VconDictList(VconAttribute):
   """ descriptor for Lists of dicts in vcon """
 
-  def __init__(self, doc : str = None):
+  def __init__(self, doc : typing.Union[str, None] = None):
     super().__init__(doc = doc)
     self._type_name = "DictList"
 
@@ -178,16 +178,21 @@ class VconPluginMethodType():
     self.__function_name__ = filter_name
     self.__self__ = vcon_instance
     if(not isinstance(vcon_instance, vcon.Vcon)):
-      AttributeError("vcon_instance should be a Vcon not {}".format(type(vcon_instance)))
+      raise AttributeError("vcon_instance should be a Vcon not {}".format(type(vcon_instance)))
 
     #print("added func: {} for obj: {} type{}".format(filter_name, vcon_instance, type(vcon_instance)))
 
   def __call__(self, *args, **kwargs):
     obj = self.__self__
-    #print("__call__ args: {}".format(args))
-    #print("__call__ kwargs: {}".format(kwargs))
-    #print("calling filter for {} create: {} num dialogs: {}".format(self.__function_name__, obj.created_at, len(obj.dialog)))
-    return(vcon.Vcon.filter(obj, self.__function_name__, **kwargs))
+    if(len(args) != 1):
+      raise AttributeError("FilterPlugin method: {} missing argument: FilterPluginOptions".format(
+        self.__function_name__
+        ))
+    # print("__call__ args: {}".format(args))
+    # print("__call__ args[0]: {}".format(args[0])) # should be FilterPluginOptions
+    # print("__call__ kwargs: {}".format(kwargs))
+    # print("calling filter for {} create: {} num dialogs: {}".format(self.__function_name__, obj.created_at, len(obj.dialog)))
+    return(vcon.Vcon.filter(obj, self.__function_name__, args[0]))
 
 class VconPluginMethodProperty:
   def __init__(self, plugin_name : str):
@@ -246,7 +251,8 @@ class Vcon():
 
   group = VconDictList(doc = "List of Dicts referencing or including other vCons to be aggregated by this vCon")
   parties = VconDictList(doc = "List of Dicts, one for each party to this conversation")
-  dialog = VconDictList(doc = "List of Dicts referencing or including the capture of text, audio or video (original form of communication) segments for this conversation")
+  dialog = VconDictList(doc = "List of Dicts referencing or including the capture of text," +
+    " audio or video (original form of communication) segments for this conversation")
   analysis = VconDictList(doc = "List of Dicts referencing or includeing analysis data for this conversation")
   attachments = VconDictList(doc = "List of Dicts referencing or including ancillary documents to this conversation")
 
@@ -424,7 +430,8 @@ class Vcon():
     self._attempting_modify()
     for key in party_dict.keys():
       if(key not in Vcon.PARTIES_OBJECT_STRING_PARAMETERS):
-        raise AttributeError(f"Not supported: setting of Parties Object parameter: {key}.  Must be one of the following:  {Vcon.PARTIES_OBJECT_STRING_PARAMETERS}")
+        raise AttributeError(f"Not supported: setting of Parties Object parameter: {key}." +
+          f"  Must be one of the following:  {Vcon.PARTIES_OBJECT_STRING_PARAMETERS}")
     # TODO parameter specific validation
     self._vcon_dict[Vcon.PARTIES].append(party_dict)
     party_index = len(self._vcon_dict[Vcon.PARTIES]) - 1
@@ -469,12 +476,13 @@ class Vcon():
 
     return(found)
 
-  def add_dialog_inline_text(self, body : str,
+  def add_dialog_inline_text(self,
+    body : str,
     start_time : typing.Union[str, int, float, datetime.datetime],
     duration : typing.Union[int, float],
     party : int,
     mime_type : str,
-    file_name : str = None) -> int:
+    file_name : typing.Union[str, None] = None) -> int:
     """
     Add a dialog segment for a text chat or email thread.
 
@@ -496,7 +504,7 @@ class Vcon():
 
     self._attempting_modify()
 
-    new_dialog = {}
+    new_dialog: typing.Dict[str, typing.Any] = {}
     new_dialog['type'] = "text"
     new_dialog['start'] = vcon.utils.cannonize_date(start_time)
     new_dialog['duration'] = duration
@@ -520,7 +528,7 @@ class Vcon():
     duration : typing.Union[int, float],
     parties : typing.Union[int, typing.List[int], typing.List[typing.List[int]]],
     mime_type : str,
-    file_name : str = None,
+    file_name : typing.Union[str, None] = None,
     originator : typing.Union[int, None] = None) -> int:
     """
     Add a recording of a portion of the conversation, inline (base64 encoded) to the dialog.
@@ -553,7 +561,7 @@ class Vcon():
 
     self._attempting_modify()
 
-    new_dialog = {}
+    new_dialog: typing.Dict[str, typing.Any] = {}
     new_dialog['type'] = "recording"
     new_dialog['start'] = vcon.utils.cannonize_date(start_time)
     new_dialog['duration'] = duration
@@ -580,7 +588,12 @@ class Vcon():
   @deprecated("use Vcon.decode_dialog_inline_body")
   def decode_dialog_inline_recording(self, dialog_index : int) -> bytes:
     """ depricated use decode_dialog_inline_body """
-    return(self.decode_dialog_inline_body(dialog_index))
+    body = self.decode_dialog_inline_body(dialog_index)
+    # this should never happen, its to silence the linters
+    if(isinstance(body, str)):
+      body = bytes(body, "utf-8")
+
+    return(body)
 
   def decode_dialog_inline_body(self, dialog_index : int) -> typing.Union[str, bytes]:
     """
@@ -618,9 +631,9 @@ class Vcon():
     duration : typing.Union[int, float],
     parties : typing.Union[int, typing.List[int], typing.List[typing.List[int]]],
     external_url: str,
-    mime_type : str = None,
-    file_name : str = None,
-    sign_type : str = "SHA-512",
+    mime_type : typing.Union[str, None] = None,
+    file_name : typing.Union[str, None] = None,
+    sign_type : typing.Union[str, None] = "SHA-512",
     originator : typing.Union[int, None] = None) -> int:
     """
     Add a recording of a portion of the conversation, as a reference via the given
@@ -657,7 +670,7 @@ class Vcon():
 
     self._attempting_modify()
 
-    new_dialog = {}
+    new_dialog: typing.Dict[str, typing.Any] = {}
     new_dialog['type'] = "recording"
     new_dialog['start'] = vcon.utils.cannonize_date(start_time)
     new_dialog['duration'] = duration
@@ -695,7 +708,10 @@ class Vcon():
 
     return(dialog_index)
 
-  def get_dialog_external_recording(self, dialog_index : int) -> bytes:
+  def get_dialog_external_recording(self,
+    dialog_index : int,
+    get_kwargs: typing.Union[dict, None] = None
+    ) -> bytes:
     """
     Get the externally referenced dialog recording via the dialog's url
     and verify its integrity using the signature in the dialog object,
@@ -705,12 +721,17 @@ class Vcon():
       dialog_index (int) - index into the Vcon.dialog array indicating
         which external recording is to be retrieved and verified.
 
+      get_kwargs (dict) - kwargs passed to **requests.get** method
+        defaults to {"timeout": = 20} seconds
+
     Returns:
       verified content/bytes for the recording
     """
     # Get body from URL using requests
     url = self.dialog[dialog_index]["url"]
-    req = requests.get(url)
+    if(get_kwargs is None):
+      get_kwargs = {"timeout": 20}
+    req = requests.get(url, **get_kwargs)
     body = req.content
 
     # verify the body
@@ -913,6 +934,8 @@ class Vcon():
     Load the Vcon JSON from the given file_handle and deserialize it.
     see Vcon.loads for more details.
     """
+    self._attempting_modify()
+
     if(isinstance(vconfile, str)):
       file_handle = open(vconfile, "rb")
     else:
@@ -962,6 +985,8 @@ class Vcon():
 
     Returns: none
     """
+
+    self._attempting_modify()
 
     #TODO: Should check unsafe stuff is not loaded
 
@@ -1246,14 +1271,17 @@ class Vcon():
 
     self._vcon_dict[Vcon.SUBJECT] = subject
 
-  def filter(self, filter_name: str, **options) -> Vcon:
+  def filter(self,
+    filter_name: str,
+    options: vcon.filter_plugins.FilterPluginOptions
+    ) -> Vcon:
     """
     Run this Vcon through the named filter plugin.
 
     See vcon.filter_plugins.FilterPluginRegistry for the set of registered plugins.
 
     Parameters:
-      options (kwargs) - passed through to plugin.  The key words are documented by
+      options - passed through to plugin.  The fields in options are documented by
         the specified plugin.
 
     Returns:
@@ -1261,15 +1289,10 @@ class Vcon():
     """
     self._attempting_modify()
 
-    try:
-      plugin = vcon.filter_plugins.FilterPluginRegistry.get(filter_name)
-    except vcon.filter_plugins.PluginFilterNotRegistered as fp_error:
-      plugin = vcon.filter_plugins.FilterPluginRegistry.get_type_default_plugin(filter_name)
+    plugin = vcon.filter_plugins.FilterPluginRegistry.get(filter_name, True)
 
-    if(plugin is None):
-        raise Exception("Vcon.filter plugin: {} not found".format(filter_name))
+    return(plugin.filter(self, options))
 
-    return(plugin.filter(self, **options))
 
   def set_uuid(self, domain_name: str, replace: bool= False) -> str:
     """
@@ -1310,7 +1333,7 @@ class Vcon():
     try:
        existing_attr = getattr(vcon.Vcon, name)
        #logger.warning("found Vcon attribute: {} {}".format(name, existing_attr))
-       exists = True
+       exists = existing_attr is not None
 
     except AttributeError as ex_err:
       if(str(ex_err).startswith("type object 'Vcon'")):
@@ -1322,7 +1345,7 @@ class Vcon():
         exists = True
 
     if(not exists):
-      # The only programatic way to do this is to instantiate a Vcon, but this seemed a bit 
+      # The only programatic way to do this is to instantiate a Vcon, but this seemed a bit
       # heavy.  So for now just testing a manually maintained list of attributes and  blacklisted
       # token names.
       instance_attributes = ['_jwe_dict', '_jws_dict', '_state', '_vcon_dict', 'vcon', "Vcon", "filter_plugins", "security", "utils", "cli"]
@@ -1424,7 +1447,7 @@ class Vcon():
     # Translate transcriptions to body for consistency with dialog and attachments
     for index, analysis in enumerate(old_vcon.get("analysis", [])):
       analysis_type = analysis.get('type', None)
-      if(analysis_type == None):
+      if(analysis_type is None):
         raise InvalidVconJson("analysis object: {} has no type field".format(index))
 
       if(analysis_type == "transcript"):
