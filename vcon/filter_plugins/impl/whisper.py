@@ -142,17 +142,19 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                 #transcript = self.whisper_model.transcribe(samples, ts_num=7, stab=False)
 
                 # whisper has some print statements that we want to go to stderr
+
+                model = self.whisper_model
+
                 with contextlib.redirect_stdout(sys.stderr):
-                  if(options.model_size is None or
-                    options.model_size == self.whisper_model_size):
-                    model = self.whisper_model
-                    pass
-                  else:
-                    # loading a different model is expensive.  Its better to register
-                    # multiple instance of whisper plugin with different names and models.
-                    raise Exception("Not implemented whisper model initialized with size: {} transcribe requested for size: {}".format(
-                      self.whisper_model_size,
-                      options.model_size
+
+                  # loading a different model is expensive.  Its better to register
+                  # multiple instance of whisper plugin with different names and models.
+                  if(hasattr(options, "model_size")):
+                    logger.warning(
+                      "Ignoring whisper options attribute: model_size: {}, model size must be set in whipser initialization.  Using model size: {}".format(
+
+                      options.model_size,
+                      self.whisper_model_size
                       ))
 
                   whisper_options = {}
