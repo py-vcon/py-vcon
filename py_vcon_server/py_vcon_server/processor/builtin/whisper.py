@@ -4,27 +4,39 @@ import typing
 import pydantic
 import py_vcon_server.processor
 import py_vcon_server.logging_utils
-
+import vcon.filter_plugins
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 
 __version__ = "0.0.1"
 
-class WhisperInitOptions(py_vcon_server.processor.VconProcessorInitOptions):
-  model_size: typing.Optional[str] = pydantic.Field(
-    title = "Whisper model size to use",
-    #description = "vCon format version,
-    default = "base",
-    examples = ["tiny", "base"]
-    )
+plugin = vcon.filter_plugins.FilterPluginRegistry.get("whisper")
 
 
-class WhisperOptions(py_vcon_server.processor.VconProcessorOptions):
+class WhisperInitOptions(
+  py_vcon_server.processor.VconProcessorInitOptions,
+  plugin.plugin().init_options_type
+  ):
   pass
-  # TODO: add options for sepcifying which dialogs to transcribe
-  # TODO: add options for specifying which types of transcription output are desired
+  # The folloiwng should be defined in the WhisperInitOptions
+  # model_size: typing.Optional[str] = pydantic.Field(
+  #   title = "Whisper model size to use",
+  #   #description = "vCon format version,
+  #   default = "base",
+  #   examples = ["tiny", "base"]
+  #   )
 
+
+class WhisperOptions(
+  py_vcon_server.processor.VconProcessorOptions,
+  plugin.plugin().options_type
+  ):
+  pass
+  # TODO: add options for specifying which dialogs to transcribe
+
+# TODO: REMOVE THIS
+print("WhisperOptions fields: {}".format(WhisperOptions.__fields__))
 
 class Whisper(py_vcon_server.processor.VconProcessor):
   """ Whisper OpenAI transcription binding for **VconProcessor** """
