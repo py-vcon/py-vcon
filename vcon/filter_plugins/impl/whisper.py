@@ -21,7 +21,12 @@ except Exception as e:
   raise e
 
 
-class WhisperInitOptions(vcon.filter_plugins.FilterPluginInitOptions):
+class WhisperInitOptions(vcon.filter_plugins.FilterPluginInitOptions, title = "Whisper **FilterPlugin** intialization object"):
+  """
+  A **WhisperInitOptions** object is provided to the
+  **Whisper FilterPlugin.__init__** funcion when it is first loaded.  Its
+  attributes effect how the registered **FilterPlugin** functions.
+  """
   model_size: str = pydantic.Field(
     title = "**Whisper** model size name",
     description = """
@@ -53,7 +58,7 @@ List of output types to generate.  Current set of value supported are:
 
 class Whisper(vcon.filter_plugins.FilterPlugin):
   """
-  FilterPlugin to generate transcriptions for a Von
+  **FilterPlugin** to generate transcriptions for a **Vcon**
   """
   init_options_type = WhisperInitOptions
   supported_options = [ "language" ]
@@ -65,12 +70,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
     ):
     """
     Parameters:
-      in_vcon the input Vcon containing dialog recordings
-
-
-    Returns:
-       copy or modified vcon with transcriptions added
-
+      init_options (WhisperInitOptions) - the initialization options for the Whisper trascription plugin
     """
     super().__init__(
       init_options,
@@ -91,16 +91,16 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
     Transcribe recording dialogs in given Vcon using the Whisper implementation
 `
     Parameters:
-      options (kwargs)
-        options["whisper"] (dict) are passed through to whisper.Whisper.transcribe
-          See help(whisper.DecodingOptions) for pass through options
+      options (WhisperOptions)
 
-         options["output_types"] List[str] - list of output types to generate.  Current set
-           of value supported are:
-             "vendor" - add the Whisper specific JSON format transcript as an analysis object
-             "word_srt" - add a .srt file with timing on a word or small phrase basis as an analysis object
-             "word_ass" - add a .ass file with sentence and highlighted word timeing as an analysis object
-           Not specifing "output_type" assumes all of the above will be output, each as a separate analysis object.
+      options.output_types List[str] - list of output types to generate.  Current set
+      of value supported are:
+
+       * "vendor" - add the Whisper specific JSON format transcript as an analysis object
+       * "word_srt" - add a .srt file with timing on a word or small phrase basis as an analysis object
+       * "word_ass" - add a .ass file with sentence and highlighted word timeing as an analysis object
+
+      Not specifing "output_type" assumes all of the above will be output, each as a separate analysis object.
 
     Returns:
       the modified Vcon with added analysis objects for the transcription.
