@@ -82,16 +82,16 @@ class FilterPlugin():
   input and output a **Vcon** which may be the input **Vcon**
   modified.
 
-  A **FilterPlugin* as three primary operations:
+  A **FilterPlugin** as three primary operations:
 
-    * Initialization (*__init__**) which is invoked with a
+   * Initialization (**__init__**) which is invoked with a
         derived class specific set of initialization 
         options (derived from **FilterPluginInitOptions**(
 
-    * filtering (**filter**) which is the actual method 
+   * filtering (**filter**) which is the actual method 
         that operates on a **Vcon**.
 
-    * teardown (**__del__**) which performs any shutdown or
+   * teardown (**__del__**) which performs any shutdown or
         release of resources for the plugin.
 
   Initialization and teardown are only performed once.
@@ -101,21 +101,21 @@ class FilterPlugin():
   implement a derived class to use it.  The derived class
   must implement the following:
 
-    * **__init__** method SHOULD invoke super().__init__
+   * **__init__** method SHOULD invoke super().__init__
 
-    * **filter** method to performe the actual **Vcon** operation
+   * **filter** method to performe the actual **Vcon** operation
 
-    * **init_options_type** MUST be defined and set to a
+   * **init_options_type** MUST be defined and set to a
         derived class of **FilterPluginInitOptions** which
         is the type of the only argument to the derived
         class's **__init__** method.
 
-    To be used the derived class and a specific set of 
-    initialization options must be registered using
-    **FilterPluginRegistry.register**.  A **FilterPlugin**
-    is dynamically loaded only the first time that it
-    is actually used. It stays loaded until the system
-    exits.
+  To be used the derived class and a specific set of 
+  initialization options must be registered using
+  **FilterPluginRegistry.register**.  A **FilterPlugin**
+  is dynamically loaded only the first time that it
+  is actually used. It stays loaded until the system
+  exits.
   """
   def __init__(self,
     options: FilterPluginInitOptions,
@@ -164,7 +164,7 @@ class FilterPlugin():
 
     Parameters:
       in_vcon (vcon.Vcon) - input Vcon upon which an operation is to be performed by the plugin.
-      options (kwargs) - opaque options to the filter method/opearation
+      options (FilterPluginOptions) - derived options specific to the filter method/opearation
 
     Returns:
       vcon.Vcon - the modified Vcon
@@ -173,7 +173,11 @@ class FilterPlugin():
 
 
   def __del__(self):
-    """ Teardown/uninitialization method for the plugin """
+    """
+    Teardown/uninitialization method for the plugin
+
+    Parameters: None
+    """
     print("deleting {}".format(self.__class__))
 
 
