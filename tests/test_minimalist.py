@@ -1,25 +1,15 @@
 """ unit tests for mimimum elements of vCon """
 
-import pytest
-import vcon
 import json
 import os
+#import pprint
 import jose.utils
-import pprint
+import vcon
+from tests.common_utils import call_data , empty_vcon, two_party_tel_vcon
 
 VCON_PARTIES = "parties"
 VCON_DIALOG = "dialog"
 
-call_data = {
-      "epoch" : "1652552179",
-      "destination" : "2117",
-      "source" : "+19144345359",
-      "rfc2822" : "Sat, 14 May 2022 18:16:19 -0000",
-      "rfc3339" : "2022-05-14T18:16:19.000+00:00",
-      "file_extension" : "WAV",
-      "duration" : 94.84,
-      "channels" : 1
-}
 
 # TODO: remove references to Vcon._vcon_dict and use attributes instead
 
@@ -32,27 +22,6 @@ def assert_dict_array_size(test_dict : dict, list_name : str, size : int) -> Non
 
 def assert_vcon_array_size(vCon : vcon.Vcon, list_name : str, size : int) -> None:
   assert_dict_array_size(vCon._vcon_dict, list_name, size)
-
-#empty_count = 0
-@pytest.fixture(scope="function")
-def empty_vcon() -> vcon.Vcon:
-  """ construct vCon with no data """
-  #empty_count += 1
-  #print("empty invoked: {}".format(empty_count))
-  vCon = vcon.Vcon()
-  #print("empty_vcon invoked:")
-  #pprint.pprint(vCon._vcon_dict)
-  return(vCon)
-
-@pytest.fixture(scope="function")
-def two_party_tel_vcon(empty_vcon : vcon.Vcon) -> vcon.Vcon:
-  """ construct vCon with two tel URL """
-  vCon = empty_vcon
-  first_party = vCon.set_party_parameter("tel", call_data['source'])
-  assert(first_party == 0)
-  second_party = vCon.set_party_parameter("tel", call_data['destination'])
-  assert(second_party == 1)
-  return(vCon)
 
 def test_party_parameters(empty_vcon : vcon.Vcon):
   try:
@@ -67,21 +36,21 @@ def test_party_parameters(empty_vcon : vcon.Vcon):
 def test_party_tel(empty_vcon : vcon.Vcon):
   """ Test adding first party with a tel url to create simple vCon """
 
-  vCon = empty_vcon
-  assert_vcon_array_size(vCon, VCON_PARTIES, 0)
-  party_index = vCon.set_party_tel_url(call_data['source'])
+  a_vcon = empty_vcon
+  assert_vcon_array_size(a_vcon, VCON_PARTIES, 0)
+  party_index = a_vcon.set_party_tel_url(call_data['source'])
   assert(party_index == 0)
-  assert(vCon._vcon_dict[VCON_PARTIES][party_index]['tel'] == call_data['source'])
-  assert_vcon_array_size(vCon, VCON_PARTIES, 1)
-  assert_vcon_array_size(vCon, VCON_DIALOG, 0)
-  assert_vcon_array_size(vCon, "analysis", 0)
-  assert_vcon_array_size(vCon, "attachments", 0)
+  assert(a_vcon._vcon_dict[VCON_PARTIES][party_index]['tel'] == call_data['source'])
+  assert_vcon_array_size(a_vcon, VCON_PARTIES, 1)
+  assert_vcon_array_size(a_vcon, VCON_DIALOG, 0)
+  assert_vcon_array_size(a_vcon, "analysis", 0)
+  assert_vcon_array_size(a_vcon, "attachments", 0)
 
 
-  existing_party_index = vCon.set_party_parameter("tel", call_data['source'] + "2", party_index)
+  existing_party_index = a_vcon.set_party_parameter("tel", call_data['source'] + "2", party_index)
   assert(existing_party_index == party_index)
-  assert(vCon._vcon_dict[VCON_PARTIES][party_index]['tel'] == call_data['source'] + "2")
-  assert_vcon_array_size(vCon, VCON_PARTIES, 1)
+  assert(a_vcon._vcon_dict[VCON_PARTIES][party_index]['tel'] == call_data['source'] + "2")
+  assert_vcon_array_size(a_vcon, VCON_PARTIES, 1)
 
 def test_two_tel_party_vcon(empty_vcon : vcon.Vcon) -> None:
   """ Test two party call with tel urls """
