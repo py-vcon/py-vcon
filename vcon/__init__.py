@@ -19,6 +19,7 @@ import inspect
 import functools
 import warnings
 import datetime
+import pyjq
 import uuid6
 import requests
 import jose.utils
@@ -1293,6 +1294,39 @@ class Vcon():
     self._attempting_modify()
 
     self._vcon_dict[Vcon.SUBJECT] = subject
+
+  def jq(
+    self,
+    query: typing.Union[str, dict[str, str]]
+    ) -> typing.Union[list[str], dict[str, any]]:
+    """
+    Perform jq syle queries on the Vcon JSON
+
+    Parameters:
+
+    **query** (Union[str, dict[str, str]]) - query(s) to be performed on this Vcon
+      **query** can be a single query string or a dict containing a names set where
+      the values are query strings.
+
+  Returns:
+    if query is a str, a list containing the query result is returned
+    if query is a dict, a dict with keys corresponding to the input query where
+    the values are the query result.
+    """
+    if(self._state in [VconStates.UNVERIFIED, VconStates.DECRYPTED]):
+      raise InvalidVconState("Vcon state: {} cannot read parameters".format(self._state))
+
+    if(isinstance(query, str)):
+      return(pyjq.all(query, self.dumpd()))
+
+    else:
+      results = {}
+      vcon_dict = self.dumpd()
+      for query_name, query_string in query.items():
+        results[query_name] = pyjq.all(query_string, vcon_dict)[0]
+
+      return(results)
+
 
   def filter(self,
     filter_name: str,
