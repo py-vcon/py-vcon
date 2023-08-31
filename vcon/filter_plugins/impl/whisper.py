@@ -7,8 +7,6 @@ import contextlib
 import pydantic
 import vcon
 import vcon.filter_plugins
-#import whisper
-#import scipy.io.wavfile
 
 logger = vcon.build_logger(__name__)
 
@@ -24,7 +22,7 @@ except Exception as e:
 class WhisperInitOptions(vcon.filter_plugins.FilterPluginInitOptions, title = "Whisper **FilterPlugin** intialization object"):
   """
   A **WhisperInitOptions** object is provided to the
-  **Whisper FilterPlugin.__init__** funcion when it is first loaded.  Its
+  **Whisper FilterPlugin.__init__** method when it is first loaded.  Its
   attributes effect how the registered **FilterPlugin** functions.
   """
   model_size: str = pydantic.Field(
@@ -40,7 +38,7 @@ https://github.com/openai/whisper#available-models-and-languages
 
 class WhisperOptions(vcon.filter_plugins.TranscribeOptions):
   """
-  Options for transcibing the one or all dialogs in a **Vcon** using the **OpenAI Whisper** implementation.
+  Options for transcribing the one or all dialogs in a **Vcon** using the **OpenAI Whisper** implementation.
   """
   output_types: typing.List[str] = pydantic.Field(
     title = "transcription output types",
