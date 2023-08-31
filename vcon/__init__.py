@@ -217,6 +217,7 @@ class Vcon():
 
   # Some commonly used MIME types for convenience
   MIMETYPE_TEXT_PLAIN = "text/plain"
+  MIMETYPE_JSON = "application/json"
   MIMETYPE_AUDIO_WAV = "audio/x-wav"
   MIMETYPE_AUDIO_MP3 = "audio/x-mp3"
   MIMETYPE_AUDIO_MP4 = "audio/x-mp4"
@@ -595,6 +596,24 @@ class Vcon():
 
     return(body)
 
+
+  def get_dialog_body(self, dialog_index: int) -> typing.Union[str, bytes]:
+    """ Get the dialog body whether it is inline or an externally reference URL """
+    dialog = self.dialog[dialog_index]
+
+    if(any(key in dialog for key in("body", "url"))):
+      if("body" in dialog and dialog["body"] is not None and dialog["body"] != ""):
+        # Need to base64url decode recording
+        body_bytes = self.decode_dialog_inline_body(dialog_index)
+      elif("url" in dialog and dialog["url"] is not None and dialog["url"] != ""):
+        # HTTP GET and verify the externally referenced recording
+        body_bytes = self.get_dialog_external_recording(dialog_index)
+      else:
+        raise Exception("dialog[{}] has no body or url.  Should not have gotten here.".format(dialog_index))
+
+    return(body_bytes)
+
+
   def decode_dialog_inline_body(self, dialog_index : int) -> typing.Union[str, bytes]:
     """
     Get the dialog recording at the given index, decoding it and returning the raw bytes.
@@ -822,7 +841,8 @@ class Vcon():
     body : str = None,
     vendor : str = "conserver",
     vendor_schema : str = None,
-    encoding : str= "json"
+    encoding : str= "json",
+    **optional_parameters
     ) -> None:
     """
     Add a generic analysis for the indicated dialog.
@@ -844,6 +864,9 @@ class Vcon():
     analysis_element["vendor"] = vendor
     if(vendor_schema is not None):
       analysis_element["vendor_schema"] = vendor_schema
+
+    for parameter_name, value in optional_parameters.items():
+      analysis_element[parameter_name] = value
 
     if(self.analysis is None):
       self._vcon_dict[Vcon.ANALYSIS] = []
