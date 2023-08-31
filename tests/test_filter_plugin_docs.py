@@ -132,7 +132,7 @@ def doc_pydantic(pydantic_type: typing.Type[pydantic.BaseModel]) -> str:
     doc += FIELD_TEMPLATE.format(**field_data)
 
   if(fields_added == 0):
-    doc += "None"
+    doc += "None\n"
   return(doc)
 
 PLUGIN_TEMPLATE = """
