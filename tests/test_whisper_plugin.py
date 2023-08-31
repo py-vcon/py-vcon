@@ -161,8 +161,11 @@ def test_whisper_transcribe_external_dialog():
 
   # Test that we still have a valid serializable Vcon
   out_vcon_json = out_vcon.dumps()
-  json.loads(out_vcon_json )
+  out_vcon_dict = json.loads(out_vcon_json)
 
+  # Save a copy for reference
+  with open("tests/example_external_dialog.vcon", "w") as vcon_file:
+    vcon_file.write(json.dumps(out_vcon_dict, indent = 2))
 
 def test_whisper_no_dialog():
   """ Test Whisper plugin on Vcon with no dialogs """
