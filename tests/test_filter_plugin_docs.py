@@ -304,6 +304,13 @@ def get_module_plugin_info(
 
   return(plugins, init_options, options)
 
+def sort_types(type_set: typing.Set[typing.Type], head: typing.Type) -> typing.List[typing.Type]:
+  sorted_list = sorted(type_set.copy(), key = lambda cls: cls.__name__)
+  sorted_list.remove(head)
+  sorted_list.insert(0, head)
+
+  return(sorted_list)
+
 
 def main() -> str:
   plugins: typing.Set[typing.Type[vcon.filter_plugins.FilterPlugin]] = set()
@@ -342,7 +349,8 @@ def main() -> str:
 
   plugin_doc = ""
   plugin_toc = ""
-  for plugin_class in plugins:
+  sorted_plugins = sort_types(plugins, vcon.filter_plugins.FilterPlugin)
+  for plugin_class in sorted_plugins:
     plugin_doc += doc_plugin(plugin_class, init_options, options)
     fullname = plugin_class.__module__ + "." + plugin_class.__name__
     if(plugin_toc != ""):
@@ -353,7 +361,8 @@ def main() -> str:
 
   init_options_doc = ""
   init_options_toc = ""
-  for init_option in init_options:
+  sorted_init_options = sort_types(init_options, vcon.filter_plugins.FilterPluginInitOptions)
+  for init_option in sorted_init_options:
     init_options_doc += doc_pydantic(init_option)
     fullname = init_option.__module__ + "." + init_option.__name__
     if(init_options_toc != ""):
@@ -364,7 +373,8 @@ def main() -> str:
 
   options_doc = ""
   options_toc = ""
-  for option in options:
+  sorted_options = sort_types(options, vcon.filter_plugins.FilterPluginOptions)
+  for option in sorted_options:
     options_doc += doc_pydantic(option)
     fullname = option.__module__ + "." + option.__name__
     if(options_toc != ""):
