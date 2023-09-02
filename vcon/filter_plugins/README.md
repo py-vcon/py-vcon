@@ -4,64 +4,23 @@
 ## Table of Contents
  + [Introduction](#introduction)
  + [Filter Plugin Classes](filter-plugin-classes)
-   - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
    - [vcon.filter_plugins.FilterPlugin](#vconfilter_pluginsfilterplugin)
+   - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
    - [vcon.filter_plugins.impl.whisper.Whisper](#vconfilter_pluginsimplwhisperwhisper)
  + [Filter Plugin Initialization Options Classes](filter-plugin-initialization-options-classes)
    - [vcon.filter_plugins.FilterPluginInitOptions](#vconfilter_pluginsfilterplugininitoptions)
-   - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
+   - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
  + [Filter Plugin Options Classes](filter-plugin-options-classes)
-   - [vcon.filter_plugins.impl.whisper.WhisperOptions](#vconfilter_pluginsimplwhisperwhisperoptions)
-   - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
    - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
+   - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
+   - [vcon.filter_plugins.impl.whisper.WhisperOptions](#vconfilter_pluginsimplwhisperwhisperoptions)
 
 ## Introduction
 
 TBD
 
 # Filter Plugin Classes
-
-
-## vcon.filter_plugins.impl.openai.OpenAICompletion
-
-  **FilterPlugin** to for generative AI using **OpenAI** completion (e.g. ChatGPT)
-  
-
-**Methods**:
-
-### \_\_init__
-\_\_init__(self, init_options: vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions)
-
-Parameters:
-  init_options (OpenAICompletionInitOptions) - the initialization options for the **OpenAI** completion plugin
-
-
-**init_options** - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
-
-### filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.openai.OpenAICompletionOptions) -> vcon.Vcon
-
-
-Perform generative AI using **OpenAI** completion on the
-text **dialogs** and/or transcription **analysis** objects
-in the given **Vcon** using the given **options.prompt**.
-
-Parameters:
-  options (OpenAICompletionOptions)
-
-Returns:
-  the modified Vcon with added analysis objects for the text dialogs and transcription analysis.
-
-
-**options** - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
-
-### \_\_del__(self)
-
-
-Teardown/uninitialization method for the plugin
-
-Parameters: None
-
 
 
 ## vcon.filter_plugins.FilterPlugin
@@ -148,6 +107,47 @@ Parameters: None
 
 
 
+## vcon.filter_plugins.impl.openai.OpenAICompletion
+
+  **FilterPlugin** to for generative AI using **OpenAI** completion (e.g. ChatGPT)
+  
+
+**Methods**:
+
+### \_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions)
+
+Parameters:
+  init_options (OpenAICompletionInitOptions) - the initialization options for the **OpenAI** completion plugin
+
+
+**init_options** - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
+
+### filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.openai.OpenAICompletionOptions) -> vcon.Vcon
+
+
+Perform generative AI using **OpenAI** completion on the
+text **dialogs** and/or transcription **analysis** objects
+in the given **Vcon** using the given **options.prompt**.
+
+Parameters:
+  options (OpenAICompletionOptions)
+
+Returns:
+  the modified Vcon with added analysis objects for the text dialogs and transcription analysis.
+
+
+**options** - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
+
+### \_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
 ## vcon.filter_plugins.impl.whisper.Whisper
 
   **FilterPlugin** to generate transcriptions for a **Vcon**
@@ -208,25 +208,6 @@ base class for **FilterPlugin** initialization options
 #### Fields:
 None
 
-## vcon.filter_plugins.impl.whisper.WhisperInitOptions
- - Whisper **FilterPlugin** intialization object
-
-A **WhisperInitOptions** object is provided to the
-**Whisper FilterPlugin.__init__** method when it is first loaded.  Its
-attributes effect how the registered **FilterPlugin** functions.
-
-#### Fields:
-
-##### model_size (str)
-**Whisper** model size name
-
-Model size name to use for transcription", (e.g. "tiny", "base") as defined on
-https://github.com/openai/whisper#available-models-and-languages
-
-example: None
-examples: ['tiny', 'base']
-default: "base"
-
 ## vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions
  - OpenAI/ChatGPT **FilterPlugin** intialization object
 
@@ -248,37 +229,36 @@ example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 examples: None
 default: None
 
+## vcon.filter_plugins.impl.whisper.WhisperInitOptions
+ - Whisper **FilterPlugin** intialization object
+
+A **WhisperInitOptions** object is provided to the
+**Whisper FilterPlugin.__init__** method when it is first loaded.  Its
+attributes effect how the registered **FilterPlugin** functions.
+
+#### Fields:
+
+##### model_size (str)
+**Whisper** model size name
+
+Model size name to use for transcription", (e.g. "tiny", "base") as defined on
+https://github.com/openai/whisper#available-models-and-languages
+
+example: None
+examples: ['tiny', 'base']
+default: "base"
+
 
 # Filter Plugin Options Classes
 
 
-## vcon.filter_plugins.impl.whisper.WhisperOptions
- - WhisperOptions
+## vcon.filter_plugins.FilterPluginOptions
+ - FilterPluginOptions
 
-Options for transcribing the one or all dialogs in a **Vcon** using the **OpenAI Whisper** implementation.
+base class for **FilterPlugin.filter** method options 
 
 #### Fields:
-
-##### language (str)
-transcription language
 None
-example: None
-examples: None
-default: "en"
-
-##### output_types (typing.List[str])
-transcription output types
-
-List of output types to generate.  Current set of value supported are:
-
-  * "vendor" - add the Whisper specific JSON format transcript as an analysis object
-  * "word_srt" - add a .srt file with timing on a word or small phrase basis as an analysis object
-  * "word_ass" - add a .ass file with sentence and highlighted word timeing as an analysis object
-       Not specifing "output_type" assumes all of the above will be output, each as a separate analysis object.
-
-example: None
-examples: None
-default: ['vendor', 'word_srt', 'word_ass']
 
 ## vcon.filter_plugins.impl.openai.OpenAICompletionOptions
  - OpenAI filter method options
@@ -400,12 +380,32 @@ example: None
 examples: None
 default: "summary"
 
-## vcon.filter_plugins.FilterPluginOptions
- - FilterPluginOptions
+## vcon.filter_plugins.impl.whisper.WhisperOptions
+ - WhisperOptions
 
-base class for **FilterPlugin.filter** method options 
+Options for transcribing the one or all dialogs in a **Vcon** using the **OpenAI Whisper** implementation.
 
 #### Fields:
+
+##### language (str)
+transcription language
 None
+example: None
+examples: None
+default: "en"
+
+##### output_types (typing.List[str])
+transcription output types
+
+List of output types to generate.  Current set of value supported are:
+
+  * "vendor" - add the Whisper specific JSON format transcript as an analysis object
+  * "word_srt" - add a .srt file with timing on a word or small phrase basis as an analysis object
+  * "word_ass" - add a .ass file with sentence and highlighted word timeing as an analysis object
+       Not specifing "output_type" assumes all of the above will be output, each as a separate analysis object.
+
+example: None
+examples: None
+default: ['vendor', 'word_srt', 'word_ass']
 
 
