@@ -1,0 +1,60 @@
+Received: from 127.0.0.1
+ by atlas-production.v2-mail-prod1-gq1.omega.yahoo.com with HTTP; Fri, 23 Sep 2022 21:44:38 +0000
+Return-Path: <b@example.com>
+X-Originating-Ip: [54.159.250.94]
+X-Apparently-To: dgpetrie@yahoo.com; Fri, 23 Sep 2022 21:44:38 +0000
+Received: from 54.159.250.94 (EHLO mail.example.com)
+ by 10.253.31.90 with SMTP;
+ Fri, 23 Sep 2022 21:44:38 +0000
+Received: by mail.example.com (Postfix)
+	id 6DE5946395; Fri, 23 Sep 2022 21:44:38 +0000 (UTC)
+Delivered-To: b@example.com
+Received: from sonic305-21.consmr.mail.gq1.yahoo.com (sonic305-21.consmr.mail.gq1.yahoo.com [98.137.64.84])
+	by mail.example.com (Postfix) with ESMTP id 4DFCF46393
+	for <a@example.com>; Fri, 23 Sep 2022 21:44:38 +0000 (UTC)
+Received: from sonic.gate.mail.ne1.yahoo.com by sonic305.consmr.mail.gq1.yahoo.com with HTTP; Fri, 23 Sep 2022 21:44:37 +0000
+Date: Fri, 23 Sep 2022 21:44:25 +0000 (UTC)
+From: Bob <b@example.com>
+To: Alice <a@example.com>
+Message-ID: <1126698042.388315.1663969465698@mail.yahoo.com>
+Subject: Account problem
+MIME-Version: 1.0
+Content-Type: multipart/mixed; 
+	boundary="----=_Part_388314_1108189513.1663969465698"
+References: <1126698042.388315.1663969465698.ref@mail.yahoo.com>
+X-Mailer: WebService/1.1.20663 YMailNorrin
+Content-Length: 2016
+
+------=_Part_388314_1108189513.1663969465698
+Content-Type: multipart/alternative; 
+	boundary="----=_Part_388313_805631480.1663969465697"
+
+------=_Part_388313_805631480.1663969465697
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Alice:Please find the image attached.
+
+Regards,Bob
+
+------=_Part_388313_805631480.1663969465697
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+<html><head></head><body><div class="yahoo-style-wrap" style="font-family:Helvetica Neue, Helvetica, Arial, sans-serif;font-size:16px;"><div dir="ltr" data-setdir="false"><div><div dir="ltr" style="font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif; font-size: 16px;">Alice:</div><div dir="ltr" style="font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif; font-size: 16px;">Please find the image attached.<br></div><div dir="ltr" style="font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif; font-size: 16px;"><br></div><div dir="ltr" style="font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif; font-size: 16px;">Regards,</div><div dir="ltr" style="font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif; font-size: 16px;">Bob</div></div><br></div></div></body></html>
+------=_Part_388313_805631480.1663969465697--
+
+------=_Part_388314_1108189513.1663969465698
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="=?UTF-8?b?c2NyZWVuc2hvdC5wbmc=?="
+Content-ID: <c4c28087-6fa1-395e-e50f-dcefd3d6bf96@yahoo.com>
+
+iVBORw0KGgoAAAANSUhEUgAAACYAAAAeCAIAAADPdvs5AAAAA3NCSVQICAjb4U/gAAAAGXRFWHRT
+b2Z0d2FyZQBnbm9tZS1zY3JlZW5zaG907wO/PgAAALpJREFUSInl1t0NgzAMBOC7qPvP1gW6Qjdo
+j4f0J4qAJI6NROvniE8+mwCvtzv6imTnyf1K/UclHUFWjIvaIL3CHCABSPKKtJckWfY6zw+sj5dq
+ISdVIzmj2klzTZG2Rme7NKgOwY6qPrMcUs+2PqchL14P+oyz+fHx77K5Sv8xyxAyZ0uBaxn/SpcU
+8NxcosAut1Y3NtjVX7UjZlmpgWTSFyvVQPKB16tSqW53bFnKtyyZvYT3rSsAWADWAlOjseYFfwAA
+AABJRU5ErkJggg==
+
+------=_Part_388314_1108189513.1663969465698--

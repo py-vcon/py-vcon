@@ -1,0 +1,34 @@
+Received: from 127.0.0.1
+ by atlas-production.v2-mail-prod1-gq1.omega.yahoo.com with HTTP; Fri, 23 Sep 2022 21:44:38 +0000
+Return-Path: <b@example.com>
+X-Originating-Ip: [54.159.250.94]
+X-Apparently-To: dgpetrie@yahoo.com; Fri, 23 Sep 2022 21:44:38 +0000
+Received: from 54.159.250.94 (EHLO mail.example.com)
+ by 10.253.31.90 with SMTP;
+ Fri, 23 Sep 2022 21:44:38 +0000
+Received: by mail.example.com (Postfix)
+	id 6DE5946395; Fri, 23 Sep 2022 21:44:38 +0000 (UTC)
+Delivered-To: b@example.com
+Received: from sonic305-21.consmr.mail.gq1.yahoo.com (sonic305-21.consmr.mail.gq1.yahoo.com [98.137.64.84])
+	by mail.example.com (Postfix) with ESMTP id 4DFCF46393
+	for <a@example.com>; Fri, 23 Sep 2022 21:44:38 +0000 (UTC)
+Received: from sonic.gate.mail.ne1.yahoo.com by sonic305.consmr.mail.gq1.yahoo.com with HTTP; Fri, 23 Sep 2022 21:44:37 +0000
+Date: Fri, 23 Sep 2022 23:34:32 +0000 (UTC)
+From: Bob <b@example.com>
+To: Alice <a@example.com>
+Message-ID: <1126698042.388315.1663969465698@mail.yahoo.com>
+Subject: Re: Account problem
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Hi Alice:
+All is fine. Thanks.
+
+    On Friday, September 23, 2022, 23:24:59 PM UTC, Alice <a@example.com> wrote:  
+ 
+  Hi Bob:
+  I just wanted to follow up to see that your account is ok now.
+  
+  Regards,
+  Alice

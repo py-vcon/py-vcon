@@ -1,0 +1,38 @@
+Received: from 10.217.137.136
+ by atlas119.free.mail.ne1.yahoo.com with HTTPS; Fri, 23 Sep 2022 21:45:02 +0000
+Return-Path: <a@example.com>
+X-Originating-Ip: [54.159.250.94]
+Received-SPF: pass (domain of example.com designates 54.159.250.94 as permitted sender)
+Authentication-Results: atlas119.free.mail.ne1.yahoo.com;
+ dkim=pass header.i=@yahoo.com header.s=s2048;
+ spf=pass smtp.mailfrom=example.com;
+ dmarc=unknown header.from=example.com;
+X-Apparently-To: dgpetrie@yahoo.com; Fri, 23 Sep 2022 21:45:02 +0000
+Received: from 54.159.250.94 (EHLO mail.example.com)
+ by 10.217.137.136 with SMTP;
+ Fri, 23 Sep 2022 21:45:02 +0000
+Received: by mail.example.com (Postfix)
+	id 1C56A46395; Fri, 23 Sep 2022 21:45:02 +0000 (UTC)
+Delivered-To: b@example.com
+Received: from sonic317-21.consmr.mail.gq1.yahoo.com (sonic317-21.consmr.mail.gq1.yahoo.com [98.137.66.147])
+	by mail.example.com (Postfix) with ESMTP id F2D5C46393
+	for <b@example.com>; Fri, 23 Sep 2022 21:45:01 +0000 (UTC)
+Received: from sonic.gate.mail.ne1.yahoo.com by sonic317.consmr.mail.gq1.yahoo.com with HTTP; Fri, 23 Sep 2022 21:45:01 +0000
+Date: Fri, 23 Sep 2022 23:24:59 +0000 (UTC)
+From: Alice <a@example.com>
+To: Bob <b@example.com>
+Message-ID: <2031327240.390235.1663969499936@mail.yahoo.com>
+In-Reply-To: <1126698042.388315.1663969465698@mail.yahoo.com>
+References: <1126698042.388315.1663969465698.ref@mail.yahoo.com> <1126698042.388315.1663969465698@mail.yahoo.com>
+Subject: Account issue followup
+MIME-Version: 1.0
+Content-Type: text/plain
+Content-Transfer-Encoding: 7bit
+Content-Length: 87
+
+Hi Bob:
+I just wanted to follow up to see that your account is ok now.
+
+Regards,
+Alice
+
