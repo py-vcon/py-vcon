@@ -3,6 +3,7 @@ Module for vcon command line interface script functions.  Pulled out of vcon CLI
 script file so that it coould more easily be tested with pytest.
 """
 
+import os
 import sys
 import pathlib
 import typing
@@ -29,6 +30,24 @@ def get_mime_type(file_name):
     raise Exception("MIME type not defined for extension: {}".format(extension))
 
   return(mimetype)
+
+
+def do_in_email(args, in_vcon):
+  if(not args.emailfile[0].exists()):
+    raise Exception("Email file: {} does not exist".format(args.emailfile[0]))
+
+  # Read in the email SMTP message file
+  with open(args.emailfile[0], "r") as smtp_message_file:
+    smtp_message_string = smtp_message_file.read()
+
+  # add the email message as a dialog along with its paties if not
+  # already in the vcon
+  in_vcon.add_dialog_inline_email_message(
+    smtp_message_string,
+    os.path.basename(args.emailfile[0])
+    )
+
+  return(in_vcon)
 
 def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
   parser = argparse.ArgumentParser("vCon operations such as construction, signing, encryption, verification, decrytpion, filtering")
@@ -58,8 +77,9 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
 
   add_in_email_subparsers = subparsers_add.add_parser("in-email")
   add_in_email_subparsers.add_argument("emailfile", metavar='email_file', nargs=1, type=pathlib.Path, default=None)
-  add_in_email_subparsers.add_argument("start", metavar='start_time', nargs="?", type=str, default=None)
-  add_in_email_subparsers.add_argument("parties", metavar='parties', nargs="?", type=str, default=None)
+  # not needed as they come from the SMTP message:
+  # add_in_email_subparsers.add_argument("start", metavar='start_time', nargs="?", type=str, default=None)
+  # add_in_email_subparsers.add_argument("parties", metavar='parties', nargs="?", type=str, default=None)
 
   extractparser = subparsers_command.add_parser("extract")
   subparsers_extract = extractparser.add_subparsers(dest="extract_command")
@@ -283,66 +303,8 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
           args.url[0], mimetype, str(args.recfile[0]))
 
     elif(args.add_command == "in-email"):
-      if(not args.emailfile[0].exists()):
-        raise Exception("Email file: {} does not exist".format(args.emailfile[0]))
+      in_vcon = do_in_email(args, in_vcon)
 
-      email_message = email.message_from_file(args.emailfile[0].open("r"))
-
-      # Set subject if its not already set
-      if(in_vcon.subject is None or len(in_vcon.subject) == 0):
-        subject = email_message.get("subject")
-        in_vcon.set_subject(subject)
-
-      # Get tuple(s) of (name, email_uri) for sender and recipients
-      sender = email.utils.parseaddr(email_message.get("from"))
-      recipients = email.utils.getaddresses(email_message.get_all("to", []) +
-        email_message.get_all("cc", []) +
-        email_message.get_all("recent-to", []) +
-        email_message.get_all("recent-cc", []))
-
-      party_indices = []
-      sender_index = None
-      for email_address in [sender] + recipients:
-        print("email name: {} mailto: {}".format(email_address[0], email_address[1]), file=sys.stderr)
-        parties_found = in_vcon.find_parties_by_parameter("mailto", email_address[1])
-        if(len(parties_found) == 0):
-          parties_found = in_vcon.find_parties_by_parameter("name", email_address[0])
-
-        if(len(parties_found) == 0):
-          party_index = in_vcon.set_party_parameter("mailto", email_address[1])
-          in_vcon.set_party_parameter("name", email_address[0], party_index)
-          parties_found = [party_index]
-          if(sender_index is None):
-            sender_index = parties_found[0]
-
-        elif(sender_index is None):
-            sender_index = party_index
-
-        party_indices.extend(parties_found)
-
-        if(len(parties_found) > 1):
-          print("Warning: multiple parties found matching {}: at indices: {}".format(email_address, parties_found), file=sys.stderr)
-
-      content_type = email_message.get("content-type")
-      file_name = email_message.get_filename()
-      #date = time.mktime(email.utils.parsedate(email_message.get("date")))
-      date = email.utils.parsedate_to_datetime(email_message.get("date"))
-
-      email_body = ""
-
-      if(email_message.is_multipart()):
-        body_start = False
-        for line in str(email_message).splitlines():
-          if(body_start):
-            email_body = email_body + line + "\n\r"
-
-          elif(len(line) == 0):
-            body_start = True
-
-      else:
-        email_body = email_message.get_payload()
-
-      in_vcon.add_dialog_inline_text(email_body, date, 0, sender_index, content_type, file_name)
 
   elif(args.command == "extract"):
     if(args.extract_command == "dialog"):

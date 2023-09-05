@@ -19,6 +19,7 @@ import inspect
 import functools
 import warnings
 import datetime
+import email
 import pyjq
 import uuid6
 import requests
@@ -219,6 +220,7 @@ class Vcon():
   # Some commonly used MIME types for convenience
   MIMETYPE_TEXT_PLAIN = "text/plain"
   MIMETYPE_JSON = "application/json"
+  MIMETYPE_IMAGE_PNG = "image/png"
   MIMETYPE_AUDIO_WAV = "audio/x-wav"
   MIMETYPE_AUDIO_MP3 = "audio/x-mp3"
   MIMETYPE_AUDIO_MP4 = "audio/x-mp4"
@@ -478,11 +480,12 @@ class Vcon():
 
     return(found)
 
+
   def add_dialog_inline_text(self,
     body : str,
     start_time : typing.Union[str, int, float, datetime.datetime],
     duration : typing.Union[int, float],
-    party : int,
+    party : typing.Union[int, list[int]],
     mime_type : str,
     file_name : typing.Union[str, None] = None) -> int:
     """
@@ -524,6 +527,88 @@ class Vcon():
     self._vcon_dict[Vcon.DIALOG].append(new_dialog)
 
     return(len(self.dialog))
+
+
+  def add_dialog_inline_email_message(
+    self,
+    smtp_message: str,
+    file_name : typing.Union[str, None] = None
+    ) -> int:
+    """
+    Add a new text dialog and any attachments for the given SMTP email message.
+
+    SMTP message should include To, From, Subject, Cc, Date headers and may
+    include a simple text or MIME body.  Attachments are added to Vcon. 
+
+    Parameters:
+      * **smtp_message** (str) - string containing the contents of a SMTP
+      messages including headers and body.
+
+    Returns:
+      index (int) of the dialog added for the text body of the message
+    """
+
+    email_message = email.message_from_string(smtp_message)
+
+    # Set subject if its not already set
+    if(self.subject is None or len(self.subject) == 0):
+      subject = email_message.get("subject")
+      if(subject is not None and subject != ""):
+        self.set_subject(subject)
+
+    # Get tuple(s) of (name, email_uri) for sender and recipients
+    sender = email.utils.parseaddr(email_message.get("from"))
+    recipients = email.utils.getaddresses(email_message.get_all("to", []) +
+      email_message.get_all("cc", []) +
+      email_message.get_all("recent-to", []) +
+      email_message.get_all("recent-cc", []))
+
+    party_indices = []
+    sender_index = None
+    for email_address in [sender] + recipients:
+      logger.debug("email name: {} mailto: {}".format(email_address[0], email_address[1]))
+      parties_found = self.find_parties_by_parameter("mailto", email_address[1])
+      if(len(parties_found) == 0):
+        parties_found = self.find_parties_by_parameter("name", email_address[0])
+
+      if(len(parties_found) == 0):
+        party_index = self.set_party_parameter("mailto", email_address[1])
+        self.set_party_parameter("name", email_address[0], party_index)
+        parties_found = [party_index]
+        if(sender_index is None):
+          sender_index = parties_found[0]
+
+      elif(sender_index is None):
+          sender_index = party_index
+
+      party_indices.extend(parties_found)
+
+      if(len(parties_found) > 1):
+        logger.warning("Warning: multiple parties found matching {}: at indices: {}".format(email_address, parties_found))
+
+    content_type = email_message.get("content-type")
+    file_name = email_message.get_filename()
+    #date = time.mktime(email.utils.parsedate(email_message.get("date")))
+    date = email.utils.parsedate_to_datetime(email_message.get("date"))
+
+    email_body = ""
+
+    if(email_message.is_multipart()):
+      body_start = False
+      for line in str(email_message).splitlines():
+        if(body_start):
+          email_body = email_body + line + "\n\r"
+
+        elif(len(line) == 0):
+          body_start = True
+
+    else:
+      email_body = email_message.get_payload()
+
+    dialog_index = self.add_dialog_inline_text(email_body, date, 0, party_indices, content_type, file_name)
+
+    return(dialog_index)
+
 
   def add_dialog_inline_recording(self, body : bytes,
     start_time : typing.Union[str, int, float, datetime.datetime],
