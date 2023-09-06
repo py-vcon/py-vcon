@@ -63,7 +63,7 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
     nargs = 4,
     action = "append",
     metavar = ("register_name", "module_name", "class_name", "FilterPluginInitOptions"),
-    help = "register and load a FilterPlugin as the given name from module and class and initialize using the given FilterPluginInitOptions (JSON string)",
+    help = "register and load a FilterPlugin as the given name from module and class and initialize using the given FilterPluginInitOptions (JSON dict string)",
     type = str,
     default = [])
 
@@ -94,7 +94,12 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
   extract_dialog_subparsers.add_argument("index", metavar='dialog_index', nargs=1, type=int, default=None)
 
   filter_parser = subparsers_command.add_parser("filter")
-  fn_help = "Name of filter plugin or default type filter plugin name"
+  plugin_names = vcon.filter_plugins.FilterPluginRegistry.get_names()
+  default_types = vcon.filter_plugins.FilterPluginRegistry.get_types()
+  fn_help = "Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})".format(
+    ", ".join(plugin_names),
+    ", ".join(default_types)
+    )
   filter_parser.add_argument("filter_name", metavar="filter_plugin_name", nargs=1, type=str, help=fn_help, default=None, action="append")
   fo_help="JSON dict/object (FilterPluginOptions) with key name values which are options passed to the filter. (e.g. \'{\"a\" : 1, \"b\" : \"two\"}\' )"
   filter_parser.add_argument("-fo", "--filter-options", metavar='filter_options', nargs=1, type=str, help=fo_help, action="append")
