@@ -44,10 +44,10 @@ def test_filter_plugin_register(capsys):
   """ Test cases for the register filter plugin CLI option -r """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
-  command_args = "-n -r foo2 doesnotexist.foo Foo filter foo2".split()
+  command_args = "-n -r foo2 doesnotexist.foo Foo '{}' filter foo2".split()
   # Filter registered, but module not found
   # expect vcon.filter_plugins.FilterPluginModuleNotFound
-  assert(len(command_args) == 7)
+  assert(len(command_args) == 8)
 
   try:
     vcon.cli.main(command_args)
@@ -58,10 +58,10 @@ def test_filter_plugin_register(capsys):
   except vcon.filter_plugins.FilterPluginModuleNotFound as no_mod_error:
     print("Got {}".format(no_mod_error))
 
-  command_args = "-n -r foo2 tests.foo Foo filter foo2".split()
+  command_args = "-n -r foo2 tests.foo Foo '{}' filter foo2".split()
   # Filter register and loaded, but not completely implemented
   # expect vcon.filter_plugins.FilterPluginNotImplemented
-  assert(len(command_args) == 7)
+  assert(len(command_args) == 8)
 
   try:
     vcon.cli.main(command_args)

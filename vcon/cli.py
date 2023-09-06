@@ -57,8 +57,15 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
 
   parser.add_argument("-o", "--outfile", metavar='outfile', nargs='?', type=argparse.FileType('w'), default=sys.stdout)
 
-  parser.add_argument("-r", "--register-filter-plugin", nargs=3,
-    action="append", type=str, default=[])
+  parser.add_argument(
+    "-r",
+    "--register-filter-plugin",
+    nargs = 4,
+    action = "append",
+    metavar = ("register_name", "module_name", "class_name", "FilterPluginInitOptions"),
+    help = "register and load a FilterPlugin as the given name from module and class and initialize using the given FilterPluginInitOptions (JSON string)",
+    type = str,
+    default = [])
 
   subparsers_command = parser.add_subparsers(dest="command")
 
