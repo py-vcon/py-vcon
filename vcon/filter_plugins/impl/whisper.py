@@ -60,7 +60,12 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
   """
   init_options_type = WhisperInitOptions
   supported_options = [ "language" ]
-  _supported_media = [ vcon.Vcon.MIMETYPE_AUDIO_WAV ]
+  _supported_media = [
+    vcon.Vcon.MIMETYPE_AUDIO_WAV,
+    vcon.Vcon.MIMETYPE_AUDIO_MP3,
+    vcon.Vcon.MIMETYPE_AUDIO_MP4,
+    vcon.Vcon.MIMETYPE_VIDEO_MP4
+    ]
 
   def __init__(
     self,
@@ -118,7 +123,8 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
       # TODO assuming none of the dialogs have been transcribed
       #print("dialog keys: {}".format(dialog.keys()))
       if(dialog["type"] == "recording"):
-        if(dialog["mimetype"] in self._supported_media):
+        mime_type = dialog["mimetype"]
+        if(mime_type in self._supported_media):
           # If inline or externally referenced recording:
           if(any(key in dialog for key in("body", "url"))):
             if("body" in dialog and dialog["body"] is not None and dialog["body"] != ""):
@@ -132,7 +138,8 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
 
             with tempfile.TemporaryDirectory() as temp_dir:
               transcript = None
-              with tempfile.NamedTemporaryFile(prefix= temp_dir + os.sep, suffix=".wav") as temp_audio_file:
+              suffix = vcon.Vcon.get_mime_extension(mime_type)
+              with tempfile.NamedTemporaryFile(prefix= temp_dir + os.sep, suffix = suffix) as temp_audio_file:
                 temp_audio_file.write(body_bytes)
                 #rate, samples = scipy.io.wavfile.read(body_io)
                 # ts_num=7 is num of timestamps to get, so 7 is more than the default of 5
@@ -196,7 +203,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
             pass # ignore??
 
         else:
-          print("unsupported media type: {} in dialog[{}], skipped whisper transcription".format(dialog.mimetype, dialog_index))
+          logger.warning("unsupported media type: {} in dialog[{}], skipped whisper transcription".format(dialog["mimetype"], dialog_index))
 
     return(out_vcon)
 
