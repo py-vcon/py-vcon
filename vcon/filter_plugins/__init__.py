@@ -178,7 +178,7 @@ class FilterPlugin():
 
     Parameters: None
     """
-    print("deleting {}".format(self.__class__))
+    logger.debug("deleting {}".format(self.__class__))
 
 
 class FilterPluginRegistration:
