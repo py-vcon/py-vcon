@@ -20,6 +20,7 @@ import functools
 import warnings
 import datetime
 import email
+import pathlib
 import pyjq
 import uuid6
 import requests
@@ -228,6 +229,23 @@ class Vcon():
   MIMETYPE_VIDEO_OGG = "video/ogg"
   MIMETYPE_MULTIPART = "multipart/mixed"
 
+  FILE_EXTENSIONS = {
+    ".txt": MIMETYPE_TEXT_PLAIN,
+    ".text": MIMETYPE_TEXT_PLAIN,
+    ".png": MIMETYPE_IMAGE_PNG,
+    ".wav": MIMETYPE_AUDIO_WAV,
+    ".mp3": MIMETYPE_AUDIO_MP3,
+    ".mp4": MIMETYPE_VIDEO_MP4
+  }
+
+  MIME_EXTENSIONS = {
+    MIMETYPE_TEXT_PLAIN: ".txt",
+    MIMETYPE_IMAGE_PNG: ".png",
+    MIMETYPE_AUDIO_WAV: ".wav",
+    MIMETYPE_AUDIO_MP3: ".mp3",
+    MIMETYPE_VIDEO_MP4: ".mp4"
+  }
+
   CURRENT_VCON_VERSION = "0.0.1"
 
   # Dict keys
@@ -337,6 +355,36 @@ class Vcon():
     self._vcon_dict[Vcon.ATTACHMENTS] = []
     self._vcon_dict[Vcon.CREATED_AT] = vcon.utils.cannonize_date(datetime.datetime.utcnow())
     self._vcon_dict[Vcon.REDACTED] = {}
+
+
+  @staticmethod
+  def get_mime_type(file_name):
+    """ derive mimetype from fle extension """
+    path = pathlib.PurePath(file_name)
+    extension = path.suffix.lower()
+
+    #print("extension: {}".format(extension), file=sys.stderr)
+
+    if(extension in vcon.Vcon.FILE_EXTENSIONS):
+      mimetype = vcon.Vcon.FILE_EXTENSIONS[extension]
+  
+    # TODO: add: aac, ogg, 
+    else:
+      raise Exception("MIME type not defined for extension: {}".format(extension))
+  
+    return(mimetype)
+
+
+  @staticmethod
+  def get_mime_extension(mime_type):
+    """ get file extension for MIMETYPE """
+    if(mime_type in vcon.Vcon.MIME_EXTENSIONS):
+      extension = vcon.Vcon.MIME_EXTENSIONS[mime_type]
+
+    else:
+      raise Exception("extension not defined for mime type: {}".format(mime_type))
+    return(extension)
+
 
   def _attempting_modify(self) -> None:
     if(self._state != VconStates.UNSIGNED):
@@ -610,7 +658,9 @@ class Vcon():
     return(dialog_index)
 
 
-  def add_dialog_inline_recording(self, body : bytes,
+  def add_dialog_inline_recording(
+    self,
+    body : bytes,
     start_time : typing.Union[str, int, float, datetime.datetime],
     duration : typing.Union[int, float],
     parties : typing.Union[int, typing.List[int], typing.List[typing.List[int]]],
@@ -958,6 +1008,56 @@ class Vcon():
       self._vcon_dict[Vcon.ANALYSIS] = []
 
     self._vcon_dict[Vcon.ANALYSIS].append(analysis_element)
+
+
+  def add_attachment_inline(
+    self,
+    body : bytes,
+    sent_time : typing.Union[str, int, float, datetime.datetime],
+    party : int,
+    mime_type : str = None,
+    file_name : typing.Union[str, None] = None
+    ) -> int:
+    """
+    Add an attachment object for the given file body
+
+    Parameters:
+    body (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).
+    send_time (str, int, float, datetime.datetime): Date, time the attachment was sent.
+               string containing RFC 2822 or RFC3339 date time stamp or int/float
+               containing epoch time (since 1970) in seconds.
+    party (int): party index of the sender
+    mime_type (str): mime type of the recording
+    file_name (str): file name of the recording (optional)
+
+    Returns:
+    (int) index of the added attachment
+    """
+
+    self._attempting_modify()
+
+    new_attachment: typing.Dict[str, typing.Any] = {}
+    new_attachment['start'] = vcon.utils.cannonize_date(sent_time)
+    new_attachment['party'] = party
+    if(mime_type is not None and
+      mime_type != ""):
+      new_attachment['mimetype'] = mime_type
+    if(file_name is not None and
+      len(file_name) > 0):
+      new_attachment['filename'] = file_name
+
+    new_attachment['encoding'] = "base64url"
+    encoded_body = jose.utils.base64url_encode(body).decode('utf-8')
+    #print("encoded body type: {}".format(type(encoded_body)))
+    new_attachment['body'] = encoded_body
+
+    if(self.attachments is None):
+      self._vcon_dict[Vcon.ATTACHMENTS] = []
+
+    self._vcon_dict[Vcon.ATTACHMENTS].append(new_dialog)
+
+    return(len(self.attachements))
+
 
 
   def dump(self, vconfile: typing.Union[str, typing.TextIO]) -> None:
