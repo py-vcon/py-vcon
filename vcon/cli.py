@@ -7,29 +7,15 @@ import os
 import sys
 import pathlib
 import typing
-import argparse
+import datetime
+import pytz
+import time
 import json
-import email
-import email.utils
+import argparse
 import socket
 import sox
+import ffmpeg
 import vcon
-
-def get_mime_type(file_name):
-  """ derive mimetype from fle extension """
-  path = pathlib.PurePath(file_name)
-  extension = path.suffix.lower()
-
-  print("extension: {}".format(extension), file=sys.stderr)
-
-  if(extension == ".wav"):
-    mimetype = vcon.Vcon.MIMETYPE_AUDIO_WAV
-
-  # TODO: add: mp3, mp4 aac, ogg, 
-  else:
-    raise Exception("MIME type not defined for extension: {}".format(extension))
-
-  return(mimetype)
 
 
 def do_in_email(args, in_vcon):
@@ -46,6 +32,213 @@ def do_in_email(args, in_vcon):
     smtp_message_string,
     os.path.basename(args.emailfile[0])
     )
+
+  return(in_vcon)
+
+def zoom_chat_to_utc(local_time: str, zoom_start_utc: str, zoom_end_utc: str) -> str:
+  if(time.daylight):
+    timezone_guess = time.tzname[1]
+    tz_info = datetime.timezone(datetime.timedelta(seconds = -time.altzone), time.tzname[1])
+  else:
+    timezone_guess = time.tzname[0]
+    tz_info = datetime.timezone(datetime.timedelta(seconds = -time.altzone), time.tzname[0])
+
+  hour_string, minute_string, second_string = local_time.strip().split(":")
+  hour = int(hour_string)
+  minute = int(minute_string)
+  second = int(second_string)
+
+  start_datetime = datetime.datetime.fromisoformat(zoom_start_utc)
+  end_datetime = datetime.datetime.fromisoformat(zoom_end_utc)
+  start_date = start_datetime.date()
+  end_date = end_datetime.date()
+
+  # The time zone is unclear so we guess at local time zone
+  # and test that it is between the start and end times
+
+  dt = datetime.datetime(
+    year = start_date.year,
+    month = start_date.month,
+    day = start_date.day,
+    hour = hour,
+    minute = minute,
+    second = second,
+    tzinfo = tz_info
+    )
+
+  # make it into UTC
+  dt = dt.astimezone(pytz.UTC)
+  #tz = tzlocal.get_localzone()
+  #local_dt = tz.localize(dt, is_dst=None)
+  #local_dt = dt.replace(tzinfo = tz_info)
+
+  # Allow difference of 15 minutes
+  date_tolerance = datetime.timedelta(0, 15 * 60)
+  # The start time is from the recording file which
+  # may be off a few minutes from the actual meeting time
+
+  if(start_datetime <= dt <= end_datetime or
+    dt - start_datetime < date_tolerance):
+    return(dt.isoformat())
+
+  # Hack the timezone as it was not the local one
+  print("start hour: {} dt hour: {}".format(
+    start_datetime.hour,
+    dt.hour
+    ), file = sys.stderr)
+  if(start_datetime.hour != dt.hour):
+    dt = dt.replace(hour = start_datetime.hour)
+    print("reset hour: {}".format(dt.hour), file = sys.stderr)
+  elif(end_datetime.hour != dt.hour):
+    dt = dt.replace(hour = end_datetime.hour)
+    print("reset hour: {}".format(dt.hour), file = sys.stderr)
+
+  if(start_datetime <= dt <= end_datetime or
+    dt - start_datetime < date_tolerance):
+    return(dt.isoformat())
+
+  # Try the end date with local time
+  dt = datetime.datetime(
+    year = end_date.year,
+    month = end_date.month,
+    day = end_date.day,
+    hour = hour,
+    minute = minute,
+    second = second,
+    tzinfo = tz_info
+    )
+
+  # make it into UTC
+  dt = dt.astimezone(pytz.UTC)
+  #local_dt = tz.localize(dt, is_dst=None)
+
+  if(start_datetime <= dt <= end_datetime or
+    dt - start_datetime < date_tolerance):
+    return(dt.isoformat())
+
+  raise Exception("cannot figure out timezone for date: {} local tz is: {} start: {} dt: {} end: {} delta from start: {}".format(
+    local_time,
+    timezone_guess,
+    start_datetime.isoformat(),
+    dt.isoformat(),
+    end_datetime.isoformat(),
+    (dt - start_datetime)
+    ))
+
+
+def parse_zoom_chat(
+  file_handle,
+  recording_start: str,
+  duration: typing.Union[int, float]
+  ) -> typing.List[typing.Tuple[str, str, str]]:
+  result = []
+  start_datetime = datetime.datetime.fromisoformat(recording_start)
+  recording_end = (start_datetime + datetime.timedelta(0, duration)).isoformat()
+  for line in file_handle:
+    message_time, sender_message = line.split("From", 1)
+    message_time = message_time.strip()
+    sender, message = sender_message.split(":", 1)
+    sender = sender.strip()
+    message = message.strip()
+    # Try to extrapolate a UTD date and time from a local time
+    datetime_string = zoom_chat_to_utc(message_time, recording_start, recording_end)
+    result.append((datetime_string, sender, message))
+
+  return(result)
+
+
+def do_in_zoom(args, in_vcon):
+  if(not args.zoomdir[0].exists()):
+    raise Exception("Zoom directory: {} does not exist".format(args.zoomdir[0]))
+
+  ignore_extensions = [ "..", ".", ".conf"]
+  conf_file = next(args.zoomdir[0].glob("*.conf"))
+  if(conf_file is not None and conf_file != ""):
+    with open(conf_file, "r") as zoom_conf_file:
+      conf_json = json.load(zoom_conf_file)
+      audio_file = conf_json["items"][0]["audio"]
+      video_file = conf_json["items"][0]["video"]
+
+  start = None
+  duration = None
+  chatfile = None
+  for rec_file in args.zoomdir[0].glob("*"):
+    filebase = os.path.basename(rec_file)
+    file_ext = rec_file.suffix
+    if(filebase == audio_file and
+      video_file is not None and
+      video_file != ""
+      ):
+      print("ignoring audio file: {} in favor of video file: {}".format(
+        audio_file,
+        video_file
+        ), file = sys.stderr)
+      continue
+
+    if(file_ext in ignore_extensions):
+      print("ignore extension: {}".format(rec_file), file = sys.stderr)
+      continue
+
+    print("found: {} ".format(rec_file), file = sys.stderr)
+    print("file name: {}".format(filebase), file = sys.stderr)
+    print("extension: {} ".format(file_ext), file = sys.stderr)
+
+    if(file_ext == ".mp4"):
+      video_meta = ffmpeg.probe(rec_file)
+      # tweak the date to make it RFC3339
+      start = video_meta["streams"][0]['tags']["creation_time"].replace("Z", "+00:00")
+      duration = float(video_meta["streams"][0]['duration'])
+      with open(rec_file, "rb") as video_file_handle:
+        body_bytes = video_file_handle.read()
+        in_vcon .add_dialog_inline_recording(
+          body_bytes,
+          start,
+          duration,
+          -1, # TODO: can we get parties?
+          vcon.Vcon.MIMETYPE_VIDEO_MP4,
+          filebase
+          )
+
+    elif(filebase == "chat.txt"):
+      # need to skip until we have start and end to the recording
+      chatfile = rec_file
+
+    # All other files are attachments
+    else:
+      with open(rec_file, "rb") as attachment_handle:
+        body_bytes = attachment_handle.read()
+        in_vcon.add_attachment_inline(
+          body_bytes,
+          start,
+          -1,
+          vcon.Vcon.get_mime_type(filebase),
+          filebase
+          )
+
+  if(chatfile is not None):
+    with open(chatfile, "r") as chatfile_handle:
+      messages = parse_zoom_chat(
+        chatfile_handle,
+        start,
+        duration
+        )
+
+      for message in messages:
+        msg_time, msg_sender, msg_text = message
+
+        # Get the party index for the sendor or add them if they don't exist
+        sender_indices = in_vcon.find_parties_by_parameter("name", msg_sender)
+        if(len(sender_indices) < 1):
+          sender_indices.append(in_vcon.set_party_parameter("name", msg_sender))
+
+        # Add the text dialog
+        in_vcon.add_dialog_inline_text(
+          msg_text,
+          msg_time,
+          0,
+          sender_indices[0],
+          vcon.Vcon.MIMETYPE_TEXT_PLAIN
+          )
 
   return(in_vcon)
 
@@ -71,22 +264,50 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
 
   addparser = subparsers_command.add_parser("add")
   subparsers_add = addparser.add_subparsers(dest="add_command")
-  add_in_recording_subparsers = subparsers_add.add_parser("in-recording")
+
+  add_in_recording_subparsers = subparsers_add.add_parser(
+    "in-recording",
+    help = "add a audio or video file as a inline recording dialog"
+    )
   add_in_recording_subparsers.add_argument("recfile", metavar='recording_file', nargs=1, type=pathlib.Path, default=None)
   add_in_recording_subparsers.add_argument("start", metavar='start_time', nargs=1, type=str, default=None)
   add_in_recording_subparsers.add_argument("parties", metavar='parties', nargs=1, type=str, default=None)
 
-  add_ex_recording_subparsers = subparsers_add.add_parser("ex-recording")
+  add_ex_recording_subparsers = subparsers_add.add_parser(
+    "ex-recording",
+    help = "add a audio or video file as a externally referenced recording dialog"
+    )
   add_ex_recording_subparsers.add_argument("recfile", metavar='recording_file', nargs=1, type=pathlib.Path, default=None)
   add_ex_recording_subparsers.add_argument("start", metavar='start_time', nargs=1, type=str, default=None)
   add_ex_recording_subparsers.add_argument("parties", metavar='parties', nargs=1, type=str, default=None)
   add_ex_recording_subparsers.add_argument("url", metavar='url', nargs=1, type=str, default=None)
 
-  add_in_email_subparsers = subparsers_add.add_parser("in-email")
-  add_in_email_subparsers.add_argument("emailfile", metavar='email_file', nargs=1, type=pathlib.Path, default=None)
+  add_in_email_subparsers = subparsers_add.add_parser(
+    "in-email",
+    help = "add SMTP message as a inline text dialog"
+    )
+  add_in_email_subparsers.add_argument(
+    "emailfile",
+    metavar='email_file',
+    nargs=1,
+    type=pathlib.Path,
+    help = "path to SMTP email message file to add as text dialog",
+    default=None)
   # not needed as they come from the SMTP message:
   # add_in_email_subparsers.add_argument("start", metavar='start_time', nargs="?", type=str, default=None)
   # add_in_email_subparsers.add_argument("parties", metavar='parties', nargs="?", type=str, default=None)
+
+  add_in_zoom_subparsers = subparsers_add.add_parser(
+    "in-zoom",
+    help = "add zoom recording and capture as inline dialogs and attachments"
+    )
+  add_in_zoom_subparsers.add_argument(
+    "zoomdir",
+    metavar='zoom_directory',
+    nargs=1,
+    type=pathlib.Path,
+    help = "directory containing Zoom meeint recording and captured files to add as dialog(s) and attachment(s)",
+    default=None)
 
   extractparser = subparsers_command.add_parser("extract")
   subparsers_extract = extractparser.add_subparsers(dest="extract_command")
@@ -299,7 +520,7 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
 
       sox_info = sox.file_info.info(str(args.recfile[0]))
       duration = sox_info["duration"]
-      mimetype = get_mime_type(args.recfile[0])
+      mimetype = vcon.Vcon.get_mime_type(args.recfile[0])
 
       with open(args.recfile[0], 'rb') as file_handle:
         body = file_handle.read()
@@ -316,6 +537,9 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
 
     elif(args.add_command == "in-email"):
       in_vcon = do_in_email(args, in_vcon)
+
+    elif(args.add_command == "in-zoom"):
+      in_vcon = do_in_zoom(args, in_vcon)
 
 
   elif(args.command == "extract"):
