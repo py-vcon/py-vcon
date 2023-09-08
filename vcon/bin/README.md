@@ -12,22 +12,24 @@ vcon [I/O Options] [Operations]
 
 ## I/O Options
 
-&nbsp;&nbsp;&nbsp;&nbsp;**-n** create a new vCon and do not read input from file or stdin (mutually exclusive with -i option)
+&nbsp;&nbsp;&nbsp;&nbsp;**-n** - create a new vCon and do not read input from file or stdin (mutually exclusive with -i option)
 
-&nbsp;&nbsp;&nbsp;&nbsp;**-i FILE** read a vCon from the given file name instead of the default stdin (mutually exclusive with -n option)
+&nbsp;&nbsp;&nbsp;&nbsp;**-i FILE** - read a vCon from the given file name instead of the default stdin (mutually exclusive with -n option)
 
-&nbsp;&nbsp;&nbsp;&nbsp;**-o FILE** write the result of the command operation to the given file name instead of the default stdout
+&nbsp;&nbsp;&nbsp;&nbsp;**-o FILE** - write the result of the command operation to the given file name instead of the default stdout
 
-&nbsp;&nbsp;&nbsp;&nbsp;**-r FILTER_NAME MODULE_NAME CLASS_NAME DESCRIPTION** Load the MODULE_NAME and register the CLASS_NAME as a vcon filter plugin using the FILTER_NAME, having the functionality defined in DESCRIPTION string.  This will replace any existing filter registered as FILTER_NAME.  Note, this registration only exists for the life of this vcon command.  Generally this is used in conjunction with the **filter** option defined below.
+&nbsp;&nbsp;&nbsp;&nbsp;**-r FILTER_NAME MODULE_NAME CLASS_NAME INIT_OPTIONS** - Load the MODULE_NAME and register the CLASS_NAME as a vcon filter plugin using the FILTER_NAME.  The INIT_OPTIONS is a JSON dict containing option parameters input to the initialization of the filter plugin.  If the default INIT_OPTIONS is desired, use: "{}".  Any existing filter registered as FILTER_NAME will be replaced.  Note, this registration only exists for the life of this vcon command.  Generally this is used in conjunction with the **filter** option defined below.
 
 ## Command Operation
 
-&nbsp;&nbsp;&nbsp;&nbsp;**add in-email FILE** read a raw SMTP/email message from the given file name and add it to the vCon dialog Object array, add the parties found in the From, To and CC fields to the vCon parties Object array, if the input vCon does not already have a subject set, read the Subject header from the SMTP message and set the vCon subject parameter.  The dialog Object parameters: parties, start, mimetype, encoding and body are all filled in based upon the information in the SMTP message.
+&nbsp;&nbsp;&nbsp;&nbsp;**add in-zoom DIR** - add inline recoding dialog, text dialogs for chat and attachments from a Zoom recording.  The DIR is a directory created by Zoom for a recorded meeting that contains the **recording.conf**, **.mp4** audio or video recording and optionally a **chat.txt** file.  Any other files in the directory are considered attachments exchanged during the meeting and will be added as inline attachment objects to to the vCon.
 
-&nbsp;&nbsp;&nbsp;&nbsp;**add in-recording FILE DATE PARTIES** add a inline dialog to the input vCon containing the given recording file name, use the given date as the start time for the recording and the given parties as the participants in the recording.  The date must be the epoch time (seconds since 1970) as an integer or double; or a string RFC2822 or RFC3339 format date. The parties must be a string representing either an integer, an integer array, or an array of integers or integer arrays in JSON format, representing the parties contributing to the media in the corresponding channel.
+&nbsp;&nbsp;&nbsp;&nbsp;**add in-email FILE** - read a raw SMTP/email message from the given file name and add it to the vCon dialog Object array, add the parties found in the From, To and CC fields to the vCon parties Object array, if the input vCon does not already have a subject set, read the Subject header from the SMTP message and set the vCon subject parameter.  The dialog Object parameters: parties, start, mimetype, encoding and body are all filled in based upon the information in the SMTP message.
+
+&nbsp;&nbsp;&nbsp;&nbsp;**add in-recording FILE DATE PARTIES** - add a inline dialog to the input vCon containing the given recording file name, use the given date as the start time for the recording and the given parties as the participants in the recording.  The date must be the epoch time (seconds since 1970) as an integer or double; or a string RFC2822 or RFC3339 format date. The parties must be a string representing either an integer, an integer array, or an array of integers or integer arrays in JSON format, representing the parties contributing to the media in the corresponding channel.
 
 
-&nbsp;&nbsp;&nbsp;&nbsp;**add ex-recording FILE DATE PARTIES URL** add a dialog to the input vCon referencing the given recording file name, use the given date as the start time for the recording and the given parties as the participants in the recording, where the recording is stored at the given HTTPS url.  The date must be the epoch time (seconds since 1970) as an integer or double; or a string RFC2822 or RFC3339 format date. The parties must be a string representing either an integer, an integer array, or an array of integers or integer arrays in JSON format, representing the parties contributing to the media in the corresponding channel.
+&nbsp;&nbsp;&nbsp;&nbsp;**add ex-recording FILE DATE PARTIES URL** - add a dialog to the input vCon referencing the given recording file name, use the given date as the start time for the recording and the given parties as the participants in the recording, where the recording is stored at the given HTTPS url.  The date must be the epoch time (seconds since 1970) as an integer or double; or a string RFC2822 or RFC3339 format date. The parties must be a string representing either an integer, an integer array, or an array of integers or integer arrays in JSON format, representing the parties contributing to the media in the corresponding channel.
 
 &nbsp;&nbsp;&nbsp;&nbsp;**filter FILTER_NAME [-fo FILTER_OPTIONS]** run the FILTER_NAME filter plugin on the input vcon.  Currently the only builtin filter plugin is **transcribe**.  Othere comming soon.  FILTER_OPTIONS is a quoted curly bracket surrounded string defining a dict as input options for the filter (e.g. "{foo='bar', verbose=True, number=6}" )
 
@@ -87,3 +89,7 @@ To obtain the value of the uuid parameter from the output vCon:
 To create a new vcon, add a recording of parties 0 and 1, starting at the current time and pipe that into another vcon command to transcribe the recording:
 
     vcon -n add in-recording ~/dev/vcon/examples/agent_sample.wav  "`date --rfc-3339=seconds`"  "[0,1]" | vcon filter transcribe
+
+To create a new vCon and add dialogs and attachments from a Zoom recording:
+
+    vcon -n add in-zoom zoom_recording_directory/
