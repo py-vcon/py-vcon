@@ -1015,7 +1015,7 @@ class Vcon():
     body : bytes,
     sent_time : typing.Union[str, int, float, datetime.datetime],
     party : int,
-    mime_type : str = None,
+    mime_type : typing.Union[str, None] = None,
     file_name : typing.Union[str, None] = None
     ) -> int:
     """
@@ -1054,9 +1054,9 @@ class Vcon():
     if(self.attachments is None):
       self._vcon_dict[Vcon.ATTACHMENTS] = []
 
-    self._vcon_dict[Vcon.ATTACHMENTS].append(new_dialog)
+    self._vcon_dict[Vcon.ATTACHMENTS].append(new_attachment)
 
-    return(len(self.attachements))
+    return(len(self.attachments))
 
 
 
