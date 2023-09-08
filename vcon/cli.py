@@ -8,12 +8,13 @@ import sys
 import pathlib
 import typing
 import datetime
-import pytz
 import time
 import json
+import textwrap
 import argparse
 import socket
 import sox
+import pytz
 import ffmpeg
 import vcon
 
@@ -309,19 +310,54 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
     help = "directory containing Zoom meeint recording and captured files to add as dialog(s) and attachment(s)",
     default=None)
 
+
+  add_in_meet_subparsers = subparsers_add.add_parser(
+    "in-meet",
+    help = "add Google meet recording and chat as inline dialogs"
+    )
+  add_in_meet_subparsers.add_argument(
+    "meetrec",
+    metavar='meet_recording',
+    nargs=1,
+    type=pathlib.Path,
+    help = "path to Google Meet video recording file.  The path to the chat file is implied from this if presnet.",
+    default=None)
+
+
   extractparser = subparsers_command.add_parser("extract")
   subparsers_extract = extractparser.add_subparsers(dest="extract_command")
   extract_dialog_subparsers = subparsers_extract.add_parser("dialog")
   extract_dialog_subparsers.add_argument("index", metavar='dialog_index', nargs=1, type=int, default=None)
 
-  filter_parser = subparsers_command.add_parser("filter")
+  filter_parser = subparsers_command.add_parser(
+    "filter",
+    formatter_class = argparse.RawTextHelpFormatter
+    )
   plugin_names = vcon.filter_plugins.FilterPluginRegistry.get_names()
   default_types = vcon.filter_plugins.FilterPluginRegistry.get_types()
-  fn_help = "Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})".format(
+  fn_help_template = """\
+Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
+{}
+"""
+  plugin_descriptions = ""
+  for plugin_name in plugin_names:
+    descript = vcon.filter_plugins.FilterPluginRegistry.get(plugin_name).description
+    plugin_descriptions += "{} - {}\n".format(plugin_name, descript)
+
+
+  fn_help = fn_help_template.format(
     ", ".join(plugin_names),
-    ", ".join(default_types)
+    ", ".join(default_types),
+    plugin_descriptions
     )
-  filter_parser.add_argument("filter_name", metavar="filter_plugin_name", nargs=1, type=str, help=fn_help, default=None, action="append")
+  filter_parser.add_argument(
+    "filter_name",
+    metavar = "filter_plugin_name",
+    nargs = 1,
+    type = str,
+    help = fn_help,
+    default = None,
+    action = "append")
   fo_help="JSON dict/object (FilterPluginOptions) with key name values which are options passed to the filter. (e.g. \'{\"a\" : 1, \"b\" : \"two\"}\' )"
   filter_parser.add_argument("-fo", "--filter-options", metavar='filter_options', nargs=1, type=str, help=fo_help, action="append")
 
