@@ -89,6 +89,7 @@ def test_whisper_transcribe_inline_dialog():
 
 def test_whisper_transcribe_external_dialog():
   """ Test Whisper plugin with an externally referenced audio dialog """
+  constant_date = "2023-08-31T18:26:36.987+00:00"
   in_vcon = vcon.Vcon()
 
   # Add external ref
@@ -101,7 +102,7 @@ def test_whisper_transcribe_external_dialog():
     assert(len(file_content) > 10000)
 
   dialog_index = in_vcon.add_dialog_external_recording(file_content,
-    datetime.datetime.utcnow(),
+    constant_date,
     0, # duration TODO
     [0,1],
     url,
@@ -156,8 +157,10 @@ def test_whisper_transcribe_external_dialog():
   print("ass len: {}".format(body_len))
   assert(body_len > 90000)
 
-  if(out_vcon.uuid is None):
-    out_vcon.set_uuid("vcon.net")
+  # hack the UUID so that the output Vcon does not change
+  in_vcon._vcon_dict[vcon.Vcon.UUID] = "018a4cd9-b326-811b-9a21-90977a450c19"
+  # set the date so that output does not change
+  in_vcon.set_created_at(constant_date)
 
   # Test that we still have a valid serializable Vcon
   out_vcon_json = out_vcon.dumps()
