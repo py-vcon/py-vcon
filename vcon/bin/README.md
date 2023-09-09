@@ -22,7 +22,9 @@ vcon [I/O Options] [Operations]
 
 ## Command Operation
 
-&nbsp;&nbsp;&nbsp;&nbsp;**add in-zoom DIR** - add inline recoding dialog, text dialogs for chat and attachments from a Zoom recording.  The DIR is a directory created by Zoom for a recorded meeting that contains the **recording.conf**, **.mp4** audio or video recording and optionally a **chat.txt** file.  Any other files in the directory are considered attachments exchanged during the meeting and will be added as inline attachment objects to to the vCon.
+&nbsp;&nbsp;&nbsp;&nbsp;**add in-meet VIDEO_FILE** - add inline recording dialog, text dialogs for chat and attachments from a Google Meet recording.  The VIDEO_FILE is a mp4 video recording created by Google Meet for a recorded meeting.  The chat file name is implied with the same meeting name and date prefix as the VIDEO_FILE.  Text dialog(s) will be created for the chat messages found in the chat file.
+
+&nbsp;&nbsp;&nbsp;&nbsp;**add in-zoom DIR** - add inline recording dialog, text dialogs for chat and attachments from a Zoom recording.  The DIR is a directory created by Zoom for a recorded meeting that contains the **recording.conf**, **.mp4** audio or video recording and optionally a **chat.txt** file.  Any other files in the directory are considered attachments exchanged during the meeting and will be added as inline attachment objects to to the vCon.
 
 &nbsp;&nbsp;&nbsp;&nbsp;**add in-email FILE** - read a raw SMTP/email message from the given file name and add it to the vCon dialog Object array, add the parties found in the From, To and CC fields to the vCon parties Object array, if the input vCon does not already have a subject set, read the Subject header from the SMTP message and set the vCon subject parameter.  The dialog Object parameters: parties, start, mimetype, encoding and body are all filled in based upon the information in the SMTP message.
 
@@ -90,6 +92,11 @@ To create a new vcon, add a recording of parties 0 and 1, starting at the curren
 
     vcon -n add in-recording ~/dev/vcon/examples/agent_sample.wav  "`date --rfc-3339=seconds`"  "[0,1]" | vcon filter transcribe
 
-To create a new vCon and add dialogs and attachments from a Zoom recording:
+To create a new vCon and add dialogs and attachments from a Zoom meeting recording:
 
     vcon -n add in-zoom zoom_recording_directory/
+
+To create a new vCon and add dialogs and attachments from a Google Meet recording:
+
+    vcon -n add in-meet 'tests/google_meet/test meeting (2023-09-06 20:27 GMT-4) (18af10d0)' 
+
