@@ -895,6 +895,11 @@ class Vcon():
     if(get_kwargs is None):
       get_kwargs = {"timeout": 20}
     req = requests.get(url, **get_kwargs)
+    if(not(200 <= req.status_code < 300)):
+      raise Exception("get of {} resulted in error: {}".format(
+        url,
+        req.status_code
+        ))
     body = req.content
 
     # verify the body
@@ -1146,6 +1151,34 @@ class Vcon():
 
     return(vcon_dict)
 
+
+  def post(
+    self,
+    base_uri: str = "http://{host}:{port}/vcon",
+    host: str = "localhost",
+    port: int = 8000,
+    # not sure why I cannot use vcon.Vcon.MIMETYPE_JSON here
+    post_kwargs: typing.Dict[str, typing.Any] = {"timeout": 20}
+    ) -> None:
+    """
+    HTTP Post this Vcon from the given base_uri and path.
+    """
+    if(post_kwargs is None):
+      post_kwargs = {"timeout": 20}
+
+    uri = base_uri.format(
+      host = host,
+      port = port
+      )
+
+    req = requests.post(uri, json = self.dumpd(), **post_kwargs)
+    if(not(200 <= req.status_code < 300)):
+      raise Exception("post of {} resulted in error: {}".format(
+        uri,
+        req.status_code
+        ))
+
+
   def load(self, vconfile: typing.Union[str, typing.TextIO]) -> None:
     """
     Load the Vcon JSON from the given file_handle and deserialize it.
@@ -1258,6 +1291,37 @@ class Vcon():
         "  Signed vcon must have payload and signatures fields." +
         "  Encrypted vcon must have cyphertext and recipients fields."
         )
+
+  def get(
+    self,
+    uuid: str,
+    base_uri: str = "http://{host}:{port}{path}",
+    host: str = "localhost",
+    port: int = 8000,
+    path: str = "/vcon/{uuid}",
+    # not sure why I cannot use vcon.Vcon.MIMETYPE_JSON here
+    get_kwargs: typing.Dict[str, typing.Any] = {"timeout": 20, "headers": {"accept": "application/json"}}
+    ) -> None:
+    """
+    HTTP GET the Vcon from the given base_uri and path.
+    """
+    if(get_kwargs is None):
+      get_kwargs = {"timeout": 20, "headers": {"accept": vcon.Vcon.MIMETYPE_JSON }}
+
+    uri = base_uri.format(
+      host = host,
+      port = port,
+      path = path.format(uuid = uuid)
+      )
+    req = requests.get(uri, **get_kwargs)
+    if(not(200 <= req.status_code < 300)):
+      raise Exception("get of {} resulted in error: {}".format(
+        uri,
+        req.status_code
+        ))
+    vcon_json = req.content
+    self.loads(vcon_json)
+
 
   def sign(self, private_key_pem_file_name : str, cert_chain_pem_file_names : typing.List[str]) -> None:
     """
