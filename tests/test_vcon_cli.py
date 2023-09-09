@@ -15,7 +15,7 @@ WAVE_FILE_URL = "https://github.com/vcon-dev/vcon/blob/main/examples/agent_sampl
 WAVE_FILE_SIZE = os.path.getsize(WAVE_FILE_NAME)
 VCON_WITH_DIALOG_FILE_NAME = "py_vcon_server/tests/hello.vcon"
 SMTP_MESSAGE_W_IMAGE_FILE_NAME = "tests/email_acct_prob_bob_image.txt"
-
+GOOGLE_MEET_RECORDING = "tests/google_meet/test meeting (2023-09-06 20:27 GMT-4) (18af10d0)"
 
 def test_vcon_new(capsys):
   """ test vcon -n """
@@ -223,6 +223,54 @@ Regards,Bob
   #assert(len(out_vcon.attachments[0]["body"]) == 402)
 
 
+def test_in_meet(capsys):
+  """ Test add of Google Meet recording as recording and text dialogs """
+  # Importing vcon here so that we catch any junk stdout which will break ths CLI
+  import vcon.cli
+
+  # Run the vcon command to ad externally reference recording
+  vcon.cli.main(["-n", "add", "in-meet", GOOGLE_MEET_RECORDING])
+
+  out_vcon_json, error = capsys.readouterr()
+  # As we captured the stderr, we need to re-emmit it for unit test feedback
+  print("stderr: {}".format(error), file=sys.stderr)
+
+  out_vcon = vcon.Vcon()
+  out_vcon.loads(out_vcon_json)
+
+  assert(len(out_vcon.parties) == 1)
+  assert(len(out_vcon.parties[0].keys()) == 1)
+  assert(out_vcon.subject == "test meeting")
+  assert(out_vcon.parties[0]["name"] == "Daniel Petrie")
+  assert(len(out_vcon.dialog) == 4)
+  assert(out_vcon.dialog[0]["type"] == "recording")
+  assert(out_vcon.dialog[0]["start"] == "2023-09-07T00:27:00.000+00:00")
+  assert(out_vcon.dialog[0]["duration"] == 74.791667 )
+  assert(out_vcon.dialog[0]["encoding"] == "base64url")
+  assert(out_vcon.dialog[0]["mimetype"] == vcon.Vcon.MIMETYPE_VIDEO_MP4)
+  assert(out_vcon.dialog[0]["filename"] == os.path.basename(GOOGLE_MEET_RECORDING))
+  assert("parties" not in out_vcon.dialog[0])
+  assert(out_vcon.dialog[1]["type"] == "text")
+  assert(out_vcon.dialog[1]["parties"] == 0)
+  assert(out_vcon.dialog[1]["start"] == "2023-09-07T00:27:21.199+00:00")
+  assert(out_vcon.dialog[1]["duration"] == 3 )
+  assert(out_vcon.dialog[1]["encoding"] == "none")
+  assert(out_vcon.dialog[1]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[1]["body"] == "test message 1")
+  assert(out_vcon.dialog[2]["type"] == "text")
+  assert(out_vcon.dialog[2]["parties"] == 0)
+  assert(out_vcon.dialog[2]["start"] == "2023-09-07T00:27:39.362+00:00")
+  assert(out_vcon.dialog[2]["duration"] == 3 )
+  assert(out_vcon.dialog[2]["encoding"] == "none")
+  assert(out_vcon.dialog[2]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[2]["body"] == "https://docs.google.com/document/d/1RN6xuZaqz6bpltbc-t-jRMdQ8AyoMsVoskybU/edit")
+  assert(out_vcon.dialog[3]["type"] == "text")
+  assert(out_vcon.dialog[3]["parties"] == 0)
+  assert(out_vcon.dialog[3]["start"] == "2023-09-07T00:27:57.735+00:00")
+  assert(out_vcon.dialog[3]["duration"] == 3 )
+  assert(out_vcon.dialog[3]["encoding"] == "none")
+  assert(out_vcon.dialog[3]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[3]["body"] == "test message 2")
 # TODO:
 # vcon sign
 # vcon verify
