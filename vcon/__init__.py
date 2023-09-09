@@ -568,7 +568,7 @@ class Vcon():
     if(file_name is not None and len(file_name) > 0):
       new_dialog['filename'] = file_name
 
-    new_dialog['encoding'] = "None"
+    new_dialog['encoding'] = "none"
     new_dialog['body'] = body
 
     if(self.dialog is None):
@@ -774,7 +774,7 @@ class Vcon():
     if(dialog.get("body") is None):
       raise AttributeError("dialog[{}] does not contain an inline body/file".format(dialog_index))
 
-    encoding = dialog.get("encoding", "None").lower()
+    encoding = dialog.get("encoding", "none").lower()
     if(encoding == "base64url"):
       # This is wrong.  decode should take a string not bytes, but it fails without the bytes conversion
       # this is a bug in jose.baseurl_decode
