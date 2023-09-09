@@ -5,12 +5,12 @@ script file so that it coould more easily be tested with pytest.
 
 import os
 import sys
+import re
 import pathlib
 import typing
 import datetime
 import time
 import json
-import textwrap
 import argparse
 import socket
 import sox
@@ -19,7 +19,10 @@ import ffmpeg
 import vcon
 
 
-def do_in_email(args, in_vcon):
+def do_in_email(
+  args,
+  in_vcon: vcon.Vcon
+  ) -> vcon.Vcon:
   if(not args.emailfile[0].exists()):
     raise Exception("Email file: {} does not exist".format(args.emailfile[0]))
 
@@ -148,7 +151,10 @@ def parse_zoom_chat(
   return(result)
 
 
-def do_in_zoom(args, in_vcon):
+def do_in_zoom(
+  args,
+  in_vcon: vcon.Vcon
+  ) -> vcon.Vcon:
   if(not args.zoomdir[0].exists()):
     raise Exception("Zoom directory: {} does not exist".format(args.zoomdir[0]))
 
@@ -243,6 +249,165 @@ def do_in_zoom(args, in_vcon):
 
   return(in_vcon)
 
+
+def meet_chat_time_to_seconds(relative_time: str) -> float:
+  hours, minutes, seconds = relative_time.split(":")
+  total_time = int(hours) * 3600 + \
+    int(minutes) * 60 + \
+    float(seconds)
+
+  return(total_time)
+
+
+def parse_meet_chat(
+  file_handle,
+  meeting_start: str
+  ) -> typing.List[typing.Tuple[str, float, str, str]]:
+
+  meeting_start_datetime = datetime.datetime.fromisoformat(meeting_start)
+  messages = []
+  while(1):
+    times = file_handle.readline()
+    if(times is None or
+      times == ""
+      ):
+      break
+    # times are relative to start of meeting
+    time_start, time_end = times.split(",", 1)
+    # convert to seconds to calculate duration
+    # calculate start time from meeting start time
+    seconds_start = meet_chat_time_to_seconds(time_start)
+    seconds_end = meet_chat_time_to_seconds(time_end)
+    duration = seconds_end - seconds_start
+    start_date = (meeting_start_datetime + datetime.timedelta(0, seconds_start)).isoformat()
+
+    sender_message = file_handle.readline()
+    sender, message = sender_message.split(":", 1)
+    messages.append((start_date, duration, sender, message))
+    file_handle.readline() # blank line separator
+
+  return(messages)
+
+
+def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
+  if(not args.meetrec[0].exists()):
+    print("Google Meet recording file: {} does not exist".format(
+      args.meetrec[0]
+      ),
+      file = sys.stderr
+      )
+    sys.exit(7)
+  if(not args.meetrec[0].is_file()):
+    print("{} is not a file".format(
+      args.meetrec[0]
+      ),
+      file = sys.stderr
+      )
+    sys.exit(7)
+  #print(magic.from_file(args.meetrec, mime = True))
+  with open(args.meetrec[0], "rb") as rec_file_handle:
+    image_data = rec_file_handle.read(8)
+    if(len(image_data) < 8):
+      print("recording file: {} too small)".format(
+        args.meetrec[0]
+        ),
+        file = sys.stderr
+        )
+      sys.exit(7)
+
+    # magic header bytes
+    header = ''.join('{:02x}'.format(x) for x in image_data[4:])
+    if(header != "66747970"):
+      print("expected file: {} to be an MP4 recording (magic: {} expected: 66747970)".format(
+        args.meetrec[0],
+        header
+        ),
+        file = sys.stderr
+        )
+      sys.exit(7)
+
+  # Check metadata on recording
+  video_meta = ffmpeg.probe(args.meetrec[0])
+  meta_filename = video_meta["format"]["filename"]
+  duration = float(video_meta["streams"][0]['duration'])
+  # print("Metadata: {}".format(video_meta))
+  # print("meta file name: {}".format(meta_filename))
+  # print("duration: {}".format(duration))
+  re_results = re.match(r'(?P<meeting>[a-zA-Z0-9 ]+) [^\(]*\((?P<date>[^\(]+)\) [^\(]*\((?P<hash>[^\(]+)\)', meta_filename)
+  if(re_results is not None):
+    name_parts_dict = re_results.groupdict()
+    meeting_name = name_parts_dict["meeting"]
+    meeting_date = name_parts_dict["date"]
+    # Massage the date into RFC3339 format
+    # hour offset must be 2 digits
+    if(meeting_date[-2:-1] == "-"):
+      meeting_date = meeting_date[:-1] + "0" + meeting_date[-1:]
+    # insert T between date and time, remove space and GMT, add minutes to offset
+    meeting_date = meeting_date.replace(" ", "T", 1).replace(" GMT", "") + ":00"
+    meeting_hash = name_parts_dict["hash"]
+    # print("meeting name: {}\ndate: {}\nhash: {}".format(
+    #   meeting_name,
+    #   meeting_date,
+    #   meeting_hash
+    #   ),
+    #   file = sys.stderr
+    #   )
+  else:
+    meeting_name = None
+    meeting_hash = None
+    # infer meeting date from recording file creation date
+    meeting_date = datetime.datetime.fromtimestamp(os.path.getctime(args.meetrec[0])).isoformat()
+
+  # Set the subject, if not alaready set, to the meeting name
+  if(meeting_name is not None and
+    (in_vcon.subject is None or
+    in_vcon.subject == "")
+    ):
+    in_vcon.set_subject(meeting_name)
+
+  # parties unknown
+  parties = None
+  with open(args.meetrec[0], "rb") as recording_handle:
+    body_bytes = recording_handle.read()
+    in_vcon.add_dialog_inline_recording(
+      body_bytes,
+      meeting_date,
+      duration,
+      parties,
+      vcon.Vcon.MIMETYPE_VIDEO_MP4,
+      str(args.meetrec[0])
+      )
+
+  # Try to find the chat file
+  if(meeting_hash is not None and
+    (" (" + meeting_hash + ")") in str(args.meetrec[0])
+    ):
+    chatfile = str(args.meetrec[0]).replace(" (" + meeting_hash + ")", "")
+
+    with open(chatfile, "r") as chat_handle:
+      messages = parse_meet_chat(
+        chat_handle,
+        meeting_date
+        )
+      #print("chat: {} chat messages".format(messages))
+      for timestamp, duration, sender, message in messages:
+        # Get party index or add them if not in the Vcon
+        sender_indices = in_vcon.find_parties_by_parameter("name", sender)
+        if(len(sender_indices) < 1):
+          sender_indices.append(in_vcon.set_party_parameter("name", sender))
+
+        # add a text dialog
+        in_vcon.add_dialog_inline_text(
+          message,
+          timestamp,
+          duration,
+          sender_indices[0],
+          vcon.Vcon.MIMETYPE_TEXT_PLAIN
+          )
+
+  return(in_vcon)
+
+
 def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
   parser = argparse.ArgumentParser("vCon operations such as construction, signing, encryption, verification, decrytpion, filtering")
   input_group = parser.add_mutually_exclusive_group()
@@ -320,7 +485,7 @@ def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
     metavar='meet_recording',
     nargs=1,
     type=pathlib.Path,
-    help = "path to Google Meet video recording file.  The path to the chat file is implied from this if presnet.",
+    help = "- path to Google Meet video recording file.  The path to the chat file is implied from this if presnet.",
     default=None)
 
 
@@ -576,6 +741,9 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
 
     elif(args.add_command == "in-zoom"):
       in_vcon = do_in_zoom(args, in_vcon)
+
+    elif(args.add_command == "in-meet"):
+      in_vcon = do_in_meet(args, in_vcon)
 
 
   elif(args.command == "extract"):
