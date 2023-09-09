@@ -357,6 +357,7 @@ class Vcon():
     self._vcon_dict[Vcon.REDACTED] = {}
 
 
+  # TODO: use mimetypes package instead
   @staticmethod
   def get_mime_type(file_name):
     """ derive mimetype from fle extension """
@@ -375,6 +376,7 @@ class Vcon():
     return(mimetype)
 
 
+  # TODO: use mimetypes package instead
   @staticmethod
   def get_mime_extension(mime_type):
     """ get file extension for MIMETYPE """
@@ -702,8 +704,14 @@ class Vcon():
     new_dialog['type'] = "recording"
     new_dialog['start'] = vcon.utils.cannonize_date(start_time)
     new_dialog['duration'] = duration
-    new_dialog['parties'] = parties
+
+    if(parties is not None and
+      parties != ""
+      ):
+      new_dialog['parties'] = parties
+
     new_dialog['mimetype'] = mime_type
+
     if(file_name is not None and len(file_name) > 0):
       new_dialog['filename'] = file_name
 
