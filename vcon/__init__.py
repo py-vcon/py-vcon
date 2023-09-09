@@ -1474,6 +1474,28 @@ class Vcon():
       self._state = current_state
       raise e
 
+
+  def set_created_at(
+    self,
+    create_date: typing.Union[int, float, str, None]
+    ) -> None:
+    """
+    Set the Vcon creation date.
+
+    **create_date** (typing.Union[int, float, str, None]) - epoch time as int or float,
+      date string as RFC3339 or RFC822 format.
+      passing a value of None will use the current time.
+
+    Returns: None
+    """
+    self._attempting_modify()
+
+    if(create_date is None):
+      create_date = time.time()
+
+    self._vcon_dict[Vcon.CREATED_AT] = vcon.utils.cannonize_date(create_date)
+
+
   def set_subject(self, subject: str) -> None:
     """
     Set the subject parameter of the vCon.
