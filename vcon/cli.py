@@ -283,7 +283,7 @@ def parse_meet_chat(
 
     sender_message = file_handle.readline()
     sender, message = sender_message.split(":", 1)
-    messages.append((start_date, duration, sender, message))
+    messages.append((start_date, duration, sender.strip(), message.strip()))
     file_handle.readline() # blank line separator
 
   return(messages)
@@ -328,12 +328,13 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
 
   # Check metadata on recording
   video_meta = ffmpeg.probe(args.meetrec[0])
-  meta_filename = video_meta["format"]["filename"]
+  meta_filename = os.path.basename(video_meta["format"]["filename"])
   duration = float(video_meta["streams"][0]['duration'])
   # print("Metadata: {}".format(video_meta))
   # print("meta file name: {}".format(meta_filename))
   # print("duration: {}".format(duration))
-  re_results = re.match(r'(?P<meeting>[a-zA-Z0-9 ]+) [^\(]*\((?P<date>[^\(]+)\) [^\(]*\((?P<hash>[^\(]+)\)', meta_filename)
+  re_results = re.match(r'(?P<meeting>[a-zA-Z0-9 ]+) [^\(]*\((?P<date>[^\(]+)\) [^\(]*\((?P<hash>[^\(]+)\)',
+    meta_filename)
   if(re_results is not None):
     name_parts_dict = re_results.groupdict()
     meeting_name = name_parts_dict["meeting"]
@@ -356,7 +357,8 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
     meeting_name = None
     meeting_hash = None
     # infer meeting date from recording file creation date
-    meeting_date = datetime.datetime.fromtimestamp(os.path.getctime(args.meetrec[0])).isoformat()
+    meeting_date = vcon.utils.cannonize_date(os.path.getctime(args.meetrec[0]))
+    print("Meeting date: {}".format(meeting_date), file = sys.stderr)
 
   # Set the subject, if not alaready set, to the meeting name
   if(meeting_name is not None and
@@ -375,7 +377,7 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
       duration,
       parties,
       vcon.Vcon.MIMETYPE_VIDEO_MP4,
-      str(args.meetrec[0])
+      os.path.basename(str(args.meetrec[0]))
       )
 
   # Try to find the chat file
