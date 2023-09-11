@@ -12,11 +12,18 @@ vcon [I/O Options] [Operations]
 
 ## I/O Options
 
-&nbsp;&nbsp;&nbsp;&nbsp;**-n** - create a new vCon and do not read input from file or stdin (mutually exclusive with -i option)
+The **-n**, **-i**, **-g** options are mutually exclusive.
 
-&nbsp;&nbsp;&nbsp;&nbsp;**-i FILE** - read a vCon from the given file name instead of the default stdin (mutually exclusive with -n option)
+&nbsp;&nbsp;&nbsp;&nbsp;**-n** - create a new vCon and do not read input from file or stdin.
+
+&nbsp;&nbsp;&nbsp;&nbsp;**-i FILE** - read a vCon from the given file name instead of the default stdin.
+
+&nbsp;&nbsp;&nbsp;&nbsp;**-g HOST PORT UUID** - do a HTTP get to read in a vCon from the given HOST, PORT having the given UUID instead of the default stdin.  Assumes the URL: http://HOST:PORT/vcon/UUID
+
 
 &nbsp;&nbsp;&nbsp;&nbsp;**-o FILE** - write the result of the command operation to the given file name instead of the default stdout
+
+&nbsp;&nbsp;&nbsp;&nbsp;**-p HOST PORT** - HTTP post the resulting output vCon to the given HOST and PORT.  This option does not change the stdout or effect of the -o option.
 
 &nbsp;&nbsp;&nbsp;&nbsp;**-r FILTER_NAME MODULE_NAME CLASS_NAME INIT_OPTIONS** - Load the MODULE_NAME and register the CLASS_NAME as a vcon filter plugin using the FILTER_NAME.  The INIT_OPTIONS is a JSON dict containing option parameters input to the initialization of the filter plugin.  If the default INIT_OPTIONS is desired, use: "{}".  Any existing filter registered as FILTER_NAME will be replaced.  Note, this registration only exists for the life of this vcon command.  Generally this is used in conjunction with the **filter** option defined below.
 
@@ -87,6 +94,10 @@ Output:
 To obtain the value of the uuid parameter from the output vCon:
 
     vcon -n | jq '.uuid'
+
+To set the name parameter of the first party in an existing Vcon:
+
+    vcon -i myvcon.vcon | jq '. | .parties[0] += {name: "Foo Bar"}'
 
 To create a new vcon, add a recording of parties 0 and 1, starting at the current time and pipe that into another vcon command to transcribe the recording:
 
