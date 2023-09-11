@@ -412,11 +412,50 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
 
 def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
   parser = argparse.ArgumentParser("vCon operations such as construction, signing, encryption, verification, decrytpion, filtering")
-  input_group = parser.add_mutually_exclusive_group()
-  input_group.add_argument("-i", "--infile", metavar='infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
-  input_group.add_argument("-n", "--newvcon", action="store_true")
 
-  parser.add_argument("-o", "--outfile", metavar='outfile', nargs='?', type=argparse.FileType('w'), default=sys.stdout)
+  input_group = parser.add_mutually_exclusive_group()
+  input_group.add_argument(
+    "-i",
+    "--infile",
+    metavar='infile',
+    help = "- read input vCon from file",
+    nargs='?',
+    type=argparse.FileType('r'),
+    default=sys.stdin
+    )
+  input_group.add_argument(
+    "-g",
+    "--get",
+    metavar=('host', 'port', 'uuid'),
+    help = "- HTTP get vCon having the given uuid from host, port",
+    nargs = 3,
+    type = str
+    )
+  input_group.add_argument(
+    "-n",
+    "--newvcon",
+    help = "- create a new/empty vCon as the input file",
+    action="store_true"
+    )
+
+  parser.add_argument(
+    "-o",
+    "--outfile",
+    metavar='outfile',
+    nargs='?',
+    type=argparse.FileType('w'),
+    default=sys.stdout
+    )
+
+  parser.add_argument(
+    "-p",
+    "--post",
+    metavar = ('host', 'port'),
+    nargs = 2,
+    # action = "append",
+    help = "- HTTP post the output vCon to the given host and port",
+    type = str
+    )
 
   parser.add_argument(
     "-r",
@@ -639,7 +678,19 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
   print("new in {}".format(args.newvcon), file=sys.stderr)
   print("filter plugin registrations in {}".format(args.register_filter_plugin), file=sys.stderr)
   in_vcon = vcon.Vcon()
-  if(not args.newvcon):
+  if(args.get):
+    try:
+      port = int(args.get[1])
+    except ValueError:
+      parser.error("get port must be an integer.  Received: {}".format(args.get[1]))
+
+    in_vcon.get(
+      host = args.get[0],
+      port = port,
+      uuid = args.get[2]
+      )
+
+  elif(not args.newvcon):
     in_vcon_json = args.infile.read()
     if(in_vcon_json is not None and len(in_vcon_json) > 0):
       in_vcon.loads(in_vcon_json)
@@ -772,5 +823,16 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
     out_vcon_json = in_vcon.dumps(signed=signed_json)
     args.outfile.write(out_vcon_json)
 
+  if(args.post):
+    print("post args: {}".format(len(args.post)), file = sys.stderr)
+    try:
+      port = int(args.post[1])
+    except ValueError:
+      parser.error("post port must be an integer.  Received: {}".format(args.post[1]))
+
+    in_vcon.post(
+      host = args.post[0],
+      port = port
+      )
   return(0)
 
