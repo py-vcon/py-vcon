@@ -5,6 +5,8 @@ unit tests for the vcon command line script
 import sys
 import io
 import os.path
+import httpretty
+from tests.common_utils import empty_vcon, two_party_tel_vcon, call_data
 
 IN_VCON_JSON = """
 {"uuid": "0183878b-dacf-8e27-973a-91e26eb8001b", "vcon": "0.0.1", "attachments": [], "parties": [{"name": "Alice", "tel": "+12345678901"}, {"name": "Bob", "tel": "+19876543210"}]}
@@ -271,6 +273,99 @@ def test_in_meet(capsys):
   assert(out_vcon.dialog[3]["encoding"] == "none")
   assert(out_vcon.dialog[3]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[3]["body"] == "test message 2")
+
+
+@httpretty.activate(verbose = True, allow_net_connect = False)
+def test_get(two_party_tel_vcon, capsys):
+  """ Test cli get (-g, --get) HTTP get of Vcon """
+  # Importing vcon here so that we catch any junk stdout which will break ths CLI
+  import vcon.cli
+
+  host = "example.com"
+  port = 8000
+  uuid = "test_fake_uuid"
+
+  # Hack UUID for testing
+  two_party_tel_vcon._vcon_dict[vcon.Vcon.UUID] = uuid
+
+  httpretty.register_uri(
+    httpretty.GET,
+    "http://{host}:{port}{path}".format(
+      host = host,
+      port = port,
+      path = "/vcon/{}".format(uuid)
+      ),
+    body = two_party_tel_vcon.dumps()
+    )
+
+  # Run the vcon command to get Vcon from HTTP host
+  vcon.cli.main(["-g", host, str(port), uuid])
+
+  out_vcon_json, error = capsys.readouterr()
+  # As we captured the stderr, we need to re-emmit it for unit test feedback
+  print("stderr: {}".format(error), file=sys.stderr)
+
+  got_vcon = vcon.Vcon()
+  got_vcon.loads(out_vcon_json)
+
+  assert(httpretty.latest_requests()[0].headers["accept"] == vcon.Vcon.MIMETYPE_JSON)
+  assert(len(got_vcon.parties) == 2)
+  assert(got_vcon.parties[0]['tel'] == call_data['source'])
+  assert(got_vcon.parties[1]['tel'] == call_data['destination'])
+  assert(got_vcon.uuid == uuid)
+
+
+@httpretty.activate(verbose = True, allow_net_connect = False)
+def test_post(two_party_tel_vcon, capsys):
+  """ Test cli post (-p, --post) HTTP post of Vcon """
+  # Importing vcon here so that we catch any junk stdout which will break ths CLI
+  import vcon.cli
+
+  host = "example.com"
+  port = 8000
+  uuid = "test_fake_uuid"
+
+  # Hack UUID for testing
+  two_party_tel_vcon._vcon_dict[vcon.Vcon.UUID] = uuid
+
+  httpretty.register_uri(
+    httpretty.POST,
+    "http://{host}:{port}/vcon".format(
+      host = host,
+      port = port
+      ),
+      status = 200
+      )
+
+  # Setup stdin for vcon CLI to read
+  sys.stdin = io.StringIO(two_party_tel_vcon.dumps())
+
+  # Run the vcon command to post Vcon to HTTP host
+  vcon.cli.main(["-p", host, str(port)])
+
+  out_vcon_json, error = capsys.readouterr()
+  # As we captured the stderr, we need to re-emmit it for unit test feedback
+  print("stderr: {}".format(error), file=sys.stderr)
+
+  posted_vcon = vcon.Vcon()
+  assert(httpretty.latest_requests()[0].headers["Content-Type"] == vcon.Vcon.MIMETYPE_JSON)
+  #print("type: " + str(type(httpretty.latest_requests()[0].body)))
+  #print(httpretty.latest_requests()[0].body)
+  posted_vcon.loads(httpretty.latest_requests()[0].body)
+
+  assert(len(posted_vcon.parties) == 2)
+  assert(posted_vcon.parties[0]['tel'] == call_data['source'])
+  assert(posted_vcon.parties[1]['tel'] == call_data['destination'])
+  assert(posted_vcon.uuid == uuid)
+
+  out_vcon = vcon.Vcon()
+  out_vcon.loads(out_vcon_json)
+  assert(len(out_vcon.parties) == 2)
+  assert(out_vcon.parties[0]['tel'] == call_data['source'])
+  assert(out_vcon.parties[1]['tel'] == call_data['destination'])
+  assert(out_vcon.uuid == uuid)
+
+
 # TODO:
 # vcon sign
 # vcon verify
