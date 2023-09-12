@@ -270,7 +270,7 @@ class FilterPlugin():
 
 
 class FilterPluginRegistration:
-  """ Class containing info and heloer methods on the registration for a single named plugin filter """
+  """ Class containing info and helper methods on the registration for a single named plugin filter """
   def __init__(
     self,
     name: str,
