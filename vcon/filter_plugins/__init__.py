@@ -6,6 +6,7 @@ import copy
 import sys
 import typing
 import traceback
+import operator
 import logging
 import pydantic
 import pythonjsonlogger.jsonlogger
@@ -179,6 +180,93 @@ class FilterPlugin():
     Parameters: None
     """
     logger.debug("deleting {}".format(self.__class__))
+
+
+  @staticmethod
+  def slice_list(slice_spec: typing.Union[str, typing.List[int]],
+    whole_list: typing.List[typing.Any],
+    option_name: str
+    ) -> typing.List[typing.Any]:
+    """ Allow list indices or slice spec (e.g. "n:m:i") to indicate elements of array to use """
+
+    # Specified as a slice e.g. "n", "n:", "n:m" or "n:m:i"
+    if(isinstance(slice_spec, str)):
+      if(slice_spec is None or
+        slice_spec == "" or
+        slice_spec == ":" or
+        slice_spec == "0:"
+        ):
+        start = 0
+        end = None
+        incr = None
+
+      # No colon, must be a single int
+      elif(slice_spec.find(":") == -1):
+        start = int(slice_spec)
+        end = start + 1
+        incr = None
+
+      else:
+        slice_operands = slice_spec.split(":")
+        if(len(slice_operands) > 3):
+          raise AttributeError("{} string should contain 0-2 colon (':') {}".format(
+            option_name,
+            slice_spec
+            ))
+
+        if(len(slice_operands) == 0):
+          assert(0)  # should not get here, should have been handled above
+
+        if(len(slice_operands) >= 1):
+          if(slice_operands[0] == ""):
+            start = 0
+          else:
+            start = int(slice_operands[0])
+
+        if(len(slice_operands) >= 2):
+          if(slice_operands[1] == ""):
+            end = None
+          else:
+            end = int(slice_operands[1])
+        else:
+          end = None
+
+        if(len(slice_operands) == 3):
+          if(slice_operands[2] == ""):
+            incr = None
+          else:
+            incr = int(slice_operands[2])
+        else:
+          incr = None
+
+      sliced_list = list(operator.getitem(whole_list, slice(start, end, incr)))
+      logger.debug("{} given: {}  slicing using [{}:{}:{}] resulting in {} of {} items".format(
+        option_name,
+        slice_spec,
+        start,
+        end,
+        incr,
+        len(sliced_list),
+        len(whole_list)
+        ))
+
+    # Specified as a list of indices to the dialog
+    elif(isinstance(slice_spec, list)):
+      sliced_list = [whole_list[int(i)] for i in slice_spec]
+      logger.debug("{} slicing using indices: {} resulting in {} of {} items".format(
+        option_name,
+        slice_spec,
+        len(sliced_list),
+        len(whole_list)
+        ))
+
+    else:
+      raise AttributeError("{} should be string or list of integers: {}".format(
+        option_name,
+        slice_spec
+        ))
+
+    return(sliced_list)
 
 
 class FilterPluginRegistration:
