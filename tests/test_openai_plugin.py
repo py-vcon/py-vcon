@@ -25,8 +25,8 @@ def test_1_options():
 
   options_dict = {}
   options = vcon.filter_plugins.impl.openai.OpenAICompletionOptions(**options_dict)
-  assert(options.input_dialogs)
-  assert(options.input_transcripts)
+  assert(options.input_dialogs == "")
+  assert(options.input_transcripts == "")
 
 def test_2_completion_text_summary():
   """ Test OpenAICompletion FilterPlugin with transcribe ananlysis and text output """
