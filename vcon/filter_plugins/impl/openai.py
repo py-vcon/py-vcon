@@ -1,4 +1,5 @@
 """ OpenAI FilterPlugin implentation """
+import typing
 import pydantic
 import openai
 import vcon
@@ -41,28 +42,35 @@ class OpenAICompletionOptions(
   More details on the OpenAI specific parameters can be found here:
   https://platform.openai.com/docs/api-reference/completions/create
   """
-  input_dialogs: bool = pydantic.Field(
+  input_dialogs: typing.Union[str,typing.List[int]] = pydantic.Field(
     title = "input **Vcon** text **dialog** objects",
     description = """
- * **True** - all text **dialog** objects are fed into **OpenAI** model to complete the response to the **prompt**
- * **False** - none of the **dialog** objects are fed to the the model.
+ * **""** (empty str or None) - all text **dialog** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
 
-TODO: select specific **Vcon dialog** objects by index as input.
+ * **n:m** (str) - text **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **n:m:i** (str) - text **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.
+ * **[1, 4, 5, 9]** (list[int]) - the text **dialog** objects having the indices in the given list are fed to the the model.
+
+**dialog** objects in the given sequence or list which are not **text** type dialogs are ignored.
 """,
-    default = True,
-    examples = [True, False]
+    default = "",
+    examples = ["", "0:", "0:-2", "2:5", "0:6:2", [], [1, 4, 5, 9]]
     )
 
-  input_transcripts: bool = pydantic.Field(
+  input_transcripts: typing.Union[str,typing.List[int]] = pydantic.Field(
     title = "input **Vcon** transcript type **analysis** objects",
     description = """
- * **True** - all transcription **analysis** objects are fed into **OpenAI** model to complete the response to the **prompt**
- * **False** - none of the **analysis** object are fed to the the model.
+ * **""** (empty str or None) - all transcribe **analysis** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+ * **n:m** (str) - transcribe **analysis** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **n:m:i** (str) - transcribe **analysis** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **[]** (empty list[int]) - none of the **analysis** object are fed to the the model.
+ * **[1, 4, 5, 9]** (list[int]) - the transcribe **analysis** objects having the indices in the given list are fed to the the model.
 
-TODO: select specific **Vcon analysis** objects by index as input.
+**analysis** objects in the given sequence or list which are not **transcribe** type analysis are ignored.
 """,
-    default = True,
-    examples = [True, False]
+    default = "",
+    examples = ["", "0:", "0:-2", "2:5", "0:6:2", [], [1, 4, 5, 9]]
     )
 
   model: str = pydantic.Field(
@@ -292,6 +300,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     return(out_vcon)
 
 
+
   def filter(
     self,
     in_vcon: vcon.Vcon,
@@ -310,9 +319,21 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     """
     out_vcon = in_vcon
 
+    analysis_list = self.slice_list(
+      options.input_transcripts,
+      in_vcon.analysis,
+      "OpenaiCompletionOptions.input_transcripts"
+      )
+
+    dialog_list = self.slice_list(
+      options.input_dialogs,
+      in_vcon.dialog,
+      "OpenaiCompletionOptions.input_dialogs"
+      )
+
     # no dialogs and we are not to input analysis
-    if(in_vcon.dialog is None and
-      not options.input_transcripts):
+    if(len(dialog_list) == 0 and
+      len(analysis_list) == 0):
       return(out_vcon)
 
     if(openai.api_key is None or
@@ -320,32 +341,30 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       logger.warning("OpenAICompletion.filter: OpenAI API key is not set, no filtering performed")
       return(out_vcon)
 
-    if(options.input_dialogs):
-      for dialog_index, dialog in enumerate(in_vcon.dialog):
-        if(dialog["type"] == "text"):
-          #if(dialog["mimetype"] in self._supported_media):
-          # If inline or externally referenced recording:
-          body_bytes = in_vcon.get_dialog_body(dialog_index)
-          if(isinstance(body_bytes, bytes)):
-            body_bytes = str(body_bytes, encoding = "utf-8")
+    for dialog_index, dialog in enumerate(dialog_list):
+      if(dialog["type"] == "text"):
+        #if(dialog["mimetype"] in self._supported_media):
+        # If inline or externally referenced recording:
+        body_bytes = in_vcon.get_dialog_body(dialog_index)
+        if(isinstance(body_bytes, bytes)):
+          body_bytes = str(body_bytes, encoding = "utf-8")
 
-          out_vcon = self.complete(
-            out_vcon,
-            options,
-            body_bytes,
-            dialog_index,
-            )
-        else:
-          pass # ignore??
+        out_vcon = self.complete(
+          out_vcon,
+          options,
+          body_bytes,
+          dialog_index,
+          )
+      else:
+        pass # ignore??
 
-          # else:
-          #  print("unsupported media type: {} in dialog[{}], skipped whisper transcription".format(dialog.mimetype, dialog_index))
+        # else:
+        #  print("unsupported media type: {} in dialog[{}], skipped whisper transcription".format(dialog.mimetype, dialog_index))
 
-    if(in_vcon.analysis is None or
-      not options.input_transcripts):
+    if(len(analysis_list) == 0):
       return(out_vcon)
 
-    for analysis_index, analysis in enumerate(in_vcon.analysis):
+    for analysis in analysis_list:
        if(analysis["type"] == "transcript"):
          if(analysis["vendor"] == "Whisper" and
            analysis["vendor_schema"] == "whisper_word_timestamps"
@@ -358,5 +377,6 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
             text_body,
             dialog_index,
             )
+
     return(out_vcon)
 
