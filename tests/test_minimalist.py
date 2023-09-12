@@ -4,6 +4,7 @@ import json
 import os
 #import pprint
 import jose.utils
+import time
 import vcon
 from tests.common_utils import call_data , empty_vcon, two_party_tel_vcon
 
@@ -232,4 +233,32 @@ def test_transcript(two_party_tel_vcon : vcon.Vcon):
   assert(vCon.analysis[0]['encoding'] == "json")
   assert(vCon.analysis[0]['vendor'] == vendor)
   assert(vCon.analysis[0]['vendor_schema'] == vendor_schema)
+
+
+def test_attachments(two_party_tel_vcon: vcon.Vcon):
+  """ Test adding and getting attachments """
+  file_name = "tests/bar.py"
+  now = time.time()
+
+  with open(file_name, "rt") as file_handle:
+    body_bytes = file_handle.read()
+    attachment_index = two_party_tel_vcon.add_attachment_inline(
+      body_bytes,
+      now,
+      0,
+      vcon.Vcon.MIMETYPE_TEXT_PLAIN,
+      os.path.basename(file_name)
+      )
+
+  assert(attachment_index == 0)
+  assert(len(two_party_tel_vcon.attachments) == 1)
+  assert(two_party_tel_vcon.attachments[0]["encoding"] == "none")
+  assert(two_party_tel_vcon.attachments[0]["party"] == 0)
+  assert(two_party_tel_vcon.attachments[0]["mimetype"] ==
+    vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(two_party_tel_vcon.attachments[0]["filename"] ==
+    os.path.basename(file_name))
+  assert(two_party_tel_vcon.attachments[0]["start"] ==
+    vcon.utils.cannonize_date(now))
+  assert(two_party_tel_vcon.attachments[0]["body"] == body_bytes)
 
