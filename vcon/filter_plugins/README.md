@@ -272,29 +272,36 @@ https://platform.openai.com/docs/api-reference/completions/create
 
 #### Fields:
 
-##### input_dialogs (bool)
+##### input_dialogs (typing.Union[str, typing.List[int]])
 input **Vcon** text **dialog** objects
 
- * **True** - all text **dialog** objects are fed into **OpenAI** model to complete the response to the **prompt**
- * **False** - none of the **dialog** objects are fed to the the model.
+ * **""** (empty str or None) - all text **dialog** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
 
-TODO: select specific **Vcon dialog** objects by index as input.
+ * **n:m** (str) - text **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **n:m:i** (str) - text **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.
+ * **[1, 4, 5, 9]** (list[int]) - the text **dialog** objects having the indices in the given list are fed to the the model.
+
+**dialog** objects in the given sequence or list which are not **text** type dialogs are ignored.
 
 example: None
-examples: [True, False]
-default: True
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+default: 
 
-##### input_transcripts (bool)
+##### input_transcripts (typing.Union[str, typing.List[int]])
 input **Vcon** transcript type **analysis** objects
 
- * **True** - all transcription **analysis** objects are fed into **OpenAI** model to complete the response to the **prompt**
- * **False** - none of the **analysis** object are fed to the the model.
+ * **""** (empty str or None) - all transcribe **analysis** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+ * **n:m** (str) - transcribe **analysis** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **n:m:i** (str) - transcribe **analysis** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **[]** (empty list[int]) - none of the **analysis** object are fed to the the model.
+ * **[1, 4, 5, 9]** (list[int]) - the transcribe **analysis** objects having the indices in the given list are fed to the the model.
 
-TODO: select specific **Vcon analysis** objects by index as input.
+**analysis** objects in the given sequence or list which are not **transcribe** type analysis are ignored.
 
 example: None
-examples: [True, False]
-default: True
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+default: 
 
 ##### model (str)
 **OpenAI** model name to use for generative AI
