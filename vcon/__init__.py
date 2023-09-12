@@ -576,7 +576,7 @@ class Vcon():
 
     self._vcon_dict[Vcon.DIALOG].append(new_dialog)
 
-    return(len(self.dialog))
+    return(len(self.dialog) - 1)
 
 
   def add_dialog_inline_email_message(
@@ -1055,12 +1055,26 @@ class Vcon():
     if(mime_type is not None and
       mime_type != ""):
       new_attachment['mimetype'] = mime_type
+      if(mime_type in [
+        vcon.Vcon.MIMETYPE_TEXT_PLAIN,
+        vcon.Vcon.MIMETYPE_JSON
+        ]):
+        encoding = "none"
+      else:
+        encoding = "base64url"
+
     if(file_name is not None and
       len(file_name) > 0):
       new_attachment['filename'] = file_name
 
-    new_attachment['encoding'] = "base64url"
-    encoded_body = jose.utils.base64url_encode(body).decode('utf-8')
+    new_attachment['encoding'] = encoding
+    if(encoding == "none"):
+      if(isinstance(body, str)):
+        encoded_body = body
+      else:
+        encoded_body = body.decode('utf-8')
+    else:
+      encoded_body = jose.utils.base64url_encode(body).decode('utf-8')
     #print("encoded body type: {}".format(type(encoded_body)))
     new_attachment['body'] = encoded_body
 
@@ -1069,8 +1083,7 @@ class Vcon():
 
     self._vcon_dict[Vcon.ATTACHMENTS].append(new_attachment)
 
-    return(len(self.attachments))
-
+    return(len(self.attachments) - 1)
 
 
   def dump(self, vconfile: typing.Union[str, typing.TextIO]) -> None:
