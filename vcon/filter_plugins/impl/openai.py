@@ -11,7 +11,7 @@ logger = vcon.build_logger(__name__)
 
 class OpenAICompletionInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
-  title = "OpenAI/ChatGPT **FilterPlugin** intialization object"
+  title = "OpenAI/ChatGPT Completion **FilterPlugin** intialization object"
   ):
   """
   A **OpenAIInitOptions** object is provided to the
@@ -32,7 +32,7 @@ You can get one at: https://platform.openai.com/account/api-keys
 
 class OpenAICompletionOptions(
   vcon.filter_plugins.FilterPluginOptions,
-  title = "OpenAI filter method options"
+  title = "OpenAI Completion filter method options"
   ):
   """
   Options for generative AI using **OpenAI** completion (e.g. ChatGPT)
@@ -216,6 +216,19 @@ on the new **analysis** object in the **Vcon**.
 class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
   """
   **FilterPlugin** to for generative AI using **OpenAI** completion (e.g. ChatGPT)
+
+  **OpenAICompletion** differs from **OpenAIChatCompletion** in that is uses
+  only imputs a single text dialog or transcribe analysis text when asking
+  for a completion to the prompt.  **OpenAIChatCompletion** by default will
+  iterate through all of the text dialog or transcribe analysis text, but it
+  evaluates the prompt for only one text input at a time.  Thus generating
+  a prompt answer as a new analysis obejct for each text dialog or
+  transcribe analysis text analysed.
+
+  In contrast, **OpenAIChatCompletion** inputs the context of all of the text
+  dialog and transcribe analysis objects as input labeled by time and party
+  and will generate a single prompt response as one new analysis object.
+  
   """
   init_options_type = OpenAICompletionInitOptions
 
@@ -272,7 +285,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     addition_analysis_parameters = {
       "prompt": options.prompt,
       "model": options.model,
-      "vendor_product": "completion"
+      "vendor_product": "Completion"
       }
 
     # guess the body type
@@ -377,6 +390,219 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
             text_body,
             dialog_index,
             )
+
+    return(out_vcon)
+
+
+chat_completions_init_options_defaults = {
+}
+
+class OpenAIChatCompletionInitOptions(
+  OpenAICompletionInitOptions,
+  field_defaults = chat_completions_init_options_defaults,
+  title = "OpenAI/ChatGPT Chat Completion **FilterPlugin** intialization object"
+  ):
+  pass
+
+
+chat_completion_options_defaults = {
+  "jq_result": ".choices[0].message.content",
+  "model": "gpt-4",
+  "prompt": "Summarize the transcript in these messages."
+  }
+
+class OpenAIChatCompletionOptions(
+  OpenAICompletionOptions,
+  field_defaults = chat_completion_options_defaults,
+  title = "OpenAI Chat Completion filter method options"
+  ):
+  pass
+
+
+class OpenAIChatCompletion(OpenAICompletion):
+  """
+  **FilterPlugin** to for generative AI using **OpenAI** chat completion (e.g. ChatGPT)
+
+  **OpenAIChatCompletion** differs from **OpenAICompletion** in that is uses the
+  context of all of the text dialog and transcribe analysis objects as input labeled by
+  time and party and generates a single prompt response or answer in one new analysis
+  object.  In contrast, **OpenAICompletion** only imputs a single text dialog
+  or transcribe analysis text when asking for a completion to the prompt, generating
+  a prompt response and a new analysis object for each text dialog and transcribe
+  analysis object analysed.
+  """
+
+  def __init__(
+    self,
+    init_options: OpenAIChatCompletionInitOptions
+    ):
+    """
+    Parameters:
+      init_options (OpenAICompletionInitOptions) - the initialization options for the **OpenAI** completion plugin
+    """
+    super().__init__(init_options)
+
+    self.options_type = OpenAIChatCompletionOptions
+
+
+  def filter(
+    self,
+    in_vcon: vcon.Vcon,
+    options: OpenAIChatCompletionOptions
+    ) -> vcon.Vcon:
+    """
+    Perform generative AI using **OpenAI** chat completion on the
+    text **dialogs** and/or transcription **analysis** objects
+    in the given **Vcon** using the given **options.prompt**.
+`
+    Parameters:
+      options (OpenAICompletionOptions)
+
+    Returns:
+      the modified Vcon with a single analysis object added in total
+      for all of the text dialogs and transcription analysis object
+      analysed.
+    """
+
+    out_vcon = in_vcon
+
+    analysis_list = self.slice_list(
+      options.input_transcripts,
+      in_vcon.analysis,
+      "OpenaiChatCompletionOptions.input_transcripts"
+      )
+
+    dialog_list = self.slice_list(
+      options.input_dialogs,
+      in_vcon.dialog,
+      "OpenaiChatCompletionOptions.input_dialogs"
+      )
+
+    text_dialog = []
+    # Loop through the text dialogs and add them to the list
+    for dialog_index, dialog in enumerate(dialog_list):
+      if(dialog["type"] == "text"):
+        #if(dialog["mimetype"] in self._supported_media):
+        # If inline or externally referenced recording:
+        body_bytes = in_vcon.get_dialog_body(dialog_index)
+        if(isinstance(body_bytes, bytes)):
+          body_bytes = str(body_bytes, encoding = "utf-8")
+          try:
+            party_label = self.get_party_label(in_vcon, dialog["parties"])
+          except AttributeError as e:
+            logger.exception(e)
+            logger.warning("vcon: {} missing parties: {}".format(
+              in_vcon.uuid,
+              dialog["parties"]
+              ))
+            party_label = "unknown"
+
+          # role is user, prepend date and party label for content
+          new_message = {
+            "role": "user",
+            "content": "at {}, {} said: {}".format(
+              dialog["start"],
+              party_label,
+              body_bytes
+              ),
+            "date": dialog["start"]
+            }
+          text_dialog.append(new_message)
+
+    # loop through the transcriptions and add them to the list
+    for analysis in analysis_list:
+       if(analysis["type"] == "transcript"):
+         if(analysis["vendor"] == "Whisper" and
+           analysis["vendor_schema"] == "whisper_word_timestamps"
+          ):
+          text_body = analysis["body"]["text"]
+          dialog_index = analysis["dialog"]
+          try:
+            party_label = self.get_party_label(in_vcon, dialog["parties"])
+          except AttributeError as e:
+            logger.exception(e)
+            logger.warning("vcon: {} missing parties: {}".format(
+              in_vcon.uuid,
+              dialog["parties"]
+              ))
+            party_label = "unknown"
+
+          # role is user, prepend date and party label for content
+          new_message = {
+            "role": "user",
+            "content": "at {}, {} said: {}".format(
+              in_vcon.dialog[dialog_index]["start"],
+              party_label,
+              text_body
+              ),
+             "date": in_vcon.dialog[dialog_index]["start"]
+            }
+          text_dialog.append(new_message)
+
+
+    # sort the text by start date and remove the date parameter
+    sorted_messages = sorted(text_dialog.copy(), key = lambda cls: cls["date"])
+    # remove the date as it may be rejected by ChatCompletion
+    for msg in sorted_messages:
+      del msg["date"]
+
+    # add the system role at the end so that dialog does not over ride it
+    sorted_messages.append({"role": "system", "content": "You are a helpful assistant."})
+
+    # Add the prompt
+    sorted_messages.append({"role": "system", "content": options.prompt})
+
+    # feed message to ChatGPT
+    chat_completion_result = openai.ChatCompletion.create(
+      model = options.model,
+      messages = sorted_messages,
+      max_tokens = options.max_tokens,
+      temperature = options.temperature
+      )
+
+    query_result = pyjq.all(options.jq_result, chat_completion_result)
+    if(len(query_result) == 0):
+      logger.warning("{} jq query resulted in no elements.  No analysis object added".format(
+       self.__class__.__name__
+       ))
+      return(out_vcon)
+    if(len(query_result) == 1):
+      new_analysis_body = query_result[0]
+    else:
+      # TODO: is this what we should be doing??
+      logger.warning("{} jq query resulted in {} elements.  Dropping all but the first one.".format(
+       self.__class__.__name__,
+       len(query_result)
+       ))
+      new_analysis_body = query_result[0]
+
+    addition_analysis_parameters = {
+      "prompt": options.prompt,
+      "model": options.model,
+      "vendor_product": "ChatCompletion"
+      }
+
+    # guess the body type
+    if(isinstance(new_analysis_body, str)):
+      encoding = "none"
+      schema = "text"
+      addition_analysis_parameters["mimetype"] = vcon.Vcon.MIMETYPE_TEXT_PLAIN
+    else:
+      encoding = "json"
+      schema = "chat_completion_object"
+      if(options.jq_result != "."):
+        schema += " ?jq=" + options.jq_result
+      addition_analysis_parameters["mimetype"] = vcon.Vcon.MIMETYPE_JSON
+
+    out_vcon.add_analysis(
+      dialog_index,
+      options.analysis_type,
+      new_analysis_body,
+      'openai',
+      schema,
+      encoding,
+      **addition_analysis_parameters
+      )
 
     return(out_vcon)
 
