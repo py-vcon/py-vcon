@@ -62,9 +62,31 @@ class FilterPluginAlreadyRegistered(Exception):
 class FilterPluginInitOptions(pydantic.BaseModel, extra=pydantic.Extra.allow):
   """ base class for **FilterPlugin** initialization options """
 
+  def __init_subclass__(cls, field_defaults = {}, **kwargs):
+    """
+    Helper to change field defaults in subclasses
+
+    Parameters:
+      field_defaults (dict[str, Any]) - field name string and new default value for that field
+    """
+    super().__init_subclass__(**kwargs)
+    for field_name, new_default in field_defaults.items():
+      cls.__fields__[field_name].default = new_default
+
 
 class FilterPluginOptions(pydantic.BaseModel, extra=pydantic.Extra.allow):
   """ base class for **FilterPlugin.filter** method options """
+
+  def __init_subclass__(cls, field_defaults = {}, **kwargs):
+    """
+    Helper to change field defaults in subclasses
+
+    Parameters:
+      field_defaults (dict[str, Any]) - field name string and new default value for that field
+    """
+    super().__init_subclass__(**kwargs)
+    for field_name, new_default in field_defaults.items():
+      cls.__fields__[field_name].default = new_default
 
 
 class TranscribeOptions(FilterPluginOptions):
@@ -180,6 +202,42 @@ class FilterPlugin():
     Parameters: None
     """
     logger.debug("deleting {}".format(self.__class__))
+
+
+  @staticmethod
+  def get_party_label(
+    in_vcon: vcon.Vcon,
+    party_index: int
+    ) -> str:
+    """ Get a label for the indicated party in the given vcon """
+    if(isinstance(party_index, list)):
+      parties = []
+      for index in party_index:
+        parties.append(FilterPlugin.get_party_label(in_vcon, index))
+
+      return(", ".join(parties))
+
+    if(party_index is None or
+      party_index < 0
+      ):
+      return("unknown")
+
+    if(party_index >= len(in_vcon.parties)):
+      raise AttributeError("party_index: {} greater than number of parties: {}".format(
+        party_index,
+        len(in_vcon.parties)
+        ))
+
+    label_priority = ["name", "tel"]
+    label = None
+    for param_name in label_priority:
+      if(param_name in in_vcon.parties[party_index]):
+        label = in_vcon.parties[party_index][param_name]
+
+    if(label is None):
+      label = "party[{}]".format(party_index)
+
+    return(label)
 
 
   @staticmethod
