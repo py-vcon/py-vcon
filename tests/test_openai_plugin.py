@@ -55,7 +55,7 @@ def test_2_completion_text_summary():
   assert(out_vcon.analysis[original_analysis_count]["type"] == "summary")
   assert(out_vcon.analysis[original_analysis_count]["dialog"] == 0)
   assert(out_vcon.analysis[original_analysis_count]["vendor"] == "openai")
-  assert(out_vcon.analysis[original_analysis_count]["vendor_product"] == "completion")
+  assert(out_vcon.analysis[original_analysis_count]["vendor_product"] == "Completion")
   assert(out_vcon.analysis[original_analysis_count]["vendor_schema"] == "text")
   assert(out_vcon.analysis[original_analysis_count]["prompt"] == "Summarize this conversation: ")
   assert(out_vcon.analysis[original_analysis_count]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
@@ -93,7 +93,7 @@ def test_2_completion_object_summary():
   assert(out_vcon.analysis[original_analysis_count]["type"] == "summary")
   assert(out_vcon.analysis[original_analysis_count]["dialog"] == 0)
   assert(out_vcon.analysis[original_analysis_count]["vendor"] == "openai")
-  assert(out_vcon.analysis[original_analysis_count]["vendor_product"] == "completion")
+  assert(out_vcon.analysis[original_analysis_count]["vendor_product"] == "Completion")
   assert(out_vcon.analysis[original_analysis_count]["vendor_schema"] == "completion_object")
   assert(out_vcon.analysis[original_analysis_count]["prompt"] == "Summarize this conversation: ")
   assert(out_vcon.analysis[original_analysis_count]["mimetype"] == vcon.Vcon.MIMETYPE_JSON)
@@ -102,4 +102,43 @@ def test_2_completion_object_summary():
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"], str))
   assert(len(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"]) > 250)
   assert(out_vcon.analysis[original_analysis_count]["model"] == "text-davinci-003")
+
+
+
+def test_3_chat_completion_object_summary():
+  """ Test OpenAIChatCompletion FilterPlugin with transcribe ananlysis and chat_completion_object output """
+
+  in_vcon = vcon.Vcon()
+  in_vcon.load(TEST_EXTERNAL_AUDIO_VCON_FILE)
+  original_analysis_count = len(in_vcon.analysis)
+
+  options = {"jq_result": "."}
+
+  out_vcon = None
+
+  try:
+    out_vcon = in_vcon.openai_chat_completion(options)
+
+  except pydantic.error_wrappers.ValidationError as e:
+    openai_key = os.getenv("OPENAI_API_KEY", None)
+    if(openai_key is None or
+      openai_key == ""):
+        raise Exception("OPENAI_API_KEY environment variable not set this test cannot run") from e
+    raise e
+
+  after_analysis_count = len(out_vcon.analysis)
+  assert((after_analysis_count - original_analysis_count) == 1)
+  assert(out_vcon.analysis[original_analysis_count]["type"] == "summary")
+  assert(out_vcon.analysis[original_analysis_count]["dialog"] == 0)
+  assert(out_vcon.analysis[original_analysis_count]["vendor"] == "openai")
+  assert(out_vcon.analysis[original_analysis_count]["vendor_product"] == "ChatCompletion")
+  assert(out_vcon.analysis[original_analysis_count]["vendor_schema"] == "chat_completion_object")
+  assert(out_vcon.analysis[original_analysis_count]["prompt"] == "Summarize the transcript in these messages.")
+  assert(out_vcon.analysis[original_analysis_count]["mimetype"] == vcon.Vcon.MIMETYPE_JSON)
+  assert(out_vcon.analysis[original_analysis_count]["encoding"] == "json")
+  assert(isinstance(out_vcon.analysis[original_analysis_count]["body"], dict))
+  assert(isinstance(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"], str))
+  assert(len(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"]) > 250)
+  assert(out_vcon.analysis[original_analysis_count]["model"] == "gpt-4")
+  print("Response: " + out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"])
 
