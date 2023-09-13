@@ -13,3 +13,11 @@ vcon.filter_plugins.FilterPluginRegistry.register(
   init_options
   )
 
+vcon.filter_plugins.FilterPluginRegistry.register(
+  "openai_chat_completion",
+  "vcon.filter_plugins.impl.openai",
+  "OpenAIChatCompletion",
+  "OpenAI chat completion generative AI",
+  init_options
+  )
+
