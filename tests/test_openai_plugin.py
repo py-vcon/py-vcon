@@ -127,6 +127,17 @@ def test_3_chat_completion_object_summary():
     raise e
 
   after_analysis_count = len(out_vcon.analysis)
+
+  # Check stats on input to model:
+  plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion").plugin()
+  # verify stats of extracted messages are as expected
+  print("stats: {}".format(plugin.last_stats))
+  assert(plugin.last_stats['num_messages'] == 1)
+  assert(plugin.last_stats['num_text_dialogs'] == 0)
+  assert(plugin.last_stats['num_dialog_list'] == 1)
+  assert(plugin.last_stats['num_transcribe_analysis'] == 1)
+  assert(plugin.last_stats['num_analysis_list'] == 3)
+
   assert((after_analysis_count - original_analysis_count) == 1)
   assert(out_vcon.analysis[original_analysis_count]["type"] == "summary")
   assert(out_vcon.analysis[original_analysis_count]["dialog"] == 0)
