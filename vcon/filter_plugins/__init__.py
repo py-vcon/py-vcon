@@ -244,7 +244,7 @@ class FilterPlugin():
   def slice_list(slice_spec: typing.Union[str, typing.List[int]],
     whole_list: typing.List[typing.Any],
     option_name: str
-    ) -> typing.List[typing.Any]:
+    ) -> typing.List[typing.Tuple[int, typing.Any]]:
     """ Allow list indices or slice spec (e.g. "n:m:i") to indicate elements of array to use """
 
     # Specified as a slice e.g. "n", "n:", "n:m" or "n:m:i"
@@ -297,7 +297,9 @@ class FilterPlugin():
         else:
           incr = None
 
-      sliced_list = list(operator.getitem(whole_list, slice(start, end, incr)))
+      #sliced_list_items = list(operator.getitem(whole_list, slice(start, end, incr)))
+      sliced_list_indices = list(operator.getitem(list(range(len(whole_list))), slice(start, end, incr)))
+      sliced_list = [(i, whole_list[i]) for i in sliced_list_indices]
       logger.debug("{} given: {}  slicing using [{}:{}:{}] resulting in {} of {} items".format(
         option_name,
         slice_spec,
@@ -310,7 +312,7 @@ class FilterPlugin():
 
     # Specified as a list of indices to the dialog
     elif(isinstance(slice_spec, list)):
-      sliced_list = [whole_list[int(i)] for i in slice_spec]
+      sliced_list = [(i, whole_list[int(i)]) for i in slice_spec]
       logger.debug("{} slicing using indices: {} resulting in {} of {} items".format(
         option_name,
         slice_spec,

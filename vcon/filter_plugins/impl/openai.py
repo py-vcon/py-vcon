@@ -1,5 +1,6 @@
 """ OpenAI FilterPlugin implentation """
 import typing
+import datetime
 import pydantic
 import openai
 import vcon
@@ -443,7 +444,7 @@ class OpenAIChatCompletion(OpenAICompletion):
     super().__init__(init_options)
 
     self.options_type = OpenAIChatCompletionOptions
-
+    self.last_stats = {}
 
   def filter(
     self,
@@ -478,70 +479,108 @@ class OpenAIChatCompletion(OpenAICompletion):
       "OpenaiChatCompletionOptions.input_dialogs"
       )
 
-    text_dialog = []
+    dialog_text: typing.List[typing.Dict[str, str]] = []
     # Loop through the text dialogs and add them to the list
-    for dialog_index, dialog in enumerate(dialog_list):
+    num_text_dialogs = 0
+    # NOTE: the dialog_list may not be the full list of dialogs in
+    # this Vcon.  So the index into dialog_list is meaningless
+    for dialog_index, dialog in dialog_list:
       if(dialog["type"] == "text"):
+        logger.debug("text dialog[{}]".format(dialog_index))
+        num_text_dialogs += 1
         #if(dialog["mimetype"] in self._supported_media):
         # If inline or externally referenced recording:
         body_bytes = in_vcon.get_dialog_body(dialog_index)
         if(isinstance(body_bytes, bytes)):
           body_bytes = str(body_bytes, encoding = "utf-8")
-          try:
-            party_label = self.get_party_label(in_vcon, dialog["parties"])
-          except AttributeError as e:
-            logger.exception(e)
-            logger.warning("vcon: {} missing parties: {}".format(
-              in_vcon.uuid,
-              dialog["parties"]
-              ))
-            party_label = "unknown"
 
-          # role is user, prepend date and party label for content
-          new_message = {
-            "role": "user",
-            "content": "at {}, {} said: {}".format(
-              dialog["start"],
-              party_label,
-              body_bytes
-              ),
-            "date": dialog["start"]
-            }
-          text_dialog.append(new_message)
+        try:
+          party_label = self.get_party_label(in_vcon, dialog["parties"])
+        except AttributeError as e:
+          logger.exception(e)
+          logger.warning("vcon: {} missing parties: {}".format(
+            in_vcon.uuid,
+            dialog["parties"]
+            ))
+          party_label = "unknown"
+
+        # role is user, prepend date and party label for content
+        new_message = {}
+        new_message["role"] = "user"
+        new_message["content"] = "in chat at {}, {} said: {}".format(
+            dialog["start"],
+            party_label,
+            body_bytes
+            )
+        new_message["date"] = dialog["start"]
+        logger.debug("before dialog[{}] message added to dialog_text total: {}".format(dialog_index, len(dialog_text)))
+        dialog_text.append(new_message)
+        logger.debug("message added to dialog_text total: {}".format(len(dialog_text)))
+        assert(len(dialog_text) == num_text_dialogs)
 
     # loop through the transcriptions and add them to the list
-    for analysis in analysis_list:
+    num_transcribe_analysis = 0
+    for analysis_index, analysis in analysis_list:
        if(analysis["type"] == "transcript"):
          if(analysis["vendor"] == "Whisper" and
            analysis["vendor_schema"] == "whisper_word_timestamps"
           ):
+          num_transcribe_analysis += 1
           text_body = analysis["body"]["text"]
           dialog_index = analysis["dialog"]
           try:
-            party_label = self.get_party_label(in_vcon, dialog["parties"])
+            party_label = self.get_party_label(in_vcon, in_vcon.dialog[dialog_index]["parties"])
           except AttributeError as e:
             logger.exception(e)
             logger.warning("vcon: {} missing parties: {}".format(
               in_vcon.uuid,
-              dialog["parties"]
+              in_vcon.dialog[dialog_index]["parties"]
               ))
             party_label = "unknown"
 
           # role is user, prepend date and party label for content
-          new_message = {
-            "role": "user",
-            "content": "at {}, {} said: {}".format(
+          new_message = {}
+          new_message["role"] = "user"
+          if(in_vcon.dialog[dialog_index]["duration"] is not None and
+            in_vcon.dialog[dialog_index]["duration"] > 0
+            ):
+            call_end = datetime.datetime.fromisoformat(vcon.utils.cannonize_date(in_vcon.dialog[dialog_index]["start"])) +\
+              datetime.timedelta(0, in_vcon.dialog[dialog_index]["duration"])
+            call_end_string = " to " + call_end.isoformat()
+          else:
+            call_end_string = "" # don't know so don't say anything about call end
+          new_message["content"] = "in a call that took place at {}{}, {} said: {}".format(
               in_vcon.dialog[dialog_index]["start"],
+              call_end_string,
               party_label,
               text_body
-              ),
-             "date": in_vcon.dialog[dialog_index]["start"]
-            }
-          text_dialog.append(new_message)
+              )
+          new_message["date"] = in_vcon.dialog[dialog_index]["start"]
+          logger.debug("before analysis[{}] message added to dialog_text total: {}".format(analysis_index, len(dialog_text)))
+          dialog_text.append(new_message)
+          logger.debug("message added to dialog_text total: {}".format(len(dialog_text)))
+          assert(len(dialog_text) == num_text_dialogs + num_transcribe_analysis)
 
 
     # sort the text by start date and remove the date parameter
-    sorted_messages = sorted(text_dialog.copy(), key = lambda cls: cls["date"])
+    dialog_text_len = len(dialog_text)
+    sorted_messages = sorted(dialog_text.copy(), key = lambda msg: msg["date"])
+    logger.debug("generated {} messages from {} text dialogs out of {} total dialogs and {} transcriptions out of {} total analysis objects".format(
+      len(sorted_messages),
+      num_text_dialogs,
+      len(dialog_list),
+      num_transcribe_analysis,
+      len(analysis_list)
+      ))
+
+    # For test and debugging
+    assert(dialog_text_len == len(sorted_messages))
+    self.last_stats["num_messages"] = len(sorted_messages)
+    self.last_stats["num_text_dialogs"] = num_text_dialogs
+    self.last_stats["num_dialog_list"] = len(dialog_list)
+    self.last_stats["num_transcribe_analysis"] = num_transcribe_analysis
+    self.last_stats["num_analysis_list"] = len(analysis_list)
+
     # remove the date as it may be rejected by ChatCompletion
     for msg in sorted_messages:
       del msg["date"]
@@ -552,7 +591,9 @@ class OpenAIChatCompletion(OpenAICompletion):
     # Add the prompt
     sorted_messages.append({"role": "system", "content": options.prompt})
 
+    logger.debug("OpenAIChatCompletion messages: {}".format(sorted_messages))
     # feed message to ChatGPT
+
     chat_completion_result = openai.ChatCompletion.create(
       model = options.model,
       messages = sorted_messages,
@@ -566,6 +607,7 @@ class OpenAIChatCompletion(OpenAICompletion):
        self.__class__.__name__
        ))
       return(out_vcon)
+
     if(len(query_result) == 1):
       new_analysis_body = query_result[0]
     else:
