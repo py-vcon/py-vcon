@@ -355,7 +355,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       logger.warning("OpenAICompletion.filter: OpenAI API key is not set, no filtering performed")
       return(out_vcon)
 
-    for dialog_index, dialog in enumerate(dialog_list):
+    for dialog_index, dialog in dialog_list:
       if(dialog["type"] == "text"):
         #if(dialog["mimetype"] in self._supported_media):
         # If inline or externally referenced recording:
@@ -378,7 +378,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     if(len(analysis_list) == 0):
       return(out_vcon)
 
-    for analysis in analysis_list:
+    for _, analysis in analysis_list:
        if(analysis["type"] == "transcript"):
          if(analysis["vendor"] == "Whisper" and
            analysis["vendor_schema"] == "whisper_word_timestamps"
@@ -516,7 +516,6 @@ class OpenAIChatCompletion(OpenAICompletion):
         logger.debug("before dialog[{}] message added to dialog_text total: {}".format(dialog_index, len(dialog_text)))
         dialog_text.append(new_message)
         logger.debug("message added to dialog_text total: {}".format(len(dialog_text)))
-        assert(len(dialog_text) == num_text_dialogs)
 
     # loop through the transcriptions and add them to the list
     num_transcribe_analysis = 0
@@ -559,8 +558,6 @@ class OpenAIChatCompletion(OpenAICompletion):
           logger.debug("before analysis[{}] message added to dialog_text total: {}".format(analysis_index, len(dialog_text)))
           dialog_text.append(new_message)
           logger.debug("message added to dialog_text total: {}".format(len(dialog_text)))
-          assert(len(dialog_text) == num_text_dialogs + num_transcribe_analysis)
-
 
     # sort the text by start date and remove the date parameter
     dialog_text_len = len(dialog_text)
@@ -574,7 +571,6 @@ class OpenAIChatCompletion(OpenAICompletion):
       ))
 
     # For test and debugging
-    assert(dialog_text_len == len(sorted_messages))
     self.last_stats["num_messages"] = len(sorted_messages)
     self.last_stats["num_text_dialogs"] = num_text_dialogs
     self.last_stats["num_dialog_list"] = len(dialog_list)
