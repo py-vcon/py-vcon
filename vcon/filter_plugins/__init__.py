@@ -241,11 +241,17 @@ class FilterPlugin():
 
 
   @staticmethod
-  def slice_list(slice_spec: typing.Union[str, typing.List[int]],
-    whole_list: typing.List[typing.Any],
+  def slice_indices(slice_spec: typing.Union[str, typing.List[int]],
+    list_length: int,
     option_name: str
-    ) -> typing.List[typing.Tuple[int, typing.Any]]:
-    """ Allow list indices or slice spec (e.g. "n:m:i") to indicate elements of array to use """
+    ) -> typing.List[int]:
+    """ 
+    Get a list of indices for the given slice spec which may be of the form:
+    (e.g. "n:m:i") to indicate elements of array to use or may be a list of int.
+
+    Returns:
+     list[int] containing indices for the slice
+    """
 
     # Specified as a slice e.g. "n", "n:", "n:m" or "n:m:i"
     if(isinstance(slice_spec, str)):
@@ -297,9 +303,7 @@ class FilterPlugin():
         else:
           incr = None
 
-      #sliced_list_items = list(operator.getitem(whole_list, slice(start, end, incr)))
-      sliced_list_indices = list(operator.getitem(list(range(len(whole_list))), slice(start, end, incr)))
-      sliced_list = [(i, whole_list[i]) for i in sliced_list_indices]
+      sliced_list = list(operator.getitem(list(range(list_length)), slice(start, end, incr)))
       logger.debug("{} given: {}  slicing using [{}:{}:{}] resulting in {} of {} items".format(
         option_name,
         slice_spec,
@@ -307,17 +311,17 @@ class FilterPlugin():
         end,
         incr,
         len(sliced_list),
-        len(whole_list)
+        list_length
         ))
 
     # Specified as a list of indices to the dialog
     elif(isinstance(slice_spec, list)):
-      sliced_list = [(i, whole_list[int(i)]) for i in slice_spec]
+      sliced_list = slice_spec
       logger.debug("{} slicing using indices: {} resulting in {} of {} items".format(
         option_name,
         slice_spec,
         len(sliced_list),
-        len(whole_list)
+        list_length
         ))
 
     else:
