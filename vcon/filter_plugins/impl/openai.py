@@ -333,21 +333,21 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     """
     out_vcon = in_vcon
 
-    analysis_list = self.slice_list(
+    analysis_indices = self.slice_indices(
       options.input_transcripts,
-      in_vcon.analysis,
+      len(in_vcon.analysis),
       "OpenaiCompletionOptions.input_transcripts"
       )
 
-    dialog_list = self.slice_list(
+    dialog_indices = self.slice_indices(
       options.input_dialogs,
-      in_vcon.dialog,
+      len(in_vcon.dialog),
       "OpenaiCompletionOptions.input_dialogs"
       )
 
     # no dialogs and we are not to input analysis
-    if(len(dialog_list) == 0 and
-      len(analysis_list) == 0):
+    if(len(dialog_indices) == 0 and
+      len(analysis_indices) == 0):
       return(out_vcon)
 
     if(openai.api_key is None or
@@ -355,7 +355,8 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       logger.warning("OpenAICompletion.filter: OpenAI API key is not set, no filtering performed")
       return(out_vcon)
 
-    for dialog_index, dialog in dialog_list:
+    for dialog_index in dialog_indices:
+      dialog = in_vcon.dialog[dialog_index]
       if(dialog["type"] == "text"):
         #if(dialog["mimetype"] in self._supported_media):
         # If inline or externally referenced recording:
@@ -375,10 +376,11 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
         # else:
         #  print("unsupported media type: {} in dialog[{}], skipped whisper transcription".format(dialog.mimetype, dialog_index))
 
-    if(len(analysis_list) == 0):
+    if(len(analysis_indices) == 0):
       return(out_vcon)
 
-    for _, analysis in analysis_list:
+    for analysis_index in analysis_indices:
+       analysis = in_vcon.analysis[analysis_index]
        if(analysis["type"] == "transcript"):
          if(analysis["vendor"] == "Whisper" and
            analysis["vendor_schema"] == "whisper_word_timestamps"
@@ -467,15 +469,15 @@ class OpenAIChatCompletion(OpenAICompletion):
 
     out_vcon = in_vcon
 
-    analysis_list = self.slice_list(
+    analysis_indices = self.slice_indices(
       options.input_transcripts,
-      in_vcon.analysis,
+      len(in_vcon.analysis),
       "OpenaiChatCompletionOptions.input_transcripts"
       )
 
-    dialog_list = self.slice_list(
+    dialog_indices = self.slice_indices(
       options.input_dialogs,
-      in_vcon.dialog,
+      len(in_vcon.dialog),
       "OpenaiChatCompletionOptions.input_dialogs"
       )
 
@@ -484,7 +486,8 @@ class OpenAIChatCompletion(OpenAICompletion):
     num_text_dialogs = 0
     # NOTE: the dialog_list may not be the full list of dialogs in
     # this Vcon.  So the index into dialog_list is meaningless
-    for dialog_index, dialog in dialog_list:
+    for dialog_index in dialog_indices:
+      dialog = in_vcon.dialog[dialog_index]
       if(dialog["type"] == "text"):
         logger.debug("text dialog[{}]".format(dialog_index))
         num_text_dialogs += 1
@@ -519,7 +522,8 @@ class OpenAIChatCompletion(OpenAICompletion):
 
     # loop through the transcriptions and add them to the list
     num_transcribe_analysis = 0
-    for analysis_index, analysis in analysis_list:
+    for analysis_index in analysis_indices:
+       analysis = in_vcon.analysis[analysis_index]
        if(analysis["type"] == "transcript"):
          if(analysis["vendor"] == "Whisper" and
            analysis["vendor_schema"] == "whisper_word_timestamps"
@@ -565,17 +569,17 @@ class OpenAIChatCompletion(OpenAICompletion):
     logger.debug("generated {} messages from {} text dialogs out of {} total dialogs and {} transcriptions out of {} total analysis objects".format(
       len(sorted_messages),
       num_text_dialogs,
-      len(dialog_list),
+      len(dialog_indices),
       num_transcribe_analysis,
-      len(analysis_list)
+      len(analysis_indices)
       ))
 
     # For test and debugging
     self.last_stats["num_messages"] = len(sorted_messages)
     self.last_stats["num_text_dialogs"] = num_text_dialogs
-    self.last_stats["num_dialog_list"] = len(dialog_list)
+    self.last_stats["num_dialog_list"] = len(dialog_indices)
     self.last_stats["num_transcribe_analysis"] = num_transcribe_analysis
-    self.last_stats["num_analysis_list"] = len(analysis_list)
+    self.last_stats["num_analysis_list"] = len(analysis_indices)
 
     # remove the date as it may be rejected by ChatCompletion
     for msg in sorted_messages:
