@@ -1,4 +1,3 @@
-#import copy
 import os
 import sys
 import typing
@@ -108,8 +107,6 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
     Returns:
       the modified Vcon with added analysis objects for the transcription.
     """
-    #TODO do we want to copy the Vcon or modify in placed
-    #out_vcon = copy.deepcopy(in_vcon)
     out_vcon = in_vcon
     output_types = options.output_types
     if(output_types is None or len(output_types) == 0):
@@ -120,11 +117,32 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
       return(out_vcon)
 
     for dialog_index, dialog in enumerate(in_vcon.dialog):
-      # TODO assuming none of the dialogs have been transcribed
       #print("dialog keys: {}".format(dialog.keys()))
       if(dialog["type"] == "recording"):
+        # we have not already created a whisper transcript
+        wwt_index = in_vcon.find_transcript_for_dialog(
+          dialog_index,
+          True,
+          [("whisper", "", "whisper_word_timestamps")]
+          )
+        wws_index = in_vcon.find_transcript_for_dialog(
+          dialog_index,
+          True,
+          [("whisper", "", "whisper_word_srt")]
+          )
+        wwa_index = in_vcon.find_transcript_for_dialog(
+          dialog_index,
+          True,
+          [("whisper", "", "whisper_word_ass")]
+          )
         mime_type = dialog["mimetype"]
-        if(mime_type in self._supported_media):
+        logger.debug("found: wtt: {} wws: {} wwa: {}".format(wwt_index, wws_index, wwa_index))
+        # if requesting transcript type that does not exist already
+        if(((wwt_index is None and "vendor" in output_types) or
+          (wws_index is None and "word_srt" in output_types) or
+          (wwa_index is None and "word_ass" in output_types)) and
+          mime_type in self._supported_media
+          ):
           # If inline or externally referenced recording:
           if(any(key in dialog for key in("body", "url"))):
             if("body" in dialog and dialog["body"] is not None and dialog["body"] != ""):
@@ -178,10 +196,12 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
               # transcript["stable_segments"] = stable_segments
 
               # need to add transcription to dialog.analysis
-              if("vendor" in output_types):
+              # if time stamp transcript does not already exist and requested
+              if(wwt_index is None and "vendor" in output_types):
                 out_vcon.add_analysis_transcript(dialog_index, transcript, "Whisper", "whisper_word_timestamps")
 
-              if("word_srt" in output_types):
+              # if srt does not already exist and requested
+              if(wws_index is None and "word_srt" in output_types):
                 with tempfile.NamedTemporaryFile(prefix= temp_dir + os.sep, suffix=".srt") as temp_srt_file:
                   # stable_whisper has some print statements that we want to go to stderr
                   with contextlib.redirect_stdout(sys.stderr):
@@ -190,7 +210,8 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                   # TODO: should body be json.loads'd
                   out_vcon.add_analysis_transcript(dialog_index, srt_bytes.decode("utf-8"), "Whisper", "whisper_word_srt", encoding = "none")
 
-              if("word_ass" in output_types):
+              # if ass does not already exist and requested
+              if(wwa_index is None and "word_ass" in output_types):
                 # Getting junk on stdout from stable_whisper.  Redirect it.
                 with contextlib.redirect_stdout(sys.stderr):
                   with tempfile.NamedTemporaryFile(prefix= temp_dir + os.sep, suffix=".ass") as temp_ass_file:
