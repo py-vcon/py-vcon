@@ -31,6 +31,7 @@ import pythonjsonlogger.jsonlogger
 import vcon.utils
 import vcon.security
 import vcon.filter_plugins
+import vcon.accessors
 
 __version__ = "0.2"
 
@@ -208,6 +209,7 @@ class VconPluginMethodProperty:
       return(self)
 
     return(VconPluginMethodType(self.plugin_name, instance_object))
+
 
 class Vcon():
   """
@@ -739,6 +741,117 @@ class Vcon():
       body = bytes(body, "utf-8")
 
     return(body)
+
+
+  def get_dialog_text(
+    self,
+    dialog_index: int,
+    find_transcript: bool = True,
+    generate_transcript: bool = False
+    ) -> typing.List[typing.Dict[str, typing.Any]]:
+    """
+    Get the text for this dialog.
+
+    If this is a text dialog, return the text.  If this is a recording dialog
+    try to find the transcript for this dialog in the analysis objects and 
+    return the text from the transcript.
+
+    Parameters:
+      **dialog_index** (int) - index to the dialog in this Vcon's dialog objects list.
+      **find_transcript** (bool) - try to find transcript for this dialog in the
+        analysis objects list and get the transcript text.
+      **generate_transcript** (bool) - if the transcript for this dialog is not found
+        in the analysis objects, generate the transcript using the default transcript
+        type FilterPlugin.
+
+    Returns:
+      list of dicts where each dict contains the following:
+        * "party" (int) - index to the party that typed or spoke the given text
+        * "text" (str) - the typed or spoken text
+        * "start" (str) - the RFC3339 time stamp at which the text started/spoken/transmitted
+        * "duration" (int) - optional duration over which the text was typed or spoken
+
+      Text dialogs will return a single dict, recording dialogs may return one or more dicts.
+    """
+
+    #dialog type    mimetype   action
+    #================================
+    # text          TEXT_PLAIN return text body
+    # text          MULTIPART  find first plain/text in multipart body
+    # recording     N/A        find transcript in analysis
+
+    dialog = self.dialog[dialog_index]
+    if(dialog["type"] == "text"):
+      text_dict = {}
+      text_dict["party"] = dialog["parties"][0]
+      text_dict["start"] = dialog["start"]
+      text_dict["duration"] = dialog["duration"]
+
+      if(dialog["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN):
+        text_dict["text"] = dialog["body"]
+        return([text_dict])
+
+      if(dialog["mimetype"] == vcon.Vcon.MIMETYPE_MULTIPART):
+        email_message = email.message_from_string(dialog["body"])
+        for subpart in email_message.get_payload():
+          if(subpart.get_content_type == vcon.Vcon.MIMETYPE_TEXT_PLAIN):
+            text_dict["text"] = subpart.get_payload()
+            return([text_dict])
+
+    elif(dialog["type"] == "recording"):
+      transcript_index = self.find_transcript_for_dialog(dialog_index)
+      if(transcript_index is not None):
+        analysis = self.analysis[transcript_index]
+        accessor_class = vcon.accessors.transcript_accessors[(
+          analysis["vendor"].lower(),
+          analysis["product"].lower(),
+          analysis["schema"].lower(),
+          )]
+        accessor = accessor_class(dialog, analysis)
+        return(accessor.get_text())
+
+    return([])
+
+  def find_transcript_for_dialog(
+    self,
+    dialog_index: int,
+    transcript_accessor_exists: bool = True,
+    transcript_accessors: typing.Union[typing.List[typing.Tuple[str, str, str]], None] = None
+    ) -> typing.Union[int, None]:
+    """
+    Find the index to the transcript analysis for the indicated dialog.
+
+    Parameters:
+      **dialog_index** (int) - index to a recording dialog
+      **transcript_accessor_exists** (bool) - only consider transcript analysis objects
+        for which a transcript_accessor exist.
+
+    Returns:
+      (int or None) - index of the transcript type analysis object in this Vcon or
+        None if not found.
+    """
+    if(transcript_accessors is None):
+      transcript_accessors = list(vcon.accessors.transcript_accessors.keys())
+    logger.debug("accessors: {}".format(transcript_accessors))
+
+    for analysis_index, analysis in enumerate(self.analysis):
+      if(analysis["type"] == "transcript" and
+        analysis["dialog"] == dialog_index
+        ):
+        if(not transcript_accessor_exists):
+          return(analysis_index)
+
+        generator_tuple = (
+          analysis.get("vendor", "").lower(),
+          analysis.get("vendor_product", "").lower(),
+          analysis.get("vendor_schema", "").lower()
+          )
+
+        logger.debug("generator: {}".format(generator_tuple))
+        if(generator_tuple in transcript_accessors):
+          return(analysis_index)
+
+    return(None)
 
 
   def get_dialog_body(self, dialog_index: int) -> typing.Union[str, bytes]:
