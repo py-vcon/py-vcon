@@ -843,8 +843,8 @@ class Vcon():
 
         generator_tuple = (
           analysis.get("vendor", "").lower(),
-          analysis.get("vendor_product", "").lower(),
-          analysis.get("vendor_schema", "").lower()
+          analysis.get("product", "").lower(),
+          analysis.get("schema", "").lower()
           )
 
         logger.debug("generator: {}".format(generator_tuple))
@@ -1066,9 +1066,10 @@ class Vcon():
     dialog_index : int,
     transcript : dict,
     vendor : str,
-    vendor_schema : str = None,
+    schema : typing.Union[str, None] = None,
     analysis_type: str = "transcript",
-    encoding : str= "json"
+    encoding : str = "json",
+    **optional_parameters: typing.Dict[str, typing.Any]
     ) -> None:
     """
     Add a transcript for the indicated dialog.
@@ -1076,21 +1077,24 @@ class Vcon():
     Parameters:
     dialog_index (str): index to the dialog in the vCon dialog list that this trascript corresponds to.
     vendor (str): string token for the vendor of the audio to text transcription service
-    vendor_schema (str): schema label for the transcription data.  Used to identify data format of the transcription
+    schema (str): schema label for the transcription data.  Used to identify data format of the transcription
                   for vendors that have more than one format or version.
     """
 
     self._attempting_modify()
 
-    analysis_element = {}
+    analysis_element: typing.Dict[str, typing.Any] = {}
     analysis_element["type"] = analysis_type
     # TODO should validate dialog_index??
     analysis_element["dialog"] = dialog_index
     analysis_element["body"] = transcript
     analysis_element["encoding"] = encoding
     analysis_element["vendor"] = vendor
-    if(vendor_schema is not None):
-      analysis_element["vendor_schema"] = vendor_schema
+    if(schema is not None):
+      analysis_element["schema"] = schema
+
+    for param, value in optional_parameters.items():
+      analysis_element[param] = value
 
     if(self.analysis is None):
       self._vcon_dict[Vcon.ANALYSIS] = []
@@ -1102,7 +1106,7 @@ class Vcon():
     analysis_type: str,
     body : str = None,
     vendor : str = "conserver",
-    vendor_schema : str = None,
+    schema : str = None,
     encoding : str= "json",
     **optional_parameters
     ) -> None:
@@ -1112,7 +1116,7 @@ class Vcon():
     Parameters:
     dialog_index (str): index to the dialog in the vCon dialog list that this trascript corresponds to.
     vendor (str): string token for the vendor of the audio to text transcription service
-    vendor_schema (str): schema label for the transcription data.  Used to identify data format of the transcription
+    schema (str): schema label for the transcription data.  Used to identify data format of the transcription
                   for vendors that have more than one format or version.
     """
 
@@ -1124,8 +1128,8 @@ class Vcon():
     analysis_element["body"] = body
     analysis_element["encoding"] = encoding
     analysis_element["vendor"] = vendor
-    if(vendor_schema is not None):
-      analysis_element["vendor_schema"] = vendor_schema
+    if(schema is not None):
+      analysis_element["schema"] = schema
 
     for parameter_name, value in optional_parameters.items():
       analysis_element[parameter_name] = value
@@ -1913,6 +1917,21 @@ class Vcon():
         raise InvalidVconJson("analysis object: {} has no type field".format(index))
 
       if(analysis_type == "transcript"):
+        # Clean up Vcons where vendor_schema was used instead of schema
+        if("vendor_schema" in analysis):
+          analysis['schema'] = analysis.pop('vendor_schema')
+
+        # Clean up Vcons where vendor_product was used instead of product
+        if("vendor_product" in analysis):
+          analysis['product'] = analysis.pop('vendor_product')
+
+        # Clean up Vcons where Whisper was set as vendor instead of product
+        if(analysis.get("vendor", "").lower() == "whisper" and
+           analysis.get("product", None) is None
+          ):
+            analysis['vendor'] = "openai"
+            analysis['product'] = "whisper"
+
         if("transcript" in analysis):
           analysis['body'] = analysis.pop('transcript')
 
