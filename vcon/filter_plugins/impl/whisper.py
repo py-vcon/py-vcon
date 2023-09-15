@@ -123,17 +123,26 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
         wwt_index = in_vcon.find_transcript_for_dialog(
           dialog_index,
           True,
-          [("whisper", "", "whisper_word_timestamps")]
+          [
+            ("whisper", "", "whisper_word_timestamps"), # old mislabeled
+            ("openai", "whisper", "whisper_word_timestamps")
+          ]
           )
         wws_index = in_vcon.find_transcript_for_dialog(
           dialog_index,
           True,
-          [("whisper", "", "whisper_word_srt")]
+          [
+            ("whisper", "", "whisper_word_srt"), # old mislabeled
+            ("openai", "whisper", "whisper_word_srt")
+          ]
           )
         wwa_index = in_vcon.find_transcript_for_dialog(
           dialog_index,
           True,
-          [("whisper", "", "whisper_word_ass")]
+          [
+            ("whisper", "", "whisper_word_ass"), # old mislabeled
+            ("openai", "whisper", "whisper_word_ass")
+          ]
           )
         mime_type = dialog["mimetype"]
         logger.debug("found: wtt: {} wws: {} wwa: {}".format(wwt_index, wws_index, wwa_index))
@@ -197,8 +206,17 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
 
               # need to add transcription to dialog.analysis
               # if time stamp transcript does not already exist and requested
+              analysis_extras = {
+                "product": "whisper"
+              }
               if(wwt_index is None and "vendor" in output_types):
-                out_vcon.add_analysis_transcript(dialog_index, transcript, "Whisper", "whisper_word_timestamps")
+                out_vcon.add_analysis_transcript(
+                  dialog_index,
+                  transcript,
+                  "openai",
+                  "whisper_word_timestamps",
+                  **analysis_extras
+                  )
 
               # if srt does not already exist and requested
               if(wws_index is None and "word_srt" in output_types):
@@ -208,7 +226,14 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                     stable_whisper.results_to_word_srt(transcript, temp_srt_file.name)
                   srt_bytes = temp_srt_file.read()
                   # TODO: should body be json.loads'd
-                  out_vcon.add_analysis_transcript(dialog_index, srt_bytes.decode("utf-8"), "Whisper", "whisper_word_srt", encoding = "none")
+                  out_vcon.add_analysis_transcript(
+                    dialog_index,
+                    srt_bytes.decode("utf-8"),
+                    "openai",
+                    "whisper_word_srt",
+                    encoding = "none",
+                    **analysis_extras
+                    )
 
               # if ass does not already exist and requested
               if(wwa_index is None and "word_ass" in output_types):
@@ -218,7 +243,14 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                     stable_whisper.results_to_sentence_word_ass(transcript, temp_ass_file.name)
                     ass_bytes = temp_ass_file.read()
                     # TODO: should body be json.loads'd
-                    out_vcon.add_analysis_transcript(dialog_index, ass_bytes.decode("utf-8"), "Whisper", "whisper_word_ass", encoding = "none")
+                    out_vcon.add_analysis_transcript(
+                      dialog_index,
+                      ass_bytes.decode("utf-8"),
+                      "openai",
+                      "whisper_word_ass",
+                      encoding = "none",
+                      **analysis_extras
+                      )
 
           else:
             pass # ignore??
