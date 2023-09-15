@@ -28,7 +28,7 @@ class WhisperTranscriptAccessor(vcon.accessors.TranscriptAccessor):
     """
     if(self._analysis_dict["type"].lower() == "transcript" and
       self._analysis_dict["vendor"].lower() == "whisper" and
-      self._analysis_dict["vendor_schema"].lower() == "whisper_word_timestamps"
+      self._analysis_dict["schema"].lower() == "whisper_word_timestamps"
       ):
 
       # TODO: need to get diarization working on Whisper
@@ -44,5 +44,8 @@ class WhisperTranscriptAccessor(vcon.accessors.TranscriptAccessor):
 
 
 # Register an accessor for the Whisper transcription format
+# legacy for upward compatibility:
 vcon.accessors.transcript_accessors[("whisper", "", "whisper_word_timestamps")] = WhisperTranscriptAccessor
+# correct labeling
+vcon.accessors.transcript_accessors[("openai", "whisper", "whisper_word_timestamps")] = WhisperTranscriptAccessor
 
