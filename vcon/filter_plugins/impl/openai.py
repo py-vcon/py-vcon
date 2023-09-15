@@ -286,7 +286,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     addition_analysis_parameters = {
       "prompt": options.prompt,
       "model": options.model,
-      "vendor_product": "Completion"
+      "product": "Completion"
       }
 
     # guess the body type
@@ -382,8 +382,9 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     for analysis_index in analysis_indices:
        analysis = in_vcon.analysis[analysis_index]
        if(analysis["type"] == "transcript"):
-         if(analysis["vendor"] == "Whisper" and
-           analysis["vendor_schema"] == "whisper_word_timestamps"
+         if(analysis["vendor"] == "openai" and
+           analysis["product"] == "whisper" and
+           analysis["schema"] == "whisper_word_timestamps"
           ):
           text_body = analysis["body"]["text"]
           dialog_index = analysis["dialog"]
@@ -525,8 +526,9 @@ class OpenAIChatCompletion(OpenAICompletion):
     for analysis_index in analysis_indices:
        analysis = in_vcon.analysis[analysis_index]
        if(analysis["type"].lower() == "transcript"):
-         if(analysis["vendor"].lower() == "whisper" and
-           analysis["vendor_schema"].lower() == "whisper_word_timestamps"
+         if(analysis["vendor"].lower() == "openai" and
+           analysis["product"].lower() == "whisper" and
+           analysis["schema"].lower() == "whisper_word_timestamps"
           ):
           num_transcribe_analysis += 1
           text_body = analysis["body"]["text"]
@@ -621,7 +623,7 @@ class OpenAIChatCompletion(OpenAICompletion):
     addition_analysis_parameters = {
       "prompt": options.prompt,
       "model": options.model,
-      "vendor_product": "ChatCompletion"
+      "product": "ChatCompletion"
       }
 
     # guess the body type
