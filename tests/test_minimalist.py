@@ -223,16 +223,16 @@ def test_transcript(two_party_tel_vcon : vcon.Vcon):
   dialog_index = 0
   transcript = { "text" : "Hello, how are you" }
   vendor = "Achme"
-  vendor_schema = "simple"
+  schema = "simple"
 
-  vCon.add_analysis_transcript(dialog_index, transcript, vendor, vendor_schema)
+  vCon.add_analysis_transcript(dialog_index, transcript, vendor, schema)
   assert(len(vCon.analysis) == 1)
   assert(vCon.analysis[0]['type'] == "transcript")
   assert(vCon.analysis[0]['dialog'] == dialog_index)
   assert(vCon.analysis[0]['body'] == transcript)
   assert(vCon.analysis[0]['encoding'] == "json")
   assert(vCon.analysis[0]['vendor'] == vendor)
-  assert(vCon.analysis[0]['vendor_schema'] == vendor_schema)
+  assert(vCon.analysis[0]['schema'] == schema)
 
 
 def test_attachments(two_party_tel_vcon: vcon.Vcon):
