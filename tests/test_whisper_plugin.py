@@ -39,41 +39,41 @@ def test_whisper_transcribe_inline_dialog():
 
   assert(len(in_vcon.dialog) > 0)
 
-  anal_count = len(in_vcon.analysis)
+  analysis_count = len(in_vcon.analysis)
   out_vcon = in_vcon.whisper(options)
-  assert(len(in_vcon.analysis) == anal_count + 3) # Whisper transcript, srt file and ass file
-  assert(len(out_vcon.analysis) == anal_count + 3) # Whisper transcript, srt file and ass file
+  assert(len(in_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
+  assert(len(out_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
   #print(json.dumps(out_vcon.analysis[0], indent=2))
 
-  assert(out_vcon.analysis[anal_count]["type"] == "transcript")
-  assert(out_vcon.analysis[anal_count]["vendor"] == "Whisper")
-  assert(out_vcon.analysis[anal_count]["vendor_schema"] == "whisper_word_timestamps")
-  #print("whisper body: {}".format(out_vcon.analysis[anal_count]["body"]))
-  body_len = len(out_vcon.analysis[anal_count]["body"])
-  #body_type = type(out_vcon.analysis[anal_count]["body"])
-  assert(isinstance(out_vcon.analysis[anal_count]["body"], dict))
+  assert(out_vcon.analysis[analysis_count]["type"] == "transcript")
+  assert(out_vcon.analysis[analysis_count]["vendor"] == "Whisper")
+  assert(out_vcon.analysis[analysis_count]["vendor_schema"] == "whisper_word_timestamps")
+  #print("whisper body: {}".format(out_vcon.analysis[analysis_count]["body"]))
+  body_len = len(out_vcon.analysis[analysis_count]["body"])
+  #body_type = type(out_vcon.analysis[analysis_count]["body"])
+  assert(isinstance(out_vcon.analysis[analysis_count]["body"], dict))
   #print("transcript type: {}".format(body_type))
-  print("transcript keys: {}".format(out_vcon.analysis[anal_count]["body"].keys()))
+  print("transcript keys: {}".format(out_vcon.analysis[analysis_count]["body"].keys()))
   # Stable whisper changed and the word time stamps (time_scale key) are now part of "segments"
   # in transcription object.
   #if(body_len != 3):
   # Make body check a little more tollerent to addtions
-  assert(out_vcon.analysis[anal_count]["body"].keys() >=
+  assert(out_vcon.analysis[analysis_count]["body"].keys() >=
     {'text', 'segments', 'language'})
-  assert(out_vcon.analysis[anal_count + 1]["type"] == "transcript")
-  assert(out_vcon.analysis[anal_count + 1]["vendor"] == "Whisper")
-  assert(out_vcon.analysis[anal_count + 1]["vendor_schema"] == "whisper_word_srt")
-  body_len = len(out_vcon.analysis[anal_count + 1]["body"])
+  assert(out_vcon.analysis[analysis_count + 1]["type"] == "transcript")
+  assert(out_vcon.analysis[analysis_count + 1]["vendor"] == "Whisper")
+  assert(out_vcon.analysis[analysis_count + 1]["vendor_schema"] == "whisper_word_srt")
+  body_len = len(out_vcon.analysis[analysis_count + 1]["body"])
   print("srt len: {}".format(body_len))
   expected_srt_size = 33000
   if(body_len < expected_srt_size):
-    print("srt body: {}".format(out_vcon.analysis[anal_count + 1]["body"]))
-    print("srt type: {}".format(type(out_vcon.analysis[anal_count + 1]["body"])))
+    print("srt body: {}".format(out_vcon.analysis[analysis_count + 1]["body"]))
+    print("srt type: {}".format(type(out_vcon.analysis[analysis_count + 1]["body"])))
   assert(body_len > expected_srt_size)
-  assert(out_vcon.analysis[anal_count + 2]["type"] == "transcript")
-  assert(out_vcon.analysis[anal_count + 2]["vendor"] == "Whisper")
-  assert(out_vcon.analysis[anal_count + 2]["vendor_schema"] == "whisper_word_ass")
-  body_len = len(out_vcon.analysis[anal_count + 2]["body"])
+  assert(out_vcon.analysis[analysis_count + 2]["type"] == "transcript")
+  assert(out_vcon.analysis[analysis_count + 2]["vendor"] == "Whisper")
+  assert(out_vcon.analysis[analysis_count + 2]["vendor_schema"] == "whisper_word_ass")
+  body_len = len(out_vcon.analysis[analysis_count + 2]["body"])
   print("ass len: {}".format(body_len))
   assert(body_len > 90000)
 
@@ -83,6 +83,11 @@ def test_whisper_transcribe_inline_dialog():
   # Test that we still have a valid serializable Vcon
   out_vcon_json = out_vcon.dumps()
   json.loads(out_vcon_json )
+
+  # Run again, should not generate duplicate analysis
+  out_vcon2 = out_vcon.whisper(options)
+  assert(len(out_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
+  assert(len(out_vcon2.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
 
   # TODO: should test more than one invokation of whisper plugin to be sure its ok to reuse
   # models for more than one transcription.
@@ -120,40 +125,40 @@ def test_whisper_transcribe_external_dialog():
 
   assert(len(in_vcon.dialog) > 0)
 
-  anal_count = len(in_vcon.analysis)
+  analysis_count = len(in_vcon.analysis)
   out_vcon = in_vcon.transcribe(options)
-  assert(len(out_vcon.analysis) == anal_count + 3) # Whisper transcript, srt file and ass file
+  assert(len(out_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
   #print(json.dumps(out_vcon.analysis[0], indent=2))
 
-  assert(out_vcon.analysis[anal_count]["type"] == "transcript")
-  assert(out_vcon.analysis[anal_count]["vendor"] == "Whisper")
-  assert(out_vcon.analysis[anal_count]["vendor_schema"] == "whisper_word_timestamps")
-  #print("whisper body: {}".format(out_vcon.analysis[anal_count]["body"]))
-  body_len = len(out_vcon.analysis[anal_count]["body"])
-  #body_type = type(out_vcon.analysis[anal_count]["body"])
-  assert(isinstance(out_vcon.analysis[anal_count]["body"], dict))
+  assert(out_vcon.analysis[analysis_count]["type"] == "transcript")
+  assert(out_vcon.analysis[analysis_count]["vendor"] == "Whisper")
+  assert(out_vcon.analysis[analysis_count]["vendor_schema"] == "whisper_word_timestamps")
+  #print("whisper body: {}".format(out_vcon.analysis[analysis_count]["body"]))
+  body_len = len(out_vcon.analysis[analysis_count]["body"])
+  #body_type = type(out_vcon.analysis[analysis_count]["body"])
+  assert(isinstance(out_vcon.analysis[analysis_count]["body"], dict))
   #print("transcript type: {}".format(body_type))
-  print("transcript keys: {}".format(out_vcon.analysis[anal_count]["body"].keys()))
+  print("transcript keys: {}".format(out_vcon.analysis[analysis_count]["body"].keys()))
   # Stable whisper changed and the word time stamps (time_scale key) are now part of "segments"
   # in transcription object.
   #if(body_len != 3):
   # Make body check a little more tollerent to addtions
-  assert(out_vcon.analysis[anal_count]["body"].keys() >=
+  assert(out_vcon.analysis[analysis_count]["body"].keys() >=
     {'text', 'segments', 'language'})
-  assert(out_vcon.analysis[anal_count + 1]["type"] == "transcript")
-  assert(out_vcon.analysis[anal_count + 1]["vendor"] == "Whisper")
-  assert(out_vcon.analysis[anal_count + 1]["vendor_schema"] == "whisper_word_srt")
-  body_len = len(out_vcon.analysis[anal_count + 1]["body"])
+  assert(out_vcon.analysis[analysis_count + 1]["type"] == "transcript")
+  assert(out_vcon.analysis[analysis_count + 1]["vendor"] == "Whisper")
+  assert(out_vcon.analysis[analysis_count + 1]["vendor_schema"] == "whisper_word_srt")
+  body_len = len(out_vcon.analysis[analysis_count + 1]["body"])
   print("srt len: {}".format(body_len))
   expected_srt_size = 33000
   if(body_len < expected_srt_size):
-    print("srt body: {}".format(out_vcon.analysis[anal_count + 1]["body"]))
-    print("srt type: {}".format(type(out_vcon.analysis[anal_count + 1]["body"])))
+    print("srt body: {}".format(out_vcon.analysis[analysis_count + 1]["body"]))
+    print("srt type: {}".format(type(out_vcon.analysis[analysis_count + 1]["body"])))
   assert(body_len > expected_srt_size)
-  assert(out_vcon.analysis[anal_count + 2]["type"] == "transcript")
-  assert(out_vcon.analysis[anal_count + 2]["vendor"] == "Whisper")
-  assert(out_vcon.analysis[anal_count + 2]["vendor_schema"] == "whisper_word_ass")
-  body_len = len(out_vcon.analysis[anal_count + 2]["body"])
+  assert(out_vcon.analysis[analysis_count + 2]["type"] == "transcript")
+  assert(out_vcon.analysis[analysis_count + 2]["vendor"] == "Whisper")
+  assert(out_vcon.analysis[analysis_count + 2]["vendor_schema"] == "whisper_word_ass")
+  body_len = len(out_vcon.analysis[analysis_count + 2]["body"])
   print("ass len: {}".format(body_len))
   assert(body_len > 90000)
 
