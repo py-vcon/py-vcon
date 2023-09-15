@@ -524,9 +524,9 @@ class OpenAIChatCompletion(OpenAICompletion):
     num_transcribe_analysis = 0
     for analysis_index in analysis_indices:
        analysis = in_vcon.analysis[analysis_index]
-       if(analysis["type"] == "transcript"):
-         if(analysis["vendor"] == "Whisper" and
-           analysis["vendor_schema"] == "whisper_word_timestamps"
+       if(analysis["type"].lower() == "transcript"):
+         if(analysis["vendor"].lower() == "whisper" and
+           analysis["vendor_schema"].lower() == "whisper_word_timestamps"
           ):
           num_transcribe_analysis += 1
           text_body = analysis["body"]["text"]
