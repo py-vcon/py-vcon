@@ -207,13 +207,14 @@ class FilterPlugin():
   @staticmethod
   def get_party_label(
     in_vcon: vcon.Vcon,
-    party_index: int
+    party_index: typing.Union[int, typing.List[int]],
+    allow_missing_parties = False
     ) -> str:
     """ Get a label for the indicated party in the given vcon """
     if(isinstance(party_index, list)):
       parties = []
       for index in party_index:
-        parties.append(FilterPlugin.get_party_label(in_vcon, index))
+        parties.append(FilterPlugin.get_party_label(in_vcon, index, allow_missing_parties))
 
       return(", ".join(parties))
 
@@ -223,6 +224,9 @@ class FilterPlugin():
       return("unknown")
 
     if(party_index >= len(in_vcon.parties)):
+      if(allow_missing_parties):
+        return("party[{}]".format(party_index))
+
       raise AttributeError("party_index: {} greater than number of parties: {}".format(
         party_index,
         len(in_vcon.parties)
