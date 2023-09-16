@@ -25,7 +25,7 @@ class TranscriptAccessor():
 
     Returns:
       list of dicts where each dict contains the following:
-        * "party" (int) - index to the party that typed or spoke the given text
+        * "parties" (Union[int, list[int]]) - index or list of indices to the party(s) that typed or spoke the given text
         * "text" (str) - the typed or spoken text
         * "start" (str) - the RFC3339 time stamp at which the text started/spoken/transmitted
         * "duration" (int) - optional duration over which the text was typed or spoken
