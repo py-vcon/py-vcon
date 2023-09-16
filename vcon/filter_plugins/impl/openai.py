@@ -46,29 +46,18 @@ class OpenAICompletionOptions(
   input_dialogs: typing.Union[str,typing.List[int]] = pydantic.Field(
     title = "input **Vcon** text **dialog** objects",
     description = """
- * **""** (empty str or None) - all text **dialog** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+Indicates which text **dialog** and recording **dialog** object's associated
+transcript **analysis** objects are to be input.  Recording **dialog**
+objects that do not have transcript **analysis** objects, are transcribed
+using the default FilterPlugin transcribe type.
 
- * **n:m** (str) - text **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **n:m:i** (str) - text **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **""** (empty str or None) - all **dialogs** are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
  * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.
- * **[1, 4, 5, 9]** (list[int]) - the text **dialog** objects having the indices in the given list are fed to the the model.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are fed to the the model.
 
-**dialog** objects in the given sequence or list which are not **text** type dialogs are ignored.
-""",
-    default = "",
-    examples = ["", "0:", "0:-2", "2:5", "0:6:2", [], [1, 4, 5, 9]]
-    )
-
-  input_transcripts: typing.Union[str,typing.List[int]] = pydantic.Field(
-    title = "input **Vcon** transcript type **analysis** objects",
-    description = """
- * **""** (empty str or None) - all transcribe **analysis** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
- * **n:m** (str) - transcribe **analysis** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **n:m:i** (str) - transcribe **analysis** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **[]** (empty list[int]) - none of the **analysis** object are fed to the the model.
- * **[1, 4, 5, 9]** (list[int]) - the transcribe **analysis** objects having the indices in the given list are fed to the the model.
-
-**analysis** objects in the given sequence or list which are not **transcribe** type analysis are ignored.
+**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.
 """,
     default = "",
     examples = ["", "0:", "0:-2", "2:5", "0:6:2", [], [1, 4, 5, 9]]
@@ -333,21 +322,14 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     """
     out_vcon = in_vcon
 
-    analysis_indices = self.slice_indices(
-      options.input_transcripts,
-      len(in_vcon.analysis),
-      "OpenaiCompletionOptions.input_transcripts"
-      )
-
     dialog_indices = self.slice_indices(
       options.input_dialogs,
       len(in_vcon.dialog),
       "OpenaiCompletionOptions.input_dialogs"
       )
 
-    # no dialogs and we are not to input analysis
-    if(len(dialog_indices) == 0 and
-      len(analysis_indices) == 0):
+    # no dialogs
+    if(len(dialog_indices) == 0):
       return(out_vcon)
 
     if(openai.api_key is None or
@@ -356,44 +338,19 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       return(out_vcon)
 
     for dialog_index in dialog_indices:
+      this_dialog_texts = in_vcon.get_dialog_text(
+        dialog_index,
+        True, # find text from transcript analysis if dialog is a recording and transcript exists
+        True  # transcribe this recording dialog if transcript does not exist
+        )
       dialog = in_vcon.dialog[dialog_index]
-      if(dialog["type"] == "text"):
-        #if(dialog["mimetype"] in self._supported_media):
-        # If inline or externally referenced recording:
-        body_bytes = in_vcon.get_dialog_body(dialog_index)
-        if(isinstance(body_bytes, bytes)):
-          body_bytes = str(body_bytes, encoding = "utf-8")
-
+      for text_item in this_dialog_texts:
         out_vcon = self.complete(
           out_vcon,
           options,
-          body_bytes,
+          text_item["text"],
           dialog_index,
           )
-      else:
-        pass # ignore??
-
-        # else:
-        #  print("unsupported media type: {} in dialog[{}], skipped whisper transcription".format(dialog.mimetype, dialog_index))
-
-    if(len(analysis_indices) == 0):
-      return(out_vcon)
-
-    for analysis_index in analysis_indices:
-       analysis = in_vcon.analysis[analysis_index]
-       if(analysis["type"] == "transcript"):
-         if(analysis["vendor"] == "openai" and
-           analysis["product"] == "whisper" and
-           analysis["schema"] == "whisper_word_timestamps"
-          ):
-          text_body = analysis["body"]["text"]
-          dialog_index = analysis["dialog"]
-          out_vcon = self.complete(
-            out_vcon,
-            options,
-            text_body,
-            dialog_index,
-            )
 
     return(out_vcon)
 
@@ -470,12 +427,6 @@ class OpenAIChatCompletion(OpenAICompletion):
 
     out_vcon = in_vcon
 
-    analysis_indices = self.slice_indices(
-      options.input_transcripts,
-      len(in_vcon.analysis),
-      "OpenaiChatCompletionOptions.input_transcripts"
-      )
-
     dialog_indices = self.slice_indices(
       options.input_dialogs,
       len(in_vcon.dialog),
@@ -485,95 +436,66 @@ class OpenAIChatCompletion(OpenAICompletion):
     dialog_text: typing.List[typing.Dict[str, str]] = []
     # Loop through the text dialogs and add them to the list
     num_text_dialogs = 0
+    num_transcribe_analysis = 0
     # NOTE: the dialog_list may not be the full list of dialogs in
     # this Vcon.  So the index into dialog_list is meaningless
     for dialog_index in dialog_indices:
+      this_dialog_texts = in_vcon.get_dialog_text(
+        dialog_index,
+        True, # find text from transcript analysis if dialog is a recording and transcript exists
+        True  # transcribe this recording dialog if transcript does not exist
+        )
       dialog = in_vcon.dialog[dialog_index]
-      if(dialog["type"] == "text"):
-        logger.debug("text dialog[{}]".format(dialog_index))
-        num_text_dialogs += 1
-        #if(dialog["mimetype"] in self._supported_media):
-        # If inline or externally referenced recording:
-        body_bytes = in_vcon.get_dialog_body(dialog_index)
-        if(isinstance(body_bytes, bytes)):
-          body_bytes = str(body_bytes, encoding = "utf-8")
-
+      logger.debug("text dialog[{}] text(s): {}".format(dialog_index, this_dialog_texts))
+      for text_index, text_dict in enumerate(this_dialog_texts):
         try:
-          party_label = self.get_party_label(in_vcon, dialog["parties"])
+          party_label = self.get_party_label(in_vcon, text_dict["parties"], True)
         except AttributeError as e:
           logger.exception(e)
-          logger.warning("vcon: {} missing parties: {}".format(
+          logger.warning("vcon: {} get_dialog_text dialog_index: {} text[{}]: missing parties: {}".format(
             in_vcon.uuid,
-            dialog["parties"]
+            dialog_index,
+            text_index,
+            text_dict["parties"]
             ))
           party_label = "unknown"
 
-        # role is user, prepend date and party label for content
-        new_message = {}
-        new_message["role"] = "user"
-        new_message["content"] = "in chat at {}, {} said: {}".format(
-            dialog["start"],
-            party_label,
-            body_bytes
-            )
-        new_message["date"] = dialog["start"]
-        logger.debug("before dialog[{}] message added to dialog_text total: {}".format(dialog_index, len(dialog_text)))
-        dialog_text.append(new_message)
-        logger.debug("message added to dialog_text total: {}".format(len(dialog_text)))
-
-    # loop through the transcriptions and add them to the list
-    num_transcribe_analysis = 0
-    for analysis_index in analysis_indices:
-       analysis = in_vcon.analysis[analysis_index]
-       if(analysis["type"].lower() == "transcript"):
-         if(analysis["vendor"].lower() == "openai" and
-           analysis["product"].lower() == "whisper" and
-           analysis["schema"].lower() == "whisper_word_timestamps"
+        if(text_dict["duration"] is not None and
+          text_dict["duration"] > 0
           ):
-          num_transcribe_analysis += 1
-          text_body = analysis["body"]["text"]
-          dialog_index = analysis["dialog"]
-          try:
-            party_label = self.get_party_label(in_vcon, in_vcon.dialog[dialog_index]["parties"])
-          except AttributeError as e:
-            logger.exception(e)
-            logger.warning("vcon: {} missing parties: {}".format(
-              in_vcon.uuid,
-              in_vcon.dialog[dialog_index]["parties"]
-              ))
-            party_label = "unknown"
+          call_end = datetime.datetime.fromisoformat(vcon.utils.cannonize_date(text_dict["start"])) +\
+            datetime.timedelta(0, text_dict["duration"])
+          call_end_string = " to " + call_end.isoformat()
+        else:
+          call_end_string = "" # don't know so don't say anything about call end
 
-          # role is user, prepend date and party label for content
-          new_message = {}
-          new_message["role"] = "user"
-          if(in_vcon.dialog[dialog_index]["duration"] is not None and
-            in_vcon.dialog[dialog_index]["duration"] > 0
-            ):
-            call_end = datetime.datetime.fromisoformat(vcon.utils.cannonize_date(in_vcon.dialog[dialog_index]["start"])) +\
-              datetime.timedelta(0, in_vcon.dialog[dialog_index]["duration"])
-            call_end_string = " to " + call_end.isoformat()
-          else:
-            call_end_string = "" # don't know so don't say anything about call end
-          new_message["content"] = "in a call that took place at {}{}, {} said: {}".format(
-              in_vcon.dialog[dialog_index]["start"],
-              call_end_string,
-              party_label,
-              text_body
-              )
-          new_message["date"] = in_vcon.dialog[dialog_index]["start"]
-          logger.debug("before analysis[{}] message added to dialog_text total: {}".format(analysis_index, len(dialog_text)))
-          dialog_text.append(new_message)
-          logger.debug("message added to dialog_text total: {}".format(len(dialog_text)))
+        # role is user, prepend date and party label for content
+        text_dict["role"] = "user"
+        if(dialog["type"] == "text"):
+          num_text_dialogs += 1
+          text_dict["content"] = "in chat at {}, {} said: {}".format(
+            text_dict["start"],
+            party_label,
+            text_dict["text"]
+            )
+        elif(dialog["type"] == "recording"):
+          num_transcribe_analysis += 1
+          text_dict["content"] = "in a call that took place at {}{}, {} said: {}".format(
+            text_dict["start"],
+            call_end_string,
+            party_label,
+            text_dict["text"]
+            )
+
+        dialog_text.append(text_dict)
 
     # sort the text by start date and remove the date parameter
-    dialog_text_len = len(dialog_text)
-    sorted_messages = sorted(dialog_text.copy(), key = lambda msg: msg["date"])
-    logger.debug("generated {} messages from {} text dialogs out of {} total dialogs and {} transcriptions out of {} total analysis objects".format(
+    sorted_messages = sorted(dialog_text.copy(), key = lambda msg: msg["start"])
+    logger.debug("generated {} messages from {} text dialogs and {} recording dialogs out of {} input dialogs".format(
       len(sorted_messages),
       num_text_dialogs,
-      len(dialog_indices),
       num_transcribe_analysis,
-      len(analysis_indices)
+      len(dialog_indices)
       ))
 
     # For test and debugging
@@ -581,11 +503,15 @@ class OpenAIChatCompletion(OpenAICompletion):
     self.last_stats["num_text_dialogs"] = num_text_dialogs
     self.last_stats["num_dialog_list"] = len(dialog_indices)
     self.last_stats["num_transcribe_analysis"] = num_transcribe_analysis
-    self.last_stats["num_analysis_list"] = len(analysis_indices)
 
-    # remove the date as it may be rejected by ChatCompletion
+    # Remove stuff that ChatCompletion does not expect
     for msg in sorted_messages:
-      del msg["date"]
+      # Remove everything except role and content
+      remove_keys = list(msg.keys())
+      remove_keys.remove("role")
+      remove_keys.remove("content")
+      for param in remove_keys:
+        del msg[param]
 
     # add the system role at the end so that dialog does not over ride it
     sorted_messages.append({"role": "system", "content": "You are a helpful assistant."})
@@ -638,8 +564,15 @@ class OpenAIChatCompletion(OpenAICompletion):
         schema += " ?jq=" + options.jq_result
       addition_analysis_parameters["mimetype"] = vcon.Vcon.MIMETYPE_JSON
 
+    if(len(dialog_indices) == 1):
+      analysis_dialogs = dialog_indices[0]
+    elif(len(dialog_indices) > 1):
+      analysis_dialogs = dialog_indices
+    else:
+      raise Exception("creating analysis from zero dialogs")
+
     out_vcon.add_analysis(
-      dialog_index,
+      analysis_dialogs,
       options.analysis_type,
       new_analysis_body,
       'openai',
