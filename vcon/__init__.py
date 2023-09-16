@@ -1102,11 +1102,11 @@ class Vcon():
     self._vcon_dict[Vcon.ANALYSIS].append(analysis_element)
 
   def add_analysis(self,
-    dialog_index : int,
+    dialog_index : typing.Union[int, typing.List[int]],
     analysis_type: str,
-    body : str = None,
-    vendor : str = "conserver",
-    schema : str = None,
+    body : typing.Union[str, None] = None,
+    vendor : typing.Union[str, None] = None,
+    schema : typing.Union[str, None] = None,
     encoding : str= "json",
     **optional_parameters
     ) -> None:
@@ -1114,10 +1114,12 @@ class Vcon():
     Add a generic analysis for the indicated dialog.
 
     Parameters:
-    dialog_index (str): index to the dialog in the vCon dialog list that this trascript corresponds to.
-    vendor (str): string token for the vendor of the audio to text transcription service
-    schema (str): schema label for the transcription data.  Used to identify data format of the transcription
+    **dialog_index** (Union[int, list[int]]): index or list of indices to the dialog in the vCon dialog
+      list that this analysis was generated from.
+    **vendor** (str): string token for the vendor of the audio to text transcription service
+    **schema** (str): schema label for the transcription data.  Used to identify data format of the transcription
                   for vendors that have more than one format or version.
+    **optional_parameters** (dict[str, Any]) - additional parameters to add to the analysis object.
     """
 
     self._attempting_modify()
@@ -1125,10 +1127,12 @@ class Vcon():
     analysis_element = {}
     analysis_element["type"] = analysis_type
     analysis_element["dialog"] = dialog_index
-    analysis_element["body"] = body
+    if(body is not None and body != ""):
+      analysis_element["body"] = body
     analysis_element["encoding"] = encoding
-    analysis_element["vendor"] = vendor
-    if(schema is not None):
+    if(vendor is not None and vendor != ""):
+      analysis_element["vendor"] = vendor
+    if(schema is not None and schema != ""):
       analysis_element["schema"] = schema
 
     for parameter_name, value in optional_parameters.items():
