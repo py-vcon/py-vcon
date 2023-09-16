@@ -1,7 +1,14 @@
 {
   "vcon": "0.0.1",
   "group": [],
-  "parties": [],
+  "parties": [
+    {
+      "name": "Carolyn Lake"
+    },
+    {
+      "name": "Dana"
+    }
+  ],
   "dialog": [
     {
       "type": "recording",
