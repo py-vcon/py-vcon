@@ -1,4 +1,5 @@
 """ Whisper audio transcription filter plugin registration """
+import datetime
 import vcon.filter_plugins
 import vcon.accessors
 
@@ -27,16 +28,22 @@ class WhisperTranscriptAccessor(vcon.accessors.TranscriptAccessor):
     segment.
     """
     if(self._analysis_dict["type"].lower() == "transcript" and
-      self._analysis_dict["vendor"].lower() == "whisper" and
-      self._analysis_dict["schema"].lower() == "whisper_word_timestamps"
-      ):
+      ((self._analysis_dict["vendor"].lower() == "openai" and
+        self._analysis_dict["product"].lower() == "whisper" and
+        self._analysis_dict["schema"].lower() == "whisper_word_timestamps") or
+      (self._analysis_dict["vendor"].lower() == "whisper" and # older, incorrect labeling
+        self._analysis_dict["schema"].lower() == "whisper_word_timestamps")
+      )):
 
       # TODO: need to get diarization working on Whisper
       text_dict = {}
-      text_dict["party"] = self._dialog_dict["parties"]
+      text_dict["parties"] = self._dialog_dict["parties"]
       text_dict["text"] = self._analysis_dict["body"]["text"]
-      text_dict["start"] = self._analysis_dict["body"]["dddd"]
-      text_dict["duration"] = self._analysis_dict["body"]["dddd"]
+      dialog_start = datetime.datetime.fromisoformat(vcon.utils.cannonize_date(self._dialog_dict["start"]))
+      relative_start = self._analysis_dict["body"]["segments"][0]["start"]
+      text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()
+      relative_end = self._analysis_dict["body"]["segments"][-1]["end"]
+      text_dict["duration"] = relative_end - relative_start
 
       return([text_dict])
 
