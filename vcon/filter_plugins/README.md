@@ -363,29 +363,18 @@ https://platform.openai.com/docs/api-reference/completions/create
 ##### input_dialogs (typing.Union[str, typing.List[int]])
 input **Vcon** text **dialog** objects
 
- * **""** (empty str or None) - all text **dialog** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+Indicates which text **dialog** and recording **dialog** object's associated
+transcript **analysis** objects are to be input.  Recording **dialog**
+objects that do not have transcript **analysis** objects, are transcribed
+using the default FilterPlugin transcribe type.
 
- * **n:m** (str) - text **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **n:m:i** (str) - text **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **""** (empty str or None) - all **dialogs** are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
  * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.
- * **[1, 4, 5, 9]** (list[int]) - the text **dialog** objects having the indices in the given list are fed to the the model.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are fed to the the model.
 
-**dialog** objects in the given sequence or list which are not **text** type dialogs are ignored.
-
-example: None
-examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
-default: 
-
-##### input_transcripts (typing.Union[str, typing.List[int]])
-input **Vcon** transcript type **analysis** objects
-
- * **""** (empty str or None) - all transcribe **analysis** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
- * **n:m** (str) - transcribe **analysis** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **n:m:i** (str) - transcribe **analysis** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **[]** (empty list[int]) - none of the **analysis** object are fed to the the model.
- * **[1, 4, 5, 9]** (list[int]) - the transcribe **analysis** objects having the indices in the given list are fed to the the model.
-
-**analysis** objects in the given sequence or list which are not **transcribe** type analysis are ignored.
+**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.
 
 example: None
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
@@ -490,29 +479,18 @@ https://platform.openai.com/docs/api-reference/completions/create
 ##### input_dialogs (typing.Union[str, typing.List[int]])
 input **Vcon** text **dialog** objects
 
- * **""** (empty str or None) - all text **dialog** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+Indicates which text **dialog** and recording **dialog** object's associated
+transcript **analysis** objects are to be input.  Recording **dialog**
+objects that do not have transcript **analysis** objects, are transcribed
+using the default FilterPlugin transcribe type.
 
- * **n:m** (str) - text **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **n:m:i** (str) - text **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **""** (empty str or None) - all **dialogs** are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
  * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.
- * **[1, 4, 5, 9]** (list[int]) - the text **dialog** objects having the indices in the given list are fed to the the model.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are fed to the the model.
 
-**dialog** objects in the given sequence or list which are not **text** type dialogs are ignored.
-
-example: None
-examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
-default: 
-
-##### input_transcripts (typing.Union[str, typing.List[int]])
-input **Vcon** transcript type **analysis** objects
-
- * **""** (empty str or None) - all transcribe **analysis** objects are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
- * **n:m** (str) - transcribe **analysis** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **n:m:i** (str) - transcribe **analysis** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
- * **[]** (empty list[int]) - none of the **analysis** object are fed to the the model.
- * **[1, 4, 5, 9]** (list[int]) - the transcribe **analysis** objects having the indices in the given list are fed to the the model.
-
-**analysis** objects in the given sequence or list which are not **transcribe** type analysis are ignored.
+**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.
 
 example: None
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
