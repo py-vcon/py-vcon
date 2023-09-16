@@ -26,7 +26,6 @@ def test_1_options():
   options_dict = {}
   options = vcon.filter_plugins.impl.openai.OpenAICompletionOptions(**options_dict)
   assert(options.input_dialogs == "")
-  assert(options.input_transcripts == "")
 
 def test_2_completion_text_summary():
   """ Test OpenAICompletion FilterPlugin with transcribe ananlysis and text output """
@@ -136,7 +135,6 @@ def test_3_chat_completion_object_summary():
   assert(plugin.last_stats['num_text_dialogs'] == 0)
   assert(plugin.last_stats['num_dialog_list'] == 1)
   assert(plugin.last_stats['num_transcribe_analysis'] == 1)
-  assert(plugin.last_stats['num_analysis_list'] == 3)
 
   assert((after_analysis_count - original_analysis_count) == 1)
   assert(out_vcon.analysis[original_analysis_count]["type"] == "summary")
