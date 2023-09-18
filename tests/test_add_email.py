@@ -21,6 +21,8 @@ def test_add_email_multipart():
     os.path.basename(SMTP_MESSAGE_W_IMAGE_FILE_NAME)
     )
 
+  out_vcon.set_uuid("py-vcon.com")
+
   assert(len(out_vcon.parties) == 2)
   assert(len(out_vcon.parties[0].keys()) == 2)
   assert(len(out_vcon.parties[1].keys()) == 2)
@@ -45,4 +47,8 @@ def test_add_email_multipart():
   # fix:
   #assert(out_vcon.attachments[0]["encoding"] is "base64")
   #assert(len(out_vcon.attachments[0]["body"]) == 402)
+
+  texts = out_vcon.get_dialog_text(0)
+  assert(len(texts) == 1)
+  assert(texts[0]["text"] == 'Alice:Please find the image attached.\r\n\r\nRegards,Bob\r\n')
 
