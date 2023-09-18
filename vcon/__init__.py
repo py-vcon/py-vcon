@@ -649,7 +649,7 @@ class Vcon():
       body_start = False
       for line in str(email_message).splitlines():
         if(body_start):
-          email_body = email_body + line + "\n\r"
+          email_body = email_body + line + "\r\n"
 
         elif(len(line) == 0):
           body_start = True
@@ -782,21 +782,31 @@ class Vcon():
 
     dialog = self.dialog[dialog_index]
     if(dialog["type"] == "text"):
+      #logger.debug("get_dialog_text mime type:{}".format(dialog["mimetype"]))
       text_dict = {}
       text_dict["party"] = dialog["parties"][0]
       text_dict["start"] = dialog["start"]
       text_dict["duration"] = dialog["duration"]
 
-      if(dialog["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN):
+      if(dialog["mimetype"].lower() == vcon.Vcon.MIMETYPE_TEXT_PLAIN):
         text_dict["text"] = dialog["body"]
         return([text_dict])
 
-      if(dialog["mimetype"] == vcon.Vcon.MIMETYPE_MULTIPART):
-        email_message = email.message_from_string(dialog["body"])
-        for subpart in email_message.get_payload():
-          if(subpart.get_content_type == vcon.Vcon.MIMETYPE_TEXT_PLAIN):
+      if(vcon.Vcon.MIMETYPE_MULTIPART in dialog["mimetype"].lower() ):
+        # Need the content type with the boundry and body separator
+        email_message = email.message_from_string("Content-Type: " + dialog["mimetype"] + "\r\n\r\n" + dialog["body"])
+
+        if(not email_message.is_multipart()):
+          logger.warning("Text body in dialog[{}] incorrectly labeled as multipart".format(dialog_index))
+
+        for subpart in email_message.walk():
+          if(subpart.get_content_type() == vcon.Vcon.MIMETYPE_TEXT_PLAIN):
+            logger.debug("subpart payload type: {} part is multipart: {}".format(type(subpart.get_payload()), subpart.is_multipart()))
             text_dict["text"] = subpart.get_payload()
             return([text_dict])
+
+          # else:
+          #   logger.debug("skipping part mimetype: {}".format(subpart.get_content_type()))
 
     elif(dialog["type"] == "recording"):
       transcript_index = self.find_transcript_for_dialog(dialog_index)
