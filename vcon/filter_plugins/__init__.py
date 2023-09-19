@@ -96,6 +96,24 @@ class TranscribeOptions(FilterPluginOptions):
     default = "en"
     )
 
+  input_dialogs: typing.Union[str,typing.List[int]] = pydantic.Field(
+    title = "input **Vcon** recording **dialog** objects",
+    description = """
+Indicates which recording **dialog** objects in the given **Vcon** are
+to be transcribed.
+
+ * **""** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.
+ * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.
+
+**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
+""",
+    default = "",
+    examples = ["", "0:", "0:-2", "2:5", "0:6:2", [], [1, 4, 5, 9]]
+    )
+
 
 class FilterPlugin():
   """
@@ -257,6 +275,9 @@ class FilterPlugin():
      list[int] containing indices for the slice
     """
 
+    if(list_length == 0):
+      return([])
+
     # Specified as a slice e.g. "n", "n:", "n:m" or "n:m:i"
     if(isinstance(slice_spec, str)):
       if(slice_spec is None or
@@ -394,6 +415,11 @@ class FilterPluginRegistration:
                 self._class_name,
                 self._module_name
                 ))
+            logger.debug("creating init_options type: {} using: dict: {} for plugin: {}".format(
+              class_.init_options_type,
+              init_options,
+              self.name
+              ))
             init_options = class_.init_options_type(**init_options)
             # TODO raise "filter_plugin class: {} has not set static attribute: init_options_type.  Should be a class Deribed from FilterPluginInitOptions".format(self._class_name)
           self._plugin = class_(init_options)
@@ -600,6 +626,7 @@ class FilterPluginRegistry:
     if(name is None):
       raise FilterPluginNotRegistered("Filter plugin default type name {} is not set".format(plugin_type))
     return(FilterPluginRegistry.get(name))
+
 
 #class TranscriptionFilter(FilterPlugin):
   # TODO abstraction of transcription filters, iterates through dialogs
