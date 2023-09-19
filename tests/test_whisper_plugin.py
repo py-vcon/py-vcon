@@ -100,8 +100,8 @@ def test_whisper_transcribe_external_dialog():
   constant_date = "2023-08-31T18:26:36.987+00:00"
   in_vcon = vcon.Vcon()
 
-  assert(in_vcon.set_party_parameter("name", "Carolyn Lake") == 0)
-  assert(in_vcon.set_party_parameter("name", "Dana") == 1)
+  assert(in_vcon.set_party_parameter("name", "Dana") == 0)
+  assert(in_vcon.set_party_parameter("name", "Carolyn Lake") == 1)
 
   # Add external ref
   file_path = "examples/agent_sample.wav"
