@@ -5,16 +5,19 @@
  + [Introduction](#introduction)
  + [Filter Plugin Classes](filter-plugin-classes)
    - [vcon.filter_plugins.FilterPlugin](#vconfilter_pluginsfilterplugin)
+   - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
    - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
    - [vcon.filter_plugins.impl.whisper.Whisper](#vconfilter_pluginsimplwhisperwhisper)
  + [Filter Plugin Initialization Options Classes](filter-plugin-initialization-options-classes)
    - [vcon.filter_plugins.FilterPluginInitOptions](#vconfilter_pluginsfilterplugininitoptions)
+   - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
  + [Filter Plugin Options Classes](filter-plugin-options-classes)
    - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
+   - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperOptions](#vconfilter_pluginsimplwhisperwhisperoptions)
@@ -100,6 +103,45 @@ Returns:
 
 
 **options** - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
+
+### \_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
+## vcon.filter_plugins.impl.deepgram.Deepgram
+
+  **FilterPlugin** to for transcription using **Deepgram** 
+  
+
+**Methods**:
+
+### \_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.deepgram.DeepgramInitOptions)
+
+Parameters:
+  init_options (DeepgramInitOptions) - the initialization options for the **Deepgram** transcription plugin
+
+
+**init_options** - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
+
+### filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.deepgram.DeepgramOptions) -> vcon.Vcon
+
+
+Transcribe the recording dialog objects using **Deepgram**.
+
+Parameters:
+  options (DeepgramOptions)
+
+Returns:
+  the modified Vcon with added transcript analysis objects for the recording dialogs.
+
+
+**options** - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
 
 ### \_\_del__(self)
 
@@ -275,6 +317,27 @@ base class for **FilterPlugin** initialization options
 #### Fields:
 None
 
+## vcon.filter_plugins.impl.deepgram.DeepgramInitOptions
+ - Deepgram transcription **FilterPlugin** intialization object
+
+A **DeepgramInitOptions** object is provided to the
+**Deepgram FilterPlugin.__init__** method when it is first loaded.  Its
+attributes effect how the registered **FilterPlugin** functions.
+
+#### Fields:
+
+##### deepgram_key (str)
+**Deepgram API key
+
+The **deepgram_key** is used to access the Deepgram RESTful transcription service.
+It is required to use this **FilterPlugin**.
+
+You can get one at: https://console.deepgram.com/signup?jump=keys
+
+example: 123456789e96a1da774e57abcdefghijklmnop
+examples: None
+default: ""
+
 ## vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions
  - OpenAI/ChatGPT Chat Completion **FilterPlugin** intialization object
 
@@ -285,7 +348,7 @@ attributes effect how the registered **FilterPlugin** functions.
 #### Fields:
 
 ##### openai_api_key (str)
-**OpenAI iAPI key
+**OpenAI API key
 
 The **openai_api_key** is used to access the OpenAI RESTful service.
 It is required to use this **FilterPlugin**.
@@ -306,7 +369,7 @@ attributes effect how the registered **FilterPlugin** functions.
 #### Fields:
 
 ##### openai_api_key (str)
-**OpenAI iAPI key
+**OpenAI API key
 
 The **openai_api_key** is used to access the OpenAI RESTful service.
 It is required to use this **FilterPlugin**.
@@ -347,6 +410,43 @@ base class for **FilterPlugin.filter** method options
 
 #### Fields:
 None
+
+## vcon.filter_plugins.impl.deepgram.DeepgramOptions
+ - Deepgram transcription filter method options
+
+Options for transcribing the recording **dialog** objects using
+Deepgram transcription service.  The resulting transcription(s)
+are added as transcript **analysis** objects in this **Vcon**
+
+More details on the OpenAI specific parameters can be found here:
+https://developers.deepgram.com/reference/pre-recorded
+
+#### Fields:
+
+##### language (str)
+transcription language
+None
+example: None
+examples: None
+default: "en"
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** recording **dialog** objects
+
+Indicates which recording **dialog** objects in the given **Vcon** are
+to be transcribed.
+
+ * **""** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.
+ * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.
+
+**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
+
+example: None
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+default: 
 
 ## vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions
  - OpenAI Chat Completion filter method options
@@ -593,6 +693,24 @@ None
 example: None
 examples: None
 default: "en"
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** recording **dialog** objects
+
+Indicates which recording **dialog** objects in the given **Vcon** are
+to be transcribed.
+
+ * **""** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.
+ * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.
+
+**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
+
+example: None
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+default: 
 
 ##### output_types (typing.List[str])
 transcription output types
