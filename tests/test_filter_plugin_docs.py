@@ -54,8 +54,9 @@ FIELD_TEMPLATE = """
 ##### {name} ({type})
 {title}
 {description}
-example: {example}
-examples: {examples}
+
+example{example}
+
 default: {default}
 """
 
@@ -128,6 +129,19 @@ def doc_pydantic(pydantic_type: typing.Type[pydantic.BaseModel]) -> str:
       field_data.get("default", None) is not None):
       # put quotes around default if this is type str
       field_data["default"] = '"{}"'.format(field_data["default"])
+
+    # Tweak examples
+    if("examples" in field_data and
+      field_data["examples"] is not None and
+      field_data["examples"] != ""
+      ):
+      field_data["example"] = "s: " + str(field_data["examples"])
+    elif("example" in field_data and
+      field_data["example"] is not None
+      ):
+      field_data["example"] = ": " + field_data["example"]
+    else:
+      field_data["example"] = ": "
 
     doc += FIELD_TEMPLATE.format(**field_data)
 
