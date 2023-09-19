@@ -116,7 +116,14 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
     if(in_vcon.dialog is None):
       return(out_vcon)
 
-    for dialog_index, dialog in enumerate(in_vcon.dialog):
+    dialog_indices = self.slice_indices(
+      options.input_dialogs,
+      len(in_vcon.dialog),
+      "WhisperOptions.input_dialogs"
+      )
+
+    for dialog_index in dialog_indices:
+      dialog = in_vcon.dialog[dialog_index]
       #print("dialog keys: {}".format(dialog.keys()))
       if(dialog["type"] == "recording"):
         # we have not already created a whisper transcript
@@ -152,17 +159,9 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
           (wwa_index is None and "word_ass" in output_types)) and
           mime_type in self._supported_media
           ):
-          # If inline or externally referenced recording:
-          if(any(key in dialog for key in("body", "url"))):
-            if("body" in dialog and dialog["body"] is not None and dialog["body"] != ""):
-              # Need to base64url decode recording
-              body_bytes = in_vcon.decode_dialog_inline_body(dialog_index)
-            elif("url" in dialog and dialog["url"] is not None and dialog["url"] != ""):
-              # HTTP GET and verify the externally referenced recording
-              body_bytes = in_vcon.get_dialog_external_recording(dialog_index)
-            else:
-              raise Exception("recording type dialog[{}] has no body or url.  Should not have gotten here.".format(dialog_index))
 
+          body_bytes = in_vcon.get_dialog_body(dialog_index)
+          if(body_bytes is not None and len(body_bytes)):
             with tempfile.TemporaryDirectory() as temp_dir:
               transcript = None
               suffix = vcon.Vcon.get_mime_extension(mime_type)
