@@ -327,15 +327,16 @@ attributes effect how the registered **FilterPlugin** functions.
 #### Fields:
 
 ##### deepgram_key (str)
-**Deepgram API key
+**Deepgram** API key
 
 The **deepgram_key** is used to access the Deepgram RESTful transcription service.
 It is required to use this **FilterPlugin**.
 
 You can get one at: https://console.deepgram.com/signup?jump=keys
 
+
 example: 123456789e96a1da774e57abcdefghijklmnop
-examples: None
+
 default: ""
 
 ## vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions
@@ -348,15 +349,16 @@ attributes effect how the registered **FilterPlugin** functions.
 #### Fields:
 
 ##### openai_api_key (str)
-**OpenAI API key
+**OpenAI** API key
 
 The **openai_api_key** is used to access the OpenAI RESTful service.
 It is required to use this **FilterPlugin**.
 
 You can get one at: https://platform.openai.com/account/api-keys
 
+
 example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
-examples: None
+
 default: None
 
 ## vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions
@@ -369,15 +371,16 @@ attributes effect how the registered **FilterPlugin** functions.
 #### Fields:
 
 ##### openai_api_key (str)
-**OpenAI API key
+**OpenAI** API key
 
 The **openai_api_key** is used to access the OpenAI RESTful service.
 It is required to use this **FilterPlugin**.
 
 You can get one at: https://platform.openai.com/account/api-keys
 
+
 example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
-examples: None
+
 default: None
 
 ## vcon.filter_plugins.impl.whisper.WhisperInitOptions
@@ -395,8 +398,9 @@ attributes effect how the registered **FilterPlugin** functions.
 Model size name to use for transcription", (e.g. "tiny", "base") as defined on
 https://github.com/openai/whisper#available-models-and-languages
 
-example: None
+
 examples: ['tiny', 'base']
+
 default: "base"
 
 
@@ -426,8 +430,9 @@ https://developers.deepgram.com/reference/pre-recorded
 ##### language (str)
 transcription language
 None
-example: None
-examples: None
+
+example: 
+
 default: "en"
 
 ##### input_dialogs (typing.Union[str, typing.List[int]])
@@ -444,8 +449,9 @@ to be transcribed.
 
 **dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
 
-example: None
+
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
 default: 
 
 ## vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions
@@ -476,8 +482,9 @@ using the default FilterPlugin transcribe type.
 
 **dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.
 
-example: None
+
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
 default: 
 
 ##### model (str)
@@ -495,8 +502,9 @@ your license/API key using the following:
     openai.api_key = "your key here"
     openai.Model.list()
 
-example: None
+
 examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
+
 default: "gpt-4"
 
 ##### prompt (str)
@@ -506,8 +514,9 @@ The **OpenAI** model is given text from the dialog and
 given this prompt to instruct it what generative AI text
 that you would like from it.
 
-example: None
-examples: None
+
+example: 
+
 default: "Summarize the transcript in these messages."
 
 ##### max_tokens (int)
@@ -516,8 +525,9 @@ maximum number of tokens of output
 The **max_tokens** limits the size of the output generative AI text.
 A token is approximately a syllable.  On average a word is 1.33 tokens.
 
-example: None
-examples: None
+
+example: 
+
 default: 100
 
 ##### temperature (float)
@@ -527,8 +537,9 @@ lower number is more deterministic, higher is more random.
 
 values should range from 0.0 to 2.0
 
-example: None
-examples: None
+
+example: 
+
 default: 0.0
 
 ##### jq_result (str)
@@ -539,7 +550,7 @@ The **OpenAI** completion outputs a JSON
 
 The **jq_results** string contains a **jq**  filter/query string that
 is applied to the output to determine what is saved in the
-created **Vcon** analysis** object.
+created **Vcon** **analysis** object.
 
 * **"."** - results in a query that returns the entire JSON object.
 * **".choices[0].text"** - results in a query which contains only the text portion of the completion output
@@ -548,8 +559,9 @@ For more information on creating **jq filters** see:
 https://jqlang.github.io/jq/manual/
 
 
-example: None
+
 examples: ['.', '.choices[0].text']
+
 default: ".choices[0].message.content"
 
 ##### analysis_type (str)
@@ -560,8 +572,9 @@ object which is added to the input **Vcon**.
 **analysis_type** is the **analysis** type token that is set
 on the new **analysis** object in the **Vcon**.
 
-example: None
-examples: None
+
+example: 
+
 default: "summary"
 
 ## vcon.filter_plugins.impl.openai.OpenAICompletionOptions
@@ -592,8 +605,9 @@ using the default FilterPlugin transcribe type.
 
 **dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.
 
-example: None
+
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
 default: 
 
 ##### model (str)
@@ -611,8 +625,9 @@ your license/API key using the following:
     openai.api_key = "your key here"
     openai.Model.list()
 
-example: None
+
 examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
+
 default: "text-davinci-003"
 
 ##### prompt (str)
@@ -622,8 +637,9 @@ The **OpenAI** model is given text from the dialog and
 given this prompt to instruct it what generative AI text
 that you would like from it.
 
-example: None
-examples: None
+
+example: 
+
 default: "Summarize this conversation: "
 
 ##### max_tokens (int)
@@ -632,8 +648,9 @@ maximum number of tokens of output
 The **max_tokens** limits the size of the output generative AI text.
 A token is approximately a syllable.  On average a word is 1.33 tokens.
 
-example: None
-examples: None
+
+example: 
+
 default: 100
 
 ##### temperature (float)
@@ -643,8 +660,9 @@ lower number is more deterministic, higher is more random.
 
 values should range from 0.0 to 2.0
 
-example: None
-examples: None
+
+example: 
+
 default: 0.0
 
 ##### jq_result (str)
@@ -655,7 +673,7 @@ The **OpenAI** completion outputs a JSON
 
 The **jq_results** string contains a **jq**  filter/query string that
 is applied to the output to determine what is saved in the
-created **Vcon** analysis** object.
+created **Vcon** **analysis** object.
 
 * **"."** - results in a query that returns the entire JSON object.
 * **".choices[0].text"** - results in a query which contains only the text portion of the completion output
@@ -664,8 +682,9 @@ For more information on creating **jq filters** see:
 https://jqlang.github.io/jq/manual/
 
 
-example: None
+
 examples: ['.', '.choices[0].text']
+
 default: ".choices[0].text"
 
 ##### analysis_type (str)
@@ -676,8 +695,9 @@ object which is added to the input **Vcon**.
 **analysis_type** is the **analysis** type token that is set
 on the new **analysis** object in the **Vcon**.
 
-example: None
-examples: None
+
+example: 
+
 default: "summary"
 
 ## vcon.filter_plugins.impl.whisper.WhisperOptions
@@ -690,8 +710,9 @@ Options for transcribing the one or all dialogs in a **Vcon** using the **OpenAI
 ##### language (str)
 transcription language
 None
-example: None
-examples: None
+
+example: 
+
 default: "en"
 
 ##### input_dialogs (typing.Union[str, typing.List[int]])
@@ -708,8 +729,9 @@ to be transcribed.
 
 **dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
 
-example: None
+
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
 default: 
 
 ##### output_types (typing.List[str])
@@ -722,8 +744,9 @@ List of output types to generate.  Current set of value supported are:
   * "word_ass" - add a .ass file with sentence and highlighted word timeing as an analysis object
        Not specifing "output_type" assumes all of the above will be output, each as a separate analysis object.
 
-example: None
-examples: None
+
+example: 
+
 default: ['vendor', 'word_srt', 'word_ass']
 
 
