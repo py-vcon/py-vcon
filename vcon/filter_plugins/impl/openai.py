@@ -20,7 +20,7 @@ class OpenAICompletionInitOptions(
   attributes effect how the registered **FilterPlugin** functions.
   """
   openai_api_key: str = pydantic.Field(
-    title = "**OpenAI API key",
+    title = "**OpenAI** API key",
     description = """
 The **openai_api_key** is used to access the OpenAI RESTful service.
 It is required to use this **FilterPlugin**.
@@ -178,7 +178,7 @@ The **OpenAI** completion outputs a JSON
 
 The **jq_results** string contains a **jq**  filter/query string that
 is applied to the output to determine what is saved in the
-created **Vcon** analysis** object.
+created **Vcon** **analysis** object.
 
 * **"."** - results in a query that returns the entire JSON object.
 * **".choices[0].text"** - results in a query which contains only the text portion of the completion output
