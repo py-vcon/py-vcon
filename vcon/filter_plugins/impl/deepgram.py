@@ -19,7 +19,7 @@ class DeepgramInitOptions(
   attributes effect how the registered **FilterPlugin** functions.
   """
   deepgram_key: str = pydantic.Field(
-    title = "**Deepgram API key",
+    title = "**Deepgram** API key",
     description = """
 The **deepgram_key** is used to access the Deepgram RESTful transcription service.
 It is required to use this **FilterPlugin**.
