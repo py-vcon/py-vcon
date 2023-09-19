@@ -20,7 +20,7 @@ class OpenAICompletionInitOptions(
   attributes effect how the registered **FilterPlugin** functions.
   """
   openai_api_key: str = pydantic.Field(
-    title = "**OpenAI iAPI key",
+    title = "**OpenAI API key",
     description = """
 The **openai_api_key** is used to access the OpenAI RESTful service.
 It is required to use this **FilterPlugin**.
