@@ -18,6 +18,7 @@ WAVE_FILE_SIZE = os.path.getsize(WAVE_FILE_NAME)
 VCON_WITH_DIALOG_FILE_NAME = "py_vcon_server/tests/hello.vcon"
 SMTP_MESSAGE_W_IMAGE_FILE_NAME = "tests/email_acct_prob_bob_image.txt"
 GOOGLE_MEET_RECORDING = "tests/google_meet/test meeting (2023-09-06 20:27 GMT-4) (18af10d0)"
+ZOOM_MEETING_RECORDING = "tests/zoom/Zoom recording to computer 09 18 23"
 
 def test_vcon_new(capsys):
   """ test vcon -n """
@@ -273,6 +274,64 @@ def test_in_meet(capsys):
   assert(out_vcon.dialog[3]["encoding"] == "none")
   assert(out_vcon.dialog[3]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[3]["body"] == "test message 2")
+
+
+def test_zoom(capsys):
+  """ Test add of Google Meet recording as recording and text dialogs """
+  # Importing vcon here so that we catch any junk stdout which will break ths CLI
+  import vcon.cli
+
+  # Run the vcon command to ad externally reference recording
+  vcon.cli.main(["-n", "add", "in-zoom", ZOOM_MEETING_RECORDING])
+
+  out_vcon_json, error = capsys.readouterr()
+  # As we captured the stderr, we need to re-emmit it for unit test feedback
+  print("stderr: {}".format(error), file=sys.stderr)
+
+  out_vcon = vcon.Vcon()
+  out_vcon.loads(out_vcon_json)
+
+  assert(len(out_vcon.parties) == 2)
+  assert(len(out_vcon.parties[0].keys()) == 1)
+  assert(out_vcon.parties[0]["name"] == "Daniel Petrie")
+  assert(len(out_vcon.dialog) == 7)
+  assert(out_vcon.dialog[0]["type"] == "recording")
+  assert(out_vcon.dialog[0]["start"] == "2023-09-19T02:37:55.000+00:00")
+  assert(out_vcon.dialog[0]["duration"] == 294.56 )
+  assert(out_vcon.dialog[0]["encoding"] == "base64url")
+  assert(out_vcon.dialog[0]["mimetype"] == vcon.Vcon.MIMETYPE_VIDEO_MP4)
+  assert(out_vcon.dialog[0]["filename"] == "video1635030520.mp4")
+  #assert(out_vcon.dialog[0]["parties"] == -1)
+  assert(out_vcon.dialog[1]["type"] == "text")
+  assert(out_vcon.dialog[1]["parties"] == 0)
+  assert(out_vcon.dialog[1]["start"] == "2023-09-19T02:35:18.000+00:00")
+  assert(out_vcon.dialog[1]["duration"] == 0 )
+  assert(out_vcon.dialog[1]["encoding"] == "none")
+  assert(out_vcon.dialog[1]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[1]["body"] == "What is your fvorite color?")
+  assert(out_vcon.dialog[2]["type"] == "text")
+  assert(out_vcon.dialog[2]["parties"] == 1)
+  assert(out_vcon.dialog[2]["start"] == "2023-09-19T02:35:32.000+00:00")
+  assert(out_vcon.dialog[2]["duration"] == 0 )
+  assert(out_vcon.dialog[2]["encoding"] == "none")
+  assert(out_vcon.dialog[2]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[2]["body"] == "I don’t have one!  I like them all.")
+  assert(out_vcon.dialog[3]["type"] == "text")
+  assert(out_vcon.dialog[3]["parties"] == 1)
+  assert(out_vcon.dialog[3]["start"] == "2023-09-19T02:36:06.000+00:00")
+  assert(out_vcon.dialog[3]["duration"] == 0 )
+  assert(out_vcon.dialog[3]["encoding"] == "none")
+  assert(out_vcon.dialog[3]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[3]["body"] == "What is your favorite drink to make and to imbibe?")
+  assert(out_vcon.dialog[4]["parties"] == 0)
+  assert(out_vcon.dialog[4]["start"] == "2023-09-19T02:36:33.000+00:00")
+  assert(out_vcon.dialog[4]["body"] == "Switzerland?")
+  assert(out_vcon.dialog[5]["parties"] == 0)
+  assert(out_vcon.dialog[5]["start"] == "2023-09-19T02:37:01.000+00:00")
+  assert(out_vcon.dialog[5]["body"] == "What ever fruit I have on hand.")
+  assert(out_vcon.dialog[6]["parties"] == 1)
+  assert(out_vcon.dialog[6]["start"] == "2023-09-19T02:37:25.000+00:00")
+  assert(out_vcon.dialog[6]["body"] == 'Reacted to "What ever fruit I ha..." with 😃')
 
 
 @httpretty.activate(verbose = True, allow_net_connect = False)
