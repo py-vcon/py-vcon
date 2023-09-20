@@ -7,6 +7,8 @@ import vcon
 import vcon.filter_plugins
 import pyjq
 
+VERBOSE = False
+
 logger = vcon.build_logger(__name__)
 
 
@@ -446,7 +448,8 @@ class OpenAIChatCompletion(OpenAICompletion):
         True  # transcribe this recording dialog if transcript does not exist
         )
       dialog = in_vcon.dialog[dialog_index]
-      logger.debug("text dialog[{}] text(s): {}".format(dialog_index, this_dialog_texts))
+      if(VERBOSE):
+        logger.debug("text dialog[{}] text(s): {}".format(dialog_index, this_dialog_texts))
       for text_index, text_dict in enumerate(this_dialog_texts):
         try:
           party_label = self.get_party_label(in_vcon, text_dict["parties"], True)
@@ -519,7 +522,8 @@ class OpenAIChatCompletion(OpenAICompletion):
     # Add the prompt
     sorted_messages.append({"role": "system", "content": options.prompt})
 
-    logger.debug("OpenAIChatCompletion messages: {}".format(sorted_messages))
+    if(VERBOSE):
+      logger.debug("OpenAIChatCompletion messages: {}".format(sorted_messages))
     # feed message to ChatGPT
 
     chat_completion_result = openai.ChatCompletion.create(
