@@ -10,7 +10,6 @@ cffi
 charset-normalizer
 DataProfiler
 decorator
-deepgram-sdk
 defusedxml
 Deprecated
 email-validator
@@ -31,7 +30,6 @@ importlib-resources
 jedi
 Jinja2
 jmespath
-jose
 jsonschema
 MarkupSafe
 matplotlib-inline
@@ -45,7 +43,6 @@ nbformat
 nest-asyncio
 notebook
 notebook-shim
-openai
 packaging
 pandocfilters
 paramiko
@@ -74,8 +71,6 @@ python-dotenv
 PyYAML
 pyzmq
 redis
-regex
-requests
 rocketry
 rsa
 s3transfer

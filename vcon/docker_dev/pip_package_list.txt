@@ -1,10 +1,15 @@
 # runtime dependencies:
+deepgram-sdk
 cryptography >= 37
 hsslms
+jose
+openai
 pydantic
 pyjq
 python-jose
 python-dateutil
+regex
+requests
 sox
 uuid6
 python-json-logger
