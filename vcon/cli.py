@@ -9,6 +9,7 @@ import re
 import pathlib
 import typing
 import datetime
+import dateutil
 import time
 import json
 import argparse
@@ -18,6 +19,7 @@ import pytz
 import ffmpeg
 import vcon
 
+VERBOSE = False
 
 def do_in_email(
   args,
@@ -59,7 +61,12 @@ def zoom_chat_to_utc(local_time: str, zoom_start_utc: str, zoom_end_utc: str) ->
 
   # The time zone is unclear so we guess at local time zone
   # and test that it is between the start and end times
-
+  # convert the start_date to local time before 
+  # taking year, month and day
+  start_datetime_local = start_datetime.astimezone(tz_info)
+  start_date_local = start_datetime_local.date()
+  if(VERBOSE):
+    print("local start date: {}".format(start_date_local), file = sys.stderr)
   dt = datetime.datetime(
     year = start_date.year,
     month = start_date.month,
@@ -86,26 +93,35 @@ def zoom_chat_to_utc(local_time: str, zoom_start_utc: str, zoom_end_utc: str) ->
     return(dt.isoformat())
 
   # Hack the timezone as it was not the local one
-  print("start hour: {} dt hour: {}".format(
-    start_datetime.hour,
-    dt.hour
-    ), file = sys.stderr)
+  if(VERBOSE):
+    print("start hour: {} dt hour: {}".format(
+      start_datetime.hour,
+      dt.hour
+      ), file = sys.stderr)
   if(start_datetime.hour != dt.hour):
     dt = dt.replace(hour = start_datetime.hour)
-    print("reset hour: {}".format(dt.hour), file = sys.stderr)
+    if(VERBOSE):
+      print("reset hour: {}".format(dt.hour), file = sys.stderr)
   elif(end_datetime.hour != dt.hour):
     dt = dt.replace(hour = end_datetime.hour)
-    print("reset hour: {}".format(dt.hour), file = sys.stderr)
+    if(VERBOSE):
+      print("reset hour: {}".format(dt.hour), file = sys.stderr)
 
   if(start_datetime <= dt <= end_datetime or
     dt - start_datetime < date_tolerance):
     return(dt.isoformat())
 
   # Try the end date with local time
+  # convert the end_date to local time before
+  # taking year, month and day
+  end_datetime_local = end_datetime.astimezone(tz_info)
+  end_date_local = end_datetime_local.date()
+  if(VERBOSE):
+    print("local end date: {}".format(end_date_local), file = sys.stderr)
   dt = datetime.datetime(
-    year = end_date.year,
-    month = end_date.month,
-    day = end_date.day,
+    year = end_date_local.year,
+    month = end_date_local.month,
+    day = end_date_local.day,
     hour = hour,
     minute = minute,
     second = second,
@@ -176,19 +192,22 @@ def do_in_zoom(
       video_file is not None and
       video_file != ""
       ):
-      print("ignoring audio file: {} in favor of video file: {}".format(
+      if(VERBOSE):
+        print("ignoring audio file: {} in favor of video file: {}".format(
         audio_file,
         video_file
         ), file = sys.stderr)
       continue
 
     if(file_ext in ignore_extensions):
-      print("ignore extension: {}".format(rec_file), file = sys.stderr)
+      if(VERBOSE):
+        print("ignore extension: {}".format(rec_file), file = sys.stderr)
       continue
 
-    print("found: {} ".format(rec_file), file = sys.stderr)
-    print("file name: {}".format(filebase), file = sys.stderr)
-    print("extension: {} ".format(file_ext), file = sys.stderr)
+    if(VERBOSE):
+      print("found: {} ".format(rec_file), file = sys.stderr)
+      print("file name: {}".format(filebase), file = sys.stderr)
+      print("extension: {} ".format(file_ext), file = sys.stderr)
 
     if(file_ext == ".mp4"):
       video_meta = ffmpeg.probe(rec_file)
