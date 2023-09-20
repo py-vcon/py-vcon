@@ -63,7 +63,6 @@ ptyprocess
 pure-eval
 pyasn1
 pycparser
-pydantic
 pydub
 pyflakes
 Pygments
