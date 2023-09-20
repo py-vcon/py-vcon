@@ -1,6 +1,7 @@
 # runtime dependencies:
 cryptography >= 37
 hsslms
+pyjq
 python-jose
 python-dateutil
 sox

@@ -67,7 +67,6 @@ pydantic
 pydub
 pyflakes
 Pygments
-pyjq
 PyJWT
 pymongo
 pyparsing
