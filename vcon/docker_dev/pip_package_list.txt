@@ -8,6 +8,7 @@ pydantic
 pyjq
 python-jose
 python-dateutil
+pytz
 regex
 requests
 sox
