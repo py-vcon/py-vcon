@@ -2,7 +2,10 @@
 import os
 import vcon.filter_plugins
 
-openai_api_key = os.getenv("OPENAI_API_KEY", None)
+logger = vcon.build_logger(__name__)
+
+openai_api_key = os.getenv("OPENAI_API_KEY", "")
+logger.warning("OPENAI_API_KEY env variable not set.  OpenAI pluggins will be no-op.")
 init_options = {"openai_api_key": openai_api_key}
 
 vcon.filter_plugins.FilterPluginRegistry.register(
