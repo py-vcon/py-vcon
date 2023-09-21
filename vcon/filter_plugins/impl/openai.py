@@ -406,6 +406,10 @@ class OpenAIChatCompletion(OpenAICompletion):
     super().__init__(init_options)
 
     self.options_type = OpenAIChatCompletionOptions
+    if(init_options.openai_api_key is None or
+      init_options.openai_api_key == ""):
+      logger.warning("OpenAI completion plugin: key not set.  Plugin will be a no-op")
+    openai.api_key = init_options.openai_api_key
     self.last_stats = {}
 
   def filter(
