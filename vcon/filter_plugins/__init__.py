@@ -415,9 +415,19 @@ class FilterPluginRegistration:
                 self._class_name,
                 self._module_name
                 ))
+
+            # Hide keys from logging
+            init_options_hidden = init_options.copy()
+            for name in init_options_hidden.keys():
+              # assume field names that end in _key needs to be hidden
+              if(name[-4:] == "_key" and init_options_hidden[name] != ""):
+                # obscure keys
+                init_options_hidden[name] = "********"
+                # logger.debug("hiding value for: {}".format(name))
+
             logger.debug("creating init_options type: {} using: dict: {} for plugin: {}".format(
               class_.init_options_type,
-              init_options,
+              init_options_hidden,
               self.name
               ))
             init_options = class_.init_options_type(**init_options)
