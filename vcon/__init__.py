@@ -1221,20 +1221,28 @@ class Vcon():
     return(len(self.attachments) - 1)
 
 
-  def dump(self, vconfile: typing.Union[str, typing.TextIO]) -> None:
+  def dump(
+      self,
+      vconfile: typing.Union[str, typing.TextIO],
+      indent: typing.Union[int, None] = None
+    ) -> None:
     """ dump vcon in JSON form to given file """
     if(isinstance(vconfile, str)):
       file_handle = open(vconfile, "w")
     else:
       file_handle = vconfile
 
-    file_handle.write(self.dumps())
+    file_handle.write(self.dumps(indent = indent))
 
     if(isinstance(vconfile, str)):
       file_handle.close()
 
 
-  def dumps(self, signed : bool = True) -> str:
+  def dumps(
+      self,
+      signed: bool = True,
+      indent: typing.Union[int, None] = None
+    ) -> str:
     """
     Dump the vCon as a JSON string.
 
@@ -1247,9 +1255,13 @@ class Vcon():
     Returns:
              String containing JSON representation of the vCon.
     """
-    return(json.dumps(self.dumpd(signed, False), default=lambda o: o.__dict__, **dumps_options))
+    return(json.dumps(self.dumpd(signed, False), indent = indent, default=lambda o: o.__dict__, **dumps_options))
 
-  def dumpd(self, signed : bool = True, deepcopy : bool = True) -> dict:
+  def dumpd(
+      self,
+      signed: bool = True,
+      deepcopy: bool = True,
+    ) -> dict:
     """
     Dump the vCon as a dict representing JSON.
 
