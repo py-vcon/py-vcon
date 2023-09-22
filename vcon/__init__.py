@@ -810,6 +810,10 @@ class Vcon():
 
     elif(dialog["type"] == "recording"):
       transcript_index = self.find_transcript_for_dialog(dialog_index)
+      if(transcript_index is None):
+        self.transcribe({})
+        transcript_index = self.find_transcript_for_dialog(dialog_index)
+
       if(transcript_index is not None):
         analysis = self.analysis[transcript_index]
         accessor_class = vcon.accessors.transcript_accessors[(
