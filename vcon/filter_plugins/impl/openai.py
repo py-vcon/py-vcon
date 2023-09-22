@@ -241,6 +241,8 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       init_options.openai_api_key == ""):
       logger.warning("OpenAI completion plugin: key not set.  Plugin will be a no-op")
     openai.api_key = init_options.openai_api_key
+    self.last_stats: typing.Dict[str, int] = {}
+
 
   def complete(
     self,
@@ -346,13 +348,21 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
         True  # transcribe this recording dialog if transcript does not exist
         )
       dialog = in_vcon.dialog[dialog_index]
-      for text_item in this_dialog_texts:
-        out_vcon = self.complete(
+
+      text_segments = [d["text"] for d in this_dialog_texts]
+
+      # no text, no analysis
+      if(len(text_segments) == 0):
+        continue
+
+      self.last_stats["num_text_segments"] = len(text_segments)
+      all_dialog_text = "  ".join(text_segments)
+      out_vcon = self.complete(
           out_vcon,
           options,
-          text_item["text"],
-          dialog_index,
-          )
+          all_dialog_text,
+          dialog_index
+        )
 
     return(out_vcon)
 
@@ -410,7 +420,7 @@ class OpenAIChatCompletion(OpenAICompletion):
       init_options.openai_api_key == ""):
       logger.warning("OpenAI completion plugin: key not set.  Plugin will be a no-op")
     openai.api_key = init_options.openai_api_key
-    self.last_stats = {}
+    self.last_stats: typing.Dict[str, int] = {}
 
   def filter(
     self,
