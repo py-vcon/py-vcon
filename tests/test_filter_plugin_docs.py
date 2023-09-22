@@ -6,6 +6,7 @@ import typing
 import importlib
 import pkgutil
 import pydantic
+import pydantic.fields
 import vcon.filter_plugins
 import vcon.filter_plugins.impl.whisper
 
