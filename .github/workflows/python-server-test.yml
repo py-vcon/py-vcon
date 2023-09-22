@@ -111,6 +111,11 @@ jobs:
           python3 -c "import stable_whisper;print(stable_whisper.__version__)"
 
       - name: Test py_vcon_server package with pytest
+        # Environment variables
+        env:
+          OPENAI_API_KEY: ${{  secrets.OPENAI_API_KEY }}
+          DEEPGRAM_KEY: ${{  secrets.DEEPGRAM_KEY }}
+        
         run: |
           # Run all Vcon server package unit tests
           (cd py_vcon_server; pytest -v -rP tests)
