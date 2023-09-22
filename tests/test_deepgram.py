@@ -126,7 +126,7 @@ def test_deepgram_transcribe_external_dialog():
   out_vcon_dict = json.loads(out_vcon_json)
 
   # Save a copy for reference
-  out_vcon.dump("tests/example_deepgram_external_dialog.vcon")
+  out_vcon.dump("tests/example_deepgram_external_dialog.vcon", indent = 2)
 
 def test_deepgram_no_dialog():
   """ Test Deepgram plugin on Vcon with no dialogs """
