@@ -496,6 +496,10 @@ class OpenAIChatCompletion(OpenAICompletion):
 
         dialog_text.append(text_dict)
 
+    # Nothing to summary or analyze.
+    if(len(dialog_text) == 0):
+      return(out_vcon)
+
     # sort the text by start date and remove the date parameter
     sorted_messages = sorted(dialog_text.copy(), key = lambda msg: msg["start"])
     logger.debug("generated {} messages from {} text dialogs and {} recording dialogs out of {} input dialogs".format(
