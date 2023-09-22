@@ -66,7 +66,7 @@ def test_2_completion_text_summary():
   assert(out_vcon.analysis[original_analysis_count]["model"] == "text-davinci-003")
 
 
-def test_2_completion_object_summary():
+def test_2a_completion_object_summary():
   """ Test OpenAICompletion FilterPlugin with transcribe ananlysis and completion_object output """
 
   in_vcon = vcon.Vcon()
@@ -104,6 +104,48 @@ def test_2_completion_object_summary():
   assert(len(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"]) > 250)
   assert(out_vcon.analysis[original_analysis_count]["model"] == "text-davinci-003")
 
+
+def test_2b_completion_object_summary():
+  """ Test OpenAICompletion FilterPlugin with transcribe ananlysis and completion_object output """
+
+  in_vcon = vcon.Vcon()
+  in_vcon.load(TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE)
+  original_analysis_count = len(in_vcon.analysis)
+
+  options = {"jq_result": "."}
+
+  out_vcon = None
+
+  try:
+    out_vcon = in_vcon.openai_completion(options)
+
+  except pydantic.error_wrappers.ValidationError as e:
+    openai_key = os.getenv("OPENAI_API_KEY", None)
+    if(openai_key is None or
+      openai_key == ""):
+        raise Exception("OPENAI_API_KEY environment variable not set this test cannot run") from e
+    raise e
+
+  #print(json.dumps(out_vcon.dumpd(), indent = 2))
+
+  # Check stats on input to model:
+  plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_completion").plugin()
+  assert(50 < plugin.last_stats["num_text_segments"] < 70)
+
+  after_analysis_count = len(out_vcon.analysis)
+  assert((after_analysis_count - original_analysis_count) == 1)
+  assert(out_vcon.analysis[original_analysis_count]["type"] == "summary")
+  assert(out_vcon.analysis[original_analysis_count]["dialog"] == 0)
+  assert(out_vcon.analysis[original_analysis_count]["vendor"] == "openai")
+  assert(out_vcon.analysis[original_analysis_count]["product"] == "Completion")
+  assert(out_vcon.analysis[original_analysis_count]["schema"] == "completion_object")
+  assert(out_vcon.analysis[original_analysis_count]["prompt"] == "Summarize this conversation: ")
+  assert(out_vcon.analysis[original_analysis_count]["mimetype"] == vcon.Vcon.MIMETYPE_JSON)
+  assert(out_vcon.analysis[original_analysis_count]["encoding"] == "json")
+  assert(isinstance(out_vcon.analysis[original_analysis_count]["body"], dict))
+  assert(isinstance(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"], str))
+  assert(len(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"]) > 250)
+  assert(out_vcon.analysis[original_analysis_count]["model"] == "text-davinci-003")
 
 
 def test_3_chat_completion_object_summary():
