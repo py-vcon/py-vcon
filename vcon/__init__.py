@@ -128,6 +128,53 @@ class InvalidVconSignature(Exception):
   """ Signature does not match the content"""
 
 
+
+def tag_meta(func):
+  """ decorator to tag with meta category """
+  func._tag = "meta"
+  return(func)
+
+def tag_party(func):
+  """ decorator to tag with party category """
+  func._tag = "party"
+  return(func)
+
+def tag_dialog(func):
+  """ decorator to tag with dialog category """
+  func._tag = "dialog"
+  return(func)
+
+def tag_analysis(func):
+  """ decorator to tag with analysis category """
+  func._tag = "analysis"
+  return(func)
+
+def tag_attachment(func):
+  """ decorator to tag with attachment category """
+  func._tag = "attachment"
+  return(func)
+
+def tag_signing(func):
+  """ decorator to tag with signing category """
+  func._tag = "signing"
+  return(func)
+
+def tag_encrypting(func):
+  """ decorator to tag with encrypting category """
+  func._tag = "encrypting"
+  return(func)
+
+def tag_serialize(func):
+  """ decorator to tag with serialize category """
+  func._tag = "serialize"
+  return(func)
+
+def tag_operation(func):
+  """ decorator to tag with operation category """
+  func._tag = "operation"
+  return(func)
+
+
 class VconAttribute:
   """ descriptor base class for attributes in vcon """
   def __init__(self, doc : typing.Union[str, None] = None):
@@ -420,6 +467,7 @@ class Vcon():
 
     return(party)
 
+
   def get_conversation_time(self) -> typing.Tuple[str, float]:
     """
     Get the start time and duration of the vcon
@@ -438,6 +486,8 @@ class Vcon():
     # has defininte joine time for each party, but is not captured in the vcon.
     raise Exception("not implemented")
 
+
+  @tag_party
   def set_party_parameter(self,
     parameter_name : str,
     parameter_value : str,
@@ -472,6 +522,8 @@ class Vcon():
 
     return(party_index)
 
+
+  @tag_party
   def add_party(self, party_dict: dict) -> int:
     """
     Add a new party to the vCon Parties Object array.
@@ -510,6 +562,8 @@ class Vcon():
 
     return(self.set_party_parameter("tel", tel_url, party_index))
 
+
+  @tag_party
   def find_parties_by_parameter(self, parameter_name : str, parameter_value_substr : str) -> typing.List[int]:
     """
     Find the list of parties which have string parameters of the given name and value
@@ -533,6 +587,7 @@ class Vcon():
     return(found)
 
 
+  @tag_dialog
   def add_dialog_inline_text(self,
     body : str,
     start_time : typing.Union[str, int, float, datetime.datetime],
@@ -581,6 +636,7 @@ class Vcon():
     return(len(self.dialog) - 1)
 
 
+  @tag_dialog
   def add_dialog_inline_email_message(
     self,
     smtp_message: str,
@@ -662,6 +718,7 @@ class Vcon():
     return(dialog_index)
 
 
+  @tag_dialog
   def add_dialog_inline_recording(
     self,
     body : bytes,
@@ -743,6 +800,7 @@ class Vcon():
     return(body)
 
 
+  @tag_dialog
   def get_dialog_text(
     self,
     dialog_index: int,
@@ -826,6 +884,8 @@ class Vcon():
 
     return([])
 
+
+  @tag_dialog
   def find_transcript_for_dialog(
     self,
     dialog_index: int,
@@ -868,6 +928,7 @@ class Vcon():
     return(None)
 
 
+  @tag_dialog
   def get_dialog_body(self, dialog_index: int) -> typing.Union[str, bytes]:
     """ Get the dialog body whether it is inline or an externally reference URL """
     dialog = self.dialog[dialog_index]
@@ -885,6 +946,8 @@ class Vcon():
     return(body_bytes)
 
 
+
+  @tag_dialog
   def decode_dialog_inline_body(self, dialog_index : int) -> typing.Union[str, bytes]:
     """
     Get the dialog recording at the given index, decoding it and returning the raw bytes.
@@ -916,6 +979,8 @@ class Vcon():
 
     return(decoded_body)
 
+
+  @tag_dialog
   def add_dialog_external_recording(self, body : bytes,
     start_time : typing.Union[str, int, float, datetime.datetime],
     duration : typing.Union[int, float],
@@ -998,6 +1063,8 @@ class Vcon():
 
     return(dialog_index)
 
+
+  @tag_dialog
   def get_dialog_external_recording(self,
     dialog_index : int,
     get_kwargs: typing.Union[dict, None] = None
@@ -1034,6 +1101,7 @@ class Vcon():
 
     return(body)
 
+  @tag_signing
   def verify_dialog_external_recording(self, dialog_index : int, body : bytes) -> None:
     """
     Verify the given body of the externally stored recording for the indicted dialog.
@@ -1076,6 +1144,8 @@ class Vcon():
     else:
       raise AttributeError("dialog[{}] alg: {} not supported.  Must be SHA-512 or LMOTS_SHA256_N32_W8".format(dialog_index, dialog['alg']))
 
+
+  @tag_analysis
   def add_analysis_transcript(self,
     dialog_index : int,
     transcript : dict,
@@ -1115,6 +1185,7 @@ class Vcon():
 
     self._vcon_dict[Vcon.ANALYSIS].append(analysis_element)
 
+  @tag_analysis
   def add_analysis(self,
     dialog_index : typing.Union[int, typing.List[int]],
     analysis_type: str,
@@ -1158,6 +1229,7 @@ class Vcon():
     self._vcon_dict[Vcon.ANALYSIS].append(analysis_element)
 
 
+  @tag_attachment
   def add_attachment_inline(
     self,
     body : bytes,
@@ -1221,6 +1293,7 @@ class Vcon():
     return(len(self.attachments) - 1)
 
 
+  @tag_serialize
   def dump(
       self,
       vconfile: typing.Union[str, typing.TextIO],
@@ -1238,6 +1311,7 @@ class Vcon():
       file_handle.close()
 
 
+  @tag_serialize
   def dumps(
       self,
       signed: bool = True,
@@ -1257,6 +1331,8 @@ class Vcon():
     """
     return(json.dumps(self.dumpd(signed, False), indent = indent, default=lambda o: o.__dict__, **dumps_options))
 
+
+  @tag_serialize
   def dumpd(
       self,
       signed: bool = True,
@@ -1312,6 +1388,7 @@ class Vcon():
     return(vcon_dict)
 
 
+  @tag_serialize
   def post(
     self,
     base_uri: str = "http://{host}:{port}/vcon",
@@ -1339,6 +1416,7 @@ class Vcon():
         ))
 
 
+  @tag_serialize
   def load(self, vconfile: typing.Union[str, typing.TextIO]) -> None:
     """
     Load the Vcon JSON from the given file_handle and deserialize it.
@@ -1358,6 +1436,8 @@ class Vcon():
 
     self.loads(vcon_json_string)
 
+
+  @tag_serialize
   def loadd(self, vcon_dict : dict) -> None:
     """
     Load the vCon from the JSON style dict.
@@ -1380,6 +1460,8 @@ class Vcon():
 
     return(self.loads(vcon_string))
 
+
+  @tag_serialize
   def loads(self, vcon_json : str) -> None:
     """
     Load the vCon from a JSON string.
@@ -1452,6 +1534,8 @@ class Vcon():
         "  Encrypted vcon must have cyphertext and recipients fields."
         )
 
+
+  @tag_serialize
   def get(
     self,
     uuid: str,
@@ -1482,7 +1566,7 @@ class Vcon():
     vcon_json = req.content
     self.loads(vcon_json)
 
-
+  @tag_signing
   def sign(self, private_key_pem_file_name : str, cert_chain_pem_file_names : typing.List[str]) -> None:
     """
     Sign the vcon using the given private key from the give certificate chain.
@@ -1526,6 +1610,8 @@ class Vcon():
     self._jws_dict = jws_serialization
     self._state = VconStates.SIGNED
 
+
+  @tag_signing
   def verify(self, ca_cert_pem_file_names : typing.List[str]) -> None:
     """
     Verify the signed vCon and its certificate chain which should be issued by one of the given CAs
@@ -1629,6 +1715,7 @@ class Vcon():
     raise last_exception
 
 
+  @tag_encrypting
   def encrypt(self, cert_pem_file_name : str) -> None:
     """
     encrypt a Signed vcon using the given public key from the give certificate.
@@ -1660,6 +1747,8 @@ class Vcon():
     self._jwe_dict = jwe_complete_serialization
     self._state = VconStates.ENCRYPTED
 
+
+  @tag_encrypting
   def decrypt(self, private_key_pem_file_name : str, cert_pem_file_name : str) -> None:
     """
     Decrypt a vCon using private and public key file.
@@ -1699,6 +1788,7 @@ class Vcon():
       raise e
 
 
+  @tag_meta
   def set_created_at(
     self,
     create_date: typing.Union[int, float, str, None]
@@ -1720,6 +1810,7 @@ class Vcon():
     self._vcon_dict[Vcon.CREATED_AT] = vcon.utils.cannonize_date(create_date)
 
 
+  @tag_meta
   def set_subject(self, subject: str) -> None:
     """
     Set the subject parameter of the vCon.
@@ -1734,6 +1825,8 @@ class Vcon():
 
     self._vcon_dict[Vcon.SUBJECT] = subject
 
+
+  @tag_operation
   def jq(
     self,
     query: typing.Union[str, dict[str, str]]
@@ -1767,6 +1860,7 @@ class Vcon():
       return(results)
 
 
+  @tag_operation
   def filter(self,
     filter_name: str,
     options: vcon.filter_plugins.FilterPluginOptions
@@ -1790,6 +1884,7 @@ class Vcon():
     return(plugin.filter(self, options))
 
 
+  @tag_meta
   def set_uuid(self, domain_name: str, replace: bool= False) -> str:
     """
     Generate a UUID for this vCon and set the parameter
