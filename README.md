@@ -1,17 +1,28 @@
-# The Home Repo for vCons and the Conserver
+# The Repo for the py-vcon and py-vcon-server Projects
 
 ## Introduction
-vCons are PDFs for human conversations, defining them so they can be shared, analyzed and secured. The Conserver is a domain specific data platform based on vCons, converting the raw materials of recorded conversations into self-serve data sources for any team. The Conserver represents the most modern set of tools for data engineers to responsibly and scalably use customer conversations in data pipelines. 
 
-The Vcon library consists of two primary components:
+Not familiar with what a vCon is? see: [What is a vCon?](#what-is-a-vcon)
 
-  * The Python Vcon package for constructing and operating on Vcon objects
-  * The Conserver for storing, managing and manipulating Vcon objects and operation streams on Vcon objects
+The py-vcon project consists of two primary Python packages:
+
+ * The py-vcon Vcon package provides
+   * python [Vcon API](vcon/README.md) - for constructing and operating on Vcon objects
+   * [command line interface](vcon/bin/README.md) - supporting piping of Vcon construction and operations
+   * [Filter plugins](#vcon-filter-plugins) - to extend operations to perform on a Vcon
+
+ * The py-vcon-server package provides (release coming soon):
+   * RESTful API
+   * Storage - abstracted to support your favorite database
+   * Job Queuing - for processing operations on sets of vCons
+   * Batching - 
+   * Pipelining - naming and configuring sets of processor operations to repeatedly perform on sets of vCons
+   * Extensible - framework for adding open source or proprietary vCon processor operations
 
 ## Table of Contents
 
   + [Introduction to the py-vcon Project](#introduction-to-the-py-vcon-project)
-  + [What is a vCon?](#what-is_a_vcon)
+  + [What is a vCon?](#what-is-a-vcon)
   + [vCon Presentations, Whitepapers and Tutorials](#vcon-presentations-whitepapers-and-tutorials)
   + [Vcon Package Scope](#vcon-package-scope)
   + [Vcon Server Package Scope](#vcon-server-package-scope)
@@ -23,24 +34,6 @@ The Vcon library consists of two primary components:
   + [Testing the Vcon Package](#testing-the-vcon-package)
   + [Support](#Support)
   + [Contributing](#contributing)
-
-
-
-## Introduction to the py-vcon Project
-
-merge with Indroduction above????
-Not familiar with what a vCon is? see ..
-
- * The py-vcon Vcon package provides
-   * python API
-   * command line interface
-
- * The py-vcon-server package provides
-   *  RESTful API
-   *  Storage
-   *  Job Queuing
-   *  Batching
-   *  Pipelining
 
 ## What is a vCon?
 
