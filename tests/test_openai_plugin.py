@@ -9,6 +9,8 @@ import vcon.filter_plugins.impl.openai
 TEST_EXTERNAL_AUDIO_VCON_FILE = "tests/example_external_dialog.vcon"
 TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE = "tests/example_deepgram_external_dialog.vcon"
 SHORT_RECORDING_VCON = "tests/hello.vcon"
+TEST_MODEL = "gpt-3.5-turbo-instruct" # cheaper to run in tests than davinci-003 ???
+TEST_CHAT_MODEL = "gpt-3.5-turbo-16k" # should be a little cheaper to run instead of GPT-4 for testing 
 
 def test_1_options():
   """ Tests for OpenAICompletionInitOptions and OpenAICompletionOptions """
@@ -21,7 +23,9 @@ def test_1_options():
     # expected
     pass
 
-  init_options_dict = {"openai_api_key": "foo"}
+  init_options_dict = {
+      "openai_api_key": "foo"
+    }
   init_options = vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions(**init_options_dict)
   assert(init_options.openai_api_key == "foo")
 
@@ -35,7 +39,9 @@ def test_2_completion_text_summary():
   in_vcon.load(TEST_EXTERNAL_AUDIO_VCON_FILE)
   original_analysis_count = len(in_vcon.analysis)
 
-  options = {}
+  options = {
+      "model": TEST_MODEL
+    }
 
   out_vcon = None
 
@@ -63,7 +69,7 @@ def test_2_completion_text_summary():
   assert(out_vcon.analysis[original_analysis_count]["encoding"] == "none")
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"], str))
   assert(len(out_vcon.analysis[original_analysis_count]["body"]) > 250)
-  assert(out_vcon.analysis[original_analysis_count]["model"] == "text-davinci-003")
+  assert(out_vcon.analysis[original_analysis_count]["model"] == TEST_MODEL)
 
 
 def test_2a_completion_object_summary():
@@ -73,7 +79,10 @@ def test_2a_completion_object_summary():
   in_vcon.load(TEST_EXTERNAL_AUDIO_VCON_FILE)
   original_analysis_count = len(in_vcon.analysis)
 
-  options = {"jq_result": "."}
+  options = {
+      "jq_result": ".",
+      "model": TEST_MODEL
+    }
 
   out_vcon = None
 
@@ -102,7 +111,7 @@ def test_2a_completion_object_summary():
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"], dict))
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"], str))
   assert(len(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"]) > 250)
-  assert(out_vcon.analysis[original_analysis_count]["model"] == "text-davinci-003")
+  assert(out_vcon.analysis[original_analysis_count]["model"] == TEST_MODEL)
 
 
 def test_2b_completion_object_summary():
@@ -112,7 +121,10 @@ def test_2b_completion_object_summary():
   in_vcon.load(TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE)
   original_analysis_count = len(in_vcon.analysis)
 
-  options = {"jq_result": "."}
+  options = {
+      "jq_result": ".",
+      "model": TEST_MODEL
+    }
 
   out_vcon = None
 
@@ -145,7 +157,7 @@ def test_2b_completion_object_summary():
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"], dict))
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"], str))
   assert(len(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["text"]) > 250)
-  assert(out_vcon.analysis[original_analysis_count]["model"] == "text-davinci-003")
+  assert(out_vcon.analysis[original_analysis_count]["model"] == TEST_MODEL)
 
 
 def test_3_chat_completion_object_summary():
@@ -155,7 +167,10 @@ def test_3_chat_completion_object_summary():
   in_vcon.load(TEST_EXTERNAL_AUDIO_VCON_FILE)
   original_analysis_count = len(in_vcon.analysis)
 
-  options = {"jq_result": "."}
+  options = {
+      "jq_result": ".",
+      "model": TEST_CHAT_MODEL
+    }
 
   out_vcon = None
 
@@ -192,7 +207,7 @@ def test_3_chat_completion_object_summary():
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"], dict))
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"], str))
   assert(len(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"]) > 250)
-  assert(out_vcon.analysis[original_analysis_count]["model"] == "gpt-4")
+  assert(out_vcon.analysis[original_analysis_count]["model"] == TEST_CHAT_MODEL)
   print("Response: " + out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"])
 
 
@@ -203,7 +218,10 @@ def test_4_diarized_chat_completion_object_summary():
   in_vcon.load(TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE)
   original_analysis_count = len(in_vcon.analysis)
 
-  options = {"jq_result": "."}
+  options = {
+      "jq_result": ".",
+      "model": TEST_CHAT_MODEL
+    }
 
   out_vcon = None
 
@@ -240,7 +258,7 @@ def test_4_diarized_chat_completion_object_summary():
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"], dict))
   assert(isinstance(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"], str))
   assert(len(out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"]) > 250)
-  assert(out_vcon.analysis[original_analysis_count]["model"] == "gpt-4")
+  assert(out_vcon.analysis[original_analysis_count]["model"] == TEST_CHAT_MODEL)
   print("Response: " + out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"])
 
 
@@ -254,7 +272,10 @@ def test_5_openai_triggers_trasncribe():
   assert(len(in_vcon.analysis) == 0)
   original_analysis_count = 0
 
-  options = {"jq_result": "."}
+  options = {
+      "jq_result": ".",
+      "model": TEST_CHAT_MODEL
+    }
 
   out_vcon = None
 
@@ -292,7 +313,7 @@ def test_5_openai_triggers_trasncribe():
   assert(isinstance(out_vcon.analysis[original_analysis_count + 3]["body"], dict))
   assert(isinstance(out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"], str))
   assert(len(out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"]) > 80)
-  assert(out_vcon.analysis[original_analysis_count + 3]["model"] == "gpt-4")
+  assert(out_vcon.analysis[original_analysis_count + 3]["model"] == TEST_CHAT_MODEL)
   print("Response: " + out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"])
 
 
