@@ -497,14 +497,14 @@ class Vcon():
     Set the named parameter for the given party index.  If the index is not provided,
     add a new party to the vCon Parties Object array.
 
-    Parameters:
-      parameter_name (String) name of the Party Object parameter to be set.
-                  Must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]
-      parameter_value (String) new value to set for the named parameter
-      party_index (int): index of party to set tel url on
-                  (-1 indicates a new party should be added)
+    Parameters:  
+      **parameter_name** (String) - name of the Party Object parameter to be set.
+                  Must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]  
+      **parameter_value** (String) - new value to set for the named parameter  
+      **party_index** (int) - index of party to set tel url on
+                  (-1 indicates a new party should be added)  
 
-    Returns:
+    Returns:  
     int: if success, positive int index of party in list
     """
 
@@ -528,11 +528,11 @@ class Vcon():
     """
     Add a new party to the vCon Parties Object array.
 
-    Parameters:
-      party_dict (dict) dict representing the parameter name and value pairs
+    Parameters:  
+      **party_dict** (dict) - dict representing the parameter name and value pairs
                   Dict key must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]
 
-    Returns:
+    Returns:  
     int: if success, positive int index of party in list
     """
     self._attempting_modify()
@@ -569,12 +569,12 @@ class Vcon():
     Find the list of parties which have string parameters of the given name and value
     which contains the given substring.
 
-    Parameters:
-      parameter_name (String) name of the Party Object parameter to be searched.
-      paramter_value_substr(String) substring to check if it is contained in the value of the given
+    Parameters:  
+      **parameter_name** (String) - name of the Party Object parameter to be searched.  
+      **paramter_value_substr** (String) - substring to check if it is contained in the value of the given
               parameter name
 
-    Returns:
+    Returns:  
       List of indices into the parties object array for which the given parameter name's value
       contains a match for the given substring.
     """
@@ -598,19 +598,19 @@ class Vcon():
     """
     Add a dialog segment for a text chat or email thread.
 
-    Parameters:
-      body (str): bytes for the text communication (e.g. text or multipart MIME body).
-      start_time (str, int, float, datetime.datetime): Date, time of the start time the
+    Parameters:  
+      **body** (str) - bytes for the text communication (e.g. text or multipart MIME body).  
+      **start_time** (str, int, float, datetime.datetime) - Date, time of the start time the
                sender started typing or if unavailable, the time it was sent.
                String containing RFC 2822 or RFC3339 date time stamp or int/float
-               containing epoch time (since 1970) in seconds.
-      duration (int or float): duration in time the sender completed typing in seconds.
+               containing epoch time (since 1970) in seconds.  
+      **duration** (int or float) - duration in time the sender completed typing in seconds.
                Should be zero if unknown.
-      party (int) index into parties object array as to which party sent the text communication.
-      mime_type (str): mime type of the body (usually MIMETYPE_TEXT_PLAIN or MIMETYPE_MULTIPART)
-      file_name (str): file name of the body if applicable (optional)
+      **party** (int) - index into parties object array as to which party sent the text communication.  
+      **mime_type** (str) - mime type of the body (usually MIMETYPE_TEXT_PLAIN or MIMETYPE_MULTIPART)  
+      **file_name** (str) - file name of the body if applicable (optional)
 
-    Returns:
+    Returns:  
       Index of the new dialog in the Dialog Object array parameter.
     """
 
@@ -648,11 +648,11 @@ class Vcon():
     SMTP message should include To, From, Subject, Cc, Date headers and may
     include a simple text or MIME body.  Attachments are added to Vcon. 
 
-    Parameters:
-      * **smtp_message** (str) - string containing the contents of a SMTP
+    Parameters:  
+      **smtp_message** (str) - string containing the contents of a SMTP
       messages including headers and body.
 
-    Returns:
+    Returns:  
       index (int) of the dialog added for the text body of the message
     """
 
@@ -731,24 +731,24 @@ class Vcon():
     """
     Add a recording of a portion of the conversation, inline (base64 encoded) to the dialog.
 
-    Parameters:
-    body (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).
-    start_time (str, int, float, datetime.datetime): Date, time of the start of
+    Parameters:  
+    **body** (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).  
+    **start_time** (str, int, float, datetime.datetime): Date, time of the start of
                the recording.
                string containing RFC 2822 or RFC3339 date time stamp or int/float
                containing epoch time (since 1970) in seconds.
-    duration (int or float): duration of the recording in seconds
-    parties (int, List[int], List[List[int]]): party indices speaking in each
-               channel of the recording.
-    mime_type (str): mime type of the recording
-    file_name (str): file name of the recording (optional)
-    originator (int): by default the originator of the dialog is the first party listed in the parites array.
+    **duration** (int or float): duration of the recording in seconds  
+    **parties** (int, List[int], List[List[int]]): party indices speaking in each
+               channel of the recording.  
+    **mime_type** (str): mime type of the recording  
+    **file_name** (str): file name of the recording (optional)  
+    **originator** (int): by default the originator of the dialog is the first party listed in the parites array.
                However , in some cases, it is difficult to arrange the recording channels with the originator
                as the first party/channel.  In these cases, the originator can be explicitly provided.  The
                value of the originator is the index into the Vcon.parties array of the party that originated
                this dialog.
 
-    Returns:
+    Returns:  
             Number of bytes read from body.
     """
     # TODO should return dialog index not byte count
@@ -814,15 +814,15 @@ class Vcon():
     try to find the transcript for this dialog in the analysis objects and 
     return the text from the transcript.
 
-    Parameters:
-      **dialog_index** (int) - index to the dialog in this Vcon's dialog objects list.
+    Parameters:  
+      **dialog_index** (int) - index to the dialog in this Vcon's dialog objects list.  
       **find_transcript** (bool) - try to find transcript for this dialog in the
-        analysis objects list and get the transcript text.
+        analysis objects list and get the transcript text.  
       **generate_transcript** (bool) - if the transcript for this dialog is not found
         in the analysis objects, generate the transcript using the default transcript
         type FilterPlugin.
 
-    Returns:
+    Returns:  
       list of dicts where each dict contains the following:
         * "party" (int) - index to the party that typed or spoke the given text
         * "text" (str) - the typed or spoken text
@@ -895,12 +895,12 @@ class Vcon():
     """
     Find the index to the transcript analysis for the indicated dialog.
 
-    Parameters:
-      **dialog_index** (int) - index to a recording dialog
+    Parameters:  
+      **dialog_index** (int) - index to a recording dialog  
       **transcript_accessor_exists** (bool) - only consider transcript analysis objects
         for which a transcript_accessor exist.
 
-    Returns:
+    Returns:  
       (int or None) - index of the transcript type analysis object in this Vcon or
         None if not found.
     """
@@ -930,7 +930,15 @@ class Vcon():
 
   @tag_dialog
   def get_dialog_body(self, dialog_index: int) -> typing.Union[str, bytes]:
-    """ Get the dialog body whether it is inline or an externally reference URL """
+    """
+    Get the dialog body whether it is inline or an externally reference URL
+
+    Parameters:  
+    **dialog_index** (int) - index of the dialog in the Vcon, from which to retrieve the body
+
+    Returns:  
+    (str) or (bytes) for the dialog body
+    """
     dialog = self.dialog[dialog_index]
 
     if(any(key in dialog for key in("body", "url"))):
@@ -952,10 +960,10 @@ class Vcon():
     """
     Get the dialog recording at the given index, decoding it and returning the raw bytes.
 
-    Parameters:
-      dialog_index (int): index the the dialog in the dialog list, containing the inline recording
+    Parameters:  
+      **dialog_index** (int): index the the dialog in the dialog list, containing the inline recording
 
-    Returns:
+    Returns:  
       (bytes): the bytes for the recording file
     """
     dialog = self.dialog[dialog_index]
@@ -995,28 +1003,28 @@ class Vcon():
     URL, to the dialog and generate a signature and key for the content.  This
     method has the limitation that the entire recording must be passed in in-memory.
 
-    Parameters:
-    body (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).
-    start_time (str, int, float, datetime.datetime): Date, time of the start of
+    Parameters:  
+    **body** (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).  
+    **start_time** (str, int, float, datetime.datetime): Date, time of the start of
                the recording.
                string containing RFC 2822 or RFC 3339 date time stamp or int/float
-               containing epoch time (since 1970) in seconds.
-    duration (int or float): duration of the recording in seconds
-    parties (int, List[int], List[List[int]]): party indices speaking in each
-               channel of the recording.
-    external_url (string): https URL where the body is stored securely
-    mime_type (str): mime type of the recording (optional)
-    file_name (str): file name of the recording (optional)
-    sign_type (str): signature type to create for external signature
+               containing epoch time (since 1970) in seconds.  
+    **duration** (int or float): duration of the recording in seconds  
+    **parties** (int, List[int], List[List[int]]): party indices speaking in each
+               channel of the recording.  
+    **external_url** (string): https URL where the body is stored securely  
+    **mime_type** (str): mime type of the recording (optional)  
+    **file_name** (str): file name of the recording (optional)  
+    **sign_type** (str): signature type to create for external signature
                      default= "SHA-512" use SHA 512 bit hash (RFC6234)
-                     "LM-OTS" use Leighton-Micali One Time Signature (RFC8554
-    originator (int): by default the originator of the dialog is the first party listed in the parites array.
+                     "LM-OTS" use Leighton-Micali One Time Signature (RFC8554)  
+    **originator** (int): by default the originator of the dialog is the first party listed in the parites array.
                However , in some cases, it is difficult to arrange the recording channels with the originator
                as the first party/channel.  In these cases, the originator can be explicitly provided.  The
                value of the originator is the index into the Vcon.parties array of the party that originated
                this dialog.
 
-    Returns:
+    Returns:  
             Index to the added dialog
     """
     # TODO should return dialog index not byte count
@@ -1074,14 +1082,13 @@ class Vcon():
     and verify its integrity using the signature in the dialog object,
     blocking on its return.
 
-    Parameters:
-      dialog_index (int) - index into the Vcon.dialog array indicating
-        which external recording is to be retrieved and verified.
-
-      get_kwargs (dict) - kwargs passed to **requests.get** method
+    Parameters:  
+      **dialog_index** (int) - index into the Vcon.dialog array indicating
+        which external recording is to be retrieved and verified.  
+      **get_kwargs** (dict) - kwargs passed to **requests.get** method
         defaults to {"timeout": = 20} seconds
 
-    Returns:
+    Returns:  
       verified content/bytes for the recording
     """
     # Get body from URL using requests
@@ -1108,10 +1115,9 @@ class Vcon():
     Using the signature and public key stored in the dialog, the content of the body
     of the recording is verifyed.
 
-    Parameters:
-      dialog_index (int): index of the dialog to be verified
-
-      body (bytes): the contents of the recording which is stored external to this vCon
+    Parameters:  
+      **dialog_index** (int): index of the dialog to be verified  
+      **body** (bytes): the contents of the recording which is stored external to this vCon
 
     Returns: none
 
@@ -1158,11 +1164,13 @@ class Vcon():
     """
     Add a transcript for the indicated dialog.
 
-    Parameters:
-    dialog_index (str): index to the dialog in the vCon dialog list that this trascript corresponds to.
-    vendor (str): string token for the vendor of the audio to text transcription service
-    schema (str): schema label for the transcription data.  Used to identify data format of the transcription
+    Parameters:  
+    **dialog_index** (str): index to the dialog in the vCon dialog list that this trascript corresponds to.  
+    **vendor** (str): string token for the vendor of the audio to text transcription service.  
+    **schema** (str): schema label for the transcription data.  Used to identify data format of the transcription
                   for vendors that have more than one format or version.
+
+    Return: none
     """
 
     self._attempting_modify()
@@ -1198,13 +1206,15 @@ class Vcon():
     """
     Add a generic analysis for the indicated dialog.
 
-    Parameters:
+    Parameters:  
     **dialog_index** (Union[int, list[int]]): index or list of indices to the dialog in the vCon dialog
-      list that this analysis was generated from.
-    **vendor** (str): string token for the vendor of the audio to text transcription service
+      list that this analysis was generated from.  
+    **vendor** (str): string token for the vendor of the audio to text transcription service  
     **schema** (str): schema label for the transcription data.  Used to identify data format of the transcription
-                  for vendors that have more than one format or version.
+                  for vendors that have more than one format or version.  
     **optional_parameters** (dict[str, Any]) - additional parameters to add to the analysis object.
+
+    Return: none
     """
 
     self._attempting_modify()
@@ -1241,16 +1251,16 @@ class Vcon():
     """
     Add an attachment object for the given file body
 
-    Parameters:
-    body (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).
-    send_time (str, int, float, datetime.datetime): Date, time the attachment was sent.
+    Parameters:  
+    **body** (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).  
+    **send_time** (str, int, float, datetime.datetime): Date, time the attachment was sent.
                string containing RFC 2822 or RFC3339 date time stamp or int/float
-               containing epoch time (since 1970) in seconds.
-    party (int): party index of the sender
-    mime_type (str): mime type of the recording
-    file_name (str): file name of the recording (optional)
+               containing epoch time (since 1970) in seconds.  
+    **party** (int): party index of the sender  
+    **mime_type** (str): mime type of the recording  
+    **file_name** (str): file name of the recording (optional)
 
-    Returns:
+    Returns:  
     (int) index of the added attachment
     """
 
@@ -1299,7 +1309,15 @@ class Vcon():
       vconfile: typing.Union[str, typing.TextIO],
       indent: typing.Union[int, None] = None
     ) -> None:
-    """ dump vcon in JSON form to given file """
+    """
+    dump vcon in JSON form to given file
+
+    Parameters:  
+    **vconfile** (str, TextIO) - if string, file name else file like object to write Vcon JSON to.  
+    **index** (None, int) - apply indenting/pretty printing to JSON
+
+    Return: none
+    """
     if(isinstance(vconfile, str)):
       file_handle = open(vconfile, "w")
     else:
@@ -1320,13 +1338,12 @@ class Vcon():
     """
     Dump the vCon as a JSON string.
 
-    Parameters:
-
-    signed (Boolean): If the vCon is signed locally or verfied,
-        True: serialize the signed version
+    Parameters:  
+    **signed** (Boolean): If the vCon is signed locally or verfied,  
+        True: serialize the signed version  
         False: serialize the unsigned version
 
-    Returns:
+    Returns:  
              String containing JSON representation of the vCon.
     """
     return(json.dumps(self.dumpd(signed, False), indent = indent, default=lambda o: o.__dict__, **dumps_options))
@@ -1399,6 +1416,14 @@ class Vcon():
     ) -> None:
     """
     HTTP Post this Vcon from the given base_uri and path.
+
+    Parameters:  
+    **base_url** (str) - template URL for HTTP post  
+    **host** (str) - host IP or DNS name to use in URL  
+    **port** (int) - HTTP port to use  
+    **post_kwargs** (dict) - extra args to pass to requests.post
+
+    Return: none
     """
     if(post_kwargs is None):
       post_kwargs = {"timeout": 20}
@@ -1421,6 +1446,11 @@ class Vcon():
     """
     Load the Vcon JSON from the given file_handle and deserialize it.
     see Vcon.loads for more details.
+
+    Parameters: 
+    **vconfile** (str, TextIO) - if string, file name else file like object to write Vcon JSON to.  
+
+    Returns: none
     """
     self._attempting_modify()
 
@@ -1448,8 +1478,8 @@ class Vcon():
     2) JWS vCon must have a payload and signatures
     3) JWE vCon must have a cyphertext and recipients
 
-    Parameters:
-      vcon_dict (dict): dict containing JSON representation of a vCon
+    Parameters:  
+      **vcon_dict** (dict): dict containing JSON representation of a vCon
 
     Returns: none
     """
@@ -1472,8 +1502,8 @@ class Vcon():
     2) JWS vCon must have a payload and signatures
     3) JWE vCon must have a cyphertext and recipients
 
-    Parameters:
-      vcon_json (str): string containing JSON representation of a vCon
+    Parameters:  
+      **vcon_json** (str): string containing JSON representation of a vCon
 
     Returns: none
     """
@@ -1548,6 +1578,16 @@ class Vcon():
     ) -> None:
     """
     HTTP GET the Vcon from the given base_uri and path.
+
+    Parameters:  
+    **uuid** (str) - UUID of the vCon to retrieve  
+    **base_url** (str) - template URL for HTTP post  
+    **host** (str) - host IP or DNS name to use in URL  
+    **port** (int) - HTTP port to use  
+    **path** (str) - template path for the URL  
+    **get_kwargs** (dict) - extra args to pass to requests.get
+
+    Return: none
     """
     if(get_kwargs is None):
       get_kwargs = {"timeout": 20, "headers": {"accept": vcon.Vcon.MIMETYPE_JSON }}
@@ -1571,12 +1611,11 @@ class Vcon():
     """
     Sign the vcon using the given private key from the give certificate chain.
 
-    Parameters:
-      cert_chain_pem_file_names (List{str]): file names for the pem format certicate chain for the
+    Parameters:  
+    **private_key_pem_file_name** (str): the private key to use for signing the vcon.  
+    **cert_chain_pem_file_names** (List[str]): file names for the pem format certicate chain for the
         private key to use for signing.  The cert/public key corresponding to the private key should be the
         first cert.  THe certificate authority root should be the last cert.
-
-    private_key_pem_file_name (str): the private key to use for signing the vcon.
 
     Returns: none
     """
@@ -1616,8 +1655,8 @@ class Vcon():
     """
     Verify the signed vCon and its certificate chain which should be issued by one of the given CAs
 
-    Parameters:
-      ca_cert_pem_file_names (List[str]): list of Certificate Authority certificate PEM file names
+    Parameters:  
+      **ca_cert_pem_file_names** (List[str]): list of Certificate Authority certificate PEM file names
         to verify the vCon's certificate chain.
 
     Returns: none
@@ -1722,8 +1761,8 @@ class Vcon():
 
     vcon must be signed first.
 
-    Parameters:
-    cert_pem_file_name (str): the public key/cert to use for encrypting the vcon.
+    Parameters:  
+    **cert_pem_file_name** (str): the public key/cert to use for encrypting the vcon.
 
     Returns: none
     """
@@ -1753,12 +1792,11 @@ class Vcon():
     """
     Decrypt a vCon using private and public key file.
 
-    vCOn must be in encrypted state and will be in signed state after decryption.
+    vCon must be in encrypted state and will be in signed state after decryption.
 
-    Parameters:
-    cert_pem_file_name (str): the public key/cert to use for decrypting the vcon.
-
-    private_key_pem_file_name (str): the private key to use for decrypting the vcon.
+    Parameters:  
+    **private_key_pem_file_name** (str): the private key to use for decrypting the vcon.  
+    **cert_pem_file_name** (str): the public key/cert to use for decrypting the vcon.
 
     Returns: none
     """
@@ -1796,6 +1834,7 @@ class Vcon():
     """
     Set the Vcon creation date.
 
+    Parameters:  
     **create_date** (typing.Union[int, float, str, None]) - epoch time as int or float,
       date string as RFC3339 or RFC822 format.
       passing a value of None will use the current time.
@@ -1815,8 +1854,8 @@ class Vcon():
     """
     Set the subject parameter of the vCon.
 
-    Parameters:
-      subject - String value to assign to the vCon subject parameter.
+    Parameters:  
+      **subject** - String value to assign to the vCon subject parameter.
 
     Returns: None
     """
@@ -1834,14 +1873,13 @@ class Vcon():
     """
     Perform jq syle queries on the Vcon JSON
 
-    Parameters:
-
+    Parameters:  
     **query** (Union[str, dict[str, str]]) - query(s) to be performed on this Vcon
       **query** can be a single query string or a dict containing a names set where
       the values are query strings.
 
-  Returns:
-    if query is a str, a list containing the query result is returned
+  Returns:  
+    if query is a str, a list containing the query result is returned  
     if query is a dict, a dict with keys corresponding to the input query where
     the values are the query result.
     """
@@ -1870,11 +1908,12 @@ class Vcon():
 
     See vcon.filter_plugins.FilterPluginRegistry for the set of registered plugins.
 
-    Parameters:
-      options - passed through to plugin.  The fields in options are documented by
+    Parameters:  
+      **filter_name** (str) - name of a registered FilterPlugin
+      **options** - passed through to plugin.  The fields in options are documented by
         the specified plugin.
 
-    Returns:
+    Returns:  
       the filter modified Vcon
     """
     self._attempting_modify()
@@ -1889,11 +1928,11 @@ class Vcon():
     """
     Generate a UUID for this vCon and set the parameter
 
-    Parameters:
-      domain_name: a DNS domain name string, should generally be a fully qualified host
+    Parameters:  
+      **domain_name**: a DNS domain name string, should generally be a fully qualified host
           name.
 
-    Returns:
+    Returns:  
       UUID version 8 string
       (vCon uuid parameter is also set)
 
