@@ -9,7 +9,7 @@ We are working to make vCon a new IETF standard for containing conversational da
  * **Analysis** (e.g. transcritpions, translations, summary, notes, sentiment analysis, action items, bullet points, etc.).
 
 The point of a vCon standard is to make it easier to integrate communication platforms with post conversation analysis services.
-We want to make it easier to take your converstation data from your contact center, phone applicaiton, video conferencing service and allow you use 3rd party SaaS offerings for conversation analysis.
+We want to make it easier to take your converstation data from your contact center, phone application or video conferencing service and allow you use 3rd party SaaS offerings for conversation analysis.
 
 Want to learn more about vCon? see: [What is a vCon?](#what-is-a-vcon)
 
@@ -32,7 +32,7 @@ Currently this consists of two primary Python packages:
 
 ## Table of Contents
 
-  + [Introduction to the py-vcon Project](#introduction-to-the-py-vcon-project)
+  + [Introduction](#introduction)
   + [What is a vCon?](#what-is-a-vcon)
   + [vCon Presentations, Whitepapers and Tutorials](#vcon-presentations-whitepapers-and-tutorials)
   + [Vcon Package Documentation](#vcon-package-documentation)
@@ -46,6 +46,8 @@ Currently this consists of two primary Python packages:
   + [Contributing](#contributing)
 
 ## What is a vCon?
+
+Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a vCon.
 
 ### vCon Presentations, Whitepapers and Tutorials
 
@@ -63,7 +65,7 @@ Currently this consists of two primary Python packages:
   * [Vcon API](vcon/README.md) - for constructing and operating on Vcon objects
   * [command line interface](vcon/bin/README.md) - supporting piping of Vcon construction and operations
   * [Filter plugins](#vcon-filter-plugins) - to extend operations to perform on a Vcon
-  * [vCon Library Quick Start for Python](https://github.com/vcon-dev/vcon/wiki/Library-Quick-Start)
+  * [vCon Library Quick Start for Python](Vcon-Quick-Start.md)
 
 ## Installing py-vcon
 
@@ -71,7 +73,7 @@ Currently this consists of two primary Python packages:
 
 ## Vcon Filter Plugins
 
-[Filter plugins](#vcon-filter-plugins) are plugin modules that perform some sort of operation on a Vcon.
+[Filter plugins](vcon/filter_plugins/README.md) are plugin modules that perform some sort of operation on a Vcon.
 They perform an operation on an input Vcon and provide a resulting Vcon as the output.
 A FilterPlugin takes a set of options as input which have defaults, but may be overrided.
 The py-vcon project comes with a set of FilterPlugins which will grow over time.
@@ -89,7 +91,7 @@ You can get the list of registered filter plugins using the following:
 
 ## Adding Vcon Filter Plugins
 
-You can build your own FilterPlugins by extending the [FilterPlugin class](vcon/filter_plutins#vconfilter_pluginsfilterplugin).
+You can build your own FilterPlugins by extending the [FilterPlugin class](vcon/filter_plugins#vconfilter_pluginsfilterplugin).
 You must implement the [filter method](vcon/filter_plugins#filterpluginfilter) and optionally implement the [__init__ method](vcon/filter_plugins#filterplugin__init__) or [__del__ method](vcon/filter_plugins#filterplugin__del__) if your plugin requires some initialization or teardown before it can be used.
 
 If your custom FilterPlugin requires initialization options or options to be passed to the filter method, you must implement a derived class from [FilterPluginInitOptions](vcon/filter_plugins#vconfilter_pluginsfilterplugininitoptions) or [FilterPluginOptions](vcon/filter_plugins#vconfilter_pluginsfilterpluginoptions) respectively.
@@ -127,6 +129,13 @@ The current set of API keys are needed for:
   * OpenAI Generative AI ([OpenAICompletion](vcon/filter_plugins/README.md#vconfilter_pluginsimplopenaiopenaicompletion) and [OpenAIChatCompletion](vcon/filter_plugins/README.md#vconfilter_pluginsimplopenaiopenaichatcompletion) FilterPlugins): OPENAI_API_KEY
   <br>You can get a key at: https://console.deepgram.com/signup?jump=keys
 
+The easiest way to use these plugins is to set the keys as an environmental variable.  For example on linux bash shell"
+
+    export DEEPGRAM__KEY="your Deepgram key here"
+    export OPENAI_API_KEY="your OpenAI key here"
+
+However you can also set these keys using init_options and filter options.
+
 ## Vcon Package Building and Testing
 
 Instructions for building the Vcon package for pypi can be found [here](BUILD.md)
@@ -151,7 +160,7 @@ Note: These errors may not show up when you run test_vcon_cli.py with the rest o
 
 ##  Support
 
-The first lilne of support is to help your self by reading the documentation and the code.
+The first lilne of support is to help yourself by reading the documentation and the code.
 If this does not yeild results, submit an issue to the py-vcon project on github.
 We will do our best to respond.
 Commercial support is available from [SIPez](http://www.sipez.com).
@@ -168,6 +177,6 @@ If you are submitting new code or fixes, you are expected to add new unit test c
 A fair amount of the documentation is generated from the Python docs, perhaps more in the future.
 For this reason, any contibutions with additions or changed to APIs must document classes, methods and arguments with typing.
 We are a small group supporting this project.
-We cannot be sustainable without addition automated unit testing and documentation.
+We cannot be sustainable without additional automated unit testing and documentation.
 This serves you, in helping to be sure no one breaks your contribution, as well as the project.
 
