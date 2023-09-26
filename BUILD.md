@@ -1,9 +1,9 @@
 # Build Instructions
 
-  + [Building Vcon core package](#building-vcon-core-package)
-  + [Building the conserver package](#building-the-conserver-package)
+  + [Building Vcon package](#building-vcon-package)
+  + [Building the Vcon Server package](#building-the-vcon-server-package)
 
-## Building Vcon core package
+## Building Vcon package
 
 Make sure python build and twine packages are installed:
 
@@ -43,7 +43,7 @@ Commit all of the changes and tag the build release:
 
     git tag -a vcon_x.x [xxxxx_commit_SHA] -m "Vcon pypi release"
 
-## Building the conserver package
+## Building the server package
 
 TBD
 
