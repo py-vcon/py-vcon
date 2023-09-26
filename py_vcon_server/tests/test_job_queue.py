@@ -230,11 +230,15 @@ async def test_queue_lifecycle(job_queue):
     raise e
 
   # complete in progress job
+  before_in_progress_jobs = await job_queue.get_in_progress_jobs()
+  print("num jobs before: {}".format(len(before_in_progress_jobs)))
+  assert(in_progress_job["jobid"] in before_in_progress_jobs)
   await job_queue.remove_in_progress_job(in_progress_job["jobid"])
   in_progress_jobs = await job_queue.get_in_progress_jobs()
   assert(isinstance(in_progress_jobs, dict))
   # Cannot assume other jobs are in progress as the DB may be shared
-  assert(len(in_progress_jobs) >= 1)
+  #assert(len(in_progress_jobs) >= 1)
+  print("num jobs after: {}".format(len(in_progress_jobs)))
   # Make sure our job was removed
   assert(in_progress_jobs.get(in_progress_job["jobid"], None) is None)
 
