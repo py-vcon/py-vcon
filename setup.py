@@ -1,16 +1,21 @@
 """ Build script for vcon core package for pypi """
 # import os
 import sys
+import typing
 import setuptools
 
-requires = []
+REQUIRES: typing.List[str] = []
 
 # print("CWD: {}".format(os.getcwd()), file=sys.stderr)
 # print("files in CWD: {}".format(os.listdir(os.getcwd())), file=sys.stderr)
 
 
-def get_requirements(filename, requires = []) -> dict:
-  with open(filename) as core_file:
+def get_requirements(
+    filename: str,
+    requires: typing.List[str]
+  ) -> typing.List[str]:
+  """ get pip package names from text file """
+  with open(filename, "rt") as core_file:
     line = core_file.readline()
     while line:
       line = line.strip()
@@ -20,8 +25,8 @@ def get_requirements(filename, requires = []) -> dict:
   return(requires)
 
 
-requires = get_requirements("vcon/docker_dev/pip_package_list.txt", requires)
-print("vcon package dependencies: {}".format(requires), file = sys.stderr)
+REQUIRES = get_requirements("vcon/docker_dev/pip_package_list.txt", REQUIRES)
+print("vcon package dependencies: {}".format(REQUIRES), file = sys.stderr)
 
 
 def get_version() -> str:
@@ -31,8 +36,8 @@ def get_version() -> str:
   build creates.  Therefore we cannot access version directly from vcon/__init__.py.
   So I have hacked this means of parcing the version value rather than
   de-normalizing it and having it set in multiple places.
-  """ 
-  with open("vcon/__init__.py") as core_file:
+  """
+  with open("vcon/__init__.py", "rt") as core_file:
     line = core_file.readline()
     while line:
       if(line.startswith("__version__")):
@@ -53,20 +58,20 @@ def get_version() -> str:
 __version__ = get_version()
 
 setuptools.setup(
-  name='vcon',
+  name='py-vcon',
   version=__version__,
   # version="0.1",
   description='vCon container manipulation package',
-  url='http://github.com/von-dev/vcon',
+  url='http://github.com/py-vcon/py-vcon',
   author='Dan Petrie',
   author_email='dan.vcon@sipez.com',
   license='MIT',
   packages=['vcon', 'vcon.filter_plugins', 'vcon.filter_plugins.impl'],
   data_files=[
     ("vcon", ["vcon/docker_dev/pip_package_list.txt"])],
-  python_requires=">=3.6",
+  python_requires=">=3.7",
   tests_require=['pytest', 'pytest-asyncio', 'pytest-dependency'],
-  install_requires=requires,
+  install_requires = REQUIRES,
   scripts=['vcon/bin/vcon'],
   # entry_points={
   #   'console_scripts': [
