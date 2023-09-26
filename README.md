@@ -2,31 +2,41 @@
 
 ## Introduction
 
-Not familiar with what a vCon is? see: [What is a vCon?](#what-is-a-vcon)
+We are working to make vCon a new IETF standard for containing conversational data.  Conversational data may consists of:
+ * The metadata (who, what, when, where, how, why, etc.) including partipants or **parties**
+ * The conversation exchange or **dialog** in its original mode (text, audio, video)
+ * Related documents or **attachments** (e.g. presentations, images, contracts and other files)
+ * **Analysis** (e.g. transcritpions, translations, summary, notes, sentiment analysis, action items, bullet points, etc.).
 
-The py-vcon project consists of two primary Python packages:
+The point of a vCon standard is to make it easier to integrate communication platforms with post conversation analysis services.
+We want to make it easier to take your converstation data from your contact center, phone applicaiton, video conferencing service and allow you use 3rd party SaaS offerings for conversation analysis.
 
- * The py-vcon Vcon package provides
+Want to learn more about vCon? see: [What is a vCon?](#what-is-a-vcon)
+
+The py-vcon project provides open source solutions in the form of Python packages to help you work with vCon's.
+Currently this consists of two primary Python packages:
+
+ * The py-vcon Vcon package (py-vcon on pypi) provides
    * python [Vcon API](vcon/README.md) - for constructing and operating on Vcon objects
    * [command line interface](vcon/bin/README.md) - supporting piping of Vcon construction and operations
    * [Filter plugins](#vcon-filter-plugins) - to extend operations to perform on a Vcon
 
  * The py-vcon-server package provides (release coming soon):
    * RESTful API
+   * Flexible Architecture
    * Storage - abstracted to support your favorite database
    * Job Queuing - for processing operations on sets of vCons
    * Batching - 
    * Pipelining - naming and configuring sets of processor operations to repeatedly perform on sets of vCons
-   * Extensible - framework for adding open source or proprietary vCon processor operations
+   * Extensible modules - framework for adding open source or proprietary vCon processor operations
 
 ## Table of Contents
 
   + [Introduction to the py-vcon Project](#introduction-to-the-py-vcon-project)
   + [What is a vCon?](#what-is-a-vcon)
   + [vCon Presentations, Whitepapers and Tutorials](#vcon-presentations-whitepapers-and-tutorials)
-  + [Vcon Package Scope](#vcon-package-scope)
-  + [Vcon Server Package Scope](#vcon-server-package-scope)
   + [Vcon Package Documentation](#vcon-package-documentation)
+  + [Installing py-vcon](#installing-py-vcon)
   + [Vcon Filter Plugins](#vcon-filter-plugins)
   + [Adding Vcon Filter Plugins](#adding-vcon-filter-plugins)
   + [Third Party API Keys](#third-party-api-keys)
@@ -37,8 +47,7 @@ The py-vcon project consists of two primary Python packages:
 
 ## What is a vCon?
 
-
-## vCon Presentations, Whitepapers and Tutorials
+### vCon Presentations, Whitepapers and Tutorials
 
  * Read the [IETF Contact Center Requirements draft proposal](https://datatracker.ietf.org/doc/draft-rosenberg-vcon-cc-usecases/)
  * Read the [IETF draft proposal](https://datatracker.ietf.org/doc/html/draft-petrie-vcon-01)
@@ -49,27 +58,64 @@ The py-vcon project consists of two primary Python packages:
  * See the [presentation at IIT](https://youtu.be/s-pjgpBOQqc)
  * See the [key note proposal for vCons](https://blog.tadsummit.com/2021/12/08/strolid-keynote-vcons/).
 
-
-## Vcon Package Scope
-
-    link to Vcon doc
-    link to vcon commandline doc
-    link to jq doc
-
-## Vcon Server Package Scope
-
-    link to Vcon Server Architecture
-    link to Vcon Server doc
-
 ## Vcon Package Documentation
 
+  * [Vcon API](vcon/README.md) - for constructing and operating on Vcon objects
+  * [command line interface](vcon/bin/README.md) - supporting piping of Vcon construction and operations
+  * [Filter plugins](#vcon-filter-plugins) - to extend operations to perform on a Vcon
   * [vCon Library Quick Start for Python](https://github.com/vcon-dev/vcon/wiki/Library-Quick-Start)
+
+## Installing py-vcon
+
+    pip install py-vcon
 
 ## Vcon Filter Plugins
 
-    link to vcon/filter_plugins/README.md
+[Filter plugins](#vcon-filter-plugins) are plugin modules that perform some sort of operation on a Vcon.
+They perform an operation on an input Vcon and provide a resulting Vcon as the output.
+A FilterPlugin takes a set of options as input which have defaults, but may be overrided.
+The py-vcon project comes with a set of FilterPlugins which will grow over time.
+You can also create proprietary FilterPlugins which may be used with py-vcon.
+FilterPlugins get registered with a unique name and a default set of options.
+FilterPlugins can be invoked using the [Vcon.filter](vcon/README.md#filter) method or
+invoked using the registered name as the method name with the signature:
+
+    my_vcon.<registered_name>(options)
+
+You can get the list of registered filter plugins using the following:
+
+    import vcon
+    vcon.filter_plugins.FilterPluginRegistry.get_names()
 
 ## Adding Vcon Filter Plugins
+
+You can build your own FilterPlugins by extending the [FilterPlugin class](vcon/filter_plutins#vconfilter_pluginsfilterplugin).
+You must implement the [filter method](vcon/filter_plugins#filterpluginfilter) and optionally implement the [__init__ method](vcon/filter_plugins#filterplugin__init__) or [__del__ method](vcon/filter_plugins#filterplugin__del__) if your plugin requires some initialization or teardown before it can be used.
+
+If your custom FilterPlugin requires initialization options or options to be passed to the filter method, you must implement a derived class from [FilterPluginInitOptions](vcon/filter_plugins#vconfilter_pluginsfilterplugininitoptions) or [FilterPluginOptions](vcon/filter_plugins#vconfilter_pluginsfilterpluginoptions) respectively.
+
+You can then register your custom vCon using the following code:
+
+    vcon.filter_plugins.FilterPluginRegistrar.register(
+        name: str,
+        module_name: str,
+        class_name: str,
+        description: str,
+        init_options: typing.Union[FilterPluginInitOptions, typing.Dict[str, typing.Any]],
+        replace: bool = False
+      ) -> None:
+
+Register a named filter plugin.
+
+Parameters:  
+    **name** (str) - the name to register the plugin  
+    **module_name** (str) - the module name to import where the plugin class is implmented  
+    **class_name** (str) - the class name for the plugin implementation in the named module   
+    **description** (str) - a text description of what the plugin does  
+    **replace** (bool) - if True replace the already registered plugin of the same name  
+                     if False throw an exception if a plugin of the same name is already register
+
+Returns: none
 
 ## Third Party API Keys
 Some of the [Vcon Filter Plugins](#Vcon-filter-plugins) use third party provided functionality that require API keys to use or test the full functionality.
@@ -82,6 +128,8 @@ The current set of API keys are needed for:
   <br>You can get a key at: https://console.deepgram.com/signup?jump=keys
 
 ## Vcon Package Building and Testing
+
+Instructions for building the Vcon package for pypi can be found [here](BUILD.md)
 
 ## Testing the Vcon Package
 A suite of pytest unit tests exist for the Vcon package in: [tests](tests).
@@ -103,5 +151,23 @@ Note: These errors may not show up when you run test_vcon_cli.py with the rest o
 
 ##  Support
 
+The first lilne of support is to help your self by reading the documentation and the code.
+If this does not yeild results, submit an issue to the py-vcon project on github.
+We will do our best to respond.
+Commercial support is available from [SIPez](http://www.sipez.com).
+
 ## Contributing
+
+We do our best to document our project and provide test coverage.
+The code and documentation is not perfect and we do not have 100% test coverage.
+We will strive to improve on all three fronts over time.
+You can contribute by helping with any or all of this.
+Submit a PR, we are happy to consider contributions.
+It is expected that you will have run all unit tests for both the Vcon and Vcon Server projects before submitting the PR.
+If you are submitting new code or fixes, you are expected to add new unit test cases to cover the fix or feature.
+A fair amount of the documentation is generated from the Python docs, perhaps more in the future.
+For this reason, any contibutions with additions or changed to APIs must document classes, methods and arguments with typing.
+We are a small group supporting this project.
+We cannot be sustainable without addition automated unit testing and documentation.
+This serves you, in helping to be sure no one breaks your contribution, as well as the project.
 
