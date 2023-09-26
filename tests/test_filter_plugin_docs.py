@@ -17,11 +17,11 @@ PAGE_TEMPLATE = """
 
 ## Table of Contents
  + [Introduction](#introduction)
- + [Filter Plugin Classes](filter-plugin-classes)
+ + [Filter Plugin Classes](#filter-plugin-classes)
 {plugins_toc}
- + [Filter Plugin Initialization Options Classes](filter-plugin-initialization-options-classes)
+ + [Filter Plugin Initialization Options Classes](#filter-plugin-initialization-options-classes)
 {init_options_toc}
- + [Filter Plugin Options Classes](filter-plugin-options-classes)
+ + [Filter Plugin Options Classes](#filter-plugin-options-classes)
 {options_toc}
 
 ## Introduction
@@ -156,19 +156,21 @@ PLUGIN_TEMPLATE = """
 
 **Methods**:
 
-### \_\_init__
+### {class_name}.\_\_init__
 \_\_init__{__init___signature}
 {__init___description}
 
 **{__init___option_name}** - {__init___option_type}
 
-### filter{filter_signature}
+### {class_name}.filter
+filter{filter_signature}
 
 {filter_description}
 
 **{filter_option_name}** - {filter_option_type}
 
-### \_\_del__{__del___signature}
+### {class_name}.\_\_del__
+\_\_del__{__del___signature}
 
 {__del___description}
 
@@ -181,6 +183,7 @@ def doc_plugin(plugin_class: typing.Type[vcon.filter_plugins.FilterPlugin],
   ) -> str:
   plugin_data = {}
   plugin_data["name"] = plugin_class.__module__ + "." + plugin_class.__name__
+  plugin_data["class_name"] = plugin_class.__name__
   plugin_data["description"] = plugin_class.__doc__
 
 
