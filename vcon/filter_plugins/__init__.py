@@ -549,17 +549,15 @@ class FilterPluginRegistry:
     """
     Register a named filter plugin.
 
-    Parameters:
-      name (str) - the name to register the plugin
-
-      module_name (str) - the module name to import where the plugin class is implmented
-
-      class_name (str) - the class name for the plugin implementation in the named module
-
-      description (str) - a text description of what the plugin does
-
-      replace (bool) - if True replace the already registered plugin of the same name
+    Parameters:  
+      **name** (str) - the name to register the plugin  
+      **module_name** (str) - the module name to import where the plugin class is implmented  
+      **class_name** (str) - the class name for the plugin implementation in the named module  
+      **description** (str) - a text description of what the plugin does  
+      **replace** (bool) - if True replace the already registered plugin of the same name  
                        if False throw an exception if a plugin of the same name is already register
+
+    Returns: none
     """
     logger.info("Registering FilterPlugin: {}".format(locals()))
     entry = FilterPluginRegistration(
