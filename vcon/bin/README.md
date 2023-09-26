@@ -76,7 +76,7 @@ Read in the signed vCon from the file named **signed.vcon** and output the verif
 
     vcon -i signed.vcon verify auth.crt
 
-Note: piping the output to the jq command can be useful for extracting specific parameters or creating a pretty print formated JSON output.  For example, the follwing will pretty print the vcon output:
+Note: piping the output to the [jq command](https://jqlang.github.io/jq/manual/) can be useful for extracting specific parameters or creating a pretty print formated JSON output.  For example, the follwing will pretty print the vcon output:
 
     vcon -n | jw '.'
 
