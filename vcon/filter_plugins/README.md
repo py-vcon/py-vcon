@@ -3,19 +3,19 @@
 
 ## Table of Contents
  + [Introduction](#introduction)
- + [Filter Plugin Classes](filter-plugin-classes)
+ + [Filter Plugin Classes](#filter-plugin-classes)
    - [vcon.filter_plugins.FilterPlugin](#vconfilter_pluginsfilterplugin)
    - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
    - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
    - [vcon.filter_plugins.impl.whisper.Whisper](#vconfilter_pluginsimplwhisperwhisper)
- + [Filter Plugin Initialization Options Classes](filter-plugin-initialization-options-classes)
+ + [Filter Plugin Initialization Options Classes](#filter-plugin-initialization-options-classes)
    - [vcon.filter_plugins.FilterPluginInitOptions](#vconfilter_pluginsfilterplugininitoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
- + [Filter Plugin Options Classes](filter-plugin-options-classes)
+ + [Filter Plugin Options Classes](#filter-plugin-options-classes)
    - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
@@ -75,7 +75,7 @@ TBD
 
 **Methods**:
 
-### \_\_init__
+### FilterPlugin.\_\_init__
 \_\_init__(self, options: 'FilterPluginInitOptions', options_type: 'typing.Type[FilterPluginOptions]')
 
 Instance stores the initialization options that were used.
@@ -88,7 +88,8 @@ options passed into the **filter** method.
 
 **options** - [vcon.filter_plugins.FilterPluginInitOptions](#vconfilter_pluginsfilterplugininitoptions)
 
-### filter(self, in_vcon: 'Vcon', options: 'FilterPluginOptions') -> 'Vcon'
+### FilterPlugin.filter
+filter(self, in_vcon: 'Vcon', options: 'FilterPluginOptions') -> 'Vcon'
 
 
 Abstract method which performs an operation on an input Vcon and 
@@ -104,7 +105,8 @@ Returns:
 
 **options** - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
 
-### \_\_del__(self)
+### FilterPlugin.\_\_del__
+\_\_del__(self)
 
 
 Teardown/uninitialization method for the plugin
@@ -120,7 +122,7 @@ Parameters: None
 
 **Methods**:
 
-### \_\_init__
+### Deepgram.\_\_init__
 \_\_init__(self, init_options: vcon.filter_plugins.impl.deepgram.DeepgramInitOptions)
 
 Parameters:
@@ -129,7 +131,8 @@ Parameters:
 
 **init_options** - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
 
-### filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.deepgram.DeepgramOptions) -> vcon.Vcon
+### Deepgram.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.deepgram.DeepgramOptions) -> vcon.Vcon
 
 
 Transcribe the recording dialog objects using **Deepgram**.
@@ -143,7 +146,8 @@ Returns:
 
 **options** - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
 
-### \_\_del__(self)
+### Deepgram.\_\_del__
+\_\_del__(self)
 
 
 Teardown/uninitialization method for the plugin
@@ -167,7 +171,7 @@ Parameters: None
 
 **Methods**:
 
-### \_\_init__
+### OpenAIChatCompletion.\_\_init__
 \_\_init__(self, init_options: vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions)
 
 Parameters:
@@ -176,7 +180,8 @@ Parameters:
 
 **init_options** - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
 
-### filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions) -> vcon.Vcon
+### OpenAIChatCompletion.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions) -> vcon.Vcon
 
 
 Perform generative AI using **OpenAI** chat completion on the
@@ -194,7 +199,8 @@ Returns:
 
 **options** - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
 
-### \_\_del__(self)
+### OpenAIChatCompletion.\_\_del__
+\_\_del__(self)
 
 
 Teardown/uninitialization method for the plugin
@@ -223,7 +229,7 @@ Parameters: None
 
 **Methods**:
 
-### \_\_init__
+### OpenAICompletion.\_\_init__
 \_\_init__(self, init_options: vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions)
 
 Parameters:
@@ -232,7 +238,8 @@ Parameters:
 
 **init_options** - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
 
-### filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.openai.OpenAICompletionOptions) -> vcon.Vcon
+### OpenAICompletion.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.openai.OpenAICompletionOptions) -> vcon.Vcon
 
 
 Perform generative AI using **OpenAI** completion on the
@@ -248,7 +255,8 @@ Returns:
 
 **options** - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
 
-### \_\_del__(self)
+### OpenAICompletion.\_\_del__
+\_\_del__(self)
 
 
 Teardown/uninitialization method for the plugin
@@ -264,7 +272,7 @@ Parameters: None
 
 **Methods**:
 
-### \_\_init__
+### Whisper.\_\_init__
 \_\_init__(self, init_options: vcon.filter_plugins.impl.whisper.WhisperInitOptions)
 
 Parameters:
@@ -273,7 +281,8 @@ Parameters:
 
 **init_options** - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
 
-### filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.whisper.WhisperOptions) -> vcon.Vcon
+### Whisper.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.whisper.WhisperOptions) -> vcon.Vcon
 
 
 Transcribe recording dialogs in given Vcon using the Whisper implementation
@@ -296,7 +305,8 @@ Returns:
 
 **options** - [vcon.filter_plugins.impl.whisper.WhisperOptions](#vconfilter_pluginsimplwhisperwhisperoptions)
 
-### \_\_del__(self)
+### Whisper.\_\_del__
+\_\_del__(self)
 
 
 Teardown/uninitialization method for the plugin
