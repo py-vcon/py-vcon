@@ -24,7 +24,8 @@ Currently this consists of two primary Python packages:
  * The py-vcon-server package provides (release coming soon):
    * RESTful API
    * Flexible Architecture
-   * Storage - abstracted to support your favorite database
+   * Scales from 1 to 1000s of servers
+   * Storage - abstracted to enable support for your favorite database
    * Job Queuing - for processing operations on sets of vCons
    * Batching - 
    * Pipelining - naming and configuring sets of processor operations to repeatedly perform on sets of vCons
