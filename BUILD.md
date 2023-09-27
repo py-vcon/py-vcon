@@ -11,7 +11,7 @@ Make sure python build and twine packages are installed:
 
 Create a clean clone of the branch that you want to build as any files in your development area may get accidently included in the vcon package:
 
-    get clone https://github.com/vcon-dev/vcon.git
+    get clone https://github.com/py-vcon/py-vcon.git
     git checkout [xxxxx_commit_SHA]
 
 Update the package __version__ number in vcon/vcon/__init__.py

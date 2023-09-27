@@ -79,7 +79,7 @@ async def test_deepgram_transcribe_external_dialog():
 
   # Add external ref
   file_path = "examples/agent_sample.wav"
-  url = "https://github.com/vcon-dev/vcon/blob/main/examples/agent_sample.wav?raw=true"
+  url = "https://github.com/py-vcon/py-vcon/blob/main/examples/agent_sample.wav?raw=true"
   file_content = b""
   with open(file_path, "rb") as file_handle:
     file_content = file_handle.read()

@@ -70,7 +70,7 @@ def test_lm_ots_sign() -> None:
 async def test_get_external_recording(two_party_tel_vcon : vcon.Vcon) -> None:
   # Add external ref
   file_path = "examples/agent_sample.wav"
-  url = "https://github.com/vcon-dev/vcon/blob/main/examples/agent_sample.wav?raw=true"
+  url = "https://github.com/py-vcon/py-vcon/blob/main/examples/agent_sample.wav?raw=true"
   file_content = b""
   with open(file_path, "rb") as file_handle:
     file_content = file_handle.read()

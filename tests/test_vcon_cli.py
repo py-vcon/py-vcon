@@ -7,15 +7,15 @@ import io
 import os.path
 #import httpretty
 import pytest_httpserver
-from tests.common_utils import empty_vcon, two_party_tel_vcon, call_data
 import pytest
+from tests.common_utils import empty_vcon, two_party_tel_vcon, call_data
 
 IN_VCON_JSON = """
 {"uuid": "0183878b-dacf-8e27-973a-91e26eb8001b", "vcon": "0.0.1", "attachments": [], "parties": [{"name": "Alice", "tel": "+12345678901"}, {"name": "Bob", "tel": "+19876543210"}]}
 """
 
 WAVE_FILE_NAME = "examples/agent_sample.wav"
-WAVE_FILE_URL = "https://github.com/vcon-dev/vcon/blob/main/examples/agent_sample.wav?raw=true"
+WAVE_FILE_URL = "https://github.com/py-vcon/py-vcon/blob/main/examples/agent_sample.wav?raw=true"
 WAVE_FILE_SIZE = os.path.getsize(WAVE_FILE_NAME)
 VCON_WITH_DIALOG_FILE_NAME = "py_vcon_server/tests/hello.vcon"
 SMTP_MESSAGE_W_IMAGE_FILE_NAME = "tests/email_acct_prob_bob_image.txt"
