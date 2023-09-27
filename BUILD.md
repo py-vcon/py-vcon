@@ -33,9 +33,29 @@ Push the package install files up to the pypi repo.
 
 For the test repo:
 
+ 1) Go to https://test.pypi.org/manage/account/
+ 2) Create an API token
+ 3) Run:
+
     python3 -m twine upload --repository testpypi dist/*
 
-For the real/public repo:
+ 4) enter "__token__" for the username and the API token as the password
+ 5) To install the py-vcon package from the testpypi repo to test it, run the following:
+
+    pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/  py-vcon
+
+ 6) To test, install test dependencies (there should be some way to instruct pip to do this as these are in the setup file.  However, I have yet to figure it out):
+
+    pip3 install pytest pytest-asyncio pytest-dependency pytest_httpserver
+
+ 7) copy tests and data files to a tmp directory to ensure the vcon package is not picked up
+
+    mkdir -p /tmp/py_vcon_server
+    mkdir -p /tmp/vcon/filter_plugins
+    cp -rp certs examples tests /tmp
+    cp -rp py_vcon_server/tests /tmp/py_vcon_server
+
+For the real/public repo, use the above steps, but substitute step 3 with the following:
 
     python3 -m twine upload dist/*
 
