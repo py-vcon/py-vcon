@@ -5,6 +5,7 @@ import datetime
 import json
 import vcon
 import vcon.filter_plugins
+import pytest
 
 
 def test_deepgram_options():
@@ -15,7 +16,9 @@ def test_deepgram_options():
   init_options = vcon.filter_plugins.impl.deepgram.DeepgramInitOptions(**{})
   assert(init_options.deepgram_key == "")
 
-def test_deepgram_transcribe_inline_dialog():
+
+@pytest.mark.asyncio
+async def test_deepgram_transcribe_inline_dialog():
   """ Test Deepgram plugin with an inline audio dialog """
   in_vcon = vcon.Vcon()
 
@@ -30,7 +33,7 @@ def test_deepgram_transcribe_inline_dialog():
   assert(len(in_vcon.dialog) > 0)
 
   analysis_count = len(in_vcon.analysis)
-  out_vcon = in_vcon.deepgram({})
+  out_vcon = await in_vcon.deepgram({})
   assert(len(in_vcon.analysis) == analysis_count + 1)
   assert(len(out_vcon.analysis) == analysis_count + 1)
   #print(json.dumps(out_vcon.analysis[0], indent=2))
@@ -55,16 +58,18 @@ def test_deepgram_transcribe_inline_dialog():
   out_vcon_json = out_vcon.dumps()
   json.loads(out_vcon_json )
 
-  text_list = out_vcon.get_dialog_text(0)
+  text_list = await out_vcon.get_dialog_text(0)
   print("text: {}".format(json.dumps(text_list, indent = 2)))
   assert(56 <= len(text_list) <= 62)
 
   # Run again, should not generate duplicate analysis
-  out_vcon2 = out_vcon.deepgram({})
+  out_vcon2 = await out_vcon.deepgram({})
   assert(len(out_vcon.analysis) == analysis_count + 1)
   assert(len(out_vcon2.analysis) == analysis_count + 1)
 
-def test_deepgram_transcribe_external_dialog():
+
+@pytest.mark.asyncio
+async def test_deepgram_transcribe_external_dialog():
   """ Test deepgram plugin with an externally referenced audio dialog """
   constant_date = "2023-08-31T18:26:36.987+00:00"
   in_vcon = vcon.Vcon()
@@ -97,7 +102,7 @@ def test_deepgram_transcribe_external_dialog():
   assert(len(in_vcon.dialog) > 0)
 
   analysis_count = len(in_vcon.analysis)
-  out_vcon = in_vcon.deepgram(options)
+  out_vcon = await in_vcon.deepgram(options)
   assert(len(out_vcon.analysis) == analysis_count + 1)
   #print(json.dumps(out_vcon.analysis[0], indent=2))
 
@@ -128,7 +133,9 @@ def test_deepgram_transcribe_external_dialog():
   # Save a copy for reference
   out_vcon.dump("tests/example_deepgram_external_dialog.vcon", indent = 2)
 
-def test_deepgram_no_dialog():
+
+@pytest.mark.asyncio
+async def test_deepgram_no_dialog():
   """ Test Deepgram plugin on Vcon with no dialogs """
   in_vcon = vcon.Vcon()
   vcon_json = """
@@ -149,5 +156,5 @@ def test_deepgram_no_dialog():
     )
 
   assert(in_vcon.dialog is None)
-  out_vcon = in_vcon.deepgram(options)
+  out_vcon = await in_vcon.deepgram(options)
   assert(out_vcon.analysis is None)

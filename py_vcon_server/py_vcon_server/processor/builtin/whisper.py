@@ -91,7 +91,7 @@ The **Whisper** **Vcon** **filter_plug** for transcription is used which is buil
       num_dialog
       ))
 
-    out_vcon = in_vcon.whisper(vcon_whisper_options)
+    out_vcon = await in_vcon.whisper(vcon_whisper_options)
 
     await processor_input.update_vcon(out_vcon)
 

@@ -429,7 +429,7 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
   return(in_vcon)
 
 
-def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
+async def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
   parser = argparse.ArgumentParser("vCon operations such as construction, signing, encryption, verification, decrytpion, filtering")
 
   input_group = parser.add_mutually_exclusive_group()
@@ -703,7 +703,7 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
     except ValueError:
       parser.error("get port must be an integer.  Received: {}".format(args.get[1]))
 
-    in_vcon.get(
+    await in_vcon.get(
       host = args.get[0],
       port = port,
       uuid = args.get[2]
@@ -776,7 +776,7 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
       raise Exception("Should not get here")
 
     options = plugin.options_type(**filter_options_dict)
-    in_vcon = in_vcon.filter(plugin_name, options)
+    in_vcon = await in_vcon.filter(plugin_name, options)
 
   elif(args.command == "encrypt"):
     print("state: {}".format(in_vcon._state), file=sys.stderr)
@@ -849,7 +849,7 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
     except ValueError:
       parser.error("post port must be an integer.  Received: {}".format(args.post[1]))
 
-    in_vcon.post(
+    await in_vcon.post(
       host = args.post[0],
       port = port
       )

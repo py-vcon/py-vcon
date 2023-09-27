@@ -4,6 +4,7 @@ import json
 import pydantic
 import vcon
 import vcon.filter_plugins.impl.openai
+import pytest
 
 
 TEST_EXTERNAL_AUDIO_VCON_FILE = "tests/example_external_dialog.vcon"
@@ -33,7 +34,9 @@ def test_1_options():
   options = vcon.filter_plugins.impl.openai.OpenAICompletionOptions(**options_dict)
   assert(options.input_dialogs == "")
 
-def test_2_completion_text_summary():
+
+@pytest.mark.asyncio
+async def test_2_completion_text_summary():
   """ Test OpenAICompletion FilterPlugin with transcribe ananlysis and text output """
   in_vcon = vcon.Vcon()
   in_vcon.load(TEST_EXTERNAL_AUDIO_VCON_FILE)
@@ -46,7 +49,7 @@ def test_2_completion_text_summary():
   out_vcon = None
 
   try:
-    out_vcon = in_vcon.openai_completion(options)
+    out_vcon = await in_vcon.openai_completion(options)
 
   except pydantic.error_wrappers.ValidationError as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
@@ -72,7 +75,8 @@ def test_2_completion_text_summary():
   assert(out_vcon.analysis[original_analysis_count]["model"] == TEST_MODEL)
 
 
-def test_2a_completion_object_summary():
+@pytest.mark.asyncio
+async def test_2a_completion_object_summary():
   """ Test OpenAICompletion FilterPlugin with transcribe ananlysis and completion_object output """
 
   in_vcon = vcon.Vcon()
@@ -87,7 +91,7 @@ def test_2a_completion_object_summary():
   out_vcon = None
 
   try:
-    out_vcon = in_vcon.openai_completion(options)
+    out_vcon = await in_vcon.openai_completion(options)
 
   except pydantic.error_wrappers.ValidationError as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
@@ -114,7 +118,8 @@ def test_2a_completion_object_summary():
   assert(out_vcon.analysis[original_analysis_count]["model"] == TEST_MODEL)
 
 
-def test_2b_completion_object_summary():
+@pytest.mark.asyncio
+async def test_2b_completion_object_summary():
   """ Test OpenAICompletion FilterPlugin with transcribe ananlysis and completion_object output """
 
   in_vcon = vcon.Vcon()
@@ -129,7 +134,7 @@ def test_2b_completion_object_summary():
   out_vcon = None
 
   try:
-    out_vcon = in_vcon.openai_completion(options)
+    out_vcon = await in_vcon.openai_completion(options)
 
   except pydantic.error_wrappers.ValidationError as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
@@ -160,7 +165,8 @@ def test_2b_completion_object_summary():
   assert(out_vcon.analysis[original_analysis_count]["model"] == TEST_MODEL)
 
 
-def test_3_chat_completion_object_summary():
+@pytest.mark.asyncio
+async def test_3_chat_completion_object_summary():
   """ Test OpenAIChatCompletion FilterPlugin with transcribe ananlysis and chat_completion_object output """
 
   in_vcon = vcon.Vcon()
@@ -175,7 +181,7 @@ def test_3_chat_completion_object_summary():
   out_vcon = None
 
   try:
-    out_vcon = in_vcon.openai_chat_completion(options)
+    out_vcon = await in_vcon.openai_chat_completion(options)
 
   except pydantic.error_wrappers.ValidationError as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
@@ -211,7 +217,8 @@ def test_3_chat_completion_object_summary():
   print("Response: " + out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"])
 
 
-def test_4_diarized_chat_completion_object_summary():
+@pytest.mark.asyncio
+async def test_4_diarized_chat_completion_object_summary():
   """ Test OpenAIChatCompletion FilterPlugin with transcribe ananlysis and chat_completion_object output """
 
   in_vcon = vcon.Vcon()
@@ -226,7 +233,7 @@ def test_4_diarized_chat_completion_object_summary():
   out_vcon = None
 
   try:
-    out_vcon = in_vcon.openai_chat_completion(options)
+    out_vcon = await in_vcon.openai_chat_completion(options)
 
   except pydantic.error_wrappers.ValidationError as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
@@ -262,7 +269,8 @@ def test_4_diarized_chat_completion_object_summary():
   print("Response: " + out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"])
 
 
-def test_5_openai_triggers_trasncribe():
+@pytest.mark.asyncio
+async def test_5_openai_triggers_trasncribe():
   """ Test OpenAIChatCompletion FilterPlugin with missing transcribe ananlysis, should transcribe"""
 
   in_vcon = vcon.Vcon()
@@ -280,7 +288,7 @@ def test_5_openai_triggers_trasncribe():
   out_vcon = None
 
   try:
-    out_vcon = in_vcon.openai_chat_completion(options)
+    out_vcon = await in_vcon.openai_chat_completion(options)
 
   except pydantic.error_wrappers.ValidationError as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)

@@ -3,11 +3,14 @@
 import sys
 import vcon
 import vcon.filter_plugins
+import pytest
 
 # test foo registration file
 import tests.foo_reg
 
-def test_registry():
+
+@pytest.mark.asyncio
+async def test_registry():
   plugin_names = vcon.filter_plugins.FilterPluginRegistry.get_names()
 
   print("found {} plugins: {}".format(len(plugin_names), plugin_names))
@@ -28,7 +31,7 @@ def test_registry():
   assert(plugin_foop is not None)
   assert(plugin_foop.import_plugin(init_options))
   try:
-    plugin_foop.filter(None, options)
+    await plugin_foop.filter(None, options)
     # SHould not get here
     raise Exception("Should have thrown a FilterPluginNotImplemented exception")
 
@@ -40,7 +43,7 @@ def test_registry():
   # this time test foop using its registered name as a method
   try:
     in_vcon = vcon.Vcon()
-    out_vcon = in_vcon.foop(options)
+    out_vcon = await in_vcon.foop(options)
     # SHould not get here
     raise Exception("Should have thrown a FilterPluginNotImplemented exception")
 
@@ -64,7 +67,7 @@ def test_registry():
   # this time test foop using it set as default type exclaim name as a method
   in_vcon = vcon.Vcon()
   try:
-    out_vcon = in_vcon.exclaim()
+    out_vcon = await in_vcon.exclaim()
     # Should not get here
     raise Exception("Should have thrown a AttributErro for missing options arguement")
 
@@ -73,7 +76,7 @@ def test_registry():
     pass
 
   try:
-    out_vcon = in_vcon.exclaim(options)
+    out_vcon = await in_vcon.exclaim(options)
     # SHould not get here
     raise Exception("Should have thrown a FilterPluginNotImplemented exception")
 
@@ -95,7 +98,7 @@ def test_registry():
   in_vcon = vcon.Vcon()
   options = vcon.filter_plugins.FilterPluginOptions()
   try:
-    out_vcon = in_vcon.filter("doesnotexist", options)
+    out_vcon = await in_vcon.filter("doesnotexist", options)
     raise Exception("Expected not to find plugin and throw exception")
 
   except vcon.filter_plugins.FilterPluginNotRegistered as not_reg_error:
@@ -106,7 +109,7 @@ def test_registry():
   v2 = vcon.Vcon()
 
   try:
-    v2.barp(options)
+    await v2.barp(options)
     raise Exception("expect exception as filter plugin bar trys to import a non-existant package")
 
   except vcon.filter_plugins.FilterPluginModuleNotFound as fp_no_mod_error:

@@ -5,8 +5,10 @@ unit tests for the vcon command line script
 import sys
 import io
 import os.path
-import httpretty
+#import httpretty
+import pytest_httpserver
 from tests.common_utils import empty_vcon, two_party_tel_vcon, call_data
+import pytest
 
 IN_VCON_JSON = """
 {"uuid": "0183878b-dacf-8e27-973a-91e26eb8001b", "vcon": "0.0.1", "attachments": [], "parties": [{"name": "Alice", "tel": "+12345678901"}, {"name": "Bob", "tel": "+19876543210"}]}
@@ -20,13 +22,15 @@ SMTP_MESSAGE_W_IMAGE_FILE_NAME = "tests/email_acct_prob_bob_image.txt"
 GOOGLE_MEET_RECORDING = "tests/google_meet/test meeting (2023-09-06 20:27 GMT-4) (18af10d0)"
 ZOOM_MEETING_RECORDING = "tests/zoom/Zoom recording to computer 09 18 23"
 
-def test_vcon_new(capsys):
+
+@pytest.mark.asyncio
+async def test_vcon_new(capsys):
   """ test vcon -n """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
   # Note: can provide stdin using:
   # sys.stdin = io.StringIO('{"vcon": "0.0.1", "parties": [], "dialog": [], "analysis": [], "attachments": [], "uuid": "0183866c-df92-89ab-973a-91e26eb8001b"}')
-  vcon.cli.main(["-n"])
+  await vcon.cli.main(["-n"])
 
   new_vcon_json, error = capsys.readouterr()
   # As we captured the stderr, we need to re-emmit it for unit test feedback
@@ -43,7 +47,9 @@ def test_vcon_new(capsys):
   assert(len(new_vcon.uuid) == 36)
   assert(new_vcon.vcon == "0.0.1")
 
-def test_filter_plugin_register(capsys):
+
+@pytest.mark.asyncio
+async def test_filter_plugin_register(capsys):
   """ Test cases for the register filter plugin CLI option -r """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
@@ -53,7 +59,7 @@ def test_filter_plugin_register(capsys):
   assert(len(command_args) == 8)
 
   try:
-    vcon.cli.main(command_args)
+    await vcon.cli.main(command_args)
     raise Exception("Expected this to throw vcon.filter_plugins.FilterPluginModuleNotFound as the module name is wrong")
 
   # TODO: don't know why gets FilterPluginNotRegistered
@@ -67,20 +73,22 @@ def test_filter_plugin_register(capsys):
   assert(len(command_args) == 8)
 
   try:
-    vcon.cli.main(command_args)
+    await vcon.cli.main(command_args)
     raise Exception("Expected this to throw vcon.filter_plugins.FilterPluginNotImplemented as the module name is wrong")
 
   except vcon.filter_plugins.FilterPluginNotImplemented as mod_not_impl_error:
     print("Got {}".format(mod_not_impl_error))
 
-def test_filter(capsys):
+
+@pytest.mark.asyncio
+async def test_filter(capsys):
   """ Test cases for the filter command to run filer plugins """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
   command_args = "-i {} filter transcribe -fo '{{\"model_size\":\"base\"}}'".format(VCON_WITH_DIALOG_FILE_NAME).split()
   assert(len(command_args) == 6)
 
-  vcon.cli.main(command_args)
+  await vcon.cli.main(command_args)
 
   # Get stdout and stderr
   out_vcon_json, error = capsys.readouterr()
@@ -100,7 +108,9 @@ def test_filter(capsys):
   assert(len(out_vcon.dialog) == 1)
   assert(len(out_vcon.analysis) == 3)
 
-def test_ext_recording(capsys):
+
+@pytest.mark.asyncio
+async def test_ext_recording(capsys):
   """test vcon add ex-recording"""
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
@@ -111,7 +121,7 @@ def test_ext_recording(capsys):
   sys.stdin = io.StringIO(IN_VCON_JSON)
 
   # Run the vcon command to ad externally reference recording
-  vcon.cli.main(["add", "ex-recording", WAVE_FILE_NAME, date, parties, WAVE_FILE_URL])
+  await vcon.cli.main(["add", "ex-recording", WAVE_FILE_NAME, date, parties, WAVE_FILE_URL])
 
   out_vcon_json, error = capsys.readouterr()
   # As we captured the stderr, we need to re-emmit it for unit test feedback
@@ -139,7 +149,9 @@ def test_ext_recording(capsys):
   assert(out_vcon.dialog[0].get("body") is None )
   assert(out_vcon.dialog[0].get("encoding") is None )
 
-def test_int_recording(capsys):
+
+@pytest.mark.asyncio
+async def test_int_recording(capsys):
   """test vcon add in-recording"""
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
@@ -150,7 +162,7 @@ def test_int_recording(capsys):
   sys.stdin = io.StringIO(IN_VCON_JSON)
 
   # Run the vcon command to ad externally reference recording
-  vcon.cli.main(["add", "in-recording", WAVE_FILE_NAME, date, parties])
+  await vcon.cli.main(["add", "in-recording", WAVE_FILE_NAME, date, parties])
 
   out_vcon_json, error = capsys.readouterr()
   # As we captured the stderr, we need to re-emmit it for unit test feedback
@@ -179,13 +191,15 @@ def test_int_recording(capsys):
   assert(out_vcon.dialog[0].get("signature") is None)
   assert(out_vcon.dialog[0].get("alg") is None)
 
+
 # vcon add in-email
-def test_add_email(capsys):
+@pytest.mark.asyncio
+async def test_add_email(capsys):
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
 
   # Run the vcon command to ad externally reference recording
-  vcon.cli.main(["-n", "add", "in-email", SMTP_MESSAGE_W_IMAGE_FILE_NAME])
+  await vcon.cli.main(["-n", "add", "in-email", SMTP_MESSAGE_W_IMAGE_FILE_NAME])
 
   out_vcon_json, error = capsys.readouterr()
   # As we captured the stderr, we need to re-emmit it for unit test feedback
@@ -226,13 +240,14 @@ Regards,Bob
   #assert(len(out_vcon.attachments[0]["body"]) == 402)
 
 
-def test_in_meet(capsys):
+@pytest.mark.asyncio
+async def test_in_meet(capsys):
   """ Test add of Google Meet recording as recording and text dialogs """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
 
   # Run the vcon command to ad externally reference recording
-  vcon.cli.main(["-n", "add", "in-meet", GOOGLE_MEET_RECORDING])
+  await vcon.cli.main(["-n", "add", "in-meet", GOOGLE_MEET_RECORDING])
 
   out_vcon_json, error = capsys.readouterr()
   # As we captured the stderr, we need to re-emmit it for unit test feedback
@@ -276,13 +291,14 @@ def test_in_meet(capsys):
   assert(out_vcon.dialog[3]["body"] == "test message 2")
 
 
-def test_zoom(capsys):
+@pytest.mark.asyncio
+async def test_zoom(capsys):
   """ Test add of Google Meet recording as recording and text dialogs """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
 
   # Run the vcon command to ad externally reference recording
-  vcon.cli.main(["-n", "add", "in-zoom", ZOOM_MEETING_RECORDING])
+  await vcon.cli.main(["-n", "add", "in-zoom", ZOOM_MEETING_RECORDING])
 
   out_vcon_json, error = capsys.readouterr()
   # As we captured the stderr, we need to re-emmit it for unit test feedback
@@ -334,31 +350,40 @@ def test_zoom(capsys):
   assert(out_vcon.dialog[6]["body"] == 'Reacted to "What ever fruit I ha..." with 😃')
 
 
-@httpretty.activate(verbose = True, allow_net_connect = False)
-def test_get(two_party_tel_vcon, capsys):
+@pytest.mark.asyncio
+#@httpretty.activate(verbose = True, allow_net_connect = False)
+async def test_get(two_party_tel_vcon, capsys, httpserver: pytest_httpserver.HTTPServer):
   """ Test cli get (-g, --get) HTTP get of Vcon """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
 
-  host = "example.com"
-  port = 8000
+  # host = "example.com"
+  host = httpserver.host
+  # port = 8000
+  port = httpserver.port
   uuid = "test_fake_uuid"
 
   # Hack UUID for testing
   two_party_tel_vcon._vcon_dict[vcon.Vcon.UUID] = uuid
 
-  httpretty.register_uri(
-    httpretty.GET,
-    "http://{host}:{port}{path}".format(
-      host = host,
-      port = port,
-      path = "/vcon/{}".format(uuid)
-      ),
-    body = two_party_tel_vcon.dumps()
-    )
+  headers = {"accept": vcon.Vcon.MIMETYPE_JSON}
+  httpserver.expect_request(
+      "/vcon/{}".format(uuid),
+      method = "GET",
+      headers = headers
+    ).respond_with_json(two_party_tel_vcon.dumpd())
+  # httpretty.register_uri(
+  #   httpretty.GET,
+  #   "http://{host}:{port}{path}".format(
+  #     host = host,
+  #     port = port,
+  #     path = "/vcon/{}".format(uuid)
+  #     ),
+  #   body = two_party_tel_vcon.dumps()
+  #   )
 
   # Run the vcon command to get Vcon from HTTP host
-  vcon.cli.main(["-g", host, str(port), uuid])
+  await vcon.cli.main(["-g", host, str(port), uuid])
 
   out_vcon_json, error = capsys.readouterr()
   # As we captured the stderr, we need to re-emmit it for unit test feedback
@@ -367,55 +392,74 @@ def test_get(two_party_tel_vcon, capsys):
   got_vcon = vcon.Vcon()
   got_vcon.loads(out_vcon_json)
 
-  assert(httpretty.latest_requests()[0].headers["accept"] == vcon.Vcon.MIMETYPE_JSON)
+  #assert(httpretty.latest_requests()[0].headers["accept"] == vcon.Vcon.MIMETYPE_JSON)
   assert(len(got_vcon.parties) == 2)
   assert(got_vcon.parties[0]['tel'] == call_data['source'])
   assert(got_vcon.parties[1]['tel'] == call_data['destination'])
   assert(got_vcon.uuid == uuid)
 
 
-@httpretty.activate(verbose = True, allow_net_connect = False)
-def test_post(two_party_tel_vcon, capsys):
+@pytest.mark.asyncio
+#@httpretty.activate(verbose = True, allow_net_connect = False)
+async def test_post(two_party_tel_vcon, capsys, httpserver: pytest_httpserver.HTTPServer):
   """ Test cli post (-p, --post) HTTP post of Vcon """
   # Importing vcon here so that we catch any junk stdout which will break ths CLI
   import vcon.cli
 
-  host = "example.com"
-  port = 8000
+  #host = "example.com"
+  host = httpserver.host
+  #port = 8000
+  port = httpserver.port
   uuid = "test_fake_uuid"
 
   # Hack UUID for testing
   two_party_tel_vcon._vcon_dict[vcon.Vcon.UUID] = uuid
 
-  httpretty.register_uri(
-    httpretty.POST,
-    "http://{host}:{port}/vcon".format(
-      host = host,
-      port = port
-      ),
-      status = 200
-      )
+  headers = {"Content-Type": vcon.Vcon.MIMETYPE_JSON}
+  vcon_dict_copy = two_party_tel_vcon.dumpd().copy()
+  # force request body not to match
+  # vcon_dict_copy["a"] = 2
+
+  httpserver.expect_request(
+      "/vcon",
+      method = "POST",
+      headers = headers,
+      json = vcon_dict_copy
+    ).respond_with_json(two_party_tel_vcon.dumpd())
+  # httpretty.register_uri(
+  #   httpretty.POST,
+  #   "http://{host}:{port}/vcon".format(
+  #     host = host,
+  #     port = port
+  #     ),
+  #     status = 200
+  #     )
 
   # Setup stdin for vcon CLI to read
   sys.stdin = io.StringIO(two_party_tel_vcon.dumps())
 
   # Run the vcon command to post Vcon to HTTP host
-  vcon.cli.main(["-p", host, str(port)])
+  try:
+    await vcon.cli.main(["-p", host, str(port)])
+  except Exception as e:
+    print(httpserver.check_assertions())
+    raise e
 
   out_vcon_json, error = capsys.readouterr()
   # As we captured the stderr, we need to re-emmit it for unit test feedback
   print("stderr: {}".format(error), file=sys.stderr)
 
-  posted_vcon = vcon.Vcon()
-  assert(httpretty.latest_requests()[0].headers["Content-Type"] == vcon.Vcon.MIMETYPE_JSON)
+  # posted_vcon = vcon.Vcon()
+  # The following should all be tested by httpserver
+  # assert(httpretty.latest_requests()[0].headers["Content-Type"] == vcon.Vcon.MIMETYPE_JSON)
   #print("type: " + str(type(httpretty.latest_requests()[0].body)))
   #print(httpretty.latest_requests()[0].body)
-  posted_vcon.loads(httpretty.latest_requests()[0].body)
+  # posted_vcon.loads(httpretty.latest_requests()[0].body)
 
-  assert(len(posted_vcon.parties) == 2)
-  assert(posted_vcon.parties[0]['tel'] == call_data['source'])
-  assert(posted_vcon.parties[1]['tel'] == call_data['destination'])
-  assert(posted_vcon.uuid == uuid)
+  # assert(len(posted_vcon.parties) == 2)
+  # assert(posted_vcon.parties[0]['tel'] == call_data['source'])
+  # assert(posted_vcon.parties[1]['tel'] == call_data['destination'])
+  # assert(posted_vcon.uuid == uuid)
 
   out_vcon = vcon.Vcon()
   out_vcon.loads(out_vcon_json)

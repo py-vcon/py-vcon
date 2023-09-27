@@ -65,7 +65,9 @@ def test_lm_ots_sign() -> None:
     # Expect this to be raised as we have modified signature
     pass
 
-def test_get_external_recording(two_party_tel_vcon : vcon.Vcon) -> None:
+
+@pytest.mark.asyncio
+async def test_get_external_recording(two_party_tel_vcon : vcon.Vcon) -> None:
   # Add external ref
   file_path = "examples/agent_sample.wav"
   url = "https://github.com/vcon-dev/vcon/blob/main/examples/agent_sample.wav?raw=true"
@@ -90,7 +92,7 @@ def test_get_external_recording(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(dialog_object.get("duration", None) == 0)
   assert(dialog_object.get("url", None) == url)
 
-  body_bytes = two_party_tel_vcon.get_dialog_external_recording(dialog_index)
+  body_bytes = await two_party_tel_vcon.get_dialog_external_recording(dialog_index)
   assert(len(file_content) == len(body_bytes))
   assert(file_content == body_bytes)
 

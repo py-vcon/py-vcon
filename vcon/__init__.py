@@ -233,7 +233,7 @@ class VconPluginMethodType():
 
     #print("added func: {} for obj: {} type{}".format(filter_name, vcon_instance, type(vcon_instance)))
 
-  def __call__(self, *args, **kwargs):
+  async def __call__(self, *args, **kwargs):
     obj = self.__self__
     if(len(args) != 1):
       raise AttributeError("FilterPlugin method: {} missing argument: FilterPluginOptions".format(
@@ -243,7 +243,7 @@ class VconPluginMethodType():
     # print("__call__ args[0]: {}".format(args[0])) # should be FilterPluginOptions
     # print("__call__ kwargs: {}".format(kwargs))
     # print("calling filter for {} create: {} num dialogs: {}".format(self.__function_name__, obj.created_at, len(obj.dialog)))
-    return(vcon.Vcon.filter(obj, self.__function_name__, args[0]))
+    return(await vcon.Vcon.filter(obj, self.__function_name__, args[0]))
 
 class VconPluginMethodProperty:
   def __init__(self, plugin_name : str):
@@ -801,7 +801,7 @@ class Vcon():
 
 
   @tag_dialog
-  def get_dialog_text(
+  async def get_dialog_text(
     self,
     dialog_index: int,
     find_transcript: bool = True,
@@ -869,7 +869,7 @@ class Vcon():
     elif(dialog["type"] == "recording"):
       transcript_index = self.find_transcript_for_dialog(dialog_index)
       if(transcript_index is None):
-        self.transcribe({})
+        await self.transcribe({})
         transcript_index = self.find_transcript_for_dialog(dialog_index)
 
       if(transcript_index is not None):
@@ -929,7 +929,7 @@ class Vcon():
 
 
   @tag_dialog
-  def get_dialog_body(self, dialog_index: int) -> typing.Union[str, bytes]:
+  async def get_dialog_body(self, dialog_index: int) -> typing.Union[str, bytes]:
     """
     Get the dialog body whether it is inline or an externally reference URL
 
@@ -947,7 +947,7 @@ class Vcon():
         body_bytes = self.decode_dialog_inline_body(dialog_index)
       elif("url" in dialog and dialog["url"] is not None and dialog["url"] != ""):
         # HTTP GET and verify the externally referenced recording
-        body_bytes = self.get_dialog_external_recording(dialog_index)
+        body_bytes = await self.get_dialog_external_recording(dialog_index)
       else:
         raise Exception("dialog[{}] has no body or url.  Should not have gotten here.".format(dialog_index))
 
@@ -1073,7 +1073,7 @@ class Vcon():
 
 
   @tag_dialog
-  def get_dialog_external_recording(self,
+  async def get_dialog_external_recording(self,
     dialog_index : int,
     get_kwargs: typing.Union[dict, None] = None
     ) -> bytes:
@@ -1406,7 +1406,7 @@ class Vcon():
 
 
   @tag_serialize
-  def post(
+  async def post(
     self,
     base_uri: str = "http://{host}:{port}/vcon",
     host: str = "localhost",
@@ -1566,7 +1566,7 @@ class Vcon():
 
 
   @tag_serialize
-  def get(
+  async def get(
     self,
     uuid: str,
     base_uri: str = "http://{host}:{port}{path}",
@@ -1899,7 +1899,7 @@ class Vcon():
 
 
   @tag_operation
-  def filter(self,
+  async def filter(self,
     filter_name: str,
     options: vcon.filter_plugins.FilterPluginOptions
     ) -> Vcon:
@@ -1920,7 +1920,7 @@ class Vcon():
 
     plugin = vcon.filter_plugins.FilterPluginRegistry.get(filter_name, True)
 
-    return(plugin.filter(self, options))
+    return(await plugin.filter(self, options))
 
 
   @tag_meta

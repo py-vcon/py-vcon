@@ -115,7 +115,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     return(json.loads(response.content))
 
 
-  def filter(
+  async def filter(
     self,
     in_vcon: vcon.Vcon,
     options: DeepgramOptions
@@ -174,7 +174,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
 
         # We have not already transcribed this dialog
         if(transcript_index is None):
-          recording_bytes = in_vcon.get_dialog_body(dialog_index)
+          recording_bytes = await in_vcon.get_dialog_body(dialog_index)
 
           recording_data = {
             "buffer": recording_bytes,

@@ -308,7 +308,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
 
 
 
-  def filter(
+  async def filter(
     self,
     in_vcon: vcon.Vcon,
     options: OpenAICompletionOptions
@@ -342,7 +342,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       return(out_vcon)
 
     for dialog_index in dialog_indices:
-      this_dialog_texts = in_vcon.get_dialog_text(
+      this_dialog_texts = await in_vcon.get_dialog_text(
         dialog_index,
         True, # find text from transcript analysis if dialog is a recording and transcript exists
         True  # transcribe this recording dialog if transcript does not exist
@@ -422,7 +422,7 @@ class OpenAIChatCompletion(OpenAICompletion):
     openai.api_key = init_options.openai_api_key
     self.last_stats: typing.Dict[str, int] = {}
 
-  def filter(
+  async def filter(
     self,
     in_vcon: vcon.Vcon,
     options: OpenAIChatCompletionOptions
@@ -456,7 +456,7 @@ class OpenAIChatCompletion(OpenAICompletion):
     # NOTE: the dialog_list may not be the full list of dialogs in
     # this Vcon.  So the index into dialog_list is meaningless
     for dialog_index in dialog_indices:
-      this_dialog_texts = in_vcon.get_dialog_text(
+      this_dialog_texts = await in_vcon.get_dialog_text(
         dialog_index,
         True, # find text from transcript analysis if dialog is a recording and transcript exists
         True  # transcribe this recording dialog if transcript does not exist

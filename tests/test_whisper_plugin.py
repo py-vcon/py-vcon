@@ -5,6 +5,7 @@ import datetime
 import json
 import vcon
 import vcon.filter_plugins
+import pytest
 
 def test_whisper_registration():
   """ Test registration of Whisper plugin """
@@ -24,7 +25,8 @@ def test_plugin_method_add():
   # TODO
 
 
-def test_whisper_transcribe_inline_dialog():
+@pytest.mark.asyncio
+async def test_whisper_transcribe_inline_dialog():
   """ Test Whisper plugin with an inline audio dialog """
   in_vcon = vcon.Vcon()
 
@@ -40,7 +42,7 @@ def test_whisper_transcribe_inline_dialog():
   assert(len(in_vcon.dialog) > 0)
 
   analysis_count = len(in_vcon.analysis)
-  out_vcon = in_vcon.whisper(options)
+  out_vcon = await in_vcon.whisper(options)
   assert(len(in_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
   assert(len(out_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
   #print(json.dumps(out_vcon.analysis[0], indent=2))
@@ -88,14 +90,15 @@ def test_whisper_transcribe_inline_dialog():
   json.loads(out_vcon_json )
 
   # Run again, should not generate duplicate analysis
-  out_vcon2 = out_vcon.whisper(options)
+  out_vcon2 = await out_vcon.whisper(options)
   assert(len(out_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
   assert(len(out_vcon2.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
 
   # TODO: should test more than one invokation of whisper plugin to be sure its ok to reuse
   # models for more than one transcription.
 
-def test_whisper_transcribe_external_dialog():
+@pytest.mark.asyncio
+async def test_whisper_transcribe_external_dialog():
   """ Test Whisper plugin with an externally referenced audio dialog """
   constant_date = "2023-08-31T18:26:36.987+00:00"
   in_vcon = vcon.Vcon()
@@ -132,7 +135,7 @@ def test_whisper_transcribe_external_dialog():
   assert(len(in_vcon.dialog) > 0)
 
   analysis_count = len(in_vcon.analysis)
-  out_vcon = in_vcon.transcribe(options)
+  out_vcon = await in_vcon.transcribe(options)
   assert(len(out_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
   #print(json.dumps(out_vcon.analysis[0], indent=2))
 
@@ -184,7 +187,9 @@ def test_whisper_transcribe_external_dialog():
   with open("tests/example_external_dialog.vcon", "w") as vcon_file:
     vcon_file.write(json.dumps(out_vcon_dict, indent = 2))
 
-def test_whisper_no_dialog():
+
+@pytest.mark.asyncio
+async def test_whisper_no_dialog():
   """ Test Whisper plugin on Vcon with no dialogs """
   in_vcon = vcon.Vcon()
   vcon_json = """
@@ -209,5 +214,5 @@ def test_whisper_no_dialog():
     )
 
   assert(in_vcon.dialog is None)
-  out_vcon = in_vcon.transcribe(options)
+  out_vcon = await in_vcon.transcribe(options)
   assert(out_vcon.analysis is None)

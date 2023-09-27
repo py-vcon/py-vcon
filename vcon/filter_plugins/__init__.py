@@ -194,7 +194,7 @@ class FilterPlugin():
     self.options_type = options_type
 
 
-  def filter(
+  async def filter(
     self,
     in_vcon: Vcon,
     options: FilterPluginOptions
@@ -481,7 +481,7 @@ class FilterPluginRegistration:
     return(plugin.options_type(*args, **kwargs))
 
 
-  def filter(
+  async def filter(
     self,
     in_vcon : vcon.Vcon,
     options: FilterPluginOptions
@@ -508,12 +508,12 @@ class FilterPluginRegistration:
     if(not isinstance(options, FilterPluginOptions)):
       raise FilterPluginNotImplemented(
         "plugin: {} class: {} method: filter should take an instance of class derived from FilterPluginOptions, got: {}".format(
-        seld._name,
+        self.name,
         self._class_name,
         type(options)
         ))
 
-    return(plugin.filter(in_vcon, options))
+    return(await plugin.filter(in_vcon, options))
 
 class FilterPluginRegistry:
   """ class/scope for Vcon filter plugin registrations and defaults for plugin types """

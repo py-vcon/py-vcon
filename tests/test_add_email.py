@@ -1,11 +1,13 @@
 import os
 import vcon
+import pytest
 
 
 SMTP_MESSAGE_W_IMAGE_FILE_NAME = "tests/email_acct_prob_bob_image.txt"
 
 
-def test_add_email_multipart():
+@pytest.mark.asyncio
+async def test_add_email_multipart():
   """ Test import of a SMTP message with multipart body """
 
   out_vcon = vcon.Vcon()
@@ -48,7 +50,7 @@ def test_add_email_multipart():
   #assert(out_vcon.attachments[0]["encoding"] is "base64")
   #assert(len(out_vcon.attachments[0]["body"]) == 402)
 
-  texts = out_vcon.get_dialog_text(0)
+  texts = await out_vcon.get_dialog_text(0)
   assert(len(texts) == 1)
   assert(texts[0]["text"] == 'Alice:Please find the image attached.\r\n\r\nRegards,Bob\r\n')
 

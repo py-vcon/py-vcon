@@ -84,7 +84,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
     self.whisper_model = stable_whisper.load_model(self.whisper_model_size)
     #stable_whisper.modify_model(self.whisper_model)
 
-  def filter(
+  async def filter(
     self,
     in_vcon: vcon.Vcon,
     options: WhisperOptions
@@ -160,7 +160,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
           mime_type in self._supported_media
           ):
 
-          body_bytes = in_vcon.get_dialog_body(dialog_index)
+          body_bytes = await in_vcon.get_dialog_body(dialog_index)
           if(body_bytes is not None and len(body_bytes)):
             with tempfile.TemporaryDirectory() as temp_dir:
               transcript = None
