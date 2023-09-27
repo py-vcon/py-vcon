@@ -1,8 +1,13 @@
 #!/bin/bash
 
 # configuration
+if [ -z "${IMAGE_INSTANCE}" ]
+then
+  echo "IMAGE_INSTANCE not set"
+  exit 3
+fi
 
-IMAGE_NAME="vcon_core_pydev3_8"
+IMAGE_NAME="vcon_core_pydev3_8_${IMAGE_INSTANCE}"
 CONTAINER_NAME="${IMAGE_NAME}_container"
 CONTAINER_HOSTNAME="${IMAGE_NAME}_${HOSTNAME}"
 
