@@ -7,5 +7,6 @@ pytest-asyncio
 pytest-dependency
 build
 twine
-httpretty
+pytest_httpserver
+
 
