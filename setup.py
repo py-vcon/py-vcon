@@ -70,7 +70,7 @@ setuptools.setup(
   data_files=[
     ("vcon", ["vcon/docker_dev/pip_package_list.txt"])],
   python_requires=">=3.7",
-  tests_require=['pytest', 'pytest-asyncio', 'pytest-dependency'],
+  tests_require=['pytest', 'pytest-asyncio', 'pytest-dependency', "pytest_httpserver"],
   install_requires = REQUIRES,
   scripts=['vcon/bin/vcon'],
   # entry_points={
