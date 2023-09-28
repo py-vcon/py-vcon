@@ -1,3 +1,8 @@
+# The py_vcon_server Python Package
+
+Please pardon the lack of content here.  We are still under construction.
+
+The first release and documentation comming soon.
 
 ## Table of Contents
 
