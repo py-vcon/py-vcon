@@ -26,8 +26,8 @@ In vcon directory (root containing setup.py and vcon sub-directory):
 
 This creates sub-directory dist containing (x.x in the names below represents the version number):
 
-  * vcon-x.x-py3-none-any.whl
-  * vcon-x.x.tar.gz
+  * py-vcon-x.x-py3-none-any.whl
+  * py-vcon-x.x.tar.gz
 
 Push the package install files up to the pypi repo.
 
@@ -55,7 +55,9 @@ For the test repo:
     cp -rp certs examples tests /tmp
     cp -rp py_vcon_server/tests /tmp/py_vcon_server
 
-For the real/public repo, use the above steps, but substitute step 3 with the following:
+For the real/public repo, use the above steps, but substitute step 1 and 3 with the following:
+
+    Go to https://pypi.org/manage/account/
 
     python3 -m twine upload dist/*
 
