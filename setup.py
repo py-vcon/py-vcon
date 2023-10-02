@@ -58,10 +58,10 @@ def get_version() -> str:
 __version__ = get_version()
 
 setuptools.setup(
-  name='py-vcon',
+  name='python-vcon',
   version=__version__,
   # version="0.1",
-  description='vCon container manipulation package',
+  description='vCon conversational data container manipulation package',
   url='http://github.com/py-vcon/py-vcon',
   author='Dan Petrie',
   author_email='dan.vcon@sipez.com',
