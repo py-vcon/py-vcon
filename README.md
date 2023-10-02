@@ -1,4 +1,4 @@
-# The Repo for the py-vcon and py-vcon-server Projects
+# The Repo for the python-vcon and py-vcon-server Projects
 
 ## Introduction
 
