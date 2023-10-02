@@ -70,7 +70,7 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
 
 ## Installing py-vcon
 
-    pip install py-vcon
+    pip install python-vcon
 
 ## Vcon Filter Plugins
 
