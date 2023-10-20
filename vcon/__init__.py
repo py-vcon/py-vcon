@@ -683,11 +683,9 @@ class Vcon():
         party_index = self.set_party_parameter("mailto", email_address[1])
         self.set_party_parameter("name", email_address[0], party_index)
         parties_found = [party_index]
-        if(sender_index is None):
-          sender_index = parties_found[0]
 
-      elif(sender_index is None):
-          sender_index = party_index
+      if(sender_index is None):
+        sender_index = parties_found[0]
 
       party_indices.extend(parties_found)
 
