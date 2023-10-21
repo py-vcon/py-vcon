@@ -4,6 +4,7 @@ from pathlib import Path
 VCON_STORAGE_TYPE = os.getenv("VCON_STORAGE_TYPE", "redis")
 VCON_STORAGE_URL = os.getenv("STORAGE_URL", "redis://localhost")
 QUEUE_DB_URL = os.getenv("STORAGE_URL", VCON_STORAGE_URL)
+PIPELINE_DB_URL = os.getenv("PIPELINE_DB_URL", VCON_STORAGE_URL)
 STATE_DB_URL = os.getenv("STATE_DB_URL", VCON_STORAGE_URL)
 REST_URL = os.getenv("REST_URL", "http://localhost:8000")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
