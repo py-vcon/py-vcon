@@ -30,6 +30,7 @@ class EmptyJobQueue(Exception):
 class QueueDoesNotExist(Exception):
   """ Raised when attempting to operate on a queue which does not exist. """
 
+
 class JobDoesNotExist(Exception):
   """ Raised when attempting to operate on an in progress job which does not exist. """
 
