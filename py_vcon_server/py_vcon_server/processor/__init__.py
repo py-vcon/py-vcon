@@ -270,6 +270,8 @@ date_examples = [ int(time.time()),
   ]
 
 
+# TODO: use the following to avoid getting arrays or parameters set to None???
+# bar.dict(exclude_unset=True)
 class VconObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
   vcon: str = pydantic.Field(
     title = "vCon format version",
@@ -301,7 +303,7 @@ class VconProcessorInitOptions(pydantic.BaseModel):
   """
 
 
-class VconProcessorOptions(pydantic.BaseModel):
+class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
   """ Base class options for **VconProcessor.processor** method """
   input_vcon_index: int = pydantic.Field(
     title = "VconProcessorIO input vCon index",
@@ -479,7 +481,7 @@ class VconProcessorIO():
 
     return(response_output)
 
-class VconProcessor:
+class VconProcessor():
   """
   Abstract base class to all vCon processors.
 
