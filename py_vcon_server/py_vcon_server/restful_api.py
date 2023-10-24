@@ -50,9 +50,11 @@ def log_exception(exception: Exception):
 # These are used to label different sections or groups of FastAPI entry points
 SERVER_TAG = "Admin: Servers"
 QUEUE_TAG = "Admin: Job Queues"
+PIPELINE_CRUD_TAG = "Admin: Pipelines"
 IN_PROGRESS_TAG = "Admin: In Progress Jobs"
 VCON_TAG = "vCon Storage CRUD"
 PROCESSOR_TAG = "vCon Processors"
+PIPELINE_RUN_TAG "vCon Pipelines"
 
 openapi_tags = [
   {
@@ -66,6 +68,14 @@ openapi_tags = [
   {
     "name": QUEUE_TAG,
     "description": "Entry points to create, operate on, add to and delete job queues",
+    # "externalDocs": {
+    #   "description": "online docs",
+    #   "url": None
+    # }
+  },
+  {
+    "name": PIPELINE_CRUD_TAG,
+    "description": "Entry points to create, update and delete pipelines",
     # "externalDocs": {
     #   "description": "online docs",
     #   "url": None
@@ -90,6 +100,14 @@ openapi_tags = [
   {
     "name": PROCESSOR_TAG,
     "description": "Entry points to run a single processor on a vCon"
+    # "externalDocs": {
+    #   "description": "online docs",
+    #   "url": None
+    # }
+  },
+  {
+    "name": PIPELINE_RUN_TAG,
+    "description": "Entry points to run a pipeline of processor(s) on a vCon"
     # "externalDocs": {
     #   "description": "online docs",
     #   "url": None
