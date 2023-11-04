@@ -54,6 +54,8 @@ async def startup():
 
   py_vcon_server.queue.JOB_QUEUE = py_vcon_server.queue.JobQueue(py_vcon_server.settings.QUEUE_DB_URL)
 
+  py_vcon_server.pipeline.PIPELINE_DB = py_vcon_server.pipeline.PipelineDb(py_vcon_server.settings.PIPELINE_DB_URL)
+
   await py_vcon_server.states.SERVER_STATE.running()
   logger.info("event startup completed")
 
@@ -67,6 +69,8 @@ async def shutdown():
   await py_vcon_server.db.VconStorage.teardown()
 
   await py_vcon_server.queue.JOB_QUEUE.shutdown()
+
+  await py_vcon_server.pipeline.PIPELINE_DB.shutdown()
 
   await py_vcon_server.states.SERVER_STATE.unregister()
 
