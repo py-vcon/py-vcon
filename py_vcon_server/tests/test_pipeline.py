@@ -207,6 +207,16 @@ async def test_pipeline_restapi():
     assert(delete_response.status_code == 404 or
       delete_response.status_code == 204)
 
+    get_response = client.get(
+        "/pipelines"
+      )
+    assert(get_response.status_code == 200)
+    pipe_list = get_response.json()
+    print("pipe list: {}".format(pipe_list))
+    assert(isinstance(pipe_list, list))
+    assert(not pipe_name in pipe_list)
+    assert(not bad_pipe_name in pipe_list)
+
     set_response = client.put(
         "/pipeline/{}".format(
           pipe_name
@@ -232,6 +242,16 @@ async def test_pipeline_restapi():
     assert(set_response.status_code == 204)
     assert(len(resp_content) == 0)
     #assert(resp_json["detail"] == "processor: foo not registered")
+
+    get_response = client.get(
+        "/pipelines"
+      )
+    assert(get_response.status_code == 200)
+    pipe_list = get_response.json()
+    print("pipe list: {}".format(pipe_list))
+    assert(isinstance(pipe_list, list))
+    assert(pipe_name in pipe_list)
+    assert(not bad_pipe_name in pipe_list)
 
     get_response = client.get(
         "/pipeline/{}".format(
@@ -276,4 +296,14 @@ async def test_pipeline_restapi():
       )
     assert(delete_response.status_code == 204)
     assert(len(delete_response.content) == 0)
+
+    get_response = client.get(
+        "/pipelines"
+      )
+    assert(get_response.status_code == 200)
+    pipe_list = get_response.json()
+    print("pipe list: {}".format(pipe_list))
+    assert(isinstance(pipe_list, list))
+    assert(not pipe_name in pipe_list)
+    assert(not bad_pipe_name in pipe_list)
 
