@@ -6,6 +6,7 @@ import pydantic
 import py_vcon_server
 import py_vcon_server.logging_utils
 import py_vcon_server.settings
+import py_vcon_server.pipeline
 import py_vcon_server.restful_api
 from . import __version__
 import vcon
@@ -425,7 +426,7 @@ def init(restapi):
 
     logger.debug( "job: {} added to queue: {}".format(job, name))
 
-    # TODO: return queue length ???
+    # return queue length
     return(fastapi.responses.JSONResponse(content = queue_length))
 
 
@@ -605,4 +606,56 @@ def init(restapi):
     logger.debug( "job: {} removed from in progress hash".format(job_id))
 
     # No return, should respond with 204
+
+
+  @restapi.put("/pipeline/{name}",
+    status_code = 204,
+    tags = [ py_vcon_server.restful_api.PIPELINE_CRUD_TAG ])
+  async def update_pipeline(
+      name: str,
+      pipe_def: py_vcon_server.pipeline.PipelineDefinition,
+      validate_processor_options: bool = True
+    ) -> None:
+    """
+    Add new or replace existing pipeline with the named pipeline definition.
+
+    VconProcessorOptions: bool - validate the ProcessorOptions in the pipeline.
+      The default and recommendation is to validate.  However if the named 
+      processor is not installed on this machine, validation will fail.
+
+    Returns: None
+    """
+    try:
+      logger.debug("validate: {} setting pipeline: {} to: {}".format(validate_processor_options, name, pipe_def))
+      for proc_opt in pipe_def.processors:
+        try:
+          logger.debug("getting proc for: {}".format(
+            proc_opt.processor_name))
+          # Get the processor form the registry
+          processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
+            proc_opt.processor_name)
+
+          # Validate the processor options
+          processor_inst.processor_options_class()(**proc_opt.processor_options.dict())
+
+        # catch processor not found
+        except py_vcon_server.processor.VconProcessorNotRegistered as e:
+          if(validate_processor_options):
+            py_vcon_server.restful_api.log_exception(e)
+            return(py_vcon_server.restful_api.ValidationError("processor: {} not registered".format(
+              proc_opt.processor_name)))
+
+          # Validation disabled, just warn
+          logger.warning("processor: {} not registered".format(
+            proc_opt.processor_name))
+          logger.exception(e)
+
+      await py_vcon_server.pipeline.PIPELINE_DB.set_pipeline(name, pipe_def)
+      logger.debug("Saved pipeline: {}".format(name))
+
+    except Exception as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
+    logger.debug( "pipeline: {} added".format(name))
 
