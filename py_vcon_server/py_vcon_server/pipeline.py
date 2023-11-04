@@ -10,6 +10,7 @@ logger = py_vcon_server.logging_utils.init_logger(__name__)
 PIPELINE_NAMES_KEY = "pipelines"
 PIPELINE_NAME_PREFIX = "pipeline:"
 
+PIPELINE_DB = None
 
 class PipelineNotFound(Exception):
   """ Raised when Pipeline not found in the DB """
