@@ -2,6 +2,7 @@
 import pydantic
 import pytest
 import pytest_asyncio
+import fastapi.testclient
 import py_vcon_server.pipeline
 from py_vcon_server.settings import PIPELINE_DB_URL
 
@@ -120,30 +121,29 @@ def test_pipeline_objects():
   assert(pipe3_def.processors[1].processor_name == "whisper_base")
   assert(pipe3_def.processors[1].processor_options.output_types == ["vendor"])
 
+PIPE_DEF1_DICT = {
+  "pipeline_options": {
+      "timeout": 33
+    },
+  "processors": [
+      {
+        "processor_name": "foo",
+        "processor_options": {
+            "a": 3,
+            "b": "abc"
+          }
+      },
+      {
+        "processor_name": "whisper_base",
+        "processor_options":  {
+            "output_types": ["vendor"]
+          }
+      }
+    ]
+}
 
 @pytest.mark.asyncio
 async def test_pipeline_db():
-
-  pipe_def_dict = {
-    "pipeline_options": {
-        "timeout": 33
-      },
-    "processors": [
-        {
-          "processor_name": "foo",
-          "processor_options": {
-              "a": 3,
-              "b": "abc"
-            }
-        },
-        {
-          "processor_name": "whisper_base",
-          "processor_options":  {
-              "output_types": ["vendor"]
-            }
-        }
-      ]
-  }
 
   assert(PIPELINE_DB is not None)
 
@@ -154,7 +154,7 @@ async def test_pipeline_db():
     # Ignore as this may have been cleaned up in prior test run
     pass
 
-  await PIPELINE_DB.set_pipeline("first_pipe", pipe_def_dict)
+  await PIPELINE_DB.set_pipeline("first_pipe", PIPE_DEF1_DICT)
 
   pipe_got = await PIPELINE_DB.get_pipeline("first_pipe")
   assert(pipe_got.pipeline_options.timeout == 33)
@@ -190,4 +190,37 @@ async def test_pipeline_db():
   except py_vcon_server.pipeline.PipelineNotFound:
     # expected as it was already deleted
     pass
+
+
+@pytest.mark.asyncio
+async def test_pipeline_restapi():
+
+  pipe_name = "unit_test_pipe1"
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = PIPE_DEF1_DICT, 
+        params = { "validate_processor_options": True}
+      )
+    resp_json = set_response.json()
+    print("response content: {}".format(resp_json))
+    assert(set_response.status_code == 422)
+    assert(resp_json["detail"] == "processor: foo not registered")
+
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = PIPE_DEF1_DICT,
+        params = { "validate_processor_options": False}
+      )
+    print("response dir: {}".format(dir(set_response)))
+    resp_content = set_response.content
+    print("response content: {}".format(resp_content))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+    #assert(resp_json["detail"] == "processor: foo not registered")
 
