@@ -715,3 +715,30 @@ def init(restapi):
       return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
     logger.debug("deleted pipeline: {}".format(name))
+
+
+  @restapi.get("/pipelines",
+    response_model = typing.List[str],
+    tags = [ py_vcon_server.restful_api.PIPELINE_CRUD_TAG ])
+  async def get_pipeline_names():
+    """
+    Get the list of names of all pipelines in the DB.
+
+    Parameters: none
+
+    Returns:
+    List[str] - names of pipelines in the DB
+    """
+    try:
+      logger.debug("getting pipeline names")
+      name_set = await py_vcon_server.pipeline.PIPELINE_DB.get_pipeline_names()
+      names = list(name_set)
+
+    except Exception as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
+    logger.debug("Returning list of pipelines: {}".format(names))
+
+    return(fastapi.responses.JSONResponse(content = names))
+
