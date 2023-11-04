@@ -689,3 +689,29 @@ def init(restapi):
 
     return(fastapi.responses.JSONResponse(content = pipe_def.dict()))
 
+
+  @restapi.delete("/pipeline/{name}",
+    status_code = 204,
+    tags = [ py_vcon_server.restful_api.PIPELINE_CRUD_TAG ])
+  async def delete_pipeline(name: str) -> None:
+    """
+    Delete the definition of the named pipeline from the DB.
+
+    Parameters:
+      **name**: str - name of the pipeline to retrieve
+
+   Returns: none
+    """
+    try:
+      logger.debug("deleting pipeline: {}".format(name))
+      pipe_def = await py_vcon_server.pipeline.PIPELINE_DB.delete_pipeline(name)
+
+    except py_vcon_server.pipeline.PipelineNotFound as nf:
+      logger.info("Error: pipeline: {} not found".format(name))
+      return(py_vcon_server.restful_api.NotFoundResponse("pipeline: {} not found".format(name)))
+
+    except Exception as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
+    logger.debug("deleted pipeline: {}".format(name))
