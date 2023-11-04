@@ -198,6 +198,14 @@ async def test_pipeline_restapi():
   pipe_name = "unit_test_pipe1"
   bad_pipe_name = pipe_name + "_bad"
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    # Clean up junk left over from prior tests
+    delete_response = client.delete(
+        "/pipeline/{}".format(
+          pipe_name
+        )
+      )
+    assert(delete_response.status_code == 404 or
+      delete_response.status_code == 204)
 
     set_response = client.put(
         "/pipeline/{}".format(
@@ -250,4 +258,22 @@ async def test_pipeline_restapi():
     assert(pipe_def.processors[0].processor_options.b == "abc")
     assert(pipe_def.processors[1].processor_name == "whisper_base")
     assert(pipe_def.processors[1].processor_options.output_types == ["vendor"])
+
+    # Non existant pipeline
+    delete_response = client.delete(
+        "/pipeline/{}".format(
+          bad_pipe_name
+        )
+      )
+    assert(delete_response.status_code == 404)
+    del_json = delete_response.json()
+    assert(del_json["detail"] == "pipeline: unit_test_pipe1_bad not found")
+
+    delete_response = client.delete(
+        "/pipeline/{}".format(
+          pipe_name
+        )
+      )
+    assert(delete_response.status_code == 204)
+    assert(len(delete_response.content) == 0)
 
