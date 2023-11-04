@@ -54,7 +54,7 @@ PIPELINE_CRUD_TAG = "Admin: Pipelines"
 IN_PROGRESS_TAG = "Admin: In Progress Jobs"
 VCON_TAG = "vCon Storage CRUD"
 PROCESSOR_TAG = "vCon Processors"
-PIPELINE_RUN_TAG "vCon Pipelines"
+PIPELINE_RUN_TAG = "vCon Pipelines"
 
 openapi_tags = [
   {
