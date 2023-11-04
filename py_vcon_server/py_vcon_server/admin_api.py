@@ -659,3 +659,33 @@ def init(restapi):
 
     logger.debug( "pipeline: {} added".format(name))
 
+
+  @restapi.get("/pipeline/{name}",
+    response_model = py_vcon_server.pipeline.PipelineDefinition,
+    tags = [ py_vcon_server.restful_api.PIPELINE_CRUD_TAG ])
+  async def get_pipeline(name: str):
+    """
+    Get the definition of the named pipeline from the DB.
+
+    Parameters:
+      **name**: str - name of the pipeline to retrieve
+
+   Returns:
+      PipelineDefinition for named pipeline
+    """
+    try:
+      logger.debug("getting pipeline: {}".format(name))
+      pipe_def = await py_vcon_server.pipeline.PIPELINE_DB.get_pipeline(name)
+
+    except py_vcon_server.pipeline.PipelineNotFound as nf:
+      logger.info("Error: pipeline: {} not found".format(name))
+      return(py_vcon_server.restful_api.NotFoundResponse("pipeline: {} not found".format(name)))
+
+    except Exception as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
+    logger.debug("Returning pipeline: {}".format(name))
+
+    return(fastapi.responses.JSONResponse(content = pipe_def.dict()))
+
