@@ -196,6 +196,7 @@ async def test_pipeline_db():
 async def test_pipeline_restapi():
 
   pipe_name = "unit_test_pipe1"
+  bad_pipe_name = pipe_name + "_bad"
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
 
     set_response = client.put(
@@ -223,4 +224,30 @@ async def test_pipeline_restapi():
     assert(set_response.status_code == 204)
     assert(len(resp_content) == 0)
     #assert(resp_json["detail"] == "processor: foo not registered")
+
+    get_response = client.get(
+        "/pipeline/{}".format(
+          bad_pipe_name
+        )
+      )
+
+    assert(get_response.status_code == 404)
+
+    get_response = client.get(
+        "/pipeline/{}".format(
+          pipe_name
+        )
+      )
+
+    assert(get_response.status_code == 200)
+    pipe_json = get_response.json()
+    pipe_def = py_vcon_server.pipeline.PipelineDefinition(**pipe_json)
+    print("got pipeline: {}".format(pipe_json))
+    assert(pipe_def.pipeline_options.timeout == 33)
+    assert(len(pipe_def.processors) == 2)
+    assert(pipe_def.processors[0].processor_name == "foo")
+    assert(pipe_def.processors[0].processor_options.a == 3)
+    assert(pipe_def.processors[0].processor_options.b == "abc")
+    assert(pipe_def.processors[1].processor_name == "whisper_base")
+    assert(pipe_def.processors[1].processor_options.output_types == ["vendor"])
 
