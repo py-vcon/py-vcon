@@ -23,11 +23,10 @@ WhisperOptions = py_vcon_server.processor.FilterPluginProcessor.makeOptions(CLAS
 class Whisper(py_vcon_server.processor.FilterPluginProcessor):
   """ Whisper OpenAI transcription binding for **VconProcessor** """
   plugin_version = "0.0.1"
-  plugin_name = "whisper"
+  plugin_name = PLUGIN_NAME
   options_class =  WhisperOptions
   headline = "Whisper OpenAI transcription binding for **VconProcessor**  with model size: {}".format(
     PLUGIN.plugin().init_options().model_size)
-  # TODO: add the following to description: 
   plugin_description = """
 
 This **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.
