@@ -609,7 +609,7 @@ class VconProcessor():
   async def process(
     self,
     processor_input: VconProcessorIO,
-    options: VconProcessorInitOptions
+    options: VconProcessorOptions
     ) -> VconProcessorIO:
     """
     Abstract method for processing a **Vcon**.  Must
@@ -841,4 +841,74 @@ class VconProcessorRegistry:
       raise VconProcessorNotInstantiated("VconProcessor not instantiated for name: {}".format(name))
 
     return(registration._processor_instance)
+
+
+class FilterPluginProcessor(VconProcessor):
+  """ Abstract Processor for **Vcon FilterPlugins** """
+
+  @staticmethod
+  def makeInitOptions(name_prefix: str, plugin: vcon.filter_plugins.FilterPluginRegistration):
+    return(
+      type(
+          name_prefix + "InitOptions",
+          (py_vcon_server.processor.VconProcessorInitOptions, plugin.plugin().init_options_type),
+          {}
+        )
+      )
+
+
+  @staticmethod
+  def makeOptions(name_prefix: str, plugin: vcon.filter_plugins.FilterPluginRegistration):
+    return(
+      type(
+          name_prefix + "Options",
+          (py_vcon_server.processor.VconProcessorOptions, plugin.plugin().options_type),
+          {}
+        )
+      )
+
+
+  def __init__(
+    self,
+    init_options: VconProcessorInitOptions
+    ):
+
+    super().__init__(
+      "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+      self.headline + self.plugin_description,
+      self.plugin_version,
+      init_options,
+      self.options_class,
+      True # modifies a Vcon
+      )
+
+
+  async def process(self,
+    processor_input: VconProcessorIO,
+    options: VconProcessorOptions
+    ) -> VconProcessorIO:
+    """
+    Run the indicated **Vcon** through the self._plugin_name **Vcon** **filter_plugin**
+    """
+
+    index = options.input_vcon_index
+    in_vcon: vcon.Vcon = await processor_input.get_vcon(index)
+    if(in_vcon is None):
+      raise Exception("Vcon not found for index: {}".format(index))
+
+    if(in_vcon.dialog is not None):
+      num_dialog = len(in_vcon.dialog)
+    else:
+      num_dialog = None
+    logger.debug("{} filter_plugin on Vcon UUID: {} dialog count: {}".format(
+      self.plugin_name,
+      in_vcon.uuid,
+      num_dialog
+      ))
+
+    out_vcon = await in_vcon.filter(self.plugin_name, options)
+
+    await processor_input.update_vcon(out_vcon)
+
+    return(processor_input)
 
