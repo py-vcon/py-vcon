@@ -194,6 +194,11 @@ class FilterPlugin():
     self.options_type = options_type
 
 
+  def init_options(self) -> FilterPluginInitOptions:
+    """ Get the initialization options used for this plugin """
+    return(self._init_options)
+
+
   async def filter(
     self,
     in_vcon: Vcon,
