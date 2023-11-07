@@ -16,6 +16,7 @@ uuid6
 python-json-logger
 python-multipart
 
+
 # whisper dependencies
 ffmpeg-python
 more-itertools
@@ -26,6 +27,5 @@ whisper
 # stable-ts dependencies:
 numpy
 torch
-# Need to hold stable-ts back until newer version (> 20230314) of whisper is available on pip
-stable-ts < 2.0.0
+stable-ts
 
