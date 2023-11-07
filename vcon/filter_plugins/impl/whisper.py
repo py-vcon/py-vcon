@@ -222,7 +222,12 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                 with tempfile.NamedTemporaryFile(prefix= temp_dir + os.sep, suffix=".srt") as temp_srt_file:
                   # stable_whisper has some print statements that we want to go to stderr
                   with contextlib.redirect_stdout(sys.stderr):
-                    stable_whisper.results_to_word_srt(transcript, temp_srt_file.name)
+                    # Function name changed in version 2.X
+                    if(int(stable_whisper.__version__.split('.')[0]) >= 2):
+                      func = stable_whisper.result_to_srt_vtt
+                    else:
+                      func = stable_whisper.results_to_word_srt
+                    func(transcript, temp_srt_file.name)
                   srt_bytes = temp_srt_file.read()
                   # TODO: should body be json.loads'd
                   out_vcon.add_analysis_transcript(
@@ -239,7 +244,11 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                 # Getting junk on stdout from stable_whisper.  Redirect it.
                 with contextlib.redirect_stdout(sys.stderr):
                   with tempfile.NamedTemporaryFile(prefix= temp_dir + os.sep, suffix=".ass") as temp_ass_file:
-                    stable_whisper.results_to_sentence_word_ass(transcript, temp_ass_file.name)
+                    if(int(stable_whisper.__version__.split('.')[0]) >= 2):
+                      func = stable_whisper.result_to_ass
+                    else:
+                      func = stable_whisper.results_to_sentence_word_ass
+                    func(transcript, temp_ass_file.name)
                     ass_bytes = temp_ass_file.read()
                     # TODO: should body be json.loads'd
                     out_vcon.add_analysis_transcript(
