@@ -23,7 +23,7 @@ RUN  pip3 install -r /root/install/pip_dev_package_list.txt
 COPY pip_package_list.txt /root/install
 RUN  pip3 install -r /root/install/pip_package_list.txt
 
-# conserver additional pip requirements
+# server additional pip requirements
 #COPY pip_server_requirements.txt /root/install
 #RUN  pip3 install -r /root/install/pip_server_requirements.txt
 
