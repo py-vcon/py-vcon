@@ -16,7 +16,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get install -y $(grep -vE "^\s*#" /root/install/apt_package_list.txt | tr "\n" " ")
 
 # pip stuff
-RUN /usr/bin/python3.8 -m pip install --upgrade pip
+RUN /usr/bin/python3 -m pip install --upgrade pip
+RUN /usr/bin/python3 -m pip install --upgrade pip
 #RUN pip3 list --outdated --format=freeze | grep -v '^\-e' | cut -d = -f 1 | xargs -n1 pip3 install -U
 COPY pip_dev_package_list.txt /root/install
 RUN  pip3 install -r /root/install/pip_dev_package_list.txt
