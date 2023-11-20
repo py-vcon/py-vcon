@@ -196,6 +196,10 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                   logger.debug("providing whisper options: {}".format(whisper_options))
 
                   transcript = model.transcribe(temp_audio_file.name, **whisper_options)
+                  logger.debug("whisper transcript type: {}".format(type(transcript)))
+                  # Newer version of whisper returns object instead of dict
+                  if(not isinstance(transcript, dict)):
+                    transcript = transcript.to_dict()
                   # dict_keys(['text', 'segments', 'language'])
               # aggressive allows more variation
               #stabilized_segments = stable_whisper.stabilize_timestamps(transcript["segments"], aggressive=True)
@@ -227,6 +231,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                       func = stable_whisper.result_to_srt_vtt
                     else:
                       func = stable_whisper.results_to_word_srt
+                    logger.debug("starting srt")
                     func(transcript, temp_srt_file.name)
                   srt_bytes = temp_srt_file.read()
                   # TODO: should body be json.loads'd
@@ -248,6 +253,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                       func = stable_whisper.result_to_ass
                     else:
                       func = stable_whisper.results_to_sentence_word_ass
+                    logger.debug("starting ass")
                     func(transcript, temp_ass_file.name)
                     ass_bytes = temp_ass_file.read()
                     # TODO: should body be json.loads'd
@@ -259,6 +265,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                       encoding = "none",
                       **analysis_extras
                       )
+              logger.debug("done with whisper transcription")
 
           else:
             pass # ignore??
