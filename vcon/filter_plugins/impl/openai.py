@@ -1,16 +1,23 @@
 """ OpenAI FilterPlugin implentation """
 import typing
 import datetime
+import logging
 import pydantic
 import openai
+import pyjq
+import tenacity
 import vcon
 import vcon.filter_plugins
-import pyjq
 
 VERBOSE = False
 
 logger = vcon.build_logger(__name__)
 
+OPENAI_MAJOR_VERSION = int(openai.__version__.split('.')[0])
+if(OPENAI_MAJOR_VERSION < 1):
+  OPENAI_RETRY_EXCEPTIONS = (openai.error.ServiceUnavailableError, openai.error.Timeout)
+else:
+  OPENAI_RETRY_EXCEPTIONS = (openai.APITimeoutError)
 
 class OpenAICompletionInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
@@ -205,6 +212,84 @@ on the new **analysis** object in the **Vcon**.
     )
 
 
+class OpenAIClient():
+  """ Abstration to hide OpenAI API difference between 0.X and 1.X """
+  def __init__(
+      self,
+      init_options,
+      name: str
+    ):
+    if(init_options.openai_api_key is None or
+      init_options.openai_api_key == ""):
+      logger.warning("OpenAIClient in {} plugin: key not set.  Plugin will be a no-op".format(name))
+      self.key_set = False
+    else:
+      self.key_set = True
+
+
+    if(OPENAI_MAJOR_VERSION < 1):
+      openai.api_key = init_options.openai_api_key
+    else:
+      self.client = openai.AsyncOpenAI(
+          api_key = init_options.openai_api_key
+        )
+
+
+  async def completions(
+      self,
+      options,
+      text_body
+    ):
+    """ Generative AI completion on single text chunk """
+    if(OPENAI_MAJOR_VERSION < 1):
+      completion_result = openai.Completion.create(
+          model = options.model,
+          prompt = options.prompt + text_body,
+          max_tokens = options.max_tokens,
+          temperature = options.temperature
+        )
+
+    else:
+      completion_object = await self.client.completions.create(
+          model = options.model,
+          prompt = options.prompt + text_body,
+          max_tokens = options.max_tokens,
+          temperature = options.temperature
+        )
+
+      # completion_object is a openai.types.completion.Completion
+      completion_result = completion_object.dict()
+
+    return(completion_result)
+
+
+  async def chat_completions(
+      self,
+      options,
+      messages
+    ):
+    """ Generative AI completion on set of messages, from potentially mutliple people """
+    if(OPENAI_MAJOR_VERSION < 1):
+      chat_completion_result = openai.ChatCompletion.create(
+          model = options.model,
+          messages = messages,
+          max_tokens = options.max_tokens,
+          temperature = options.temperature
+        )
+
+    else:
+      # chat_completion_result is openai.types.chat.chat_completion.ChatCompletion
+      chat_completion_object = await self.client.chat.completions.create(
+          model = options.model,
+          messages = messages,
+          max_tokens = options.max_tokens,
+          temperature = options.temperature
+        )
+      chat_completion_result  = chat_completion_object.dict()
+
+    return(chat_completion_result)
+
+
 class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
   """
   **FilterPlugin** to for generative AI using **OpenAI** completion (e.g. ChatGPT)
@@ -237,14 +322,12 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       OpenAICompletionOptions
       )
 
-    if(init_options.openai_api_key is None or
-      init_options.openai_api_key == ""):
-      logger.warning("OpenAI completion plugin: key not set.  Plugin will be a no-op")
-    openai.api_key = init_options.openai_api_key
+    self.client =  OpenAIClient(init_options, self.__class__.__name__)
+
     self.last_stats: typing.Dict[str, int] = {}
 
 
-  def complete(
+  async def completions(
     self,
     out_vcon: vcon.Vcon,
     options: OpenAICompletionOptions,
@@ -253,11 +336,9 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     ) -> vcon.Vcon:
     """ Run **OpenAI completion* on the given text and create a new analysis object """
 
-    completion_result = openai.Completion.create(
-      model = options.model,
-      prompt = options.prompt + text_body,
-      max_tokens = options.max_tokens,
-      temperature = options.temperature
+    completion_result = await self.client.completions(
+        options,
+        text_body
       )
 
     query_result = pyjq.all(options.jq_result, completion_result)
@@ -336,8 +417,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     if(len(dialog_indices) == 0):
       return(out_vcon)
 
-    if(openai.api_key is None or
-      openai.api_key == ""):
+    if(not self.client.key_set):
       logger.warning("OpenAICompletion.filter: OpenAI API key is not set, no filtering performed")
       return(out_vcon)
 
@@ -357,7 +437,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
 
       self.last_stats["num_text_segments"] = len(text_segments)
       all_dialog_text = "  ".join(text_segments)
-      out_vcon = self.complete(
+      out_vcon = await self.completions(
           out_vcon,
           options,
           all_dialog_text,
@@ -416,11 +496,29 @@ class OpenAIChatCompletion(OpenAICompletion):
     super().__init__(init_options)
 
     self.options_type = OpenAIChatCompletionOptions
-    if(init_options.openai_api_key is None or
-      init_options.openai_api_key == ""):
-      logger.warning("OpenAI completion plugin: key not set.  Plugin will be a no-op")
-    openai.api_key = init_options.openai_api_key
+
+    self.client =  OpenAIClient(init_options, self.__class__.__name__)
+
     self.last_stats: typing.Dict[str, int] = {}
+
+
+  @tenacity.retry(
+      #retry=retry_if_exception_type((openai.error.APIError, openai.error.APIConnectionError, openai.error.RateLimitError, openai.error.ServiceUnavailableError, openai.error.Timeout)), 
+      retry = tenacity.retry_if_exception_type(OPENAI_RETRY_EXCEPTIONS),
+      wait = tenacity.wait_random_exponential(multiplier = 1, max = 60),
+      stop = tenacity.stop_after_attempt(10),
+      before = tenacity.before_log(logger, logging.DEBUG),
+      after = tenacity.after_log(logger, logging.DEBUG)
+    )
+  async def chat_completions_with_retry(self, messages, options):
+    """ Retry chat_completions if connectivity or service availability problems """
+    logger.debug("attempting chat_completions")
+    chat_completion_result = await self.client.chat_completions(
+        options,
+        messages
+      )
+    return(chat_completion_result)
+
 
   async def filter(
     self,
@@ -431,7 +529,7 @@ class OpenAIChatCompletion(OpenAICompletion):
     Perform generative AI using **OpenAI** chat completion on the
     text **dialogs** and/or transcription **analysis** objects
     in the given **Vcon** using the given **options.prompt**.
-`
+
     Parameters:
       options (OpenAICompletionOptions)
 
@@ -544,12 +642,17 @@ class OpenAIChatCompletion(OpenAICompletion):
       logger.debug("OpenAIChatCompletion messages: {}".format(sorted_messages))
     # feed message to ChatGPT
 
-    chat_completion_result = openai.ChatCompletion.create(
-      model = options.model,
-      messages = sorted_messages,
-      max_tokens = options.max_tokens,
-      temperature = options.temperature
-      )
+    # TODO try/except
+    #  openai.error.ServiceUnavailableError: The server is overloaded or not ready yet.
+    # /usr/local/lib/python3.8/dist-packages/openai/api_requestor.py:743: ServiceUnavailableError
+
+    chat_completion_result = await self.chat_completions_with_retry(sorted_messages, options)
+    # chat_completion_result = openai.ChatCompletion.create(
+    #   model = options.model,
+    #   messages = sorted_messages,
+    #   max_tokens = options.max_tokens,
+    #   temperature = options.temperature
+    #   )
 
     query_result = pyjq.all(options.jq_result, chat_completion_result)
     if(len(query_result) == 0):
