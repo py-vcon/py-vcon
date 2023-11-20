@@ -12,6 +12,7 @@ pytz
 regex
 requests
 sox
+tenacity
 uuid6
 python-json-logger
 python-multipart
