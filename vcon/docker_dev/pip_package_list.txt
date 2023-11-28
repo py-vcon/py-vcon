@@ -27,6 +27,6 @@ whisper
 
 # stable-ts dependencies:
 numpy
-torch
+torch >= 2.1
 stable-ts > 2
 
