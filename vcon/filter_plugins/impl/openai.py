@@ -506,7 +506,7 @@ class OpenAIChatCompletion(OpenAICompletion):
       #retry=retry_if_exception_type((openai.error.APIError, openai.error.APIConnectionError, openai.error.RateLimitError, openai.error.ServiceUnavailableError, openai.error.Timeout)), 
       retry = tenacity.retry_if_exception_type(OPENAI_RETRY_EXCEPTIONS),
       wait = tenacity.wait_random_exponential(multiplier = 1, max = 90),
-      stop = tenacity.stop_after_attempt(10),
+      stop = tenacity.stop_after_attempt(16),
       before = tenacity.before_log(logger, logging.DEBUG),
       after = tenacity.after_log(logger, logging.DEBUG)
     )
