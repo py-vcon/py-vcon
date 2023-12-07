@@ -69,7 +69,9 @@ class MultifariousVcon():
     vcon_dict: typing.Union[dict, None] = None,
     vcon_object: vcon.Vcon = None
     ) -> None:
-
+    """
+    Updated the vCon in this MultifariousVcon (not vCon Storage)
+    """
     vcon_type = self.get_vcon_type(new_vcon)
     if(vcon_type == VconTypes.UNKNOWN):
       raise Exception("Unknown/unsupported vcon type: {} for new_vcon".format(type(new_vcon)))
@@ -416,7 +418,7 @@ class VconProcessorIO():
     if(lock_key is not None and readonly):
       raise Exception("Should not lock readonly vCon")
 
-    # Make sure no vCon with same UUID
+    # Make sure no vCon with same UUID in this object
     new_uuid = await mVcon.get_vcon(VconTypes.UUID)
     for index, vCon in enumerate(self._vcons):
       exists_uuid = await vCon.get_vcon(VconTypes.UUID)
@@ -461,7 +463,7 @@ class VconProcessorIO():
 
     raise Exception("vCon {} not found in VconProcessorIO".format(uuid))
 
-  def set_paramenter(self, name: str, value, rename: typing.Dict[str, str]) -> None:
+  def set_parameter(self, name: str, value, rename: typing.Dict[str, str]) -> None:
     """
     set and output parameter value, applying the rename to the given name.
     """
@@ -480,6 +482,7 @@ class VconProcessorIO():
       )
 
     return(response_output)
+
 
 class VconProcessor():
   """
@@ -668,12 +671,12 @@ class VconProcessor():
 VCON_PROCESSOR_REGISTRY = {}
 
 
-class VconProcessorRegistry:
+class VconProcessorRegistry():
   """
   Static class to manage registry of VconProcessors.
   """
 
-  class VconProcessorRegistration:
+  class VconProcessorRegistration():
     def __init__(self,
       init_options: VconProcessorInitOptions,
       name: str,
