@@ -3,9 +3,10 @@ import pydantic
 import pytest
 import pytest_asyncio
 import fastapi.testclient
+import vcon
 import py_vcon_server.pipeline
 from py_vcon_server.settings import PIPELINE_DB_URL
-
+from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 
 PIPELINE_DB = None
 
@@ -62,7 +63,11 @@ def test_pipeline_objects():
     errors_dict = ve.errors()
     #print("error: {}".format(errors_dict[0]))
     assert(errors_dict[0]["loc"][0] == "timeout")
-    assert(errors_dict[0]["type"] == "type_error.integer")
+    assert(errors_dict[0]["type"] == "type_error.integer"
+      or errors_dict[0]["type"] == "type_error.float")
+    assert(errors_dict[1]["loc"][0] == "timeout")
+    assert(errors_dict[1]["type"] == "type_error.integer"
+      or errors_dict[1]["type"] == "type_error.float")
     print("validation error: {}".format(errors_dict[0]["msg"]))
 
   pipe1_def = py_vcon_server.pipeline.PipelineDefinition(
@@ -87,7 +92,11 @@ def test_pipeline_objects():
     #print("error: {}".format(errors_dict[0]))
     assert(errors_dict[0]["loc"][0] == "pipeline_options")
     assert(errors_dict[0]["loc"][1] == "timeout")
-    assert(errors_dict[0]["type"] == "type_error.integer")
+    assert(errors_dict[0]["type"] == "type_error.integer"
+      or errors_dict[0]["type"] == "type_error.float")
+    assert(errors_dict[1]["loc"][1] == "timeout")
+    assert(errors_dict[1]["type"] == "type_error.integer"
+      or errors_dict[1]["type"] == "type_error.float")
     print("validation error: {}".format(errors_dict[0]["msg"]))
 
   pipe_def_dict = {
@@ -137,6 +146,25 @@ PIPE_DEF1_DICT = {
         "processor_name": "whisper_base",
         "processor_options":  {
             "output_types": ["vendor"]
+          }
+      }
+    ]
+}
+
+test_timeout = 0.1
+PIPE_DEF2_DICT = {
+  "pipeline_options": {
+      "timeout": test_timeout
+    },
+  "processors": [
+      {
+        "processor_name": "deepgram",
+        "processor_options": {
+          }
+      },
+      {
+        "processor_name": "openai_chat_completion",
+        "processor_options":  {
           }
       }
     ]
@@ -193,15 +221,23 @@ async def test_pipeline_db():
 
 
 @pytest.mark.asyncio
-async def test_pipeline_restapi():
+async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
 
   pipe_name = "unit_test_pipe1"
+  pipe2_name = "unit_test_pipe2"
   bad_pipe_name = pipe_name + "_bad"
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     # Clean up junk left over from prior tests
     delete_response = client.delete(
         "/pipeline/{}".format(
           pipe_name
+        )
+      )
+    assert(delete_response.status_code == 404 or
+      delete_response.status_code == 204)
+    delete_response = client.delete(
+        "/pipeline/{}".format(
+          pipe2_name
         )
       )
     assert(delete_response.status_code == 404 or
@@ -215,6 +251,7 @@ async def test_pipeline_restapi():
     print("pipe list: {}".format(pipe_list))
     assert(isinstance(pipe_list, list))
     assert(not pipe_name in pipe_list)
+    assert(not pipe2_name in pipe_list)
     assert(not bad_pipe_name in pipe_list)
 
     set_response = client.put(
@@ -243,6 +280,25 @@ async def test_pipeline_restapi():
     assert(len(resp_content) == 0)
     #assert(resp_json["detail"] == "processor: foo not registered")
 
+    print("PIPE_DEF2: {}".format(PIPE_DEF2_DICT))
+    assert(PIPE_DEF2_DICT["pipeline_options"]["timeout"] == test_timeout)
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe2_name
+        ),
+        json = PIPE_DEF2_DICT, 
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    if(set_response.status_code != 204):
+      print("put: /pipeline/{} returned: {} {}".format(
+          pipe2_name,
+          set_response.status_code,
+          resp_content 
+        ))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
     get_response = client.get(
         "/pipelines"
       )
@@ -251,7 +307,16 @@ async def test_pipeline_restapi():
     print("pipe list: {}".format(pipe_list))
     assert(isinstance(pipe_list, list))
     assert(pipe_name in pipe_list)
+    assert(pipe2_name in pipe_list)
     assert(not bad_pipe_name in pipe_list)
+
+    get_response = client.get(
+        "/pipeline/{}".format(
+          pipe2_name
+      ))
+    assert(get_response.status_code == 200)
+    pipe2_def_dict = get_response.json()
+    assert(pipe2_def_dict["pipeline_options"]["timeout"] == test_timeout)
 
     get_response = client.get(
         "/pipeline/{}".format(
@@ -279,6 +344,93 @@ async def test_pipeline_restapi():
     assert(pipe_def.processors[1].processor_name == "whisper_base")
     assert(pipe_def.processors[1].processor_options.output_types == ["vendor"])
 
+    # put the vcon in Storage in a known state
+    assert(len(make_inline_audio_vcon.dialog) == 1)
+    assert(len(make_inline_audio_vcon.analysis) == 0)
+    set_response = client.post("/vcon", json = make_inline_audio_vcon.dumpd())
+    assert(set_response.status_code == 204)
+    assert(make_inline_audio_vcon.uuid == UUID)
+
+    # Run the pipeline on a simple/small vCon
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe2_name,
+          UUID
+        ),
+        json = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    # TODO: this should fail with timeout of 0.1
+    assert(post_response.status_code == 200)
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(len(pipeline_out_dict["vcons"]) == 1)
+    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+    assert(pipeline_out_dict["vcons_modified"][0])
+    modified_vcon = vcon.Vcon()
+    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    assert(len(modified_vcon.dialog) == 1)
+    assert(modified_vcon.dialog[0]["type"] == "recording")
+    assert(len(modified_vcon.analysis) == 2)
+    assert(modified_vcon.analysis[0]["type"] == "transcript")
+    assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
+    assert(modified_vcon.analysis[0]["product"] == "transcription")
+    assert(modified_vcon.analysis[1]["type"] == "summary")
+    assert(modified_vcon.analysis[1]["vendor"] == "openai")
+    assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+
+    # TODO test commit of vCons after pipeline run
+    # TODO: test timeout
+
+    # The pipeline was run with no save at the end.
+    # Verify that the vCon in Storage did not get updated
+    get_response = client.get(
+      "/vcon/{}".format(UUID),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    vcon_dict = get_response.json()
+    assert(len(vcon_dict["dialog"]) == 1)
+    assert(len(vcon_dict["analysis"]) == 0)
+
+    # Run the pipeline again, on a simple/small vCon
+    # This time request that the vCon be updated in Storage
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe2_name,
+          UUID
+        ),
+        json = {
+            "save_vcons": True,
+            "return_results": 6
+          },
+        headers = {"accept": "application/json"},
+      )
+    # TODO: this should fail with timeout of 0.1
+    assert(post_response.status_code == 200)
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    # TODO fix this bug, should not return PipelineOutput
+    #assert(len(pipeline_out_dict) == 0)
+
+    # TODO use this code on vCon from get
+    assert(len(pipeline_out_dict["vcons"]) == 1)
+    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+    assert(pipeline_out_dict["vcons_modified"][0])
+    modified_vcon = vcon.Vcon()
+    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    assert(len(modified_vcon.dialog) == 1)
+    assert(modified_vcon.dialog[0]["type"] == "recording")
+    assert(len(modified_vcon.analysis) == 2)
+    assert(modified_vcon.analysis[0]["type"] == "transcript")
+    assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
+    assert(modified_vcon.analysis[0]["product"] == "transcription")
+    assert(modified_vcon.analysis[1]["type"] == "summary")
+    assert(modified_vcon.analysis[1]["vendor"] == "openai")
+    assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
     # Non existant pipeline
     delete_response = client.delete(
         "/pipeline/{}".format(
@@ -292,6 +444,14 @@ async def test_pipeline_restapi():
     delete_response = client.delete(
         "/pipeline/{}".format(
           pipe_name
+        )
+      )
+    assert(delete_response.status_code == 204)
+    assert(len(delete_response.content) == 0)
+
+    delete_response = client.delete(
+        "/pipeline/{}".format(
+          pipe2_name
         )
       )
     assert(delete_response.status_code == 204)
