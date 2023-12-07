@@ -12,7 +12,7 @@ init_options = py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitO
 
 py_vcon_server.processor.VconProcessorRegistry.register(
       init_options,
-      "openai_chat_compeltion",
+      "openai_chat_completion",
       "py_vcon_server.processor.builtin.openai",
       "OpenAiChatCompletion"
       )
