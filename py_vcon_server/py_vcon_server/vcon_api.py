@@ -198,3 +198,84 @@ def init(restapi):
 
       return(fastapi.responses.JSONResponse(content = response_output.dict(exclude_none = True)))
 
+
+  @restapi.post("/pipeline/{name}/run/{uuid}",
+    response_model = typing.Union[py_vcon_server.processor.VconProcessorOutput, None],
+    summary = "Run a pipeline of processors on the vCon in storage identified by UUID",
+    tags = [ py_vcon_server.restful_api.PIPELINE_RUN_TAG ])
+  async def run_pipeline_uuid(
+      request: fastapi.Request,
+      name: str,
+      uuid: str,
+      save_vcons: bool = False,
+      return_results: bool = True
+    ):
+    """
+    Run the vCon identified by the given UUID through the named pipeline.
+
+    Note: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:
+
+      **failure_queue** assumed to be None <br>
+      **success_queue** assumed to be None <br>
+      **save_vcons** <br>
+
+    Parameters:
+
+      **name** (str) - name of the pipeline defined in the pipeline DB
+
+      **uuid** (str) - UUID of the vCon in the vCon Storage
+
+      **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline
+          processing.  Ignores/overides the **PipelineOptions.save_vcons**
+
+      **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline
+
+    Returns:
+
+      If return_results is true, return the VconProcessorOutput, otherwise return None
+    """
+
+    logger.debug("run_pipeline_uuid( pipeline: {} uuid: {} save: {} return: {}".format(
+        name,
+        uuid,
+        save_vcons,
+        return_results
+      ))
+    logger.debug("body: {}".format(await request.json()))
+    try:
+      # TODO: get vCon lock if this is a write pipeline
+      lock_key = None
+
+      # Build the VconProcessorIO
+      pipeline_input = py_vcon_server.processor.VconProcessorIO()
+      await pipeline_input.add_vcon(uuid, lock_key, save_vcons)
+
+      # Get the pipeline
+      pipe_def = await py_vcon_server.pipeline.PIPELINE_DB.get_pipeline(name)
+
+      # Run the vCon through the pipeline
+      pipeline_runner = py_vcon_server.pipeline.PipelineRunner(pipe_def, name)
+      pipeline_output = await pipeline_runner.run(pipeline_input)
+
+      # Optionally save vCons
+      if(save_vcons):
+        # Save changed Vcons
+        await py_vcon_server.db.VconStorage.commit(pipeline_output)
+
+      # TODO: release the vCon lock if taken
+      if(lock_key is not None):
+        pass
+
+      # Optionally return the pipeline output
+      if(return_results):
+        pipe_out = await pipeline_output.get_output()
+        return(fastapi.responses.JSONResponse(content = pipe_out.dict()))
+
+    except py_vcon_server.pipeline.PipelineNotFound as nf:
+      logger.info("Error: pipeline: {} not found".format(name))
+      return(py_vcon_server.restful_api.NotFoundResponse("pipeline: {} not found".format(name)))
+
+    except Exception as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
