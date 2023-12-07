@@ -1,7 +1,8 @@
 """ Vcon Pipeline processor objects and methods """
 import typing
-import pydantic
+import asyncio
 import json
+import pydantic
 import py_vcon_server.processor
 import py_vcon_server.logging_utils
 
@@ -18,6 +19,10 @@ class PipelineNotFound(Exception):
 
 class PipelineInvalid(Exception):
   """ Raised for invalild pipelines """
+
+
+class PipelineTimeout(Exception):
+  """ Raised when pipeline exceeds its processing timeout """
 
 
 class PipelineProcessor(pydantic.BaseModel):
@@ -42,17 +47,28 @@ class PipelineOptions(pydantic.BaseModel):
       title = "save/update vCon(s) after pipeline processing"
     )
 
-  timeout: typing.Union[int, None] = pydantic.Field(
+  timeout: typing.Union[float, int, None] = pydantic.Field(
       title = "processor timeout",
       description = """maximum timeout for any processor in the pipeline.
   If any one of the processors in the pipeline takes more than this number
  of seconds, the processor will be cancled, remaining processors will be
  skipped and the pipeline will be considered failed for the given job/vCon.
-"""
+""",
+  default = None
     )
 
   failure_queue: typing.Union[str, None] = pydantic.Field(
-      title = "queue for failed pipeline jobs"
+      title = "queue for failed pipeline jobs",
+      description = """If any of the processors in the pipeline or dependant DB access fail,
+ the job is added to the failure_queue if set.
+"""
+    )
+
+  success_queue: typing.Union[str, None] = pydantic.Field(
+      title = "queue for successfully run pipeline jobs",
+      description = """If all of the processors in the pipeline succeed in running,
+ the job is added to the success_queue if set.
+"""
     )
 
 
@@ -237,6 +253,85 @@ class PipelineDb():
       index: int
     )-> None:
     raise Exception("not implemented")
+
+
+class PipelineRunner():
+  """
+  Run vCon(s) through a Pipeline
+  """
+  def __init__(
+      self,
+      pipeline: PipelineDefinition,
+      name: typing.Union[str, None] = None
+    ):
+    self._pipeline = pipeline
+    self._pipeline_name = name
+
+  async def run(
+      self,
+      processor_input: py_vcon_server.processor.VconProcessorIO
+    ) -> py_vcon_server.processor.VconProcessorIO:
+    """
+    Run the VconProcessorIO through all the VconProcessor(s) in the Pipeline
+
+    Parameters:
+      **processor_input** () - the input to the first VconProcessor in the Pipeline
+
+    Returns:
+      The output VconProcessorIO from the last VconProcessor in the Pipeline
+    """
+    logger.debug("PipelineDef: {}".format(self._pipeline.dict()))
+    timeout = self._pipeline.pipeline_options.timeout
+    run_future = self.do_processes(
+        processor_input
+      )
+
+    logger.debug("Running pipeline {} with timeout: {}".format(
+        self._pipeline_name,
+        timeout
+      ))
+    try:
+      pipeline_output = await asyncio.wait_for(
+          run_future,
+          timeout
+        )
+      logger.debug("Completed pipeline {}".format(
+          self._pipeline_name
+        ))
+
+    #except asyncio.exceptions.CancelledError as ce:
+    except asyncio.exceptions.TimeoutError as ce:
+      raise PipelineTimeout("pipeline {} timed out with {} second timeout".format(
+          self._pipeline_name,
+          timeout
+        )) from ce
+    return(pipeline_output)
+
+
+  async def do_processes(
+      self,
+      processor_input: py_vcon_server.processor.VconProcessorIO
+    ) -> py_vcon_server.processor.VconProcessorIO:
+    
+    next_proc_input = processor_input  
+    for processor_config in self._pipeline.processors:
+      processor_name = processor_config.processor_name
+      processor = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(processor_name)
+      processor_options = processor_config.processor_options
+      # Recaste options to proper type
+      # This becomes important when the options has multiple inheretance to get the
+      # correct type (e.g. FilterPluginOptions).
+      processor_type_options = processor.processor_options_class()(** processor_options.dict())
+      vcon_index = processor_type_options.input_vcon_index
+      logger.debug("Starting pipeline {} processor: {} on vCon: {} (index: {})".format(
+          self._pipeline_name,
+          processor_name,
+          await next_proc_input.get_vcon(vcon_index, py_vcon_server.processor.VconTypes.UUID),
+          vcon_index
+        ))
+      next_proc_input = await processor.process(next_proc_input, processor_type_options)
+
+    return(next_proc_input)
 
 
 class PipelineManager():
