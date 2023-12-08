@@ -2,6 +2,7 @@
 
 import os
 import typing
+import asyncio
 import fastapi
 import fastapi.responses
 import py_vcon_server.db
@@ -274,6 +275,21 @@ def init(restapi):
     except py_vcon_server.pipeline.PipelineNotFound as nf:
       logger.info("Error: pipeline: {} not found".format(name))
       return(py_vcon_server.restful_api.NotFoundResponse("pipeline: {} not found".format(name)))
+
+    except asyncio.exceptions.TimeoutError as timeout_exception:
+      logger.info("Error: pipeline: {} uuid: {} processing time exeeded timeout: {} sec.".format(
+          name,
+          uuid,
+          pipe_def.pipeline_options.timeout
+        ))
+      py_vcon_server.restful_api.log_exception(timeout_exception)
+      return(py_vcon_server.restful_api.ProcessingTimeout(
+          "Error: pipeline: {} uuid: {} processing time exeeded timeout: {} sec.".format(
+            name,
+            uuid,
+            pipe_def.pipeline_options.timeout
+          )
+        ))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
