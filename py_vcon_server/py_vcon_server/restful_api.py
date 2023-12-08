@@ -27,11 +27,20 @@ class NotFoundResponse(fastapi.responses.JSONResponse):
     super().__init__(status_code = 404,
       content = {"detail": detail})
 
+
 class ValidationError(fastapi.responses.JSONResponse):
   """ Helper class to handle 422 validation error case"""
   def __init__(self, detail: str):
     super().__init__(status_code = 422,
       content = {"detail": detail})
+
+
+class ProcessingTimeout(fastapi.responses.JSONResponse):
+  """ Helper class to indicate timeouts when processing or waiting for subordinate request """
+  def __init__(self, detail: str):
+    super().__init__(status_code = 430,
+      content = {"detail": detail})
+
 
 class InternalErrorResponse(fastapi.responses.JSONResponse):
   """ Helper class to handle 500 internal server error case """
