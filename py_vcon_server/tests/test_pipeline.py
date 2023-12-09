@@ -2,6 +2,7 @@
 import pydantic
 import pytest
 import pytest_asyncio
+import copy
 import fastapi.testclient
 import vcon
 import py_vcon_server.pipeline
@@ -351,7 +352,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(set_response.status_code == 204)
     assert(make_inline_audio_vcon.uuid == UUID)
 
-    # Run the pipeline on a simple/small vCon
+    # Run the pipeline on a simple/small vCon, should timeout
     post_response = client.post(
       "/pipeline/{}/run/{}".format(
           pipe2_name,
@@ -381,17 +382,81 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
       assert(modified_vcon.analysis[1]["type"] == "summary")
       assert(modified_vcon.analysis[1]["vendor"] == "openai")
       assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
-    elif(post_response.status_code == 500):
+    elif(post_response.status_code == 430):
       # pipe_out_dict
       # TODO confirm timeout in error message
       pass
     else:
       assert(post_response.status_code != 200)
 
-    # TODO test commit of vCons after pipeline run
-    # TODO: test timeout
 
-    # The pipeline was run with no save at the end.
+    # Give more time so that pipeline does not timeout
+    more_time_pipe_dict = copy.deepcopy(PIPE_DEF2_DICT)
+    more_time_pipe_dict["pipeline_options"]["timeout"] = 10.0
+    assert(more_time_pipe_dict["pipeline_options"]["timeout"] == 10.0)
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe2_name
+        ),
+        json = more_time_pipe_dict, 
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
+    # get and check pipe timeout from DB
+    get_response = client.get(
+        "/pipeline/{}".format(
+          pipe2_name
+        )
+      )
+
+    assert(get_response.status_code == 200)
+    pipe_json = get_response.json()
+    pipe_def = py_vcon_server.pipeline.PipelineDefinition(**pipe_json)
+    print("got pipeline: {}".format(pipe_json))
+    assert(pipe_def.pipeline_options.timeout == 10.0)
+    assert(len(pipe_def.processors) == 2)
+    assert(pipe_def.processors[0].processor_name == "deepgram")
+    assert(len(pipe_def.processors[0].processor_options.dict()) == 1)
+    assert(pipe_def.processors[0].processor_options.input_vcon_index == 0)
+    assert(pipe_def.processors[1].processor_name == "openai_chat_completion")
+    assert(len(pipe_def.processors[1].processor_options.dict()) == 1)
+    assert(pipe_def.processors[1].processor_options.input_vcon_index == 0)
+
+
+    # run again with longer timeout, should succeed this time
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe2_name,
+          UUID
+        ),
+        json = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(post_response.status_code == 200)
+    assert(len(pipeline_out_dict["vcons"]) == 1)
+    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+    assert(pipeline_out_dict["vcons_modified"][0])
+    modified_vcon = vcon.Vcon()
+    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    assert(len(modified_vcon.dialog) == 1)
+    assert(modified_vcon.dialog[0]["type"] == "recording")
+    assert(len(modified_vcon.analysis) == 2)
+    assert(modified_vcon.analysis[0]["type"] == "transcript")
+    assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
+    assert(modified_vcon.analysis[0]["product"] == "transcription")
+    assert(modified_vcon.analysis[1]["type"] == "summary")
+    assert(modified_vcon.analysis[1]["vendor"] == "openai")
+    assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+
+    # The pipeline was run with no save of the vCons at the end.
     # Verify that the vCon in Storage did not get updated
     get_response = client.get(
       "/vcon/{}".format(UUID),
@@ -415,13 +480,13 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
           },
         headers = {"accept": "application/json"},
       )
-    # TODO: this should fail with timeout of 0.1
     assert(post_response.status_code == 200)
     pipeline_out_dict = post_response.json()
     print("pipe out: {}".format(pipeline_out_dict))
     # TODO fix this bug, should not return PipelineOutput
     #assert(len(pipeline_out_dict) == 0)
 
+    # TODO test commit of vCons after pipeline run
     # TODO use this code on vCon from get
     assert(len(pipeline_out_dict["vcons"]) == 1)
     assert(len(pipeline_out_dict["vcons_modified"]) == 1)
