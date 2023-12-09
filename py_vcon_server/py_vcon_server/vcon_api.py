@@ -276,7 +276,7 @@ def init(restapi):
       logger.info("Error: pipeline: {} not found".format(name))
       return(py_vcon_server.restful_api.NotFoundResponse("pipeline: {} not found".format(name)))
 
-    except asyncio.exceptions.TimeoutError as timeout_exception:
+    except py_vcon_server.pipeline.PipelineTimeout as timeout_exception:
       logger.info("Error: pipeline: {} uuid: {} processing time exeeded timeout: {} sec.".format(
           name,
           uuid,
