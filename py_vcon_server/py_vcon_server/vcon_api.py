@@ -200,6 +200,40 @@ def init(restapi):
 
       return(fastapi.responses.JSONResponse(content = response_output.dict(exclude_none = True)))
 
+  async def do_run_pipeline(
+      vCon: typing.Union[vcon.Vcon, str],
+      pipeline_name: str,
+      save_vcons: bool,
+      return_results: bool
+    ):
+      # TODO: get vCon lock if this is a write pipeline
+      lock_key = "fake_lock"
+
+      # Build the VconProcessorIO
+      pipeline_input = py_vcon_server.processor.VconProcessorIO()
+      await pipeline_input.add_vcon(vCon, lock_key, False)
+
+      # Get the pipeline
+      pipe_def = await py_vcon_server.pipeline.PIPELINE_DB.get_pipeline(pipeline_name)
+
+      # Run the vCon through the pipeline
+      pipeline_runner = py_vcon_server.pipeline.PipelineRunner(pipe_def, pipeline_name)
+      pipeline_output = await pipeline_runner.run(pipeline_input)
+
+      # Optionally save vCons
+      if(save_vcons):
+        # Save changed Vcons
+        await py_vcon_server.db.VconStorage.commit(pipeline_output)
+
+      # TODO: release the vCon lock if taken
+      if(lock_key is not None):
+        pass
+
+      # Optionally return the pipeline output
+      if(return_results):
+        pipe_out = await pipeline_output.get_output()
+        return(fastapi.responses.JSONResponse(content = pipe_out.dict()))
+
 
   pipeline_responses = copy.deepcopy(py_vcon_server.restful_api.ERROR_RESPONSES)
   pipeline_responses[200] = { "model": py_vcon_server.processor.VconProcessorOutput}
@@ -209,7 +243,6 @@ def init(restapi):
     summary = "Run a pipeline of processors on the vCon in storage identified by UUID",
     tags = [ py_vcon_server.restful_api.PIPELINE_RUN_TAG ])
   async def run_pipeline_uuid(
-      request: fastapi.Request,
       name: str,
       uuid: str,
       save_vcons: bool = False,
@@ -246,56 +279,24 @@ def init(restapi):
         save_vcons,
         return_results
       ))
-    body = await request.body()
-    if(body is not None and len(body)):
-      logger.debug("body: {}".format(await request.json()))
-    else:
-      logger.debug("body: None")
+
     try:
-      # TODO: get vCon lock if this is a write pipeline
-      lock_key = "fake_lock"
-
-      # Build the VconProcessorIO
-      pipeline_input = py_vcon_server.processor.VconProcessorIO()
-      await pipeline_input.add_vcon(uuid, lock_key, False)
-
-      # Get the pipeline
-      pipe_def = await py_vcon_server.pipeline.PIPELINE_DB.get_pipeline(name)
-
-      # Run the vCon through the pipeline
-      pipeline_runner = py_vcon_server.pipeline.PipelineRunner(pipe_def, name)
-      pipeline_output = await pipeline_runner.run(pipeline_input)
-
-      # Optionally save vCons
-      if(save_vcons):
-        # Save changed Vcons
-        await py_vcon_server.db.VconStorage.commit(pipeline_output)
-
-      # TODO: release the vCon lock if taken
-      if(lock_key is not None):
-        pass
-
-      # Optionally return the pipeline output
-      if(return_results):
-        pipe_out = await pipeline_output.get_output()
-        return(fastapi.responses.JSONResponse(content = pipe_out.dict()))
+      return(await do_run_pipeline(uuid, name, save_vcons, return_results))
 
     except py_vcon_server.pipeline.PipelineNotFound as nf:
       logger.info("Error: pipeline: {} not found".format(name))
       return(py_vcon_server.restful_api.NotFoundResponse("pipeline: {} not found".format(name)))
 
     except py_vcon_server.pipeline.PipelineTimeout as timeout_exception:
-      logger.info("Error: pipeline: {} uuid: {} processing time exeeded timeout: {} sec.".format(
+      logger.info("Error: pipeline: {} uuid: {} processing time exeeded timeout".format(
           name,
-          uuid,
-          pipe_def.pipeline_options.timeout
+          uuid
         ))
       py_vcon_server.restful_api.log_exception(timeout_exception)
       return(py_vcon_server.restful_api.ProcessingTimeout(
-          "Error: pipeline: {} uuid: {} processing time exeeded timeout: {} sec.".format(
+          "Error: pipeline: {} uuid: {} processing time exeeded timeout".format(
             name,
             uuid,
-            pipe_def.pipeline_options.timeout
           )
         ))
 
