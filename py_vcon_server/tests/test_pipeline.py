@@ -358,7 +358,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
           pipe2_name,
           UUID
         ),
-        json = {
+        params = {
             "save_vcons": False,
             "return_results": True
           },
@@ -432,7 +432,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
           pipe2_name,
           UUID
         ),
-        json = {
+        params = {
             "save_vcons": False,
             "return_results": True
           },
@@ -474,25 +474,27 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
           pipe2_name,
           UUID
         ),
-        json = {
+        params = {
             "save_vcons": True,
-            "return_results": 6
+            "return_results": False
           },
         headers = {"accept": "application/json"},
       )
     assert(post_response.status_code == 200)
     pipeline_out_dict = post_response.json()
     print("pipe out: {}".format(pipeline_out_dict))
-    # TODO fix this bug, should not return PipelineOutput
-    #assert(len(pipeline_out_dict) == 0)
+    assert(pipeline_out_dict is None)
 
-    # TODO test commit of vCons after pipeline run
-    # TODO use this code on vCon from get
-    assert(len(pipeline_out_dict["vcons"]) == 1)
-    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
-    assert(pipeline_out_dict["vcons_modified"][0])
+    # test commit of vCons after pipeline run
+    # Verify that the vCon in Storage DID get updated
+    get_response = client.get(
+      "/vcon/{}".format(UUID),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    vcon_dict = get_response.json()
     modified_vcon = vcon.Vcon()
-    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    modified_vcon.loadd(vcon_dict)
     assert(len(modified_vcon.dialog) == 1)
     assert(modified_vcon.dialog[0]["type"] == "recording")
     assert(len(modified_vcon.analysis) == 2)
@@ -502,6 +504,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(modified_vcon.analysis[1]["type"] == "summary")
     assert(modified_vcon.analysis[1]["vendor"] == "openai")
     assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+
     # Non existant pipeline
     delete_response = client.delete(
         "/pipeline/{}".format(
