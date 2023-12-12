@@ -202,12 +202,16 @@ def init(restapi):
 
   async def do_run_pipeline(
       vCon: typing.Union[vcon.Vcon, str],
+      vcon_in_storage: bool,
       pipeline_name: str,
       save_vcons: bool,
       return_results: bool
     ):
       # TODO: get vCon lock if this is a write pipeline
-      lock_key = "fake_lock"
+      if(vcon_in_storage):
+        lock_key = "fake_lock"
+      else:
+        lock_key = None
 
       # Build the VconProcessorIO
       pipeline_input = py_vcon_server.processor.VconProcessorIO()
@@ -238,6 +242,75 @@ def init(restapi):
   pipeline_responses = copy.deepcopy(py_vcon_server.restful_api.ERROR_RESPONSES)
   pipeline_responses[200] = { "model": py_vcon_server.processor.VconProcessorOutput}
   pipeline_responses[204] = { "model": None }
+  @restapi.post("/pipeline/{name}/run",
+    response_model = typing.Union[py_vcon_server.processor.VconProcessorOutput, None],
+    summary = "Run a pipeline of processors on the vCon in storage identified by UUID",
+    tags = [ py_vcon_server.restful_api.PIPELINE_RUN_TAG ])
+  async def run_pipeline(
+      name: str,
+      vCon: py_vcon_server.processor.VconObject,
+      save_vcons: bool = False,
+      return_results: bool = True
+    ):
+    """
+    Run the vCon identified by the given Vcon through the named pipeline.
+
+    Note: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:
+
+      **failure_queue** assumed to be None <br>
+      **success_queue** assumed to be None <br>
+      **save_vcons** <br>
+
+    Parameters:
+
+      **name** (str) - name of the pipeline defined in the pipeline DB
+
+      **vCon** (py_vcon_server.processor.VconObject) - vCon from body, not in storage
+
+      **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline
+          processing.  Ignores/overides the **PipelineOptions.save_vcons**
+
+      **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline
+
+    Returns:
+
+      If return_results is true, return the VconProcessorOutput, otherwise return None
+    """
+
+    logger.debug("run_pipeline( pipeline: {} vCon with UUID: {} save: {} return: {}".format(
+        name,
+        vCon.dict().get("uuid", None),
+        save_vcons,
+        return_results
+      ))
+
+    try:
+      vcon_object = vcon.Vcon()
+      vcon_object.loadd(vCon.dict())
+      return(await do_run_pipeline(vcon_object, False, name, save_vcons, return_results))
+
+    except py_vcon_server.pipeline.PipelineNotFound as nf:
+      logger.info("Error: pipeline: {} not found".format(name))
+      return(py_vcon_server.restful_api.NotFoundResponse("pipeline: {} not found".format(name)))
+
+    except py_vcon_server.pipeline.PipelineTimeout as timeout_exception:
+      logger.info("Error: pipeline: {} input Vcon with uuid: {} processing time exeeded timeout".format(
+          name,
+          vcon_object.dict
+        ))
+      py_vcon_server.restful_api.log_exception(timeout_exception)
+      return(py_vcon_server.restful_api.ProcessingTimeout(
+          "Error: pipeline: {} input Vcon with uuid: {} processing time exeeded timeout".format(
+            name,
+            vcon_object.uuid,
+          )
+        ))
+
+    except Exception as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
+
   @restapi.post("/pipeline/{name}/run/{uuid}",
     response_model = typing.Union[py_vcon_server.processor.VconProcessorOutput, None],
     summary = "Run a pipeline of processors on the vCon in storage identified by UUID",
@@ -281,7 +354,7 @@ def init(restapi):
       ))
 
     try:
-      return(await do_run_pipeline(uuid, name, save_vcons, return_results))
+      return(await do_run_pipeline(uuid, True, name, save_vcons, return_results))
 
     except py_vcon_server.pipeline.PipelineNotFound as nf:
       logger.info("Error: pipeline: {} not found".format(name))
@@ -303,4 +376,5 @@ def init(restapi):
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
 
