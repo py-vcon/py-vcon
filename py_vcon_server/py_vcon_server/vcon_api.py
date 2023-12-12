@@ -2,6 +2,7 @@
 
 import os
 import typing
+import copy
 import asyncio
 import fastapi
 import fastapi.responses
@@ -200,6 +201,9 @@ def init(restapi):
       return(fastapi.responses.JSONResponse(content = response_output.dict(exclude_none = True)))
 
 
+  pipeline_responses = copy.deepcopy(py_vcon_server.restful_api.ERROR_RESPONSES)
+  pipeline_responses[200] = { "model": py_vcon_server.processor.VconProcessorOutput}
+  pipeline_responses[204] = { "model": None }
   @restapi.post("/pipeline/{name}/run/{uuid}",
     response_model = typing.Union[py_vcon_server.processor.VconProcessorOutput, None],
     summary = "Run a pipeline of processors on the vCon in storage identified by UUID",
@@ -242,14 +246,18 @@ def init(restapi):
         save_vcons,
         return_results
       ))
-    logger.debug("body: {}".format(await request.json()))
+    body = await request.body()
+    if(body is not None and len(body)):
+      logger.debug("body: {}".format(await request.json()))
+    else:
+      logger.debug("body: None")
     try:
       # TODO: get vCon lock if this is a write pipeline
-      lock_key = None
+      lock_key = "fake_lock"
 
       # Build the VconProcessorIO
       pipeline_input = py_vcon_server.processor.VconProcessorIO()
-      await pipeline_input.add_vcon(uuid, lock_key, save_vcons)
+      await pipeline_input.add_vcon(uuid, lock_key, False)
 
       # Get the pipeline
       pipe_def = await py_vcon_server.pipeline.PIPELINE_DB.get_pipeline(name)
