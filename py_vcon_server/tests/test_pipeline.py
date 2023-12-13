@@ -456,6 +456,36 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(modified_vcon.analysis[1]["vendor"] == "openai")
     assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
 
+    # run with vCon in body, should succeed
+    post_response = client.post(
+      "/pipeline/{}/run".format(
+          pipe2_name,
+          UUID
+        ),
+        json = make_inline_audio_vcon.dumpd(),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(post_response.status_code == 200)
+    assert(len(pipeline_out_dict["vcons"]) == 1)
+    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+    assert(pipeline_out_dict["vcons_modified"][0])
+    modified_vcon = vcon.Vcon()
+    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    assert(len(modified_vcon.dialog) == 1)
+    assert(modified_vcon.dialog[0]["type"] == "recording")
+    assert(len(modified_vcon.analysis) == 2)
+    assert(modified_vcon.analysis[0]["type"] == "transcript")
+    assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
+    assert(modified_vcon.analysis[0]["product"] == "transcription")
+    assert(modified_vcon.analysis[1]["type"] == "summary")
+    assert(modified_vcon.analysis[1]["vendor"] == "openai")
+    assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
     # The pipeline was run with no save of the vCons at the end.
     # Verify that the vCon in Storage did not get updated
     get_response = client.get(
