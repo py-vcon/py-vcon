@@ -244,7 +244,7 @@ def init(restapi):
   pipeline_responses[204] = { "model": None }
   @restapi.post("/pipeline/{name}/run",
     response_model = typing.Union[py_vcon_server.processor.VconProcessorOutput, None],
-    summary = "Run a pipeline of processors on the vCon in storage identified by UUID",
+    summary = "Run a pipeline of processors on the vCon given in the request body",
     tags = [ py_vcon_server.restful_api.PIPELINE_RUN_TAG ])
   async def run_pipeline(
       name: str,
@@ -253,7 +253,7 @@ def init(restapi):
       return_results: bool = True
     ):
     """
-    Run the vCon identified by the given Vcon through the named pipeline.
+    Run the given Vcon through the named pipeline.
 
     Note: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:
 
@@ -265,7 +265,7 @@ def init(restapi):
 
       **name** (str) - name of the pipeline defined in the pipeline DB
 
-      **vCon** (py_vcon_server.processor.VconObject) - vCon from body, not in storage
+      **vCon** (py_vcon_server.processor.VconObject) - vCon from body, assumes vCon/UUID does NOT exist in storage
 
       **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline
           processing.  Ignores/overides the **PipelineOptions.save_vcons**
@@ -287,6 +287,9 @@ def init(restapi):
     try:
       vcon_object = vcon.Vcon()
       vcon_object.loadd(vCon.dict())
+
+      # TODO: verify the UUID for the given vCon does not exist in storage
+
       return(await do_run_pipeline(vcon_object, False, name, save_vcons, return_results))
 
     except py_vcon_server.pipeline.PipelineNotFound as nf:
