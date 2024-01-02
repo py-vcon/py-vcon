@@ -6,7 +6,7 @@ The first release and documentation comming soon.
 
 ## Table of Contents
 
-  + [Testing the conserver](#testing-the-conserver)
+  + [Testing the vCon server](#testing-the-vcon-server)
 
 
 ## Overview of server
@@ -42,7 +42,15 @@ The first release and documentation comming soon.
 redis server docker
 
 server in docker or from shell
+
+## RESTful API Documentation
+[RESTful/Swagger docs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html)
+
 ## Admin RESTful API
+
+[Admin: Servers](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Servers)
+
+[Admin: Job Queues](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Job%20Queues)
 
 iterate entry points and gen doc from a template
 
@@ -68,11 +76,11 @@ iterate entry points and gen doc from a template
 
 ## Building
 
-## Testing the Vcon Server
+## Testing the vCon Server
 
 A suite of pytest unit tests exist for the server in: [tests](tests)
 
-Running and testing the conserver requires a running instance of Redis.
+Running and testing the server requires a running instance of Redis.
 Be sure to create and edit your server/.env file to reflect your redis server address and port.
 It can be generated like the following command line:
 
@@ -84,7 +92,7 @@ It can be generated like the following command line:
     export REDIS_URL=redis://172.17.0.4:6379
     EOF
 
-The unit tests for the conserver can be run using the following command in this directory:
+The unit tests for the server can be run using the following command in this directory:
 
     source .env
     pytest -v -rP tests
