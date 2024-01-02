@@ -1,1 +1,2173 @@
-{"openapi":"3.0.2","info":{"title":"Python vCon Server","description":"\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n","contact":{"name":"Commercial support available from SIPez","url":"http://www.sipez.com"},"license":{"name":"MIT License"},"version":"0.1"},"paths":{"/server/info":{"get":{"tags":["Admin: Servers"],"summary":"Get Server Info","description":"Get information about the server running at this host and port.\n\nReturns: ServerInfo - attributes of this server.","operationId":"get_server_info_server_info_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ServerInfo"}}}}}}},"/server/queues":{"get":{"tags":["Admin: Servers"],"summary":"Get Server Queues Names","description":"Get the list of queues and related configuration for\nfor this server.\n\nThis is the list names of queues that this server is\nactively popping jobs from and running the vCon\nprocessors configured in the pipeline assocated with\nthe queue name.\n\nReturns: dict[str, dict] - dict with keys being queue names and values are a dict of queue properties\n\nkeys for queue properties:\n\n    weight: int - number of times to pull a job out of the\n        named queue, before iterating to the next name\n        queue configured for this server.","operationId":"get_server_queues_names_server_queues_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"title":"Response Get Server Queues Names Server Queues Get","type":"object","additionalProperties":{"$ref":"#/components/schemas/QueueProperties"}}}}}}}},"/server/queue/{name}":{"post":{"tags":["Admin: Servers"],"summary":"Set Server Queue Properties","description":"Set the properties on the named queue on this server.\n\nThis adds or updates the properties for the queue and\nidentifies the queue to be processed by this server\nusing the pipeline associated with this queue name.\n\nCurrently the only queue property is the \"weight\".\nweight must be an integer value and indicates how many\njobs should be popped from the named queue before\niterating to the next queue configured for this server.\nJobs are popped one at a time by the server such that\nthe configured NUM_WORKERS are each busy on one job at\na time.  These jobs that the server is busy on are \ncalled in_progress jobs.\n\nReturns: None","operationId":"set_server_queue_properties_server_queue__name__post","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QueueProperties"}}},"required":true},"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Admin: Servers"],"summary":"Delete Server Queue","description":"Remove the named queue from the list of queues to process on this server.\n\nThis indicates, to this server, to ignore the queue deleted from the server's queue list.\nThis does not remove or modify the queue itself or the jobs contained in the queue.\n\nReturns: None","operationId":"delete_server_queue_server_queue__name__delete","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/servers":{"get":{"tags":["Admin: Servers"],"summary":"Get Server States","description":"Get a JSON dictionary of running server states\n\nReturns: dict[server_key, ServerState] where keys are server_keys \n<br> The value associated with the server key is a dict containing server info \n\nThe list may contain servers which did not gracefully shutdown.\nIt is up to the user to remove these stale server states and\nclean up and requeue any in_progress jobs which the server did\nnot complete.  A pipeline of well behaved vCon processors does not\ncommit changes until all of the pipeline's vCon processor have\ncompleted.  Assuming this is the case,\nthe following pseudo code will clean up appropriately:\nNOTE: This is not done automatically as it is a DEV OPS \npolicy issue and is dependent upon potentially custom or\nproprietary vCon processors behavor.\n\n    get the list of server states from the /servers entry point\n    for each unique pair of server hosts and ports:\n        get the active server key from the /server/info entry point\n        for stale server_keys (all other server keys with the same host:port prefix):\n           for all of the in_progress jobs having the stale server_key (entry point: /in_progress):\n               requeue the job (entry point: put /_in_progress/{job_id}\n           remove the stale server (entry point: delete /servers/{server_key}","operationId":"get_server_states_servers_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"title":"Response Get Server States Servers Get","type":"object","additionalProperties":{"$ref":"#/components/schemas/ServerState"}}}}}}}},"/servers/{server_key}":{"delete":{"tags":["Admin: Servers"],"summary":"Delete Server State","description":"Delete the server state entry for the given server_key.\n<br><i> This should generally only be used to clean up server states for servers that did not gracefully shutdown.</i>\n\nBefore doing this, you may want to check to see if\nthere are in progress jobs (via the /in_progress entry\npoint) left over for this server and requeue them.\n\nThe server key is composed as: \"host:port:pid:start_time\".\n<br>  host and port are from the REST_URL setting.\n\nReturns: None","operationId":"delete_server_state_servers__server_key__delete","parameters":[{"required":true,"schema":{"title":"Server Key","type":"string"},"name":"server_key","in":"path"}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/queues":{"get":{"tags":["Admin: Job Queues"],"summary":"Get Job Queue Names","description":"Get a list of the names of all the job queues.\n\nJobs are added to queues from which they are popped\nto run through a pipeline (set of vCon processors).\nThe jobs pipeline server(s) pop jobs from the list\nof names of queues, configured for the server to watch.\nThe server runs the set of vCon processors configured in\nthe pipeline, having the same name as the queue.\nMost vCon processors create, operate on or modify\na vCon and have zero or more vCons as input and zero\nor more vCons as output.\n\nReturns: list[str] - queue names","operationId":"get_job_queue_names_queues_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"title":"Response Get Job Queue Names Queues Get","type":"array","items":{"type":"string"}}}}}}}},"/queue/{name}":{"get":{"tags":["Admin: Job Queues"],"summary":"Get Queued Jobs","description":"Get the jobs queued in the named queue.\n\nThese jobs are input to the pipeline, having\nthe same name as the queue, when a pipeline\nserver worker is available to work on it.\n\nNote: this is only for montoring purposes,\nDo not use this to operate on a queue as removing a job\nand placing it in an in progress state should be an atomic\noperation.\n\nReturns: list[dict] - list of job objects in the queue","operationId":"get_queued_jobs_queue__name__get","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"title":"Response Get Queued Jobs Queue  Name  Get","type":"array","items":{"$ref":"#/components/schemas/QueueJob"}}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["Admin: Job Queues"],"summary":"Add Queue Job","description":"Add the given job to the named job queue.\n\nCurrently only one job_type is supported: \"vcon_uuid\"\nwhich has an array of vCon UUIDs contained in\nvcon_uuid.  vcon_uuid is currently limited to\nexactly one vCon UUID.\n\nReturns: int - the positiion of the added job in the queue.","operationId":"add_queue_job_queue__name__put","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/QueueJob"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"title":"Response Add Queue Job Queue  Name  Put","type":"integer"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"post":{"tags":["Admin: Job Queues"],"summary":"Create New Job Queue","description":"Create the named new job queue.\n\nYou must also define a pipeline of processors (entry point\npost /pipeline) with the same name as this new queue.\nYou must then configure one or more pipeline servers\nto perform the pipeline processing for the jobs in the\nqueue, by adding the queue name to the set of queues\nfor the server to monitor (entry point /server/queues).\nWithout defining a pipeline and one or more servers to\nperform them, the jobs will just sit in the queue.\n\nReturns: None","operationId":"create_new_job_queue_queue__name__post","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Admin: Job Queues"],"summary":"Delete Job Queue","description":"Delete the named job queue and return any jobs that were in the queue.\n\nReturns: list[dict] - list of jobs that were in the queue","operationId":"delete_job_queue_queue__name__delete","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"title":"Response Delete Job Queue Queue  Name  Delete","type":"array","items":{"$ref":"#/components/schemas/QueueJob"}}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/in_progress":{"get":{"tags":["Admin: In Progress Jobs"],"summary":"Get In Progress Jobs","description":"Get the list of jobs which are dequeued and supposed to be work in progress on a pipeline server.\n\nReturns: dict - dict of in progress job objects (dict) where the keys are the unique int job id.","operationId":"get_in_progress_jobs_in_progress_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"title":"Response Get In Progress Jobs In Progress Get","type":"object","additionalProperties":{"$ref":"#/components/schemas/InProgressJob"}}}}}}}},"/in_progress/{job_id}":{"put":{"tags":["Admin: In Progress Jobs"],"summary":"Requeue In Progress Job","description":"Requeue the in process job indicated by its job id and\nput it at the front (first to be worked on) of the job\nqueue from which it came.\n\nWARNING: This does not cancel the job if it is still in\nprogress.\nRequeing an in progress job while a pipeline server is\nstill working on it will have unpredictable results.\n\nThis is typically used to reschedule, rather than cancel,\njobs from  a server that has hung or died (see entry point get /servers).\n\nReturns: None","operationId":"requeue_in_progress_job_in_progress__job_id__put","parameters":[{"required":true,"schema":{"title":"Job Id","type":"integer"},"name":"job_id","in":"path"}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Admin: In Progress Jobs"],"summary":"Remove In Progress Job","description":"Remove the in progress job indicated by its job id and\ndo NOT add it back to the queue from which it came.\n\nWARNING: This does not cancel the job if it is still in\nprogress.\nRemoving an in progress job while a pipeline server is\nstill working on it will have unpredictable results.\n\nThis is typically used to cancel, rather than reschedule,\njobs from  a server that has hung or died\n(see entry point get /servers).\n\nReturns: None","operationId":"remove_in_progress_job_in_progress__job_id__delete","parameters":[{"required":true,"schema":{"title":"Job Id","type":"integer"},"name":"job_id","in":"path"}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/pipeline/{name}":{"get":{"tags":["Admin: Pipelines"],"summary":"Get Pipeline","description":"Get the definition of the named pipeline from the DB.\n\n Parameters:\n   **name**: str - name of the pipeline to retrieve\n\nReturns:\n   PipelineDefinition for named pipeline","operationId":"get_pipeline_pipeline__name__get","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PipelineDefinition"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"put":{"tags":["Admin: Pipelines"],"summary":"Update Pipeline","description":"Add new or replace existing pipeline with the named pipeline definition.\n\nVconProcessorOptions: bool - validate the ProcessorOptions in the pipeline.\n  The default and recommendation is to validate.  However if the named \n  processor is not installed on this machine, validation will fail.\n\nReturns: None","operationId":"update_pipeline_pipeline__name__put","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"},{"required":false,"schema":{"title":"Validate Processor Options","type":"boolean","default":true},"name":"validate_processor_options","in":"query"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/PipelineDefinition"}}},"required":true},"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["Admin: Pipelines"],"summary":"Delete Pipeline","description":"Delete the definition of the named pipeline from the DB.\n\n Parameters:\n   **name**: str - name of the pipeline to retrieve\n\nReturns: none","operationId":"delete_pipeline_pipeline__name__delete","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"}],"responses":{"204":{"description":"Successful Response"},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/pipelines":{"get":{"tags":["Admin: Pipelines"],"summary":"Get Pipeline Names","description":"Get the list of names of all pipelines in the DB.\n\nParameters: none\n\nReturns:\nList[str] - names of pipelines in the DB","operationId":"get_pipeline_names_pipelines_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"title":"Response Get Pipeline Names Pipelines Get","type":"array","items":{"type":"string"}}}}}}}},"/vcon/{vcon_uuid}":{"get":{"tags":["vCon Storage CRUD"],"summary":"Get Vcon","description":"Get the vCon object identified by the given UUID.\n\nReturns: dict - vCon object which may be in the unencrypted, signed or encrypted JSON forms","operationId":"get_vcon_vcon__vcon_uuid__get","parameters":[{"required":true,"schema":{"title":"Vcon Uuid","type":"string"},"name":"vcon_uuid","in":"path"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VconObject"}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}},"delete":{"tags":["vCon Storage CRUD"],"summary":"Delete Vcon","description":"Delete the vCon idenfied by the given UUID from VconStorage\n\nReturns: None","operationId":"delete_vcon_vcon__vcon_uuid__delete","parameters":[{"required":true,"schema":{"title":"Vcon Uuid","type":"string"},"name":"vcon_uuid","in":"path"}],"responses":{"204":{"description":"Successful Response"},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/vcon":{"post":{"tags":["vCon Storage CRUD"],"summary":"Post Vcon","description":"Store the given vCon in VconStorage, replace if it exists for the given UUID","operationId":"post_vcon_vcon_post","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/VconObject"}}},"required":true},"responses":{"204":{"description":"Successful Response"},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/vcon/{vcon_uuid}/jq":{"get":{"tags":["vCon Storage CRUD"],"summary":"Get Vcon Jq Transform","description":"Apply the given jq transform to the vCon identified by the given UUID and return the results.\n\nReturns: list - containing jq tranform of the vCon.","operationId":"get_vcon_jq_transform_vcon__vcon_uuid__jq_get","parameters":[{"required":true,"schema":{"title":"Vcon Uuid","type":"string"},"name":"vcon_uuid","in":"path"},{"required":true,"schema":{"title":"Jq Transform","type":"string"},"name":"jq_transform","in":"query"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/vcon/{vcon_uuid}/jsonpath":{"get":{"tags":["vCon Storage CRUD"],"summary":"Get Vcon Jsonpath Query","description":"Apply the given JSONpath query to the vCon idntified by the given UUID.\n\nReturns: list - the JSONpath query results","operationId":"get_vcon_jsonpath_query_vcon__vcon_uuid__jsonpath_get","parameters":[{"required":true,"schema":{"title":"Vcon Uuid","type":"string"},"name":"vcon_uuid","in":"path"},{"required":true,"schema":{"title":"Path String","type":"string"},"name":"path_string","in":"query"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/process/{vcon_uuid}/deepgram":{"post":{"tags":["vCon Processors"],"summary":"transcribe Vcon dialogs using Vcon Whisper filter_plugin","description":"Deepgram transcription binding for **VconProcessor**\n\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Deepgram** **Vcon** **filter_plug** for transcription is used.","operationId":"run_vcon_processor_process__vcon_uuid__deepgram_post","parameters":[{"required":true,"schema":{"title":"Vcon Uuid","type":"string"},"name":"vcon_uuid","in":"path"},{"required":false,"schema":{"title":"Commit Changes","type":"boolean","default":false},"name":"commit_changes","in":"query"},{"required":false,"schema":{"title":"Return Whole Vcon","type":"boolean","default":true},"name":"return_whole_vcon","in":"query"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DeepgramOptions"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VconProcessorOutput"}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/process/{vcon_uuid}/openai_chat_completion":{"post":{"tags":["vCon Processors"],"summary":"transcribe Vcon dialogs using Vcon Whisper filter_plugin","description":"OpenAi Chat Completion binding for **VconProcessor**\n\nThis **VconProcessor** will input the text dialog and transcribed dialog(s) for one or all of the audio dialogs in the input Vcon and add an analysis object containing the generative AI output for the prompt provided in the option.\nThe **openai_chat_completions** **Vcon** **filter_plug** is used.","operationId":"run_vcon_processor_process__vcon_uuid__openai_chat_completion_post","parameters":[{"required":true,"schema":{"title":"Vcon Uuid","type":"string"},"name":"vcon_uuid","in":"path"},{"required":false,"schema":{"title":"Commit Changes","type":"boolean","default":false},"name":"commit_changes","in":"query"},{"required":false,"schema":{"title":"Return Whole Vcon","type":"boolean","default":true},"name":"return_whole_vcon","in":"query"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/OpenAiChatCompletionOptions"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VconProcessorOutput"}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/process/{vcon_uuid}/whisper_base":{"post":{"tags":["vCon Processors"],"summary":"transcribe Vcon dialogs using Vcon Whisper filter_plugin","description":"Whisper OpenAI transcription binding for **VconProcessor**  with model size: base\n\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Whisper** **Vcon** **filter_plug** for transcription is used which is built upon the OpenAI Whisper package.","operationId":"run_vcon_processor_process__vcon_uuid__whisper_base_post","parameters":[{"required":true,"schema":{"title":"Vcon Uuid","type":"string"},"name":"vcon_uuid","in":"path"},{"required":false,"schema":{"title":"Commit Changes","type":"boolean","default":false},"name":"commit_changes","in":"query"},{"required":false,"schema":{"title":"Return Whole Vcon","type":"boolean","default":true},"name":"return_whole_vcon","in":"query"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/WhisperOptions"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VconProcessorOutput"}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"500":{"description":"Internal Server Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HttpErrorResponseBody"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/pipeline/{name}/run":{"post":{"tags":["vCon Pipelines"],"summary":"Run a pipeline of processors on the vCon given in the request body","description":"Run the given Vcon through the named pipeline.\n\nNote: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:\n\n  **failure_queue** assumed to be None <br>\n  **success_queue** assumed to be None <br>\n  **save_vcons** <br>\n\nParameters:\n\n  **name** (str) - name of the pipeline defined in the pipeline DB\n\n  **vCon** (py_vcon_server.processor.VconObject) - vCon from body, assumes vCon/UUID does NOT exist in storage\n\n  **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline\n      processing.  Ignores/overides the **PipelineOptions.save_vcons**\n\n  **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline\n\nReturns:\n\n  If return_results is true, return the VconProcessorOutput, otherwise return None","operationId":"run_pipeline_pipeline__name__run_post","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"},{"required":false,"schema":{"title":"Save Vcons","type":"boolean","default":false},"name":"save_vcons","in":"query"},{"required":false,"schema":{"title":"Return Results","type":"boolean","default":true},"name":"return_results","in":"query"}],"requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/VconObject"}}},"required":true},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VconProcessorOutput"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}},"/pipeline/{name}/run/{uuid}":{"post":{"tags":["vCon Pipelines"],"summary":"Run a pipeline of processors on the vCon in storage identified by UUID","description":"Run the vCon identified by the given UUID through the named pipeline.\n\nNote: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:\n\n  **failure_queue** assumed to be None <br>\n  **success_queue** assumed to be None <br>\n  **save_vcons** <br>\n\nParameters:\n\n  **name** (str) - name of the pipeline defined in the pipeline DB\n\n  **uuid** (str) - UUID of the vCon in the vCon Storage\n\n  **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline\n      processing.  Ignores/overides the **PipelineOptions.save_vcons**\n\n  **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline\n\nReturns:\n\n  If return_results is true, return the VconProcessorOutput, otherwise return None","operationId":"run_pipeline_uuid_pipeline__name__run__uuid__post","parameters":[{"required":true,"schema":{"title":"Name","type":"string"},"name":"name","in":"path"},{"required":true,"schema":{"title":"Uuid","type":"string"},"name":"uuid","in":"path"},{"required":false,"schema":{"title":"Save Vcons","type":"boolean","default":false},"name":"save_vcons","in":"query"},{"required":false,"schema":{"title":"Return Results","type":"boolean","default":true},"name":"return_results","in":"query"}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VconProcessorOutput"}}}},"422":{"description":"Validation Error","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HTTPValidationError"}}}}}}}},"components":{"schemas":{"DeepgramOptions":{"title":"Deepgram transcription filter method options","type":"object","properties":{"language":{"title":"transcription language","type":"string","default":"en"},"input_dialogs":{"title":"input **Vcon** recording **dialog** objects","anyOf":[{"type":"string"},{"type":"array","items":{"type":"integer"}}],"description":"\nIndicates which recording **dialog** objects in the given **Vcon** are\nto be transcribed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n","default":"","examples":["","0:","0:-2","2:5","0:6:2",[],[1,4,5,9]]},"input_vcon_index":{"title":"VconProcessorIO input vCon index","type":"integer","description":"Index to which vCon in the VconProcessorIO is to be used for input","default":0}},"description":"Base class options for **VconProcessor.processor** method "},"HTTPValidationError":{"title":"HTTPValidationError","type":"object","properties":{"detail":{"title":"Detail","type":"array","items":{"$ref":"#/components/schemas/ValidationError"}}}},"HttpErrorResponseBody":{"title":"HttpErrorResponseBody","required":["detail"],"type":"object","properties":{"detail":{"title":"Detail","type":"string"}},"description":"Error return type object for APIs "},"InProgressJob":{"title":"InProgressJob","required":["jobid","queue","job","start","server"],"type":"object","properties":{"jobid":{"title":"job id","type":"integer","description":"unique (across all pipeline servers) integer job id for this in progress job","example":3456},"queue":{"title":"job queue name","type":"string","description":"the job queue name from which this in progress job was popped"},"job":{"title":"Job","allOf":[{"$ref":"#/components/schemas/QueueJob"}],"description":"the queue job that was popped by the pipeline server and initiated this in progress job"},"start":{"title":"job start time","type":"number","description":"epoch seconds time at which this in progress job started","example":1703715066.781355},"server":{"title":"server key","type":"string","description":"the server key to the pipeline server upon which this in progress job is running.<br> server_keys are of the format host:port:pid:start_time<br> to iterate server keys see entry point get /servers.","example":"localhost:8000:765:1692125691.2032259"}}},"OpenAiChatCompletionOptions":{"title":"OpenAI Chat Completion filter method options","type":"object","properties":{"input_dialogs":{"title":"input **Vcon** text **dialog** objects","anyOf":[{"type":"string"},{"type":"array","items":{"type":"integer"}}],"description":"\nIndicates which text **dialog** and recording **dialog** object's associated\ntranscript **analysis** objects are to be input.  Recording **dialog**\nobjects that do not have transcript **analysis** objects, are transcribed\nusing the default FilterPlugin transcribe type.\n\n * **\"\"** (empty str or None) - all **dialogs** are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** \n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** \n * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are fed to the the model.\n\n**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.\n","default":"","examples":["","0:","0:-2","2:5","0:6:2",[],[1,4,5,9]]},"model":{"title":"**OpenAI** model name to use for generative AI","type":"string","description":"\nThe named model is used to feed the transcription/text and then ask it the\ngiven prompt.\nOpenAI has numerous trained models, the latest of which may not be listed here\nin examples.\n\nYou can get the current list of of available models for\nyour license/API key using the following:\n\n    import openai\n    openai.api_key = \"your key here\"\n    openai.Model.list()\n","default":"gpt-4","examples":["davinci","gpt-4","text-davinci-001","text-search-curie-query-001","gpt-3.5-turbo","gpt-4-0613","babbage","text-babbage-001","curie-instruct-beta","davinci-similarity","code-davinci-edit-001","text-similarity-curie-001","ada-code-search-text","gpt-3.5-turbo-0613","text-search-ada-query-001","gpt-3.5-turbo-16k-0613","gpt-4-0314","babbage-search-query","ada-similarity","text-curie-001","gpt-3.5-turbo-16k","text-search-ada-doc-001","text-search-babbage-query-001","code-search-ada-code-001","curie-search-document","davinci-002","text-search-davinci-query-001","text-search-curie-doc-001","babbage-search-document","babbage-002","babbage-code-search-text","text-embedding-ada-002","davinci-instruct-beta","davinci-search-query","text-similarity-babbage-001","text-davinci-002","code-search-babbage-text-001","text-davinci-003","text-search-davinci-doc-001","code-search-ada-text-001","ada-search-query","text-similarity-ada-001","ada-code-search-code","whisper-1","text-davinci-edit-001","davinci-search-document","curie-search-query","babbage-similarity","ada","ada-search-document","text-ada-001","text-similarity-davinci-001","curie-similarity","babbage-code-search-code","code-search-babbage-code-001","text-search-babbage-doc-001","gpt-3.5-turbo-0301","curie"]},"prompt":{"title":"the prompt or question to ask about the transcription/text","type":"string","description":"\nThe **OpenAI** model is given text from the dialog and\ngiven this prompt to instruct it what generative AI text\nthat you would like from it.\n","default":"Summarize the transcript in these messages."},"max_tokens":{"title":"maximum number of tokens of output","type":"integer","description":"\nThe **max_tokens** limits the size of the output generative AI text.\nA token is approximately a syllable.  On average a word is 1.33 tokens.\n","default":100},"temperature":{"title":"**OpenAI** sampling temperature","type":"number","description":"\nlower number is more deterministic, higher is more random.\n\nvalues should range from 0.0 to 2.0\n","default":0.0},"jq_result":{"title":"**jq** query of result","type":"string","description":"\nThe **OpenAI** completion outputs a JSON \n[Completion Object](https://platform.openai.com/docs/api-reference/completions/object)\n\nThe **jq_results** string contains a **jq**  filter/query string that\nis applied to the output to determine what is saved in the\ncreated **Vcon** **analysis** object.\n\n* **\".\"** - results in a query that returns the entire JSON object.\n* **\".choices[0].text\"** - results in a query which contains only the text portion of the completion output\n\nFor more information on creating **jq filters** see:\nhttps://jqlang.github.io/jq/manual/\n\n","default":".choices[0].message.content","examples":[".",".choices[0].text"]},"analysis_type":{"title":"the **Vcon analysis** object type","type":"string","description":"\nThe results of the completion are saved in a new **analysis**\nobject which is added to the input **Vcon**.\n**analysis_type** is the **analysis** type token that is set\non the new **analysis** object in the **Vcon**.\n","default":"summary"},"input_vcon_index":{"title":"VconProcessorIO input vCon index","type":"integer","description":"Index to which vCon in the VconProcessorIO is to be used for input","default":0}},"description":"Base class options for **VconProcessor.processor** method "},"PipelineDefinition":{"title":"PipelineDefinition","required":["pipeline_options","processors"],"type":"object","properties":{"pipeline_options":{"title":"pipeline execution options","allOf":[{"$ref":"#/components/schemas/PipelineOptions"}]},"processors":{"title":"list of **VconProcessorConfig**","type":"array","items":{"$ref":"#/components/schemas/PipelineProcessor"},"description":"The sequential set of **VconProcessorConfig** for the list of **VconProcessor**s that get run for this **Pipeline**"}},"description":"Definition of the serialized representation of a VconPipeline "},"PipelineOptions":{"title":"PipelineOptions","type":"object","properties":{"save_vcons":{"title":"save/update vCon(s) after pipeline processing","type":"boolean"},"timeout":{"title":"processor timeout","anyOf":[{"type":"number"},{"type":"integer"}],"description":"maximum timeout for any processor in the pipeline.\n  If any one of the processors in the pipeline takes more than this number\n of seconds, the processor will be cancled, remaining processors will be\n skipped and the pipeline will be considered failed for the given job/vCon.\n"},"failure_queue":{"title":"queue for failed pipeline jobs","type":"string","description":"If any of the processors in the pipeline or dependant DB access fail,\n the job is added to the failure_queue if set.\n"},"success_queue":{"title":"queue for successfully run pipeline jobs","type":"string","description":"If all of the processors in the pipeline succeed in running,\n the job is added to the success_queue if set.\n"}},"description":"Options the effect the handling of Vcon Pipeline processing."},"PipelineProcessor":{"title":"PipelineProcessor","required":["processor_name","processor_options"],"type":"object","properties":{"processor_name":{"title":"VconProcessor name","type":"string"},"processor_options":{"title":"VconProcessor options","allOf":[{"$ref":"#/components/schemas/VconProcessorOptions"}]}},"description":"Configuration for a VconProcessor in a Pipeline"},"QueueJob":{"title":"QueueJob","type":"object","properties":{"job_type":{"title":"Job Type","type":"string","description":"queue job type (currently only \"vcon_uuid\" allowed)","default":"vcon_uuid"},"vcon_uuid":{"title":"vCon UUIDs","type":"array","items":{"type":"string"},"description":"array of vCon UUIDs (currently must be exactly 1)","default":[],"example":["0185656d-fake-UUID-84fd-5b4de1ef42b4"]}}},"QueueProperties":{"title":"QueueProperties","type":"object","properties":{"weight":{"title":"server's queue weight","type":"integer","description":"number of times that the pipeline server should pop a job from this queue before iterating to the server's next queue.","default":1}}},"ServerInfo":{"title":"ServerInfo","required":["start_time","pid"],"type":"object","properties":{"py_vcon_server":{"title":"server version","type":"string","description":"Python package py_vcon_server version number","default":"0.1"},"vcon":{"title":"vcon version","type":"string","description":"Python package **py_vcon** version number","default":"0.3"},"start_time":{"title":"server start time","type":"number","description":"epoch seconds time at which this server started","example":1703715066.7784812},"pid":{"title":"server process id","type":"integer","example":94430}}},"ServerState":{"title":"ServerState","required":["host","port","pid","start_time","num_workers","state","last_heartbeat"],"type":"object","properties":{"host":{"title":"server host","type":"string","description":"the server's host as configured in the REST_URL","examples":["locahost","192.168.0.23","example.com"]},"port":{"title":"server port","type":"integer","description":"the server's port as configured in the REST_URL","example":8000},"pid":{"title":"server process id","type":"integer","example":94430},"start_time":{"title":"server start up time","type":"number","description":"epoch seconds time at which this server started","example":1703715066.7792811},"num_workers":{"title":"number of server worker processes","type":"integer","description":"the number of pipeline worker processes configured in NUM_WORKERS for this server","example":4},"state":{"title":"server state","type":"string","example":"running","examples":["starting_up","running","shutting_down","unknown"]},"last_heartbeat":{"title":"heartbeat time stamp","type":"number","description":"epoch seconds time for the last heartbeat on this server","example":1703715066.779318}}},"ValidationError":{"title":"ValidationError","required":["loc","msg","type"],"type":"object","properties":{"loc":{"title":"Location","type":"array","items":{"anyOf":[{"type":"string"},{"type":"integer"}]}},"msg":{"title":"Message","type":"string"},"type":{"title":"Error Type","type":"string"}}},"VconObject":{"title":"VconObject","required":["uuid"],"type":"object","properties":{"vcon":{"title":"vCon format version","type":"string","default":"0.0.1"},"uuid":{"title":"Uuid","type":"string"},"created_at":{"title":"vCon format version","anyOf":[{"exclusiveMinimum":0.0,"type":"integer"},{"exclusiveMinimum":0.0,"type":"number"},{"type":"string"},{"type":"string","format":"date-time"}],"example":"2023-12-27T22:11:06.733+00:00","examples":[1703715066,1703715066.7337692,"Wed, 14 May 2022 18:16:19 -0000","2023-12-27T22:11:06.733+00:00","2022-05-14T18:16:19.000+00:00"]},"parties":{"title":"Parties","type":"array","items":{"$ref":"#/components/schemas/VconPartiesObject"}},"dialog":{"title":"Dialog","type":"array","items":{"type":"object"}},"analysis":{"title":"Analysis","type":"array","items":{"type":"object"}},"attachments":{"title":"Attachments","type":"array","items":{"type":"object"}}}},"VconPartiesObject":{"title":"VconPartiesObject","required":["tel"],"type":"object","properties":{"tel":{"title":"tel URI","type":"string","description":"a telephone number","example":"+1 123 456 7890"}}},"VconProcessorOptions":{"title":"VconProcessorOptions","type":"object","properties":{"input_vcon_index":{"title":"VconProcessorIO input vCon index","type":"integer","description":"Index to which vCon in the VconProcessorIO is to be used for input","default":0}},"description":"Base class options for **VconProcessor.processor** method "},"VconProcessorOutput":{"title":"VconProcessorOutput","type":"object","properties":{"vcons":{"title":"array of **Vcon** objects","type":"array","items":{"$ref":"#/components/schemas/VconObject"},"default":[]},"vcons_modified":{"title":"boolean indicated if the **Vcon** in the **vcons** array has been modified from the input version","type":"array","items":{"type":"boolean"},"default":[]}},"description":"Serializable Output results from a VconProcessor "},"WhisperOptions":{"title":"WhisperOptions","type":"object","properties":{"language":{"title":"transcription language","type":"string","default":"en"},"input_dialogs":{"title":"input **Vcon** recording **dialog** objects","anyOf":[{"type":"string"},{"type":"array","items":{"type":"integer"}}],"description":"\nIndicates which recording **dialog** objects in the given **Vcon** are\nto be transcribed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n","default":"","examples":["","0:","0:-2","2:5","0:6:2",[],[1,4,5,9]]},"output_types":{"title":"transcription output types","type":"array","items":{"type":"string"},"description":"\nList of output types to generate.  Current set of value supported are:\n\n  * \"vendor\" - add the Whisper specific JSON format transcript as an analysis object\n  * \"word_srt\" - add a .srt file with timing on a word or small phrase basis as an analysis object\n  * \"word_ass\" - add a .ass file with sentence and highlighted word timeing as an analysis object\n       Not specifing \"output_type\" assumes all of the above will be output, each as a separate analysis object.\n","default":["vendor","word_srt","word_ass"]},"input_vcon_index":{"title":"VconProcessorIO input vCon index","type":"integer","description":"Index to which vCon in the VconProcessorIO is to be used for input","default":0}},"description":"Base class options for **VconProcessor.processor** method "}}},"tags":[{"name":"Admin: Servers","description":"Entry points to get and set server information"},{"name":"Admin: Job Queues","description":"Entry points to create, operate on, add to and delete job queues"},{"name":"Admin: Pipelines","description":"Entry points to create, update and delete pipelines"},{"name":"Admin: In Progress Jobs","description":"Entry points to get, operate on in progress pipeline job states"},{"name":"vCon Storage CRUD","description":"Entry points to get, query, modify or delete vCons in storage"},{"name":"vCon Processors","description":"Entry points to run a single processor on a vCon"},{"name":"vCon Pipelines","description":"Entry points to run a pipeline of processor(s) on a vCon"}]}
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Python vCon Server",
+    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
+    "contact": {
+      "name": "Commercial support available from SIPez",
+      "url": "http://www.sipez.com"
+    },
+    "license": {
+      "name": "MIT License"
+    },
+    "version": "0.1"
+  },
+  "paths": {
+    "/server/info": {
+      "get": {
+        "tags": [
+          "Admin: Servers"
+        ],
+        "summary": "Get Server Info",
+        "description": "Get information about the server running at this host and port.\n\nReturns: ServerInfo - attributes of this server.",
+        "operationId": "get_server_info_server_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServerInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/server/queues": {
+      "get": {
+        "tags": [
+          "Admin: Servers"
+        ],
+        "summary": "Get Server Queues Names",
+        "description": "Get the list of queues and related configuration for\nfor this server.\n\nThis is the list names of queues that this server is\nactively popping jobs from and running the vCon\nprocessors configured in the pipeline assocated with\nthe queue name.\n\nReturns: dict[str, dict] - dict with keys being queue names and values are a dict of queue properties\n\nkeys for queue properties:\n\n    weight: int - number of times to pull a job out of the\n        named queue, before iterating to the next name\n        queue configured for this server.",
+        "operationId": "get_server_queues_names_server_queues_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Server Queues Names Server Queues Get",
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/QueueProperties"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/server/queue/{name}": {
+      "post": {
+        "tags": [
+          "Admin: Servers"
+        ],
+        "summary": "Set Server Queue Properties",
+        "description": "Set the properties on the named queue on this server.\n\nThis adds or updates the properties for the queue and\nidentifies the queue to be processed by this server\nusing the pipeline associated with this queue name.\n\nCurrently the only queue property is the \"weight\".\nweight must be an integer value and indicates how many\njobs should be popped from the named queue before\niterating to the next queue configured for this server.\nJobs are popped one at a time by the server such that\nthe configured NUM_WORKERS are each busy on one job at\na time.  These jobs that the server is busy on are \ncalled in_progress jobs.\n\nReturns: None",
+        "operationId": "set_server_queue_properties_server_queue__name__post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueProperties"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin: Servers"
+        ],
+        "summary": "Delete Server Queue",
+        "description": "Remove the named queue from the list of queues to process on this server.\n\nThis indicates, to this server, to ignore the queue deleted from the server's queue list.\nThis does not remove or modify the queue itself or the jobs contained in the queue.\n\nReturns: None",
+        "operationId": "delete_server_queue_server_queue__name__delete",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers": {
+      "get": {
+        "tags": [
+          "Admin: Servers"
+        ],
+        "summary": "Get Server States",
+        "description": "Get a JSON dictionary of running server states\n\nReturns: dict[server_key, ServerState] where keys are server_keys \n<br> The value associated with the server key is a dict containing server info \n\nThe list may contain servers which did not gracefully shutdown.\nIt is up to the user to remove these stale server states and\nclean up and requeue any in_progress jobs which the server did\nnot complete.  A pipeline of well behaved vCon processors does not\ncommit changes until all of the pipeline's vCon processor have\ncompleted.  Assuming this is the case,\nthe following pseudo code will clean up appropriately:\nNOTE: This is not done automatically as it is a DEV OPS \npolicy issue and is dependent upon potentially custom or\nproprietary vCon processors behavor.\n\n    get the list of server states from the /servers entry point\n    for each unique pair of server hosts and ports:\n        get the active server key from the /server/info entry point\n        for stale server_keys (all other server keys with the same host:port prefix):\n           for all of the in_progress jobs having the stale server_key (entry point: /in_progress):\n               requeue the job (entry point: put /_in_progress/{job_id}\n           remove the stale server (entry point: delete /servers/{server_key}",
+        "operationId": "get_server_states_servers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Server States Servers Get",
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/ServerState"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/servers/{server_key}": {
+      "delete": {
+        "tags": [
+          "Admin: Servers"
+        ],
+        "summary": "Delete Server State",
+        "description": "Delete the server state entry for the given server_key.\n<br><i> This should generally only be used to clean up server states for servers that did not gracefully shutdown.</i>\n\nBefore doing this, you may want to check to see if\nthere are in progress jobs (via the /in_progress entry\npoint) left over for this server and requeue them.\n\nThe server key is composed as: \"host:port:pid:start_time\".\n<br>  host and port are from the REST_URL setting.\n\nReturns: None",
+        "operationId": "delete_server_state_servers__server_key__delete",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Server Key",
+              "type": "string"
+            },
+            "name": "server_key",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queues": {
+      "get": {
+        "tags": [
+          "Admin: Job Queues"
+        ],
+        "summary": "Get Job Queue Names",
+        "description": "Get a list of the names of all the job queues.\n\nJobs are added to queues from which they are popped\nto run through a pipeline (set of vCon processors).\nThe jobs pipeline server(s) pop jobs from the list\nof names of queues, configured for the server to watch.\nThe server runs the set of vCon processors configured in\nthe pipeline, having the same name as the queue.\nMost vCon processors create, operate on or modify\na vCon and have zero or more vCons as input and zero\nor more vCons as output.\n\nReturns: list[str] - queue names",
+        "operationId": "get_job_queue_names_queues_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Job Queue Names Queues Get",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/queue/{name}": {
+      "get": {
+        "tags": [
+          "Admin: Job Queues"
+        ],
+        "summary": "Get Queued Jobs",
+        "description": "Get the jobs queued in the named queue.\n\nThese jobs are input to the pipeline, having\nthe same name as the queue, when a pipeline\nserver worker is available to work on it.\n\nNote: this is only for montoring purposes,\nDo not use this to operate on a queue as removing a job\nand placing it in an in progress state should be an atomic\noperation.\n\nReturns: list[dict] - list of job objects in the queue",
+        "operationId": "get_queued_jobs_queue__name__get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Queued Jobs Queue  Name  Get",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QueueJob"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin: Job Queues"
+        ],
+        "summary": "Add Queue Job",
+        "description": "Add the given job to the named job queue.\n\nCurrently only one job_type is supported: \"vcon_uuid\"\nwhich has an array of vCon UUIDs contained in\nvcon_uuid.  vcon_uuid is currently limited to\nexactly one vCon UUID.\n\nReturns: int - the positiion of the added job in the queue.",
+        "operationId": "add_queue_job_queue__name__put",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueJob"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Add Queue Job Queue  Name  Put",
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin: Job Queues"
+        ],
+        "summary": "Create New Job Queue",
+        "description": "Create the named new job queue.\n\nYou must also define a pipeline of processors (entry point\npost /pipeline) with the same name as this new queue.\nYou must then configure one or more pipeline servers\nto perform the pipeline processing for the jobs in the\nqueue, by adding the queue name to the set of queues\nfor the server to monitor (entry point /server/queues).\nWithout defining a pipeline and one or more servers to\nperform them, the jobs will just sit in the queue.\n\nReturns: None",
+        "operationId": "create_new_job_queue_queue__name__post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin: Job Queues"
+        ],
+        "summary": "Delete Job Queue",
+        "description": "Delete the named job queue and return any jobs that were in the queue.\n\nReturns: list[dict] - list of jobs that were in the queue",
+        "operationId": "delete_job_queue_queue__name__delete",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Delete Job Queue Queue  Name  Delete",
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QueueJob"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/in_progress": {
+      "get": {
+        "tags": [
+          "Admin: In Progress Jobs"
+        ],
+        "summary": "Get In Progress Jobs",
+        "description": "Get the list of jobs which are dequeued and supposed to be work in progress on a pipeline server.\n\nReturns: dict - dict of in progress job objects (dict) where the keys are the unique int job id.",
+        "operationId": "get_in_progress_jobs_in_progress_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get In Progress Jobs In Progress Get",
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/InProgressJob"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/in_progress/{job_id}": {
+      "put": {
+        "tags": [
+          "Admin: In Progress Jobs"
+        ],
+        "summary": "Requeue In Progress Job",
+        "description": "Requeue the in process job indicated by its job id and\nput it at the front (first to be worked on) of the job\nqueue from which it came.\n\nWARNING: This does not cancel the job if it is still in\nprogress.\nRequeing an in progress job while a pipeline server is\nstill working on it will have unpredictable results.\n\nThis is typically used to reschedule, rather than cancel,\njobs from  a server that has hung or died (see entry point get /servers).\n\nReturns: None",
+        "operationId": "requeue_in_progress_job_in_progress__job_id__put",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "integer"
+            },
+            "name": "job_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin: In Progress Jobs"
+        ],
+        "summary": "Remove In Progress Job",
+        "description": "Remove the in progress job indicated by its job id and\ndo NOT add it back to the queue from which it came.\n\nWARNING: This does not cancel the job if it is still in\nprogress.\nRemoving an in progress job while a pipeline server is\nstill working on it will have unpredictable results.\n\nThis is typically used to cancel, rather than reschedule,\njobs from  a server that has hung or died\n(see entry point get /servers).\n\nReturns: None",
+        "operationId": "remove_in_progress_job_in_progress__job_id__delete",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "integer"
+            },
+            "name": "job_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipeline/{name}": {
+      "get": {
+        "tags": [
+          "Admin: Pipelines"
+        ],
+        "summary": "Get Pipeline",
+        "description": "Get the definition of the named pipeline from the DB.\n\n Parameters:\n   **name**: str - name of the pipeline to retrieve\n\nReturns:\n   PipelineDefinition for named pipeline",
+        "operationId": "get_pipeline_pipeline__name__get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineDefinition"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin: Pipelines"
+        ],
+        "summary": "Update Pipeline",
+        "description": "Add new or replace existing pipeline with the named pipeline definition.\n\nVconProcessorOptions: bool - validate the ProcessorOptions in the pipeline.\n  The default and recommendation is to validate.  However if the named \n  processor is not installed on this machine, validation will fail.\n\nReturns: None",
+        "operationId": "update_pipeline_pipeline__name__put",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Validate Processor Options",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "validate_processor_options",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin: Pipelines"
+        ],
+        "summary": "Delete Pipeline",
+        "description": "Delete the definition of the named pipeline from the DB.\n\n Parameters:\n   **name**: str - name of the pipeline to retrieve\n\nReturns: none",
+        "operationId": "delete_pipeline_pipeline__name__delete",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipelines": {
+      "get": {
+        "tags": [
+          "Admin: Pipelines"
+        ],
+        "summary": "Get Pipeline Names",
+        "description": "Get the list of names of all pipelines in the DB.\n\nParameters: none\n\nReturns:\nList[str] - names of pipelines in the DB",
+        "operationId": "get_pipeline_names_pipelines_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Pipeline Names Pipelines Get",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vcon/{vcon_uuid}": {
+      "get": {
+        "tags": [
+          "vCon Storage CRUD"
+        ],
+        "summary": "Get Vcon",
+        "description": "Get the vCon object identified by the given UUID.\n\nReturns: dict - vCon object which may be in the unencrypted, signed or encrypted JSON forms",
+        "operationId": "get_vcon_vcon__vcon_uuid__get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconObject"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "vCon Storage CRUD"
+        ],
+        "summary": "Delete Vcon",
+        "description": "Delete the vCon idenfied by the given UUID from VconStorage\n\nReturns: None",
+        "operationId": "delete_vcon_vcon__vcon_uuid__delete",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vcon": {
+      "post": {
+        "tags": [
+          "vCon Storage CRUD"
+        ],
+        "summary": "Post Vcon",
+        "description": "Store the given vCon in VconStorage, replace if it exists for the given UUID",
+        "operationId": "post_vcon_vcon_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VconObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vcon/{vcon_uuid}/jq": {
+      "get": {
+        "tags": [
+          "vCon Storage CRUD"
+        ],
+        "summary": "Get Vcon Jq Transform",
+        "description": "Apply the given jq transform to the vCon identified by the given UUID and return the results.\n\nReturns: list - containing jq tranform of the vCon.",
+        "operationId": "get_vcon_jq_transform_vcon__vcon_uuid__jq_get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "title": "Jq Transform",
+              "type": "string"
+            },
+            "name": "jq_transform",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vcon/{vcon_uuid}/jsonpath": {
+      "get": {
+        "tags": [
+          "vCon Storage CRUD"
+        ],
+        "summary": "Get Vcon Jsonpath Query",
+        "description": "Apply the given JSONpath query to the vCon idntified by the given UUID.\n\nReturns: list - the JSONpath query results",
+        "operationId": "get_vcon_jsonpath_query_vcon__vcon_uuid__jsonpath_get",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "title": "Path String",
+              "type": "string"
+            },
+            "name": "path_string",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/deepgram": {
+      "post": {
+        "tags": [
+          "vCon Processors"
+        ],
+        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "description": "Deepgram transcription binding for **VconProcessor**\n\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Deepgram** **Vcon** **filter_plug** for transcription is used.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__deepgram_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeepgramOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/openai_chat_completion": {
+      "post": {
+        "tags": [
+          "vCon Processors"
+        ],
+        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "description": "OpenAi Chat Completion binding for **VconProcessor**\n\nThis **VconProcessor** will input the text dialog and transcribed dialog(s) for one or all of the audio dialogs in the input Vcon and add an analysis object containing the generative AI output for the prompt provided in the option.\nThe **openai_chat_completions** **Vcon** **filter_plug** is used.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__openai_chat_completion_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenAiChatCompletionOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/whisper_base": {
+      "post": {
+        "tags": [
+          "vCon Processors"
+        ],
+        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "description": "Whisper OpenAI transcription binding for **VconProcessor**  with model size: base\n\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Whisper** **Vcon** **filter_plug** for transcription is used which is built upon the OpenAI Whisper package.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__whisper_base_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhisperOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipeline/{name}/run": {
+      "post": {
+        "tags": [
+          "vCon Pipelines"
+        ],
+        "summary": "Run a pipeline of processors on the vCon given in the request body",
+        "description": "Run the given Vcon through the named pipeline.\n\nNote: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:\n\n  **failure_queue** assumed to be None <br>\n  **success_queue** assumed to be None <br>\n  **save_vcons** <br>\n\nParameters:\n\n  **name** (str) - name of the pipeline defined in the pipeline DB\n\n  **vCon** (py_vcon_server.processor.VconObject) - vCon from body, assumes vCon/UUID does NOT exist in storage\n\n  **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline\n      processing.  Ignores/overides the **PipelineOptions.save_vcons**\n\n  **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline\n\nReturns:\n\n  If return_results is true, return the VconProcessorOutput, otherwise return None",
+        "operationId": "run_pipeline_pipeline__name__run_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Save Vcons",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "save_vcons",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Results",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_results",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VconObject"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pipeline/{name}/run/{uuid}": {
+      "post": {
+        "tags": [
+          "vCon Pipelines"
+        ],
+        "summary": "Run a pipeline of processors on the vCon in storage identified by UUID",
+        "description": "Run the vCon identified by the given UUID through the named pipeline.\n\nNote: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:\n\n  **failure_queue** assumed to be None <br>\n  **success_queue** assumed to be None <br>\n  **save_vcons** <br>\n\nParameters:\n\n  **name** (str) - name of the pipeline defined in the pipeline DB\n\n  **uuid** (str) - UUID of the vCon in the vCon Storage\n\n  **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline\n      processing.  Ignores/overides the **PipelineOptions.save_vcons**\n\n  **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline\n\nReturns:\n\n  If return_results is true, return the VconProcessorOutput, otherwise return None",
+        "operationId": "run_pipeline_uuid_pipeline__name__run__uuid__post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            },
+            "name": "name",
+            "in": "path"
+          },
+          {
+            "required": true,
+            "schema": {
+              "title": "Uuid",
+              "type": "string"
+            },
+            "name": "uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Save Vcons",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "save_vcons",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Results",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_results",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DeepgramOptions": {
+        "title": "Deepgram transcription filter method options",
+        "type": "object",
+        "properties": {
+          "language": {
+            "title": "transcription language",
+            "type": "string",
+            "default": "en"
+          },
+          "input_dialogs": {
+            "title": "input **Vcon** recording **dialog** objects",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "description": "\nIndicates which recording **dialog** objects in the given **Vcon** are\nto be transcribed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n",
+            "default": "",
+            "examples": [
+              "",
+              "0:",
+              "0:-2",
+              "2:5",
+              "0:6:2",
+              [],
+              [
+                1,
+                4,
+                5,
+                9
+              ]
+            ]
+          },
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
+      },
+      "HTTPValidationError": {
+        "title": "HTTPValidationError",
+        "type": "object",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "HttpErrorResponseBody": {
+        "title": "HttpErrorResponseBody",
+        "required": [
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "description": "Error return type object for APIs "
+      },
+      "InProgressJob": {
+        "title": "InProgressJob",
+        "required": [
+          "jobid",
+          "queue",
+          "job",
+          "start",
+          "server"
+        ],
+        "type": "object",
+        "properties": {
+          "jobid": {
+            "title": "job id",
+            "type": "integer",
+            "description": "unique (across all pipeline servers) integer job id for this in progress job",
+            "example": 3456
+          },
+          "queue": {
+            "title": "job queue name",
+            "type": "string",
+            "description": "the job queue name from which this in progress job was popped"
+          },
+          "job": {
+            "title": "Job",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/QueueJob"
+              }
+            ],
+            "description": "the queue job that was popped by the pipeline server and initiated this in progress job"
+          },
+          "start": {
+            "title": "job start time",
+            "type": "number",
+            "description": "epoch seconds time at which this in progress job started",
+            "example": 1704167922.6786847
+          },
+          "server": {
+            "title": "server key",
+            "type": "string",
+            "description": "the server key to the pipeline server upon which this in progress job is running.<br> server_keys are of the format host:port:pid:start_time<br> to iterate server keys see entry point get /servers.",
+            "example": "localhost:8000:765:1692125691.2032259"
+          }
+        }
+      },
+      "OpenAiChatCompletionOptions": {
+        "title": "OpenAI Chat Completion filter method options",
+        "type": "object",
+        "properties": {
+          "input_dialogs": {
+            "title": "input **Vcon** text **dialog** objects",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "description": "\nIndicates which text **dialog** and recording **dialog** object's associated\ntranscript **analysis** objects are to be input.  Recording **dialog**\nobjects that do not have transcript **analysis** objects, are transcribed\nusing the default FilterPlugin transcribe type.\n\n * **\"\"** (empty str or None) - all **dialogs** are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** \n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** \n * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are fed to the the model.\n\n**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.\n",
+            "default": "",
+            "examples": [
+              "",
+              "0:",
+              "0:-2",
+              "2:5",
+              "0:6:2",
+              [],
+              [
+                1,
+                4,
+                5,
+                9
+              ]
+            ]
+          },
+          "model": {
+            "title": "**OpenAI** model name to use for generative AI",
+            "type": "string",
+            "description": "\nThe named model is used to feed the transcription/text and then ask it the\ngiven prompt.\nOpenAI has numerous trained models, the latest of which may not be listed here\nin examples.\n\nYou can get the current list of of available models for\nyour license/API key using the following:\n\n    import openai\n    openai.api_key = \"your key here\"\n    openai.Model.list()\n",
+            "default": "gpt-4",
+            "examples": [
+              "davinci",
+              "gpt-4",
+              "text-davinci-001",
+              "text-search-curie-query-001",
+              "gpt-3.5-turbo",
+              "gpt-4-0613",
+              "babbage",
+              "text-babbage-001",
+              "curie-instruct-beta",
+              "davinci-similarity",
+              "code-davinci-edit-001",
+              "text-similarity-curie-001",
+              "ada-code-search-text",
+              "gpt-3.5-turbo-0613",
+              "text-search-ada-query-001",
+              "gpt-3.5-turbo-16k-0613",
+              "gpt-4-0314",
+              "babbage-search-query",
+              "ada-similarity",
+              "text-curie-001",
+              "gpt-3.5-turbo-16k",
+              "text-search-ada-doc-001",
+              "text-search-babbage-query-001",
+              "code-search-ada-code-001",
+              "curie-search-document",
+              "davinci-002",
+              "text-search-davinci-query-001",
+              "text-search-curie-doc-001",
+              "babbage-search-document",
+              "babbage-002",
+              "babbage-code-search-text",
+              "text-embedding-ada-002",
+              "davinci-instruct-beta",
+              "davinci-search-query",
+              "text-similarity-babbage-001",
+              "text-davinci-002",
+              "code-search-babbage-text-001",
+              "text-davinci-003",
+              "text-search-davinci-doc-001",
+              "code-search-ada-text-001",
+              "ada-search-query",
+              "text-similarity-ada-001",
+              "ada-code-search-code",
+              "whisper-1",
+              "text-davinci-edit-001",
+              "davinci-search-document",
+              "curie-search-query",
+              "babbage-similarity",
+              "ada",
+              "ada-search-document",
+              "text-ada-001",
+              "text-similarity-davinci-001",
+              "curie-similarity",
+              "babbage-code-search-code",
+              "code-search-babbage-code-001",
+              "text-search-babbage-doc-001",
+              "gpt-3.5-turbo-0301",
+              "curie"
+            ]
+          },
+          "prompt": {
+            "title": "the prompt or question to ask about the transcription/text",
+            "type": "string",
+            "description": "\nThe **OpenAI** model is given text from the dialog and\ngiven this prompt to instruct it what generative AI text\nthat you would like from it.\n",
+            "default": "Summarize the transcript in these messages."
+          },
+          "max_tokens": {
+            "title": "maximum number of tokens of output",
+            "type": "integer",
+            "description": "\nThe **max_tokens** limits the size of the output generative AI text.\nA token is approximately a syllable.  On average a word is 1.33 tokens.\n",
+            "default": 100
+          },
+          "temperature": {
+            "title": "**OpenAI** sampling temperature",
+            "type": "number",
+            "description": "\nlower number is more deterministic, higher is more random.\n\nvalues should range from 0.0 to 2.0\n",
+            "default": 0.0
+          },
+          "jq_result": {
+            "title": "**jq** query of result",
+            "type": "string",
+            "description": "\nThe **OpenAI** completion outputs a JSON \n[Completion Object](https://platform.openai.com/docs/api-reference/completions/object)\n\nThe **jq_results** string contains a **jq**  filter/query string that\nis applied to the output to determine what is saved in the\ncreated **Vcon** **analysis** object.\n\n* **\".\"** - results in a query that returns the entire JSON object.\n* **\".choices[0].text\"** - results in a query which contains only the text portion of the completion output\n\nFor more information on creating **jq filters** see:\nhttps://jqlang.github.io/jq/manual/\n\n",
+            "default": ".choices[0].message.content",
+            "examples": [
+              ".",
+              ".choices[0].text"
+            ]
+          },
+          "analysis_type": {
+            "title": "the **Vcon analysis** object type",
+            "type": "string",
+            "description": "\nThe results of the completion are saved in a new **analysis**\nobject which is added to the input **Vcon**.\n**analysis_type** is the **analysis** type token that is set\non the new **analysis** object in the **Vcon**.\n",
+            "default": "summary"
+          },
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
+      },
+      "PipelineDefinition": {
+        "title": "PipelineDefinition",
+        "required": [
+          "pipeline_options",
+          "processors"
+        ],
+        "type": "object",
+        "properties": {
+          "pipeline_options": {
+            "title": "pipeline execution options",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PipelineOptions"
+              }
+            ]
+          },
+          "processors": {
+            "title": "list of **VconProcessorConfig**",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PipelineProcessor"
+            },
+            "description": "The sequential set of **VconProcessorConfig** for the list of **VconProcessor**s that get run for this **Pipeline**"
+          }
+        },
+        "description": "Definition of the serialized representation of a VconPipeline "
+      },
+      "PipelineOptions": {
+        "title": "PipelineOptions",
+        "type": "object",
+        "properties": {
+          "save_vcons": {
+            "title": "save/update vCon(s) after pipeline processing",
+            "type": "boolean"
+          },
+          "timeout": {
+            "title": "processor timeout",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "description": "maximum timeout for any processor in the pipeline.\n  If any one of the processors in the pipeline takes more than this number\n of seconds, the processor will be cancled, remaining processors will be\n skipped and the pipeline will be considered failed for the given job/vCon.\n"
+          },
+          "failure_queue": {
+            "title": "queue for failed pipeline jobs",
+            "type": "string",
+            "description": "If any of the processors in the pipeline or dependant DB access fail,\n the job is added to the failure_queue if set.\n"
+          },
+          "success_queue": {
+            "title": "queue for successfully run pipeline jobs",
+            "type": "string",
+            "description": "If all of the processors in the pipeline succeed in running,\n the job is added to the success_queue if set.\n"
+          }
+        },
+        "description": "Options the effect the handling of Vcon Pipeline processing."
+      },
+      "PipelineProcessor": {
+        "title": "PipelineProcessor",
+        "required": [
+          "processor_name",
+          "processor_options"
+        ],
+        "type": "object",
+        "properties": {
+          "processor_name": {
+            "title": "VconProcessor name",
+            "type": "string"
+          },
+          "processor_options": {
+            "title": "VconProcessor options",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/VconProcessorOptions"
+              }
+            ]
+          }
+        },
+        "description": "Configuration for a VconProcessor in a Pipeline"
+      },
+      "QueueJob": {
+        "title": "QueueJob",
+        "type": "object",
+        "properties": {
+          "job_type": {
+            "title": "Job Type",
+            "type": "string",
+            "description": "queue job type (currently only \"vcon_uuid\" allowed)",
+            "default": "vcon_uuid"
+          },
+          "vcon_uuid": {
+            "title": "vCon UUIDs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "array of vCon UUIDs (currently must be exactly 1)",
+            "default": [],
+            "example": [
+              "0185656d-fake-UUID-84fd-5b4de1ef42b4"
+            ]
+          }
+        }
+      },
+      "QueueProperties": {
+        "title": "QueueProperties",
+        "type": "object",
+        "properties": {
+          "weight": {
+            "title": "server's queue weight",
+            "type": "integer",
+            "description": "number of times that the pipeline server should pop a job from this queue before iterating to the server's next queue.",
+            "default": 1
+          }
+        }
+      },
+      "ServerInfo": {
+        "title": "ServerInfo",
+        "required": [
+          "start_time",
+          "pid"
+        ],
+        "type": "object",
+        "properties": {
+          "py_vcon_server": {
+            "title": "server version",
+            "type": "string",
+            "description": "Python package py_vcon_server version number",
+            "default": "0.1"
+          },
+          "vcon": {
+            "title": "vcon version",
+            "type": "string",
+            "description": "Python package **py_vcon** version number",
+            "default": "0.3"
+          },
+          "start_time": {
+            "title": "server start time",
+            "type": "number",
+            "description": "epoch seconds time at which this server started",
+            "example": 1704167922.6760223
+          },
+          "pid": {
+            "title": "server process id",
+            "type": "integer",
+            "example": 128559
+          }
+        }
+      },
+      "ServerState": {
+        "title": "ServerState",
+        "required": [
+          "host",
+          "port",
+          "pid",
+          "start_time",
+          "num_workers",
+          "state",
+          "last_heartbeat"
+        ],
+        "type": "object",
+        "properties": {
+          "host": {
+            "title": "server host",
+            "type": "string",
+            "description": "the server's host as configured in the REST_URL",
+            "examples": [
+              "locahost",
+              "192.168.0.23",
+              "example.com"
+            ]
+          },
+          "port": {
+            "title": "server port",
+            "type": "integer",
+            "description": "the server's port as configured in the REST_URL",
+            "example": 8000
+          },
+          "pid": {
+            "title": "server process id",
+            "type": "integer",
+            "example": 128559
+          },
+          "start_time": {
+            "title": "server start up time",
+            "type": "number",
+            "description": "epoch seconds time at which this server started",
+            "example": 1704167922.6768901
+          },
+          "num_workers": {
+            "title": "number of server worker processes",
+            "type": "integer",
+            "description": "the number of pipeline worker processes configured in NUM_WORKERS for this server",
+            "example": 4
+          },
+          "state": {
+            "title": "server state",
+            "type": "string",
+            "example": "running",
+            "examples": [
+              "starting_up",
+              "running",
+              "shutting_down",
+              "unknown"
+            ]
+          },
+          "last_heartbeat": {
+            "title": "heartbeat time stamp",
+            "type": "number",
+            "description": "epoch seconds time for the last heartbeat on this server",
+            "example": 1704167922.6769204
+          }
+        }
+      },
+      "ValidationError": {
+        "title": "ValidationError",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "loc": {
+            "title": "Location",
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            }
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        }
+      },
+      "VconObject": {
+        "title": "VconObject",
+        "required": [
+          "uuid"
+        ],
+        "type": "object",
+        "properties": {
+          "vcon": {
+            "title": "vCon format version",
+            "type": "string",
+            "default": "0.0.1"
+          },
+          "uuid": {
+            "title": "Uuid",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "vCon format version",
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              }
+            ],
+            "example": "2024-01-02T03:58:42.630+00:00",
+            "examples": [
+              1704167922,
+              1704167922.6302645,
+              "Wed, 14 May 2022 18:16:19 -0000",
+              "2024-01-02T03:58:42.630+00:00",
+              "2022-05-14T18:16:19.000+00:00"
+            ]
+          },
+          "parties": {
+            "title": "Parties",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VconPartiesObject"
+            }
+          },
+          "dialog": {
+            "title": "Dialog",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "analysis": {
+            "title": "Analysis",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "attachments": {
+            "title": "Attachments",
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "VconPartiesObject": {
+        "title": "VconPartiesObject",
+        "required": [
+          "tel"
+        ],
+        "type": "object",
+        "properties": {
+          "tel": {
+            "title": "tel URI",
+            "type": "string",
+            "description": "a telephone number",
+            "example": "+1 123 456 7890"
+          }
+        }
+      },
+      "VconProcessorOptions": {
+        "title": "VconProcessorOptions",
+        "type": "object",
+        "properties": {
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
+      },
+      "VconProcessorOutput": {
+        "title": "VconProcessorOutput",
+        "type": "object",
+        "properties": {
+          "vcons": {
+            "title": "array of **Vcon** objects",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VconObject"
+            },
+            "default": []
+          },
+          "vcons_modified": {
+            "title": "boolean indicated if the **Vcon** in the **vcons** array has been modified from the input version",
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            },
+            "default": []
+          }
+        },
+        "description": "Serializable Output results from a VconProcessor "
+      },
+      "WhisperOptions": {
+        "title": "WhisperOptions",
+        "type": "object",
+        "properties": {
+          "language": {
+            "title": "transcription language",
+            "type": "string",
+            "default": "en"
+          },
+          "input_dialogs": {
+            "title": "input **Vcon** recording **dialog** objects",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "description": "\nIndicates which recording **dialog** objects in the given **Vcon** are\nto be transcribed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n",
+            "default": "",
+            "examples": [
+              "",
+              "0:",
+              "0:-2",
+              "2:5",
+              "0:6:2",
+              [],
+              [
+                1,
+                4,
+                5,
+                9
+              ]
+            ]
+          },
+          "output_types": {
+            "title": "transcription output types",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "\nList of output types to generate.  Current set of value supported are:\n\n  * \"vendor\" - add the Whisper specific JSON format transcript as an analysis object\n  * \"word_srt\" - add a .srt file with timing on a word or small phrase basis as an analysis object\n  * \"word_ass\" - add a .ass file with sentence and highlighted word timeing as an analysis object\n       Not specifing \"output_type\" assumes all of the above will be output, each as a separate analysis object.\n",
+            "default": [
+              "vendor",
+              "word_srt",
+              "word_ass"
+            ]
+          },
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Admin: Servers",
+      "description": "Entry points to get and set server information"
+    },
+    {
+      "name": "Admin: Job Queues",
+      "description": "Entry points to create, operate on, add to and delete job queues"
+    },
+    {
+      "name": "Admin: Pipelines",
+      "description": "Entry points to create, update and delete pipelines"
+    },
+    {
+      "name": "Admin: In Progress Jobs",
+      "description": "Entry points to get, operate on in progress pipeline job states"
+    },
+    {
+      "name": "vCon Storage CRUD",
+      "description": "Entry points to get, query, modify or delete vCons in storage"
+    },
+    {
+      "name": "vCon Processors",
+      "description": "Entry points to run a single processor on a vCon"
+    },
+    {
+      "name": "vCon Pipelines",
+      "description": "Entry points to run a pipeline of processor(s) on a vCon"
+    }
+  ]
+}
