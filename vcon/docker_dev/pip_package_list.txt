@@ -1,5 +1,6 @@
 # runtime dependencies:
-deepgram-sdk
+# Deepgram 3+ uses match statement which does not run on python < 3.10
+deepgram-sdk < 3
 cryptography >= 37
 hsslms
 jose
