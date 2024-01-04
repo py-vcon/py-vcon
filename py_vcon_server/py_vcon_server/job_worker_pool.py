@@ -173,6 +173,7 @@ class JobScheduler():
     if(wait):
       prior_num_keys = 0
       while(True):
+        # TODO make this a little smarter and look at the task info in run_states
         num_keys = len(self._run_states.keys())
         if(prior_num_keys != num_keys):
           logger.debug("waiting run_states: {}".format(self._run_states))
@@ -400,9 +401,9 @@ class JobWorkerPool():
     """ Wraps func in order to preserve the traceback of any kind of raised exception """
     logger.debug("running in exception wrapper")
     job_id = None
+    start = time.time()
 
     try:
-      start = time.time()
       process_info = run_states.get(os.getpid(), {})
       job_definition = args[0]
       job_definition["start"] = start
@@ -433,12 +434,18 @@ class JobWorkerPool():
 
       return(result)
 
-    except Exception:
-      start = args[0].get("start", None)
+    except (
+        Exception,
+        # CancelledError apparently does not inherit from Exception.
+        # It does inherit from BaseException which seems like that might
+        # catch stuff that  we should not be dealing with (not possitive about that).
+        asyncio.exceptions.CancelledError
+      ) as e:
+      logger.warning("job wrapper caught exception")
+      logger.exception(e)
       exc = sys.exc_info()[0](traceback.format_exc())
       logger.warning("exc type: {}".format(type(exc)))
-      if(start):
-        exc.start = start
+      exc.start = start
       process_info = run_states.get(os.getpid(), {})
       process_info["job_id"] = str(job_id) + "_exception"
       run_states[os.getpid()] = process_info
@@ -506,14 +513,27 @@ class JobWorkerPool():
           exc = done_job.exception(timeout = 0)
           if(exc):
             #job_data["cancel"] = type(exc)
+            job_data["canceled_at"] = time.time()
             job_data["cancel"] = exc.__class__.__name__
             job_data["cancel_cause"] = str(getattr(exc, "__cause__", None))
-        except Exception as e:
+            # Currently labeling this an error as it has not occurred in normal cases
+            logger.error("job: {} GOT CANCEL EXCEPTION".format(
+              job_data))
+            await self._job_state_updater.job_canceled(job_data)
+        except (
+            Exception,
+            asyncio.exceptions.CancelledError
+          ) as e:
           logger.warning("canceled job done_job.exception: {}".format(
               getattr(e, "__cause__", None)
             ))
-        job_data["canceled_at"] = time.time()
-        logger.info("job: {} CANCELED".format(
+          job_data["canceled_at"] = time.time()
+          #logger.exception(e)
+          logger.debug("dir e: {}".format(dir(e)))
+          job_data["cancel"] = e.__class__.__name__
+          job_data["cancel_cause"] = str(getattr(e, "__cause__", None))
+
+        logger.warning("job: {} CANCELED".format(
           job_data))
         await self._job_state_updater.job_canceled(job_data)
 
@@ -597,14 +617,17 @@ class JobWorkerPool():
 
     Returns: number of unstarted jobs that were canceled
     """
-    canceled = 0
+    cancelled = 0
     # Start at the end of the list as they were last added
     # and more likely to not have started yet.
+    logger.debug("attempting to cancel {} unstarted jobs".format(len(self._job_futures)))
     for job in self._job_futures[::-1]:
       if(job.cancel()):
-        canceled += 1
+        cancelled += 1
 
-    return(canceled)
+    logger.debug("cancelled {} of {} jobs".format(cancelled, len(self._job_futures)))
+    return(cancelled)
+
 
   def wait_for_workers(self):
     """ Wait for worker processes to exit and shutdown """
