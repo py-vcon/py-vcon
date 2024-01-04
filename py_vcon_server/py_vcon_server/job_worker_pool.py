@@ -45,7 +45,7 @@ class JobInterface():
       self,
       results: typing.Dict[str, typing.Any]
     ) -> None:
-    """ handle a cancled job """
+    """ handle a cancelled job (only those that have not yet been started) """
     raise Exception("job_canceled not implemented")
 
 
@@ -53,7 +53,7 @@ class JobInterface():
       self,
       results: typing.Dict[str, typing.Any]
     ) -> None:
-    """ handle a job which threw an exception and did not complete """
+    """ handle a job which threw an exception and did not complete (including jobs that have been started and then cancelled) """
     raise Exception("job_exception not implemented")
 
 
