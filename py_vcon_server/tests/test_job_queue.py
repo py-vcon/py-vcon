@@ -130,15 +130,15 @@ async def test_queue_lifecycle(job_queue):
   # in the DB while this test is running.
   last_job_id = await job_queue.get_last_job_id()
   assert(last_job_id >= 0)
-  assert(in_progress_job["jobid"]  <= last_job_id)
+  assert(in_progress_job["id"]  <= last_job_id)
 
   in_progress_jobs = await job_queue.get_in_progress_jobs()
   assert(isinstance(in_progress_jobs, dict))
   # Cannot assume other jobs are in progress as the DB may be shared
   assert(len(in_progress_jobs) >= 1)
-  assert(in_progress_jobs.get(in_progress_job["jobid"], None) is not None)
+  assert(in_progress_jobs.get(in_progress_job["id"], None) is not None)
 
-  ip_job = in_progress_jobs[in_progress_job["jobid"]]
+  ip_job = in_progress_jobs[in_progress_job["id"]]
   assert(isinstance(ip_job, dict))
   assert(ip_job["queue"] == q1)
   assert(ip_job["server"] == server_key)
@@ -152,7 +152,7 @@ async def test_queue_lifecycle(job_queue):
 
   # This may need to be flexible as other jobs could be happening
   # in the DB while this test is running.
-  assert(ip_job["jobid"]  <= last_job_id)
+  assert(ip_job["id"]  <= last_job_id)
 
   jobs = await job_queue.get_queue_jobs(q1)
   assert(isinstance(jobs, list))
@@ -176,7 +176,7 @@ async def test_queue_lifecycle(job_queue):
   assert(isinstance(queue_names, set))
   assert(q1 in queue_names)
 
-  await job_queue.requeue_in_progress_job(in_progress_job["jobid"])
+  await job_queue.requeue_in_progress_job(in_progress_job["id"])
 
   jobs = await job_queue.get_queue_jobs(q1)
   assert(isinstance(jobs, list))
@@ -187,7 +187,7 @@ async def test_queue_lifecycle(job_queue):
   assert(jobs[1]["vcon_uuid"] == uuids2)
 
   try:
-    await job_queue.remove_in_progress_job(in_progress_job["jobid"])
+    await job_queue.remove_in_progress_job(in_progress_job["id"])
     raise Exception("should have an exception here as job was pushed back into the queue")
   except py_vcon_server.queue.JobDoesNotExist as e:
     # expected
@@ -196,7 +196,7 @@ async def test_queue_lifecycle(job_queue):
     raise e
 
   try:
-    await job_queue.requeue_in_progress_job(in_progress_job["jobid"])
+    await job_queue.requeue_in_progress_job(in_progress_job["id"])
     raise Exception("should have an exception here as job was pushed back into the queue")
   except py_vcon_server.queue.JobDoesNotExist as e:
     # expected
@@ -221,7 +221,7 @@ async def test_queue_lifecycle(job_queue):
 
 
   try:
-    await job_queue.requeue_in_progress_job(in_progress_job["jobid"])
+    await job_queue.requeue_in_progress_job(in_progress_job["id"])
     raise Exception("should have an exception here as queue was deleted")
   except py_vcon_server.queue.QueueDoesNotExist as e:
     # expected
@@ -232,15 +232,15 @@ async def test_queue_lifecycle(job_queue):
   # complete in progress job
   before_in_progress_jobs = await job_queue.get_in_progress_jobs()
   print("num jobs before: {}".format(len(before_in_progress_jobs)))
-  assert(in_progress_job["jobid"] in before_in_progress_jobs)
-  await job_queue.remove_in_progress_job(in_progress_job["jobid"])
+  assert(in_progress_job["id"] in before_in_progress_jobs)
+  await job_queue.remove_in_progress_job(in_progress_job["id"])
   in_progress_jobs = await job_queue.get_in_progress_jobs()
   assert(isinstance(in_progress_jobs, dict))
   # Cannot assume other jobs are in progress as the DB may be shared
   #assert(len(in_progress_jobs) >= 1)
   print("num jobs after: {}".format(len(in_progress_jobs)))
   # Make sure our job was removed
-  assert(in_progress_jobs.get(in_progress_job["jobid"], None) is None)
+  assert(in_progress_jobs.get(in_progress_job["id"], None) is None)
 
   # Create the queue again.
   num_queues = await job_queue.create_new_queue(q1)
@@ -254,13 +254,13 @@ async def test_queue_lifecycle(job_queue):
   assert(len(jobs_before) == 0)
   # Remove it and make sure it did not get added to the queue
   assert(third_in_progress_job["queue"] == q1)
-  await job_queue.remove_in_progress_job(third_in_progress_job["jobid"])
+  await job_queue.remove_in_progress_job(third_in_progress_job["id"])
   jobs_after = await job_queue.get_queue_jobs(q1)
   # Queue should not have changed
   assert(len(jobs_before) == len(jobs_after))
   in_progress_jobs = await job_queue.get_in_progress_jobs()
   # make sure job was removed
-  assert(third_in_progress_job["jobid"] not in in_progress_jobs)
+  assert(third_in_progress_job["id"] not in in_progress_jobs)
 
   # TODO:
   # add info logging in JobQueue??
