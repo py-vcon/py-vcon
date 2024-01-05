@@ -123,7 +123,7 @@ class JobQueue():
         in_progress_job["id"] = new_job_id
         in_progress_job["queue"] = ARGV[1]
         in_progress_job["server"] = ARGV[2]
-        in_progress_job["start"] = time[1] .. "." .. time[2]
+        in_progress_job["dequeued"] = time[1] .. "." .. time[2]
         in_progress_job["job"] = cjson.decode(queue_job)
 
         -- add it to the in progress hash
@@ -283,7 +283,7 @@ class JobQueue():
         id: int - unique job id for this job on the given server
         queue: str - name of the queue from which the job was popped
         job: dict - queue job object
-        start: float - epoch time UTC when the job was dequeued
+        dequeued: float - epoch time UTC when the job was dequeued
         server: str - server_key: "<host>:<port>:<pid>:start_time>" for server
           which will run the job, this is attained from the "/servers" entry 
           point in the admin REST API or from ServerState.server_key()
@@ -300,8 +300,8 @@ class JobQueue():
 
     job_json = json.loads(job)
     # convert the start time string to a float
-    if(isinstance(job_json.get("start", None), str)):
-      job_json["start"] = float(job_json["start"])
+    if(isinstance(job_json.get("dequeued", None), str)):
+      job_json["dequeued"] = float(job_json["dequeued"])
     # convert the job id string to a int
     if(isinstance(job_json.get("id", None), str)):
       job_json["id"] = int(job_json["id"])
@@ -321,8 +321,8 @@ class JobQueue():
       job_dict = json.loads(jobs_dict[jobid])
 
       # convert the start time string to a float
-      if(isinstance(job_dict.get("start", None), str)):
-        job_dict["start"] = float(job_dict["start"])
+      if(isinstance(job_dict.get("dequeued", None), str)):
+        job_dict["dequeued"] = float(job_dict["dequeued"])
       # convert the job id string to a int
       if(isinstance(job_dict.get("id", None), str)):
         job_dict["id"] = int(job_dict["id"])
@@ -377,8 +377,8 @@ class JobQueue():
 
     job_dict = json.loads(job_json)
     # convert the start time string to a float
-    if(isinstance(job_dict.get("start", None), str)):
-      job_dict["start"] = float(job_dict["start"])
+    if(isinstance(job_dict.get("dequeued", None), str)):
+      job_dict["dequeued"] = float(job_dict["dequeued"])
     # convert the job id string to a int
     if(isinstance(job_dict.get("id", None), str)):
       job_dict["id"] = int(job_dict["id"])
