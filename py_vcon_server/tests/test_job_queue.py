@@ -123,8 +123,8 @@ async def test_queue_lifecycle(job_queue):
   assert(len(in_progress_job["job"]["vcon_uuid"]) == 1)
   assert(in_progress_job["job"]["vcon_uuid"] == uuids)
   # allow a reasonable slop in time (seconds) between this machine and redis machine
-  assert(isinstance(in_progress_job["start"], float))
-  assert(abs(time.time() - in_progress_job["start"]) < 1000)
+  assert(isinstance(in_progress_job["dequeued"], float))
+  assert(abs(time.time() - in_progress_job["dequeued"]) < 1000)
 
   # This may need to be flexible as other jobs could be happening
   # in the DB while this test is running.
@@ -147,8 +147,8 @@ async def test_queue_lifecycle(job_queue):
   assert(len(ip_job["job"]["vcon_uuid"]) == 1)
   assert(ip_job["job"]["vcon_uuid"] == uuids)
   # allow a reasonable slop in time (seconds) between this machine and redis machine
-  assert(isinstance(ip_job["start"], float))
-  assert(abs(time.time() - ip_job["start"]) < 1000)
+  assert(isinstance(ip_job["dequeued"], float))
+  assert(abs(time.time() - ip_job["dequeued"]) < 1000)
 
   # This may need to be flexible as other jobs could be happening
   # in the DB while this test is running.
