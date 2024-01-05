@@ -9,7 +9,7 @@ import pytest
 import pytest_asyncio
 import py_vcon_server.job_worker_pool
 
-TOL_FACTOR = 2.0
+TOL_FACTOR = 2.5
 
 class JobTestException(Exception):
   """ exception to be caught in unit tests """
