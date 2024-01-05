@@ -120,7 +120,7 @@ class JobQueue():
 
         -- build an in progress object
         local in_progress_job = {}
-        in_progress_job["jobid"] = new_job_id
+        in_progress_job["id"] = new_job_id
         in_progress_job["queue"] = ARGV[1]
         in_progress_job["server"] = ARGV[2]
         in_progress_job["start"] = time[1] .. "." .. time[2]
@@ -280,7 +280,7 @@ class JobQueue():
 
     Returns: an in progress job object (dict) or None
       keys:
-        jobid: int - unique job id for this job on the given server
+        id: int - unique job id for this job on the given server
         queue: str - name of the queue from which the job was popped
         job: dict - queue job object
         start: float - epoch time UTC when the job was dequeued
@@ -303,8 +303,8 @@ class JobQueue():
     if(isinstance(job_json.get("start", None), str)):
       job_json["start"] = float(job_json["start"])
     # convert the job id string to a int
-    if(isinstance(job_json.get("jobid", None), str)):
-      job_json["jobid"] = int(job_json["jobid"])
+    if(isinstance(job_json.get("id", None), str)):
+      job_json["id"] = int(job_json["id"])
 
     return(job_json)
 
@@ -324,8 +324,8 @@ class JobQueue():
       if(isinstance(job_dict.get("start", None), str)):
         job_dict["start"] = float(job_dict["start"])
       # convert the job id string to a int
-      if(isinstance(job_dict.get("jobid", None), str)):
-        job_dict["jobid"] = int(job_dict["jobid"])
+      if(isinstance(job_dict.get("id", None), str)):
+        job_dict["id"] = int(job_dict["id"])
 
       in_progress_jobs[int(jobid)] = job_dict
 
@@ -380,8 +380,8 @@ class JobQueue():
     if(isinstance(job_dict.get("start", None), str)):
       job_dict["start"] = float(job_dict["start"])
     # convert the job id string to a int
-    if(isinstance(job_dict.get("jobid", None), str)):
-      job_dict["jobid"] = int(job_dict["jobid"])
+    if(isinstance(job_dict.get("id", None), str)):
+      job_dict["id"] = int(job_dict["id"])
 
     return(job_dict)
 
