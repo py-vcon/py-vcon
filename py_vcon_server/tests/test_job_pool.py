@@ -162,10 +162,10 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
 
 
   async def job_finished(
-    """ Invoked on jobs that finish normally """
       self,
       results: typing.Dict[str, typing.Any]
     ) -> None:
+    """ Invoked on jobs that finish normally """
     print("job finished with results: {}".format(results), flush = True)
     self.check_first_start(results)
     self._finished_jobs.append(copy.deepcopy(results))
@@ -236,20 +236,20 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
 
 
   async def job_canceled(
-    """ Invoked on jobs that were cancelled **before** being started """
       self,
       results: typing.Dict[str, typing.Any]
     ) -> None:
+    """ Invoked on jobs that were cancelled **before** being started """
     print("job canceled with results: {}".format(results))
     self.check_first_start(results)
     self._canceled_jobs.append(copy.deepcopy(results))
 
 
   async def job_exception(
-    """ Invoked on jobs that throught an exception or are cancelled **after** being started """
       self,
       results: typing.Dict[str, typing.Any]
     ) -> None:
+    """ Invoked on jobs that throught an exception or are cancelled **after** being started """
     print("job exception with results: {}".format(results))
     self.check_first_start(results)
     self._exception_jobs.append(copy.deepcopy(results))
