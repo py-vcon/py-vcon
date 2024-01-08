@@ -130,7 +130,7 @@ async def test_queue_lifecycle(job_queue):
   # in the DB while this test is running.
   last_job_id = await job_queue.get_last_job_id()
   assert(last_job_id >= 0)
-  assert(in_progress_job["id"]  <= last_job_id)
+  assert(int(in_progress_job["id"])  <= last_job_id)
 
   in_progress_jobs = await job_queue.get_in_progress_jobs()
   assert(isinstance(in_progress_jobs, dict))
@@ -152,7 +152,7 @@ async def test_queue_lifecycle(job_queue):
 
   # This may need to be flexible as other jobs could be happening
   # in the DB while this test is running.
-  assert(ip_job["id"]  <= last_job_id)
+  assert(int(ip_job["id"])  <= last_job_id)
 
   jobs = await job_queue.get_queue_jobs(q1)
   assert(isinstance(jobs, list))
