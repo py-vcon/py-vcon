@@ -483,7 +483,8 @@ def init(restapi):
       jobs = await py_vcon_server.queue.JOB_QUEUE.delete_queue(name)
 
     except py_vcon_server.queue.QueueDoesNotExist as e:
-      py_vcon_server.restful_api.log_exception(e)
+      #py_vcon_server.restful_api.log_exception(e)
+      logger.warning(e)
       return(py_vcon_server.restful_api.NotFoundResponse("queue: {} not found".format(name)))
 
     except Exception as e:
