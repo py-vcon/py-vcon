@@ -10,6 +10,7 @@
 """
 import asyncio
 import typing
+import copy
 import json
 import py_vcon_server.db.redis.redis_mgr
 import py_vcon_server.logging_utils
@@ -115,12 +116,12 @@ class JobQueue():
       local queue_job = redis.call("LPOP", KEYS[2])
       if queue_job then
         -- get next available job id
-        local new_job_id = redis.call("INCR", KEYS[3])
+        local new_job_id = tostring(redis.call("INCR", KEYS[3]))
         local time = redis.call("TIME")
 
         -- build an in progress object
         local in_progress_job = {}
-        in_progress_job["id"] = new_job_id
+        in_progress_job["id"] = tostring(new_job_id)
         in_progress_job["queue"] = ARGV[1]
         in_progress_job["server"] = ARGV[2]
         in_progress_job["dequeued"] = time[1] .. "." .. time[2]
@@ -271,7 +272,7 @@ class JobQueue():
   async def pop_queued_job(self,
     name: str,
     server_key: str
-    ) -> typing.Union[dict, None]:
+    ) -> typing.Union[typing.Dict[str, typing.Any], None]:
     """
     Retrieve the next available job, if one eixst,
     from the named queue for the named server,
@@ -303,8 +304,8 @@ class JobQueue():
     if(isinstance(job_json.get("dequeued", None), str)):
       job_json["dequeued"] = float(job_json["dequeued"])
     # convert the job id string to a int
-    if(isinstance(job_json.get("id", None), str)):
-      job_json["id"] = int(job_json["id"])
+    if(isinstance(job_json.get("id", None), int)):
+      job_json["id"] = str(job_json["id"])
 
     return(job_json)
 
@@ -324,10 +325,10 @@ class JobQueue():
       if(isinstance(job_dict.get("dequeued", None), str)):
         job_dict["dequeued"] = float(job_dict["dequeued"])
       # convert the job id string to a int
-      if(isinstance(job_dict.get("id", None), str)):
-        job_dict["id"] = int(job_dict["id"])
+      if(isinstance(job_dict.get("id", None), int)):
+        job_dict["id"] = str(job_dict["id"])
 
-      in_progress_jobs[int(jobid)] = job_dict
+      in_progress_jobs[str(jobid)] = job_dict
 
     return(in_progress_jobs)
 
@@ -340,9 +341,6 @@ class JobQueue():
     previously popped before being added to the in progress
     hash.
     """
-
-    if(not isinstance(job_id, int) or job_id < 0):
-      raise Exception("job_id: {} must be a positive integer",format(job_id))
 
     keys = [ IN_PROGRESS_JOBS_KEY, QUEUE_NAMES_KEY ]
     args = [ job_id, QUEUE_NAME_PREFIX ]
@@ -362,9 +360,6 @@ class JobQueue():
     Remove the indentified job from the in progress list as completed.
     """
 
-    if(not isinstance(job_id, int) or job_id < 0):
-      raise Exception("job_id: {} must be a positive integer",format(job_id))
-
     keys = [ IN_PROGRESS_JOBS_KEY]
     args = [ job_id ]
     job_json = await self._do_lua_remove_in_progress_job(keys = keys, args = args)
@@ -380,8 +375,8 @@ class JobQueue():
     if(isinstance(job_dict.get("dequeued", None), str)):
       job_dict["dequeued"] = float(job_dict["dequeued"])
     # convert the job id string to a int
-    if(isinstance(job_dict.get("id", None), str)):
-      job_dict["id"] = int(job_dict["id"])
+    if(isinstance(job_dict.get("id", None), int)):
+      job_dict["id"] = str(job_dict["id"])
 
     return(job_dict)
 
@@ -423,4 +418,66 @@ class JobQueue():
       raise QueueDoesNotExist("push_vcon_uuid_queue_job({}): queue does not exist".format(name))
 
     return(num_jobs)
+
+
+class QueueIterator():
+  """
+  Class to iterate through the weighted list of job queues configured for the server.
+
+  A queue may have a weight (defaults to 1) which indicates how many times the queue
+  should be used/checked before moving to the next queue.
+
+  The iterator keeps a cached copy of the configuration and checks for changes using 
+  the **check_update** method.
+  """
+  def __init__(
+      self
+    ):
+    self._queue_snapshot = copy.deepcopy(py_vcon_server.settings.WORK_QUEUES)
+    self._queue_sequence = None
+    self._next_queue_index = 0
+
+
+  def get_queue_count(self) -> int:
+    """ Return the number of queues contifigured (ignoring weight) """
+    return(len(self._queue_snapshot.keys()))
+
+
+  def get_cycle_count(self) -> int:
+    if(self._queue_sequence == None):
+      seq = []
+      for q_name in self._queue_snapshot.keys():
+        if(self._queue_snapshot[q_name] is None):
+          weight = 1
+        else:
+          weight = self._queue_snapshot[q_name].get("weight", 1)
+
+        for i in range(weight):
+          seq.append(q_name)
+
+      self._queue_sequence = seq
+    return(len(self._queue_sequence))
+
+
+  def get_next_queue(self) -> str:
+    """ returns the next queue name to use considering weights """
+    next_q = self._queue_sequence[self._next_queue_index % self.get_cycle_count()]
+    self._next_queue_index += 1
+
+    return(next_q)
+
+
+  def check_update(self) -> bool:
+    """
+    Check if the configured queues for this server have changed.
+    Update the snapshot of the queue config and reset the cached
+    queue sequence.
+    """
+    if(self._queue_snapshot != py_vcon_server.settings.WORK_QUEUES):
+      self._queue_snapshot = copy.deepcopy(py_vcon_server.settings.WORK_QUEUES)
+      self._queue_sequence = None
+      return(True)
+
+    return(False)
+
 
