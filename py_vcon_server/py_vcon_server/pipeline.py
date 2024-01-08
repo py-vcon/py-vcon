@@ -1,9 +1,11 @@
 """ Vcon Pipeline processor objects and methods """
 import typing
+import time
 import asyncio
 import json
 import pydantic
 import py_vcon_server.processor
+import py_vcon_server.job_worker_pool
 import py_vcon_server.logging_utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
@@ -282,7 +284,7 @@ class PipelineRunner():
     """
     logger.debug("PipelineDef: {}".format(self._pipeline.dict()))
     timeout = self._pipeline.pipeline_options.timeout
-    run_future = self.do_processes(
+    run_future = self._do_processes(
         processor_input
       )
 
@@ -308,12 +310,12 @@ class PipelineRunner():
     return(pipeline_output)
 
 
-  async def do_processes(
+  async def _do_processes(
       self,
       processor_input: py_vcon_server.processor.VconProcessorIO
     ) -> py_vcon_server.processor.VconProcessorIO:
-    
-    next_proc_input = processor_input  
+
+    next_proc_input = processor_input
     for processor_config in self._pipeline.processors:
       processor_name = processor_config.processor_name
       processor = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(processor_name)
@@ -332,6 +334,217 @@ class PipelineRunner():
       next_proc_input = await processor.process(next_proc_input, processor_type_options)
 
     return(next_proc_input)
+
+
+class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
+  """ Class to get, run and handle results of Pipeline Jobs """
+  def __init__(
+      self,
+      job_queue: py_vcon_server.queue.JobQueue,
+      pipeline_db: PipelineDb,
+      server_key: str
+    ):
+    self._job_queue = job_queue
+    self._pipeline_db = pipeline_db
+    self._server_key = server_key
+    # TODO: setup queue iterator
+    self._queue_iterator = py_vcon_server.queue.QueueIterator()
+    self._last_queue_check = time.time()
+    self._queue_check_time = 10 # seconds
+
+
+  async def get_job(self) -> typing.Union[typing.Dict[str, typing.Any], None]:
+    """ Get the definition of the next job to run. Called in the context of the scheduler/dispatcher process. """
+    jobs_locks_not_available: list = []
+    job: typing.Union[typing.Dict[str, typing.Any], None] = None
+
+    # Check for updates to server queue config every self._queue_check_time seconds
+    now = time.time()
+    if(now - self._last_queue_check > self._queue_check_time):
+      if(self._queue_iterator.check_update()):
+        logger.debug("updated job queue sequence")
+      self._last_queue_check = now
+    queue_cycle_count = self._queue_iterator.get_cycle_count()
+    queues_checked = 0
+
+    # loop no more than once through the queue cycle before giving up and not getting a job
+    while(queues_checked < queue_cycle_count):
+      # get server's next queue from list (considering weights)
+      queues_checked += 1
+      queue_name = self._queue_iterator.get_next_queue()
+      # TODO: we can do some optimization here and skip repeated weighted queues
+      # i.e. those with weight greter than 1 will be repeated, if we just checked
+      # the queue and it was empty, no sense in getting pipeline def and checking
+      # queue multiple times in a row.
+
+      # Get the pipeline definition
+      try:
+        pipe_def = await self._pipeline_db.get_pipeline(queue_name)
+        if(pipe_def is None):
+          logger.error("get_pipeine is not supposed to return None, should have thrown exception")
+          continue
+
+      except py_vcon_server.pipeline.PipelineNotFound:
+        # TODO: this message should be throttled for some period or number of times
+        logger.warning("no definition for pipeline: {}".format(queue_name))
+        # nothing to do for this queue
+        continue
+
+      # Get job from queue and mark it as in process
+      try:
+        job = await self._job_queue.pop_queued_job(
+            queue_name,
+            self._server_key
+          )
+        if(job is None):
+          logger.error("pop_queued_job is not supposed to return None, should have thrown exception")
+          continue
+
+      except py_vcon_server.queue.EmptyJobQueue:
+        # No jobs in queue, go to next queue
+        # TODO: This will be too noisy, disable it after debugging
+        logger.debug("queue: {} is emtpy".format(queue_name))
+        continue
+
+      except py_vcon_server.queue.QueueDoesNotExist:
+        # TODO: throttle down the logging of repeated messages or create
+        # a queue black list for some period of time
+        logger.warning("queue: {} does not exist".format(queue_name))
+        continue
+
+      # the job is already labeled with the queue to which it belongs
+      # so on need to set job["queue"] = queue_name
+
+      # Add pipeline def to job
+      job["pipeline"] = pipe_def.dict()
+
+      # Get locks if pipeline needs them
+      if(pipe_def.pipeline_options.save_vcons):
+        locks: typing.List[str] = []
+        queue_job = job["job"]
+        job_type = queue_job.get("job_type", None)
+        if(job_type == "vcon_uuid"):
+          for vcon_uuid in job.get("vcon_uuid", []):
+            lock = None
+            if(lock):
+              locks.append(lock)
+            else:
+              # If cannot get all locks
+              #TODO: release locks that were taken
+              for lock in locks:
+                pass
+              jobs_locks_not_available.append(job)
+              # skip to next queue job
+              continue
+
+            # Add the locks to the job
+            job["locks"] = locks
+
+        else:
+          logger.error("unsupported job_type: {} not queued in failure queue: {}".format(
+              job_type,
+              pipe_def.pipeline_options.failure_queue
+            ))
+          continue
+
+
+    # Put jobs which were not lockable back in the queue
+    # start at end and push them to the front of the queue
+    # so that they are in the original order.
+    # TODO: need to put try block finally around the following:
+    for unlockable in jobs_locks_not_available[::-1]:
+      #TODO move from inprocess back to queue
+      await self._job_queue.requeue_in_progress_job(unlockable["id"])
+
+    return(job)
+
+
+  @staticmethod
+  async def do_job(
+      job_definition: typing.Dict[str, typing.Any]
+    ) -> typing.Dict[str, typing.Any]:
+    """ Function to perform job given job definition.  Called in context of worker process. """
+    job_id = job_definition["id"]
+
+    # Create pipeline definition
+    pipe_def = job_definition.get("pipeline", None)
+    if(pipe_def is None):
+      raise Exception("no pipeline definition for job: {}".format(job_id))
+    pipeline = PipelineDefinition(**pipe_def)
+
+    queue_job = job_definition.get("job", None)
+    if(queue_job is None):
+      raise Exception("job id: {} with no queue job definition".format(job_definition.get("id")))
+
+    job_type = queue_job.get("job_type", None)
+    if(job_type is None):
+      raise Exception("job id: {} with no queue job type".format(job_definition.get("id")))
+
+    # Create runner
+    runner = PipelineRunner(pipeline)
+
+    # Create Processor input
+    pipeline_input = py_vcon_server.processor.VconProcessorIO()
+    locks = job_definition.get("locks", [])
+    lock_len = len(locks)
+    if(job_type == "vcon_uuid"):
+      for index, vcon_uuid in enumerate(queue_job["vcon_uuid"]):
+        if(lock_len > index):
+          lock = locks[index]
+        else:
+          lock = None
+        await pipeline_input.add_vcon(vcon_uuid, lock, False)
+
+    else:
+      raise Exception("unsupported queue job type: {}".format(job_type))
+    pipeline_output = await runner.run(pipeline_input)
+
+    # Unfortunately, need to do the commit here
+    save_vcons = pipeline.pipeline_options.save_vcons
+    if(save_vcons):
+      # Save changed Vcons
+      await py_vcon_server.db.VconStorage.commit(pipeline_output)
+
+    return(job_definition)
+
+
+  async def job_finished(
+      self,
+      results: typing.Dict[str, typing.Any]
+    ) -> None:
+    """ handle a successful completion of a job """
+    job_id = results["id"]
+
+    await self._job_queue.remove_in_progress_job(job_id)
+
+
+  async def job_canceled(
+      self,
+      results: typing.Dict[str, typing.Any]
+    ) -> None:
+    """ handle a cancelled job (only those that have not yet been started) """
+    job_id = results["id"]
+
+    await self._job_queue.requeue_in_progress_job(job_id)
+
+
+  async def job_exception(
+      self,
+      results: typing.Dict[str, typing.Any]
+    ) -> None:
+    """ handle a job which threw an exception and did not complete (including jobs that have been started and then cancelled) """
+    job_id = results["id"]
+    queue_job = results["job"]
+    queue_name = results["queue"]
+    job_type = queue_job["job_type"]
+    pipeline = results.get("pipeline", None)
+    if(pipeline):
+      failure_queue = pipeline["options"].get("failure_queue", None)
+      if(failure_queue and failure_queue != ""):
+        # TODO: add some info from failure
+        await self._job_queue.push_vcon_uuid_queue_job(failure_queue, queue_job["vcon_uuid"])
+
+    await self._job_queue.remove_in_progress_job(job_id)
 
 
 class PipelineManager():
