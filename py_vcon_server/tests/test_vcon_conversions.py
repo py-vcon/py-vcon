@@ -7,18 +7,26 @@ import py_vcon_server.processor
 from py_vcon_server.db import VconStorage
 from common_setup import UUID, make_2_party_tel_vcon
 import vcon
+from py_vcon_server.settings import VCON_STORAGE_URL
+
+VCON_STORAGE = None
 
 # invoke only once for all the unit test in this module
 @pytest_asyncio.fixture(autouse=True)
 async def setup():
   # Setup Vcon storage connection before test
-  await VconStorage.setup()
+  vs = VconStorage.instantiate(VCON_STORAGE_URL)
+  assert(vs is not None)
+  global VCON_STORAGE
+  VCON_STORAGE = vs
 
   # wait until teardown time
   yield
 
   # Shutdown the Vcon storage after test
-  await VconStorage.teardown()
+  VCON_STORAGE = None
+  await vs.shutdown()
+
 
 @pytest.fixture()
 def vcon_data() -> dict:
@@ -28,7 +36,7 @@ def vcon_data() -> dict:
 async def test_conversions(make_2_party_tel_vcon: vcon.Vcon):
   # Create our test Vcon and put it in the DB so that it can be retrived via UUID
   vcon_object = make_2_party_tel_vcon
-  await py_vcon_server.db.VconStorage.set(vcon_object)
+  await VCON_STORAGE.set(vcon_object)
 
   vcon_json = vcon_object.dumps()
   vcon_dict = vcon_object.dumpd()
@@ -50,7 +58,7 @@ async def test_conversions(make_2_party_tel_vcon: vcon.Vcon):
   for length in range(len(forms) + 1):
     for subset in itertools.combinations(forms, length):
       print("set vcon forms: {}".format(subset))
-      mVcon = py_vcon_server.processor.MultifariousVcon()
+      mVcon = py_vcon_server.processor.MultifariousVcon(VCON_STORAGE)
       if(len(subset) == 0):
         pass
 

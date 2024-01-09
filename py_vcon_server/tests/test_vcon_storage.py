@@ -8,17 +8,24 @@ import py_vcon_server.processor
 from py_vcon_server.db import VconStorage
 import vcon
 
+VCON_STORAGE = None
+
 # invoke only once for all the unit test in this module
 @pytest_asyncio.fixture(autouse=True)
 async def setup():
   """ Setup Vcon storage connection before test """
-  await VconStorage.setup()
+  vs = VconStorage.instantiate()
+  global VCON_STORAGE
+  VCON_STORAGE = vs
+
 
   # wait until teardown time
   yield
 
   # Shutdown the Vcon storage after test
-  await VconStorage.teardown()
+  VCON_STORAGE = None
+  await vs.shutdown()
+
 
 def test_redis_reg():
   """ Test DB binding registration for redis """
@@ -33,10 +40,10 @@ async def test_redis_set_get(make_2_party_tel_vcon: vcon.Vcon):
   vCon = make_2_party_tel_vcon
 
   # Save the vcon
-  await VconStorage.set(vCon)
+  await VCON_STORAGE.set(vCon)
 
   # Retrived the saved Vcon
-  retrieved_vcon = await VconStorage.get(UUID)
+  retrieved_vcon = await VCON_STORAGE.get(UUID)
   print(retrieved_vcon.dumps())
   # Make sure we get what we saved
   assert retrieved_vcon.parties[0]["tel"] == "1234"
@@ -48,10 +55,10 @@ async def test_redis_jq(make_2_party_tel_vcon: vcon.Vcon):
   vCon = make_2_party_tel_vcon
 
   # Save the vcon
-  await VconStorage.set(vCon)
+  await VCON_STORAGE.set(vCon)
 
   jq_xform = ".parties[]"
-  party_dict = await VconStorage.jq_query(UUID, jq_xform)
+  party_dict = await VCON_STORAGE.jq_query(UUID, jq_xform)
   #print("party_dict: {}".format(party_dict))
   assert(party_dict[0]["tel"] == "1234")
   assert(party_dict[1]["tel"] == "5678")
@@ -62,10 +69,10 @@ async def test_redis_jsonpath(make_2_party_tel_vcon: vcon.Vcon):
   vCon = make_2_party_tel_vcon
 
   # Save the vcon
-  await VconStorage.set(vCon)
+  await VCON_STORAGE.set(vCon)
 
   jsonpath = "$.parties"
-  party_dict = await VconStorage.json_path_query(UUID, jsonpath)
+  party_dict = await VCON_STORAGE.json_path_query(UUID, jsonpath)
   print("party_dict: {}".format(party_dict))
   assert(party_dict[0][0]["tel"] == "1234")
   assert(party_dict[0][1]["tel"] == "5678")
@@ -76,15 +83,15 @@ async def test_redis_delete(make_2_party_tel_vcon: vcon.Vcon):
   vCon = make_2_party_tel_vcon
 
   # Save the vcon
-  await VconStorage.set(vCon)
+  await VCON_STORAGE.set(vCon)
 
-  retrieved_vcon = await VconStorage.get(UUID)
+  retrieved_vcon = await VCON_STORAGE.get(UUID)
   assert(retrieved_vcon is not None)
 
-  await VconStorage.delete(UUID)
+  await VCON_STORAGE.delete(UUID)
 
   try:
-    retrieved_vcon = await VconStorage.get(UUID)
+    retrieved_vcon = await VCON_STORAGE.get(UUID)
     raise Exception("vCon deleted, this should fail")
   except py_vcon_server.db.VconNotFound as e:
     # expected
@@ -111,22 +118,22 @@ async def test_processor_io_commit(
   vcon2.set_uuid("py-vcon.org", True)
   assert(vcon2.uuid != UUID)
 
-  io_object = py_vcon_server.processor.VconProcessorIO()
+  io_object = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
   await io_object.add_vcon(vcon2) # read only
   await io_object.add_vcon(vcon1, None, False) # new/commit
   assert(not io_object.is_vcon_modified(0))
   assert(io_object.is_vcon_modified(1))
 
-  await VconStorage.commit(io_object)
+  await VCON_STORAGE.commit(io_object)
 
   assert(vcon1.uuid == UUID)
-  retrieved_vcon = await VconStorage.get(vcon1.uuid)
+  retrieved_vcon = await VCON_STORAGE.get(vcon1.uuid)
   assert(len(retrieved_vcon.parties) == 2)
   assert(retrieved_vcon.parties[0]["tel"] == "444")
   assert(retrieved_vcon.parties[1]["tel"] == "888")
 
   try:
-    retrieved_vcon = await VconStorage.get(vcon2.uuid)
+    retrieved_vcon = await VCON_STORAGE.get(vcon2.uuid)
     raise Exception("second vcon UUID: {} should not have been saved".format(
       vcon2.uuid
       ))
