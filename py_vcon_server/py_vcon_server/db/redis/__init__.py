@@ -3,12 +3,13 @@
 import typing
 import json
 import vcon
+import py_vcon_server.db
 import py_vcon_server.db.redis.redis_mgr
 import py_vcon_server.logging_utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
-class RedisVconStorage:
+class RedisVconStorage(py_vcon_server.db.VconStorage):
   """ Redis binding of VconStorage """
   def __init__(self):
     self._redis_mgr = None
@@ -16,7 +17,7 @@ class RedisVconStorage:
   def setup(self, redis_uri : str) -> None:
     """ Initialize redis connect """
     if(self._redis_mgr is not None):
-      raise Exception("Redis Vcon storage interface alreadu setup")
+      raise Exception("Redis Vcon storage interface already setup")
 
     # Connect
     self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_uri)
@@ -24,13 +25,21 @@ class RedisVconStorage:
     # Setup connection pool
     self._redis_mgr.create_pool()
 
-  async def teardown(self) -> None:
+  async def shutdown(self) -> None:
     """ shutdown and wait for redis connections to close """
     if(self._redis_mgr is None):
-      logger.info("Redis Vcon storage not setup, nothing to teardown")
+      logger.error("Redis Vcon storage not setup, nothing to teardown")
 
     else:
-      await self._redis_mgr.shutdown_pool()
+      rm = self._redis_mgr
+      self._redis_mgr = None
+      await rm.shutdown_pool()
+
+
+  def __del__(self):
+    if(self._redis_mgr is not None):
+      logger.error("RedisVconStorage not shutdown")
+
 
   async def set(self, save_vcon : typing.Union[vcon.Vcon, dict, str]) -> None:
     """ save **Vcon** to redis storage """
@@ -56,7 +65,7 @@ class RedisVconStorage:
     await redis_con.json().set("vcon:{}".format(uuid), "$", vcon_dict)
 
   async def get(self, vcon_uuid : str) -> typing.Union[None, vcon.Vcon]:
-    """ Get Vcon fro redis storage """
+    """ Get Vcon from redis storage """
     redis_con = self._redis_mgr.get_client()
 
     vcon_dict = await redis_con.json().get("vcon:{}".format(vcon_uuid))
@@ -69,7 +78,11 @@ class RedisVconStorage:
 
     return(a_vcon)
 
-  async def jq_query(self, vcon_uuid : str, jq_query_string : str) -> typing.Union[dict, None]:
+  async def jq_query(
+      self,
+      vcon_uuid: str,
+      jq_query_string: str
+    ) -> typing.Union[dict, None]:
     """ Get the jq query results for the given **Vcon** """
 
     a_vcon = await self.get(vcon_uuid)
@@ -80,6 +93,7 @@ class RedisVconStorage:
 
     return(query_result)
 
+
   async def json_path_query(self, vcon_uuid : str, json_path_query_string : str) -> list:
     """ Get the JSON path query results for the given **Vcon** """
     redis_con = self._redis_mgr.get_client()
@@ -87,6 +101,7 @@ class RedisVconStorage:
     query_list = await redis_con.json().get("vcon:{}".format(vcon_uuid), json_path_query_string)
 
     return(query_list)
+
 
   async def delete(self, vcon_uuid : str) -> None:
     """ Delete the Vcon with the given UUID """

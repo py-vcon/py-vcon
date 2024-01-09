@@ -1,9 +1,11 @@
 import typing
+import urllib
+import asyncio
 import pkgutil
 import importlib
 import vcon
 import py_vcon_server.logging_utils
-import py_vcon_server.processor
+#from py_vcon_server.processor import ProcessorIO
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
@@ -24,29 +26,30 @@ def import_bindings(path: str, module_prefix: str, label: str):
 # Should this be a class or global methods??
 class VconStorage():
   _vcon_storage_implementations = {}
-  _vcon_storage_binding = None
+
 
   @staticmethod
-  async def setup(db_type : str = "redis", db_url : str = "redis://localhost") -> None:
+  def instantiate(db_url : str = "redis://localhost") -> 'VconStorage':
     """ Setup Vcon storage DB type, factory and connection URL """
     #  Need to setup Vcon storage type and URL
-
-    if(VconStorage._vcon_storage_binding is not None):
-      raise(Exception("Vcon storage implementation already bound to type: {}".format(type(VconStorage._vcon_storage_binding))))
+    url_object = urllib.parse.urlparse(db_url)
+    db_type = url_object.scheme
 
     impl_class = VconStorage._vcon_storage_implementations[db_type]
-    VconStorage._vcon_storage_binding = impl_class()
+    instance = impl_class()
 
-    VconStorage._vcon_storage_binding.setup(db_url)
+    instance.setup(db_url)
 
-  @staticmethod
-  async def teardown() -> None:
+    return(instance)
+
+
+  async def shutdown(self) -> None:
     """ teardown for Vcon storage interface to force closure and clean up of connections """
-    if(VconStorage._vcon_storage_binding is None):
-      raise(Exception("Vcon storage implementation not setup"))
+    raise Exception("teardown not implemented")
 
-    await VconStorage._vcon_storage_binding.teardown()
-    VconStorage._vcon_storage_binding = None
+
+
+
 
   @staticmethod
   def register(name : str, class_type : typing.Type):
@@ -55,16 +58,16 @@ class VconStorage():
     VconStorage._vcon_storage_implementations[name] = class_type
     logger.info("registered {} Vcon storage implementation".format(name))
 
-  @staticmethod
-  async def set(save_vcon : typing.Union[vcon.Vcon, dict, str]):
+
+  async def set(self, save_vcon : typing.Union[vcon.Vcon, dict, str]) -> None:
     """ add or update a Vcon in persistent storage """
-    if(VconStorage._vcon_storage_binding is None):
-      raise(Exception("Vcon storage implementation not setup"))
+    raise Exception("set not implemented")
 
-    await VconStorage._vcon_storage_binding.set(save_vcon)
 
-  @staticmethod
-  async def commit(processor_output: py_vcon_server.processor.VconProcessorIO) -> None:
+  async def commit(
+      self,
+      processor_output #: VconProcessorIO
+    ) -> None:
     """
     Helper function to save changed **Vcon**s from the
     output of a **VconProcessor** or **Pipeline**.
@@ -80,29 +83,26 @@ class VconStorage():
           py_vcon_server.processor.VconTypes.DICT
           )
 
-        await VconStorage.set(vcon_dict)
+        await self.set(vcon_dict)
 
-  @staticmethod
-  async def get(vcon_uuid : str) -> typing.Union[None, vcon.Vcon]:
+
+  async def get(self, vcon_uuid : str) -> typing.Union[None, vcon.Vcon]:
     """ Get a Vcon from storage using its UUID as the key """
-    if(VconStorage._vcon_storage_binding is None):
-      raise(Exception("Vcon storage implementation not setup"))
+    raise Exception("get not implemented")
 
-    vCon = await VconStorage._vcon_storage_binding.get(vcon_uuid)
-    return(vCon)
 
-  @staticmethod
-  async def jq_query(vcon_uuid : str, jq_query_string : str) -> str:
+  async def jq_query(
+      self,
+      vcon_uuid: str,
+      jq_query_string: str
+    ) -> str:
     """
     Apply the given JQ query/transform on the Vcon from storage given its UUID as the key.
 
     Returns: json query/transform in the form of a string
     """
-    if(VconStorage._vcon_storage_binding is None):
-      raise(Exception("Vcon storage implementation not setup"))
+    raise Exception("jq_query not implemented")
 
-    query_result = await VconStorage._vcon_storage_binding.jq_query(vcon_uuid, jq_query_string)
-    return(query_result)
 
   @staticmethod
   async def json_path_query(vcon_uuid : str, json_path_query_string : str) -> str:
@@ -111,20 +111,16 @@ class VconStorage():
 
     Returns: json path query in the form of a string
     """
-    if(VconStorage._vcon_storage_binding is None):
-      raise(Exception("Vcon storage implementation not setup"))
+    raise Exception("json_path_query not implemented")
 
-    query_result = await VconStorage._vcon_storage_binding.json_path_query(vcon_uuid, json_path_query_string)
-    return(query_result)
 
-  @staticmethod
-  async def delete(vcon_uuid : str) -> None:
+  async def delete(self, vcon_uuid : str) -> None:
     """ Delete the Vcon from storage identified by its UUID as the key """
-    if(VconStorage._vcon_storage_binding is None):
-      raise(Exception("Vcon storage implementation not setup"))
-
-    await VconStorage._vcon_storage_binding.delete(vcon_uuid)
+    raise Exception("delete not implemented")
 
 
   # TODO: Need connection status method
+
+
+VCON_STORAGE: typing.Union[VconStorage, None] = None
 
