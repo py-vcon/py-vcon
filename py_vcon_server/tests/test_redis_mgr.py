@@ -12,9 +12,8 @@ sys.path.append("py_vcon_server/db/redis")
 print("CWD: {}".format(os.getcwd()))
 print(sys.path, file=sys.stderr)
 import py_vcon_server.db.redis.redis_mgr
-from py_vcon_server.settings import VCON_STORAGE_TYPE, VCON_STORAGE_URL
+from py_vcon_server.settings import VCON_STORAGE_URL
 
-assert(VCON_STORAGE_TYPE == "redis")
 r_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(VCON_STORAGE_URL)
 
 # Run before each test function
