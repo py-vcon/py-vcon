@@ -7,7 +7,24 @@ import copy
 import py_vcon_server.processor
 import vcon
 from common_setup import make_2_party_tel_vcon
+from py_vcon_server.settings import VCON_STORAGE_URL
 
+
+VCON_STORAGE = None
+
+@pytest_asyncio.fixture(autouse=True)
+async def setup_db():
+  # Init storge
+  vs = py_vcon_server.db.VconStorage.instantiate(VCON_STORAGE_URL)
+  global VCON_STORAGE
+  VCON_STORAGE = vs
+
+  yield
+  # teardown storage
+  VCON_STORAGE = None
+  await vs.shutdown()
+ 
+ 
 @pytest.mark.asyncio
 async def test_registration(make_2_party_tel_vcon: vcon.Vcon):
   vCon = make_2_party_tel_vcon
@@ -49,7 +66,7 @@ async def test_registration(make_2_party_tel_vcon: vcon.Vcon):
   assert(proc_inst.may_modify_vcons() == True)
 
   # Setup inputs
-  proc_input = py_vcon_server.processor.VconProcessorIO()
+  proc_input = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
   await proc_input.add_vcon(vCon, "fake_lock", False) # read/write
   proc_options = py_vcon_server.processor.VconProcessorOptions()
   assert(len(proc_input._vcons) == 1)

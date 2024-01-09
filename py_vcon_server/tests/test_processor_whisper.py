@@ -4,9 +4,29 @@ import asyncio
 import pytest
 import pytest_asyncio
 import py_vcon_server.processor
+from py_vcon_server.settings import VCON_STORAGE_URL
 #import py_vcon_server.processor.whisper_base
 import vcon
 from common_setup import make_inline_audio_vcon, make_2_party_tel_vcon
+
+
+VCON_STORAGE = None
+
+# invoke only once for all the unit test in this module
+@pytest_asyncio.fixture(autouse=True)
+async def setup():
+  """ Setup Vcon storage connection before test """
+  vs = py_vcon_server.db.VconStorage.instantiate(VCON_STORAGE_URL)
+  global VCON_STORAGE
+  VCON_STORAGE = vs
+
+
+  # wait until teardown time
+  yield
+
+  # Shutdown the Vcon storage after test
+  VCON_STORAGE = None
+  await vs.shutdown()
 
 
 @pytest.mark.asyncio
@@ -29,7 +49,7 @@ async def test_whisper_base_model(make_inline_audio_vcon):
 
 
   # Setup inputs
-  proc_input = py_vcon_server.processor.VconProcessorIO()
+  proc_input = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
   await proc_input.add_vcon(in_vcon, "fake_lock", False) # read/write
   assert(len(proc_input._vcons) == 1)
   in_vcon = await proc_input.get_vcon(proc_options.input_vcon_index)

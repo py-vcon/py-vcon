@@ -8,7 +8,7 @@ import copy
 import py_vcon_server.processor
 from common_setup import UUID, make_2_party_tel_vcon
 import vcon
-
+from py_vcon_server.settings import VCON_STORAGE_URL
 
 # Stuff to test:
 #  add
@@ -18,12 +18,27 @@ import vcon
 #  with and without lock
 #  readonly and read/write
 
+VCON_STORAGE = None
+
+@pytest_asyncio.fixture(autouse=True)
+async def setup_db():
+  # Init storge
+  vs = py_vcon_server.db.VconStorage.instantiate(VCON_STORAGE_URL)
+  global VCON_STORAGE
+  VCON_STORAGE = vs
+
+  yield
+  # teardown storage
+  VCON_STORAGE = None
+  await vs.shutdown()
+ 
+ 
 @pytest.mark.asyncio
 async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   vcon_object = make_2_party_tel_vcon
   assert(vcon_object.uuid == UUID)
 
-  io_object = py_vcon_server.processor.VconProcessorIO()
+  io_object = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
   assert(io_object.num_vcons() == 0)
   await io_object.add_vcon(vcon_object)
   assert(len(io_object._vcons) == 1)
@@ -87,7 +102,7 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
 
 
   # New processor IO object to test read/write features
-  rw_io_object = py_vcon_server.processor.VconProcessorIO()
+  rw_io_object = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
   # Add with lock and read_write
   await rw_io_object.add_vcon(vcon_object, "fake_key", False)
   assert(len(rw_io_object._vcons) == 1)
