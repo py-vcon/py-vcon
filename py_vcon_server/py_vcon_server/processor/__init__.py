@@ -7,7 +7,7 @@ import datetime
 import asyncio
 import importlib
 import pydantic
-import py_vcon_server.db
+#from py_vcon_server.db import VconStorage
 import py_vcon_server.logging_utils
 import vcon
 
@@ -59,8 +59,13 @@ class VconTypes(enum.Enum):
 
 class MultifariousVcon():
   """ Container object for various forms of vCon and cashing of the different forms """
-  def __init__(self):
-    self._vcon_forms = {}
+  def __init__(
+      self,
+      vcon_storage #: VconStorage
+    ):
+    self._vcon_forms: typing.Dict[str, typing.Any] = {}
+    self._vcon_storage = vcon_storage
+
 
   def update_vcon(self,
     new_vcon: typing.Union[str, vcon.Vcon],
@@ -121,7 +126,7 @@ class MultifariousVcon():
     forms = list(self._vcon_forms.keys())
     if(len(forms) == 1 and forms[0] == VconTypes.UUID):
       # No choice have to hit the DB
-      vcon_object = await py_vcon_server.db.VconStorage.get(self._vcon_forms[VconTypes.UUID])
+      vcon_object = await self._vcon_storage.get(self._vcon_forms[VconTypes.UUID])
       if(vcon_object is None):
         logger.warning("Unable to get Vcon for UUID: {} from storage".format(self._vcon_forms[VconTypes.UUID]))
 
@@ -328,10 +333,15 @@ class VconProcessorOutput(pydantic.BaseModel, extra=pydantic.Extra.allow):
 
 class VconProcessorIO():
   """ Abstract input and output for a VconProcessor """
-  def __init__(self):
-    self._vcons = []
-    self._vcon_locks = []
-    self._vcon_update = []
+  def __init__(
+        self,
+        vcon_storage #: VconStorage
+      ):
+    self._vcons: typing.List[MultifariousVcon] = []
+    self._vcon_locks: typing.List[str] = []
+    self._vcon_update: typing.List[bool] = []
+    self._vcon_storage = vcon_storage
+
 
   def is_vcon_modified(self,
     index: int = 0
@@ -411,7 +421,7 @@ class VconProcessorIO():
     # N/A - not allowed
     # NOP - no operation/storage
 
-    mVcon = MultifariousVcon()
+    mVcon = MultifariousVcon(self._vcon_storage)
     mVcon.update_vcon(vcon_to_add)
     if(lock_key == ""):
       lock_key = None
@@ -444,7 +454,7 @@ class VconProcessorIO():
     Returns: index of updated vCon or None
     """
 
-    mVcon = MultifariousVcon()
+    mVcon = MultifariousVcon(self._vcon_storage)
     mVcon.update_vcon(modified_vcon)
 
     uuid = await mVcon.get_vcon(VconTypes.UUID)
