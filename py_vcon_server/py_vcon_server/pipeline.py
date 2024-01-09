@@ -14,6 +14,8 @@ PIPELINE_NAMES_KEY = "pipelines"
 PIPELINE_NAME_PREFIX = "pipeline:"
 
 PIPELINE_DB = None
+VCON_STORAGE = None
+
 
 class PipelineNotFound(Exception):
   """ Raised when Pipeline not found in the DB """
@@ -483,8 +485,16 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     # Create runner
     runner = PipelineRunner(pipeline)
 
+    # Initialize VCON_STORAGE if not already done
+    global VCON_STORAGE
+    if(VCON_STORAGE is None):
+      logger.info("instantiating pipeline worker VconStorage")
+      VCON_STORAGE = py_vcon_server.db.VconStorage.instantiate(
+          py_vcon_server.settings.VCON_STORAGE_URL
+        )
+
     # Create Processor input
-    pipeline_input = py_vcon_server.processor.VconProcessorIO()
+    pipeline_input = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
     locks = job_definition.get("locks", [])
     lock_len = len(locks)
     if(job_type == "vcon_uuid"):
@@ -503,7 +513,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     save_vcons = pipeline.pipeline_options.save_vcons
     if(save_vcons):
       # Save changed Vcons
-      await py_vcon_server.db.VconStorage.commit(pipeline_output)
+      await VCON_STORAGE.commit(pipeline_output)
 
     return(job_definition)
 
