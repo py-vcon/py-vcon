@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-VCON_STORAGE_TYPE = os.getenv("VCON_STORAGE_TYPE", "redis")
 VCON_STORAGE_URL = os.getenv("STORAGE_URL", "redis://localhost")
 QUEUE_DB_URL = os.getenv("STORAGE_URL", VCON_STORAGE_URL)
 PIPELINE_DB_URL = os.getenv("PIPELINE_DB_URL", VCON_STORAGE_URL)
