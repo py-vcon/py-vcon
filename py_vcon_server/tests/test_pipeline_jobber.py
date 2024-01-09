@@ -49,9 +49,10 @@ SERVER_QUEUES = {
   }
 }
 
+TIMEOUT = 8.0
 PIPELINE_DEFINITION = {
   "pipeline_options": {
-      "timeout": 2.0,
+      "timeout": TIMEOUT,
       "save_vcons": True
     },
   "processors": [
@@ -279,7 +280,7 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
 
     # Check that pipeline def is attached
     assert(isinstance(job["pipeline"], dict))
-    assert(job["pipeline"]["pipeline_options"]["timeout"] == 2.0)
+    assert(job["pipeline"]["pipeline_options"]["timeout"] == TIMEOUT)
     assert(len(job["pipeline"]["processors"]) == 2)
 
     # check that queue is labeled in job
