@@ -10,8 +10,11 @@ import py_vcon_server.db
 import py_vcon_server.states
 import py_vcon_server.queue
 from py_vcon_server.logging_utils import init_logger
+import logging
 
 logger = init_logger(__name__)
+logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
+logger.debug("logging handlers: {}".format(logger.handlers))
 
 __version__ = "0.1"
 
@@ -49,8 +52,7 @@ async def startup():
 
   await py_vcon_server.states.SERVER_STATE.starting()
 
-  await py_vcon_server.db.VconStorage.setup(py_vcon_server.settings.VCON_STORAGE_TYPE,
-    py_vcon_server.settings.VCON_STORAGE_URL)
+  py_vcon_server.db.VCON_STORAGE = py_vcon_server.db.VconStorage.instantiate(py_vcon_server.settings.VCON_STORAGE_URL)
 
   py_vcon_server.queue.JOB_QUEUE = py_vcon_server.queue.JobQueue(py_vcon_server.settings.QUEUE_DB_URL)
 
@@ -66,7 +68,7 @@ async def shutdown():
 
   await py_vcon_server.states.SERVER_STATE.shutting_down()
 
-  await py_vcon_server.db.VconStorage.teardown()
+  await py_vcon_server.db.VCON_STORAGE.shutdown()
 
   await py_vcon_server.queue.JOB_QUEUE.shutdown()
 
