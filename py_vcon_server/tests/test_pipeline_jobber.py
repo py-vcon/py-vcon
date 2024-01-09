@@ -4,7 +4,7 @@ import pytest
 import pytest_asyncio
 import fastapi.testclient
 import py_vcon_server
-from py_vcon_server.settings import PIPELINE_DB_URL, QUEUE_DB_URL, VCON_STORAGE_TYPE, VCON_STORAGE_URL
+from py_vcon_server.settings import PIPELINE_DB_URL, QUEUE_DB_URL, VCON_STORAGE_URL
 from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 
 
@@ -51,7 +51,8 @@ SERVER_QUEUES = {
 
 PIPELINE_DEFINITION = {
   "pipeline_options": {
-      "timeout": 2.0
+      "timeout": 2.0,
+      "save_vcons": True
     },
   "processors": [
       {
@@ -69,10 +70,12 @@ PIPELINE_DEFINITION = {
 
 PIPELINE_DB = None
 JOB_QUEUE = None
+VCON_STORAGE = None
 @pytest_asyncio.fixture(autouse=True)
 async def set_queue_config():
-  await py_vcon_server.db.VconStorage.setup(VCON_STORAGE_TYPE,
-    VCON_STORAGE_URL)
+  global VCON_STORAGE
+  vs = py_vcon_server.db.VconStorage.instantiate(VCON_STORAGE_URL)
+  VCON_STORAGE = vs
 
   print("caching queue settings")
   saved_config = copy.deepcopy(py_vcon_server.settings.WORK_QUEUES)
@@ -91,7 +94,6 @@ async def set_queue_config():
   global JOB_QUEUE
   JOB_QUEUE = jq
 
-  await py_vcon_server.db.VconStorage.teardown()
   yield
 
   py_vcon_server.settings.WORK_QUEUES = saved_config
@@ -106,6 +108,9 @@ async def set_queue_config():
   JOB_QUEUE = None
   await jq.shutdown()
   print("shutdown JobQueue connection")
+
+  VCON_STORAGE = None
+  await vs.shutdown()
 
 
 @pytest.mark.asyncio
@@ -316,20 +321,42 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
 
     #TODO:
     # Run a job 
-    #job_result = await jobber.do_job(job)
+    job_result = await jobber.do_job(job)
 
     # Confirm transcript and summary were created
-    # get_response = client.get(
-    #   "/vcon/{}".format(UUID),
-    #   headers={"accept": "application/json"},
-    #   )
-    # assert(get_response.status_code == 200)
-    # vcon_dict = get_response.json()
-    # assert(len(vcon_dict["analysis"]) == 2)
+    get_response = client.get(
+      "/vcon/{}".format(UUID),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    vcon_dict = get_response.json()
+    assert(len(vcon_dict["analysis"]) == 2)
 
     # run finished job
+    await jobber.job_finished(job_result)
 
-    # confirm job not in queue
+    # confirm job not put back in queue
+    get_response = client.get(
+        "/queue/{}".format(
+            list(SERVER_QUEUES.keys())[1]
+          ),
+        headers={"accept": "application/json"},
+        )
+    assert(get_response.status_code == 200)
+    job_list = get_response.json()
+    assert(isinstance(job_list, list))
+    assert(len(job_list) == 0)
+
 
     # confirm job not in in_progress list
+    get_response = client.get(
+        "/in_progress",
+        headers={"accept": "application/json"},
+        )
+    assert(get_response.status_code == 200)
+    in_progress_jobs = get_response.json()
+    assert(isinstance(in_progress_jobs, dict))
+    in_progress = in_progress_jobs.get(job_id, None)
+    assert(in_progress is None)
+
 
