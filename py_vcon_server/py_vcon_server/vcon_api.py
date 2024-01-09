@@ -29,7 +29,7 @@ def init(restapi):
 
     try:
       logger.debug("getting vcon UUID: {}".format(vcon_uuid))
-      vCon = await py_vcon_server.db.VconStorage.get(vcon_uuid)
+      vCon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
 
     except py_vcon_server.db.VconNotFound as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -67,7 +67,7 @@ def init(restapi):
       vcon_object = vcon.Vcon()
       vcon_object.loadd(vcon_dict)
 
-      await py_vcon_server.db.VconStorage.set(vcon_dict)
+      await py_vcon_server.db.VCON_STORAGE.set(vcon_dict)
 
     except vcon.InvalidVconJson as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -91,7 +91,7 @@ def init(restapi):
     """
     try:
       logger.debug("deleting vcon UUID: {}".format(vcon_uuid))
-      await py_vcon_server.db.VconStorage.delete(vcon_uuid)
+      await py_vcon_server.db.VCON_STORAGE.delete(vcon_uuid)
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -112,7 +112,7 @@ def init(restapi):
     """
     try:
       logger.info("vcon UID: {} jq transform string: {}".format(vcon_uuid, jq_transform))
-      transform_result = await py_vcon_server.db.VconStorage.jq_query(vcon_uuid, jq_transform)
+      transform_result = await py_vcon_server.db.VCON_STORAGE.jq_query(vcon_uuid, jq_transform)
       logger.debug("jq  transform result: {}".format(transform_result))
 
     except Exception as e:
@@ -133,7 +133,7 @@ def init(restapi):
 
     try:
       logger.info("vcon UID: {} jsonpath query string: {}".format(vcon_uuid, path_string))
-      query_result = await py_vcon_server.db.VconStorage.json_path_query(vcon_uuid, path_string)
+      query_result = await py_vcon_server.db.VCON_STORAGE.json_path_query(vcon_uuid, path_string)
       logger.debug("jsonpath query result: {}".format(query_result))
 
     except Exception as e:
@@ -170,7 +170,7 @@ def init(restapi):
         logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
           processor_name, path, type(options), options, processor_name_from_path))
 
-        processor_input = py_vcon_server.processor.VconProcessorIO()
+        processor_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
         await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
 
         # Get the processor form the registry
@@ -184,7 +184,7 @@ def init(restapi):
 
         if(commit_changes):
           # Save changed Vcons
-          await py_vcon_server.db.VconStorage.commit(processor_output)
+          await py_vcon_server.db.VCON_STORAGE.commit(processor_output)
 
         # Get serializable output
         # TODO: don't return whole Vcon if not return_whole_vcon
@@ -214,7 +214,7 @@ def init(restapi):
         lock_key = None
 
       # Build the VconProcessorIO
-      pipeline_input = py_vcon_server.processor.VconProcessorIO()
+      pipeline_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
       await pipeline_input.add_vcon(vCon, lock_key, False)
 
       # Get the pipeline
@@ -227,7 +227,7 @@ def init(restapi):
       # Optionally save vCons
       if(save_vcons):
         # Save changed Vcons
-        await py_vcon_server.db.VconStorage.commit(pipeline_output)
+        await py_vcon_server.db.VCON_STORAGE.commit(pipeline_output)
 
       # TODO: release the vCon lock if taken
       if(lock_key is not None):
