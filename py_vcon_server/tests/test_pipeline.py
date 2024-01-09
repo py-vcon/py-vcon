@@ -10,6 +10,7 @@ from py_vcon_server.settings import PIPELINE_DB_URL
 from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 
 PIPELINE_DB = None
+TIMEOUT = 12.0
 
 @pytest_asyncio.fixture(autouse=True)
 async def pipeline_db():
@@ -392,8 +393,8 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
 
     # Give more time so that pipeline does not timeout
     more_time_pipe_dict = copy.deepcopy(PIPE_DEF2_DICT)
-    more_time_pipe_dict["pipeline_options"]["timeout"] = 10.0
-    assert(more_time_pipe_dict["pipeline_options"]["timeout"] == 10.0)
+    more_time_pipe_dict["pipeline_options"]["timeout"] = TIMEOUT
+    assert(more_time_pipe_dict["pipeline_options"]["timeout"] == TIMEOUT)
     set_response = client.put(
         "/pipeline/{}".format(
           pipe2_name
@@ -416,7 +417,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     pipe_json = get_response.json()
     pipe_def = py_vcon_server.pipeline.PipelineDefinition(**pipe_json)
     print("got pipeline: {}".format(pipe_json))
-    assert(pipe_def.pipeline_options.timeout == 10.0)
+    assert(pipe_def.pipeline_options.timeout == TIMEOUT)
     assert(len(pipe_def.processors) == 2)
     assert(pipe_def.processors[0].processor_name == "deepgram")
     assert(len(pipe_def.processors[0].processor_options.dict()) == 1)
