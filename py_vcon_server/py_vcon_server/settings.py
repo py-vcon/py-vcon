@@ -1,4 +1,5 @@
 import os
+import multiprocessing
 from pathlib import Path
 
 VCON_STORAGE_URL = os.getenv("STORAGE_URL", "redis://localhost")
@@ -10,9 +11,14 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
 LOGGING_CONFIG_FILE = os.getenv("LOGGING_CONFIG_FILE", Path(__file__).parent / 'logging.conf')
 LAUNCH_VCON_API = os.getenv("LAUNCH_VCON_API", True)
 LAUNCH_ADMIN_API = os.getenv("LAUNCH_ADMIN_API", True)
-NUM_WORKERS = os.getenv("NUM_WORKERS", os. cpu_count())
+NUM_WORKERS = os.getenv("NUM_WORKERS", os.cpu_count())
+if(not isinstance(NUM_WORKERS, int)):
+  print("Warning: NUM_WORKERS: {} should be an int, setting to: 0".format(NUM_WORKERS))
+  NUM_WORKERS = 0
 
 # parse out optional weights from name for each queue
+manager = multiprocessing.Manager()
+#WORK_QUEUES: multiprocessing.managers.DictProxy = manager.dict({})
 WORK_QUEUES = {}
 queue_tokens = os.getenv("WORK_QUEUES", "").split()
 for token in queue_tokens:
