@@ -6,12 +6,17 @@ import time
 import copy
 import traceback
 import asyncio
+import nest_asyncio
 import concurrent.futures
 import multiprocessing
 import multiprocessing.managers
 import py_vcon_server.logging_utils
 
+#logger = multiprocessing.log_to_stderr()
+#logger.setLevel(multiprocessing.SUBDEBUG)
+
 logger = py_vcon_server.logging_utils.init_logger(__name__)
+
 
 class JobInterface():
   """
@@ -150,7 +155,8 @@ class JobScheduler():
       initargs = (self._run_states,),
       # so as to not inherit signal handlers and file handles from parent/FastAPI
       # use spawn:
-      mp_context = multiprocessing.get_context(method = "spawn"))
+      mp_context = multiprocessing.get_context(method = "fork"))
+      #mp_context = multiprocessing.get_context(method = "spawn"))
 
     logger.debug("submitting scheduler task")
     # Start the scheduler
@@ -174,16 +180,34 @@ class JobScheduler():
       prior_num_keys = 0
       while(True):
         # TODO make this a little smarter and look at the task info in run_states
+        num_sched = 0
+        num_workers = 0
+        for key in self._run_states.keys():
+           value = self._run_states.get(key, None)
+           logger.debug("run_states[{}] = {}".format(key, value))
+           if(value and isinstance(key, int) and isinstance(value, dict)):
+             proc_type = value.get("type", None)
+             if(proc_type == "worker"):
+               num_workers +=1
+             if(proc_type == "scheduler"):
+               num_sched += 1
         num_keys = len(self._run_states.keys())
+        logger.debug("num_sched: {} num_workeres: {} num_keys: {}".format(
+            num_sched,
+            num_workers,
+            num_keys
+          ))
         if(prior_num_keys != num_keys):
           logger.debug("waiting run_states: {}".format(self._run_states))
           prior_num_keys = num_keys
 
         # we wait until scheduler and workers states show up
         # JobWorkerPool.process_init adds pid and start time even if no jobs are queued or run
-        if(num_keys >= self._num_schedulers + self._num_workers + 1 or
+        if((num_sched >= self._num_schedulers and num_workers >= self._num_workers) or
           not self._run_states["run"]):
+          logger.debug("done waiting run_states: {}".format(self._run_states))
           break
+
         time.sleep(0.1)
 
 
@@ -204,6 +228,7 @@ class JobScheduler():
       logger.info("start scheduler time: {}".format(start))
 
       if(asyncio.iscoroutinefunction(func)):
+        nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(func(*args, **kwargs))
       else:
@@ -287,6 +312,8 @@ class JobScheduler():
           # No jobs available to schedule
           else:
             break
+
+        run_states["scheduler"] = "ran all jobs"
 
       except Exception as e:
         logger.error("do_scheduling caught exception: {}".format(e))
@@ -384,11 +411,12 @@ class JobWorkerPool():
     self._job_state_updater = job_state_updater
     self._workers = concurrent.futures.ProcessPoolExecutor(
       max_workers = num_workers,
-      initializer = self.process_init,
+      initializer = JobWorkerPool.process_init,
       initargs = (run_states,),
       # so as to not inherit signal handlers and file handles from parent/FastAPI
       # use spawn:
-      mp_context = multiprocessing.get_context(method = "spawn"))
+      mp_context = multiprocessing.get_context(method = "fork"))
+      #mp_context = multiprocessing.get_context(method = "spawn"))
       #max_tasks_per_child = 1)
 
   @staticmethod
@@ -413,6 +441,7 @@ class JobWorkerPool():
       logger.info("start job: {} time: {}".format(job_id, start))
 
       if(asyncio.iscoroutinefunction(func)):
+        nest_asyncio.apply()
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(func(*args, **kwargs))
       else:
@@ -462,6 +491,7 @@ class JobWorkerPool():
       run_states[pid] = {"type": "worker", "start": start}
     except Exception as e:
       logger.exception(e)
+      run_states[pid] = {"type": "worker", "Exception in init:": str(e)}
       raise e
     # loop = asyncio.get_event_loop()
     # loop.run_until_complete(asyncio.sleep(5))
