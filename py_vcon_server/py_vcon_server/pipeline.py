@@ -474,6 +474,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       raise Exception("no pipeline definition for job: {}".format(job_id))
     pipeline = PipelineDefinition(**pipe_def)
 
+    queue_name = job_definition.get("queue", None)
     queue_job = job_definition.get("job", None)
     if(queue_job is None):
       raise Exception("job id: {} with no queue job definition".format(job_definition.get("id")))
@@ -483,7 +484,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       raise Exception("job id: {} with no queue job type".format(job_definition.get("id")))
 
     # Create runner
-    runner = PipelineRunner(pipeline)
+    runner = PipelineRunner(pipeline, queue_name)
 
     # Initialize VCON_STORAGE if not already done
     global VCON_STORAGE
