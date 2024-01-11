@@ -26,16 +26,29 @@ The first release and documentation comming soon.
 
     
 ## Architecture
+![Architure Diagram](docs/Py_vCon_Server_Architecture.png)
+
     Components
-      VconStorage
-      ServerState
-      Admin RESTful API
       vCon RESTful API
+      Admin RESTful API
       Pipeline Server
-      PipelineIO
-      Pipeline
-      Acl
-      JobQueue
+
+      Pluggable DB Interfaces
+        VconStorage
+        ServerState
+        JobQueue
+        PipelineDB
+        
+        PipelineIO
+        Pipeline
+        
+      Processor Plugin Framework
+        vCon Processor
+  
+      Concepts
+        vCon locking
+        ACL
+
 
 ## Configuration
 
