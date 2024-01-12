@@ -297,7 +297,8 @@
       },
       "put": {
         "tags": [
-          "Admin: Job Queues"
+          "Admin: Job Queues",
+          "vCon: Storage CRUD"
         ],
         "summary": "Add Queue Job",
         "description": "Add the given job to the named job queue.\n\nCurrently only one job_type is supported: \"vcon_uuid\"\nwhich has an array of vCon UUIDs contained in\nvcon_uuid.  vcon_uuid is currently limited to\nexactly one vCon UUID.\n\nReturns: int - the positiion of the added job in the queue.",
@@ -703,7 +704,7 @@
     "/vcon/{vcon_uuid}": {
       "get": {
         "tags": [
-          "vCon Storage CRUD"
+          "vCon: Storage CRUD"
         ],
         "summary": "Get Vcon",
         "description": "Get the vCon object identified by the given UUID.\n\nReturns: dict - vCon object which may be in the unencrypted, signed or encrypted JSON forms",
@@ -764,7 +765,7 @@
       },
       "delete": {
         "tags": [
-          "vCon Storage CRUD"
+          "vCon: Storage CRUD"
         ],
         "summary": "Delete Vcon",
         "description": "Delete the vCon idenfied by the given UUID from VconStorage\n\nReturns: None",
@@ -820,7 +821,7 @@
     "/vcon": {
       "post": {
         "tags": [
-          "vCon Storage CRUD"
+          "vCon: Storage CRUD"
         ],
         "summary": "Post Vcon",
         "description": "Store the given vCon in VconStorage, replace if it exists for the given UUID",
@@ -875,7 +876,7 @@
     "/vcon/{vcon_uuid}/jq": {
       "get": {
         "tags": [
-          "vCon Storage CRUD"
+          "vCon: Storage CRUD"
         ],
         "summary": "Get Vcon Jq Transform",
         "description": "Apply the given jq transform to the vCon identified by the given UUID and return the results.\n\nReturns: list - containing jq tranform of the vCon.",
@@ -945,7 +946,7 @@
     "/vcon/{vcon_uuid}/jsonpath": {
       "get": {
         "tags": [
-          "vCon Storage CRUD"
+          "vCon: Storage CRUD"
         ],
         "summary": "Get Vcon Jsonpath Query",
         "description": "Apply the given JSONpath query to the vCon idntified by the given UUID.\n\nReturns: list - the JSONpath query results",
@@ -1015,7 +1016,7 @@
     "/process/{vcon_uuid}/deepgram": {
       "post": {
         "tags": [
-          "vCon Processors"
+          "vCon: Processors"
         ],
         "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
         "description": "Deepgram transcription binding for **VconProcessor**\n\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Deepgram** **Vcon** **filter_plug** for transcription is used.",
@@ -1108,7 +1109,7 @@
     "/process/{vcon_uuid}/openai_chat_completion": {
       "post": {
         "tags": [
-          "vCon Processors"
+          "vCon: Processors"
         ],
         "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
         "description": "OpenAi Chat Completion binding for **VconProcessor**\n\nThis **VconProcessor** will input the text dialog and transcribed dialog(s) for one or all of the audio dialogs in the input Vcon and add an analysis object containing the generative AI output for the prompt provided in the option.\nThe **openai_chat_completions** **Vcon** **filter_plug** is used.",
@@ -1201,7 +1202,7 @@
     "/process/{vcon_uuid}/whisper_base": {
       "post": {
         "tags": [
-          "vCon Processors"
+          "vCon: Processors"
         ],
         "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
         "description": "Whisper OpenAI transcription binding for **VconProcessor**  with model size: base\n\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Whisper** **Vcon** **filter_plug** for transcription is used which is built upon the OpenAI Whisper package.",
@@ -1294,7 +1295,7 @@
     "/pipeline/{name}/run": {
       "post": {
         "tags": [
-          "vCon Pipelines"
+          "vCon: Pipelines"
         ],
         "summary": "Run a pipeline of processors on the vCon given in the request body",
         "description": "Run the given Vcon through the named pipeline.\n\nNote: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:\n\n  **failure_queue** assumed to be None <br>\n  **success_queue** assumed to be None <br>\n  **save_vcons** <br>\n\nParameters:\n\n  **name** (str) - name of the pipeline defined in the pipeline DB\n\n  **vCon** (py_vcon_server.processor.VconObject) - vCon from body, assumes vCon/UUID does NOT exist in storage\n\n  **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline\n      processing.  Ignores/overides the **PipelineOptions.save_vcons**\n\n  **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline\n\nReturns:\n\n  If return_results is true, return the VconProcessorOutput, otherwise return None",
@@ -1367,7 +1368,7 @@
     "/pipeline/{name}/run/{uuid}": {
       "post": {
         "tags": [
-          "vCon Pipelines"
+          "vCon: Pipelines"
         ],
         "summary": "Run a pipeline of processors on the vCon in storage identified by UUID",
         "description": "Run the vCon identified by the given UUID through the named pipeline.\n\nNote: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:\n\n  **failure_queue** assumed to be None <br>\n  **success_queue** assumed to be None <br>\n  **save_vcons** <br>\n\nParameters:\n\n  **name** (str) - name of the pipeline defined in the pipeline DB\n\n  **uuid** (str) - UUID of the vCon in the vCon Storage\n\n  **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline\n      processing.  Ignores/overides the **PipelineOptions.save_vcons**\n\n  **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline\n\nReturns:\n\n  If return_results is true, return the VconProcessorOutput, otherwise return None",
@@ -1549,7 +1550,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1704167922.6786847
+            "example": 1705027887.5441089
           },
           "server": {
             "title": "server key",
@@ -1845,12 +1846,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1704167922.6760223
+            "example": 1705027887.541268
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 128559
+            "example": 322023
           }
         }
       },
@@ -1886,13 +1887,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 128559
+            "example": 322023
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1704167922.6768901
+            "example": 1705027887.5420637
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -1915,7 +1916,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1704167922.6769204
+            "example": 1705027887.54211
           }
         }
       },
@@ -1987,12 +1988,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-01-02T03:58:42.630+00:00",
+            "example": "2024-01-12T02:51:27.531+00:00",
             "examples": [
-              1704167922,
-              1704167922.6302645,
+              1705027887,
+              1705027887.531606,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-01-02T03:58:42.630+00:00",
+              "2024-01-12T02:51:27.531+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -2158,15 +2159,15 @@
       "description": "Entry points to get, operate on in progress pipeline job states"
     },
     {
-      "name": "vCon Storage CRUD",
+      "name": "vCon: Storage CRUD",
       "description": "Entry points to get, query, modify or delete vCons in storage"
     },
     {
-      "name": "vCon Processors",
+      "name": "vCon: Processors",
       "description": "Entry points to run a single processor on a vCon"
     },
     {
-      "name": "vCon Pipelines",
+      "name": "vCon: Pipelines",
       "description": "Entry points to run a pipeline of processor(s) on a vCon"
     }
   ]
