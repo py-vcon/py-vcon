@@ -71,19 +71,39 @@ The first release and documentation comming soon.
 
 
 ## RESTful API Documentation
+The full swagger documentation for all of the RESTful APIs provided by the Py vCon Server are available here: 
 [RESTful/Swagger docs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html)
 
 ## Admin RESTful API
+The Admin RESTful APIs are provided for getting inforamtion about running servers, modifing configureation and system definitions.
+These APIs are intended for adminstration and DevOps of the server.
+They are organized in the following sections:
 
-[Admin: Servers](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Servers)
+ * [Admin: Servers](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Servers) -
+for getting and setting server configuration and state
 
-[Admin: Job Queues](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Job%20Queues)
+ * [Admin: Job Queues](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Job%20Queues) -
+for getting, setting, deleting and adding to **job queues**
 
-iterate entry points and gen doc from a template
+* [Admin: Pipelines](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Pipelines) -
+for getting, updating and deleting **pipeline** definitions and configuration
+
+ * [Admin: In Progress Jobs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20In%20Progress%20Jobs) -
+for getting, requeuing and deleting **in progress jobs**
 
 ## vCon RESTful API
+The vCon RESTful APIs are the high level interface to the Py vCon Server, providing the ability to create and perform operations on vCons.
+This the primary interface for users of the server, as opposed to adminstrators or DevOps.
+They are organized in the following sections:
 
-iterate entry points and gen doc from a template
+ * [vCon: Storage CRUD](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon:%20Storage%20CRUD) -
+for creating, updating, deleting, querying vCons in **VconStorage** and queuing **Pipeline Jobs** for vCons
+
+ * [vCon: Processors](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon:%20Processors) -
+for running **vCon Processors** on vCons in **VconStorage**
+
+ * [vCon: Pipelines](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon:%20Pipelines) -
+for running **Pipelines** on the given vCon or indicated vCon in **VconStorage**
 
 ## Pipeline Processing
 
