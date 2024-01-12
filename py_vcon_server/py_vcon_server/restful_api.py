@@ -61,9 +61,9 @@ SERVER_TAG = "Admin: Servers"
 QUEUE_TAG = "Admin: Job Queues"
 PIPELINE_CRUD_TAG = "Admin: Pipelines"
 IN_PROGRESS_TAG = "Admin: In Progress Jobs"
-VCON_TAG = "vCon Storage CRUD"
-PROCESSOR_TAG = "vCon Processors"
-PIPELINE_RUN_TAG = "vCon Pipelines"
+VCON_TAG = "vCon: Storage CRUD"
+PROCESSOR_TAG = "vCon: Processors"
+PIPELINE_RUN_TAG = "vCon: Pipelines"
 
 openapi_tags = [
   {
