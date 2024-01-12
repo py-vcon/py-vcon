@@ -6,61 +6,108 @@ The first release and documentation comming soon.
 
 ## Table of Contents
 
+  + [Overveiw of vCon Server](#overview-of-vcon-server)
+  + [Terms](#terms)
+  + [Architecture](#architecture)
+  + [RESTful API Documentation](#restful-api-documentation)
+    + [Admin RESTful API](#admin-restful-api)
+    + [vCon RESTful API](#vcon-restful-api)
+  + [Pipeline Processing](#pipeline-processing)
+  + [vCon Processor Plugins](#vcon-processor-plugins)
+  + [Access Control](#access-control)
+  + [Building](#building)
+  + [Installing and configuring](#installing-and-configuring)
   + [Testing the vCon server](#testing-the-vcon-server)
+  + [Extending the vCon Server](#extending-the-vcon-server)
+  + [Support](#support)
 
 
-## Overview of server
-
-## Terms  - overlay states as appropriate
-    job
-    job queue
-    queue job
-    server job queue
-    in progress jobs
-    pipeline
-    vCon processor
-    pipeline server
-    pipeline worker
-    processor - vCon processor
-    worker
+## Overview of vCon Server
+  * vCon RESTful API
+  * vCon Pipeline Server
+  * vCon Processor Plugin Framework
+  * Admin RESTful API
+  * Plugable DB Interfaces
+    
+## Terms
+ * **vCon processor** - a **VconProcessor** is an abstract interface for plugins to process or perform operations on one or more vCons.  A **VconProcessor** takes a **ProcessorIO object and **ProcessorOptions** as input and returns a **VconProcessor** as output.  The **VconProcessor** contains or references the vCons for the input or output to the **VconProcessor**.
+ * **pipeline** - a **VconPipeline** is an ordered set of operations or **VconProcessors** and their **ProcessorOptions** to be performed on the one or more vCons contained in a **ProcessorIO**.  The definitionof a **VconProcessor** (its **PipelineOptions** and the list of names of **VconProcessors** and their input **ProcessorOptions**) is saved using a unique name in the **PipelineDB.  A **ProcessorIO** is provided as input to the first **VconProcessor** in the **VconPipeline**, its output **ProcessorIO** is then passed as input to the next **VconProcessor** in the **VconPipeline**, continuing to the end of the list of **VconProcessors** in the **VconPipeline**.  A **VconPipeline** can be run either directly via the **vCon RESTful API** or in the **Pipeline Server**.
+ * **pipeline server** - the pipeline server runs **VconPipeline**s in batch.  Jobs to be run through a **VconPipeline** are added to a **JobQueue** via the **vCon RESTful API**.  The pipeline server is configured with a set of queues to tend.   The pipeline server pulls jobs one at time from the **JobQueue**, retieves the definition for the **VconPipeline** for that **JobQueue** and assigns the job and **VconPipeline** to a pipeline worker (OS process) to run the pipeline and its processors and optionally commit the result in the **VconStorage** after successfully running all of the pipeline processors.
+ * **queue job** - a queue job is the definition of a job to run in a **Pipeline Server**.  It is typlically a list of one or more references (vcon UUID) to vCon to be used as input to the begining of the set of **VconProcessors** in a **VconPipeline**.
+ * job queue
+ * server job queue
+ * in progress jobs
+ * pipeline worker
+ * job scheduler
+ * job - short for queue job
+ * processor - short for vCon processor
+ * queue - short for job queue
+ * worker - short for pipeline worker
 
     
 ## Architecture
+![Architure Diagram](docs/Py_vCon_Server_Architecture.png)
+
     Components
-      VconStorage
-      ServerState
-      Admin RESTful API
-      vCon RESTful API
+      vCon RESTful API built on FASTapi
+      Admin RESTful API built on FASTapi
       Pipeline Server
-      PipelineIO
-      Pipeline
-      Acl
-      JobQueue
 
-## Configuration
+      Pluggable DB Interfaces
+        VconStorage
+        ServerState
+        JobQueue
+        PipelineDB
+        
+        PipelineIO
+        Pipeline
+        
+      Processor Plugin Framework
+        vCon Processor
+  
+      Concepts
+        vCon locking
+        ACL
 
-redis server docker
-
-server in docker or from shell
 
 ## RESTful API Documentation
+The full swagger documentation for all of the RESTful APIs provided by the Py vCon Server are available here: 
 [RESTful/Swagger docs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html)
 
 ## Admin RESTful API
+The Admin RESTful APIs are provided for getting inforamtion about running servers, modifing configureation and system definitions.
+These APIs are intended for adminstration and DevOps of the server.
+They are organized in the following sections:
 
-[Admin: Servers](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Servers)
+ * [Admin: Servers](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Servers) -
+for getting and setting server configuration and state
 
-[Admin: Job Queues](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Job%20Queues)
+ * [Admin: Job Queues](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Job%20Queues) -
+for getting, setting, deleting and adding to **job queues**
 
-iterate entry points and gen doc from a template
+* [Admin: Pipelines](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20Pipelines) -
+for getting, updating and deleting **pipeline** definitions and configuration
 
-## VCON RESTful API
+ * [Admin: In Progress Jobs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin:%20In%20Progress%20Jobs) -
+for getting, requeuing and deleting **in progress jobs**
 
-iterate entry points and gen doc from a template
+## vCon RESTful API
+The vCon RESTful APIs are the high level interface to the Py vCon Server, providing the ability to create and perform operations on vCons.
+This the primary interface for users of the server, as opposed to adminstrators or DevOps.
+They are organized in the following sections:
 
-## Pipeline processing
+ * [vCon: Storage CRUD](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon:%20Storage%20CRUD) -
+for creating, updating, deleting, querying vCons in **VconStorage** and queuing **Pipeline Jobs** for vCons
 
-## Vcon Server Processor Plugins
+ * [vCon: Processors](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon:%20Processors) -
+for running **vCon Processors** on vCons in **VconStorage**
+
+ * [vCon: Pipelines](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon:%20Pipelines) -
+for running **Pipelines** on the given vCon or indicated vCon in **VconStorage**
+
+## Pipeline Processing
+
+## vCon Processor Plugins
 
     link to plugins dir README.md
 
@@ -70,7 +117,8 @@ iterate entry points and gen doc from a template
       gather all init_options types and processor options types
 
 
-## Access control
+## Access Control
+We realize Access Control is an important aspect of the vCon Server.  The ACL capabilities of the vCon Server has been planned out and desgined.  It will be implemented in the next release.
 
 ## Authentication and JWT
 
@@ -98,7 +146,9 @@ The unit tests for the server can be run using the following command in this dir
     pytest -v -rP tests
 
 ## Installing and configuring
+redis server docker
 
+server in docker or from shell
 ## Extending the Vcon Server
 
 ## Support
