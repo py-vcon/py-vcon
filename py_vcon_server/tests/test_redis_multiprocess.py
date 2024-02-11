@@ -65,12 +65,12 @@ def show_sockets():
 async def test_redis_multiprocessing():
   show_sockets()
   test_redis_in_parent = True
+  db_pool = redis.asyncio.connection.ConnectionPool.from_url(
+      DB_URL,
+      **DB_OPTIONS
+    )
+  client = redis.asyncio.client.Redis(connection_pool = db_pool)
   if(test_redis_in_parent):
-    db_pool = redis.asyncio.connection.ConnectionPool.from_url(
-        DB_URL,
-        **DB_OPTIONS
-      )
-    client = redis.asyncio.client.Redis(connection_pool = db_pool)
     try:
       await client.sadd(DB_JUNK, "A")
       await client.sadd(DB_JUNK, "B")
