@@ -11,6 +11,7 @@ import py_vcon_server.restful_api
 from . import __version__
 import vcon
 
+
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 
@@ -36,7 +37,7 @@ class ServerInfo(pydantic.BaseModel):
       )
 
 
-class ServerState(pydantic.BaseModel):
+class ServerState(pydantic.BaseModel, extra=pydantic.Extra.allow):
     host: str = pydantic.Field(
       title = "server host",
       description = "the server's host as configured in the REST_URL",
@@ -135,12 +136,13 @@ def init(restapi):
 
     try:
       logger.debug("getting server info")
-      info = {
-        "py_vcon_server": __version__,
-        "vcon": vcon.__version__,
-        "start_time": py_vcon_server.states.SERVER_STATE.start_time(),
-        "pid": py_vcon_server.states.SERVER_STATE.pid()
-        }
+      # info = {
+      #   "py_vcon_server": __version__,
+      #   "vcon": vcon.__version__,
+      #   "start_time": py_vcon_server.states.SERVER_STATE.start_time(),
+      #   "pid": py_vcon_server.states.SERVER_STATE.pid()
+      #   }
+      info = await py_vcon_server.states.SERVER_STATE.get_server_state()
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -399,7 +401,8 @@ def init(restapi):
 
   @restapi.put("/queue/{name}",
     response_model = int,
-    tags = [ py_vcon_server.restful_api.QUEUE_TAG ])
+    tags = [ py_vcon_server.restful_api.QUEUE_TAG,
+      py_vcon_server.restful_api.VCON_TAG ])
   async def add_queue_job(name: str, job: QueueJob):
     """
     Add the given job to the named job queue.
