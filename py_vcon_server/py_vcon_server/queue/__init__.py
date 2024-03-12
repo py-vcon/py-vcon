@@ -39,7 +39,7 @@ class JobDoesNotExist(Exception):
 class JobQueue():
   def __init__(self, redis_url: str):
     logger.info("connecting JobQueue redis_mgr")
-    self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_url)
+    self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_url, "JobQueue")
     self._redis_mgr.create_pool()
 
     # we can gain some optimization by registering all of the Lua scripts here
