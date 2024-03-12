@@ -8,17 +8,12 @@ The various states that are used include:
     pid
     name/id
     start time
-    queue names
     vcon_api_enabled
     admin_api_enabled
     num_workers
     last heartbeat time
     state =  one of: "unknown", "starting_up", "running", "shutting_down"
 
-  pipeline job queues
-    type: {vcon, vcon_set}
-    vcon_uuid or vcon_uuid_set
-    
   pipeline definitions
     input queue name
     vcon: { readonly, readwrite}
@@ -38,6 +33,7 @@ import urllib
 import time
 import typing
 import json
+import vcon
 import py_vcon_server.db.redis.redis_mgr
 import py_vcon_server.logging_utils
 
@@ -50,16 +46,17 @@ class ServerState:
   _hash_key = "servers"
   _states = ["unknown", "starting_up", "running", "shutting_down"]
 
-  def __init__(self, 
-                     rest_uri: str,
-                     redis_uri: str,
-                     admin_api_enabled: bool,
-                     vcon_api_enabled: bool,
-                     queues: dict,
-                     num_workers: int):
+  def __init__(
+      self,
+      rest_uri: str,
+      redis_uri: str,
+      admin_api_enabled: bool,
+      vcon_api_enabled: bool,
+      num_workers: int
+    ):
     # Connect
     logger.debug("ServerState intializing RedisMgr")
-    self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_uri)
+    self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_uri, "ServerState")
 
     # Setup connection pool
     self._redis_mgr.create_pool()
@@ -71,10 +68,10 @@ class ServerState:
     self._host = url_parser.hostname
     self._port = url_parser.port
     self._start_time = time.time()
-    self._queues = queues
     self._num_workers = num_workers
     self._state = self._states[1]
     logger.info("Server state intialized")
+
 
   def server_key(self) -> str:
     # a new container may get the same pid repeatedly
@@ -84,12 +81,13 @@ class ServerState:
   async def register(self, may_exist: bool = False) -> None:
     server_key = self.server_key()
 
-    server_dict = {}
+    server_dict: typing.Dict[str, typing.Any] = {}
+    server_dict["py_vcon_server"] = py_vcon_server. __version__
+    server_dict["vcon"] = vcon.__version__
     server_dict["host"] = self._host
     server_dict["port"] = self._port
     server_dict["pid"] = self._pid
     server_dict["start_time"] = self._start_time
-    server_dict["queues"] = self._queues
     server_dict["num_workers"] = self._num_workers
     server_dict["state"] = self._state
     server_dict["last_heartbeat"] = time.time()
@@ -132,6 +130,16 @@ class ServerState:
     self._state = self._states[3]
     await self.register(True)
 
+
+  async def get_server_state(self) -> typing.Dict[str, dict]:
+    # TODO refactor register so that we need not touch redis for this data
+    redis_con = self._redis_mgr.get_client()
+    server_json_string = await redis_con.hget(self._hash_key, self.server_key())
+    if(server_json_string):
+      server_json_string = json.loads(server_json_string)
+    return(server_json_string)
+
+
   async def get_server_states(self) -> typing.Dict[str, dict]:
     redis_con = self._redis_mgr.get_client()
     server_key_value_pairs = await redis_con.hgetall(self._hash_key)
@@ -144,7 +152,6 @@ class ServerState:
 
     return(server_key_value_pairs)
 
-  # TODO queue/working
 
   async def delete_server_state(self, server_key: str) -> None:
     redis_con = self._redis_mgr.get_client()
