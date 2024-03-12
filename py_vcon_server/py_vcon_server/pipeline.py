@@ -1,4 +1,5 @@
 """ Vcon Pipeline processor objects and methods """
+import os
 import typing
 import time
 import asyncio
@@ -7,6 +8,7 @@ import pydantic
 import py_vcon_server.processor
 import py_vcon_server.job_worker_pool
 import py_vcon_server.logging_utils
+import remote_pdb
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
@@ -19,7 +21,6 @@ VCON_STORAGE = None
 
 class PipelineNotFound(Exception):
   """ Raised when Pipeline not found in the DB """
-
 
 class PipelineInvalid(Exception):
   """ Raised for invalild pipelines """
@@ -95,8 +96,8 @@ class PipelineDefinition(pydantic.BaseModel):
 class PipelineDb():
   """ DB interface for Pipeline objects """
   def __init__(self, redis_url: str):
-    logger.info("connecting PipelineDb redis_mgr")
-    self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_url)
+    logger.info("connecting PipelineDb redis_mgr pid: {}".format(os.getpid()))
+    self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_url, "PipelineDB")
     self._redis_mgr.create_pool()
 
     # we can gain some optimization by registering all of the Lua scripts here
@@ -199,14 +200,23 @@ class PipelineDb():
              exception PipelineNotFound if name does not exist
     """
     redis_con = self._redis_mgr.get_client()
-    pipeline_dict = await redis_con.json().get(PIPELINE_NAME_PREFIX + name, "$")
+    logger.debug("getting pipeline: {} redis con: {} pid: {}".format(name, redis_con, os.getpid()))
+    try:
+      pipeline_dict = await redis_con.json().get(PIPELINE_NAME_PREFIX + name, "$")
+      logger.debug("returned from getting pipeline: {}".format(name))
+    except Exception as e:
+      logger.debug("pipeline redis get exception: {}".format(e))
+      raise e
 
     if(pipeline_dict is None):
+      logger.debug("pipeline: {} not found".format(name))
       raise PipelineNotFound("Pipeline {} not found".format(name))
 
     if(len(pipeline_dict) != 1):
+      logger.debug("pipeline get({}) error: {}".format(name, pipeline_dict))
       raise PipelineInvalid("Pipeline {} got: {}".format(name, pipeline_dict))
 
+    logger.debug("got pipeline: {}".format(name))
     return(PipelineDefinition(**pipeline_dict[0]))
 
 
@@ -342,31 +352,109 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
   """ Class to get, run and handle results of Pipeline Jobs """
   def __init__(
       self,
-      job_queue: py_vcon_server.queue.JobQueue,
-      pipeline_db: PipelineDb,
+      job_queue_db_url: str,
+      #job_queue: py_vcon_server.queue.JobQueue,
+      pipeline_db_url: str,
+      #pipeline_db: PipelineDb,
       server_key: str
     ):
-    self._job_queue = job_queue
-    self._pipeline_db = pipeline_db
+    self._job_queue_db_url = job_queue_db_url
+    self._job_queue: typing.Union[py_vcon_server.queue.JobQueue, None] = None
+    self._pipeline_db_url = pipeline_db_url
+    self._pipeline_db = None
     self._server_key = server_key
     # TODO: setup queue iterator
     self._queue_iterator = py_vcon_server.queue.QueueIterator()
     self._last_queue_check = time.time()
     self._queue_check_time = 10 # seconds
 
+  async def _init_databases(self):
+    """
+    This has to be done in scheduler context as we cannot pass DB connection
+    accross processes.
+    """
+    if(self._job_queue == None):
+      logger.debug("initialising Queue DB: {} pid: {}".format(self._job_queue_db_url, os.getpid()))
+      self._job_queue = py_vcon_server.queue.JobQueue(self._job_queue_db_url)
+      try:
+        logger.debug("getting queue list pid: {}".format(os.getpid()))
+        #remote_pdb.set_trace()
+        #breakpoint()
+        queue_list = await self._job_queue.get_queue_names()
+        logger.debug("got queue list: {}".format(queue_list))
+      except Exception as e:
+        logger.debug("got exception: {} getting queue list".format(e))
+
+    if(self._pipeline_db == None):
+      logger.debug("initialising Pipeline DB: {}".format(self._pipeline_db_url))
+      self._pipeline_db = py_vcon_server.pipeline.PipelineDb(self._pipeline_db_url)
+      logger.debug("initialed Pipeline DB")
+      try:
+        pipe_def = await self._pipeline_db.get_pipeline("A")
+        logger.debug("test got Pipeline A: {}".format(pipe_def))
+      except Exception as e:
+        logger.debug("test pipeline A not found as expected: {}".format(e))
+
+  async def run_one_job(self) -> typing.Union[str, None]:
+    """
+    Attempt to pull a job from the set of queues and run the job.
+
+    Returns: job_id (str) if a job was found or None
+    """
+
+    job_id = None
+    job_def = await self.get_job()
+
+    if(job_def):
+
+      job_id = job_def["id"]
+
+      try:
+        job_results = await PipelineJobHandler.do_job(job_def)
+
+        await self.job_finished(job_results)
+
+      except Exception as job_error:
+        logger.warning("exception while running job: {}".format(job_def))
+        logger.exception(job_error)
+        await self.job_exception(job_def)
+
+
+    else:
+      logger.debug("no job")
+
+    return(job_id)
+
+
+  async def done(self):
+    if(self._job_queue):
+      logger.debug("releasing job_queue")
+      job_queue = self._job_queue
+      self._job_queue = None
+      await job_queue.shutdown()
+    if(self._pipeline_db):
+      logger.debug("releasing pipeline_db")
+      pipeline_db = self._pipeline_db
+      self._pipeline_db = None
+      await pipeline_db.shutdown()
+
 
   async def get_job(self) -> typing.Union[typing.Dict[str, typing.Any], None]:
     """ Get the definition of the next job to run. Called in the context of the scheduler/dispatcher process. """
     jobs_locks_not_available: list = []
+    #  init DBs in scheduler context
+    await self._init_databases()
     job: typing.Union[typing.Dict[str, typing.Any], None] = None
 
     # Check for updates to server queue config every self._queue_check_time seconds
     now = time.time()
     if(now - self._last_queue_check > self._queue_check_time):
+      logger.debug("checking server job queue updates")
       if(self._queue_iterator.check_update()):
         logger.debug("updated job queue sequence")
       self._last_queue_check = now
     queue_cycle_count = self._queue_iterator.get_cycle_count()
+    logger.debug("got job queue cycle count: {}".format(queue_cycle_count))
     queues_checked = 0
 
     # loop no more than once through the queue cycle before giving up and not getting a job
@@ -374,6 +462,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       # get server's next queue from list (considering weights)
       queues_checked += 1
       queue_name = self._queue_iterator.get_next_queue()
+      logger.debug("attempting schedule queue: {}".format(queue_name))
       # TODO: we can do some optimization here and skip repeated weighted queues
       # i.e. those with weight greter than 1 will be repeated, if we just checked
       # the queue and it was empty, no sense in getting pipeline def and checking
@@ -381,19 +470,34 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
 
       # Get the pipeline definition
       try:
+        # seem to hang in redis here, trying to yeild first
+        logger.debug("yeilding before getting pipeline def")
+        await asyncio.sleep(0)
+        # see what else is running
+        for task in asyncio.all_tasks():
+          logger.debug("running task: {}".format(task))
+        logger.debug("getting pipeline def")
         pipe_def = await self._pipeline_db.get_pipeline(queue_name)
         if(pipe_def is None):
           logger.error("get_pipeine is not supposed to return None, should have thrown exception")
           continue
+        else:
+          logger.debug("got pipeline def")
 
       except py_vcon_server.pipeline.PipelineNotFound:
         # TODO: this message should be throttled for some period or number of times
         logger.warning("no definition for pipeline: {}".format(queue_name))
         # nothing to do for this queue
         continue
+      except Exception as e:
+        logger.debug("get_pipeline exception: {}".format(e))
+        raise e
 
       # Get job from queue and mark it as in process
       try:
+        logger.debug("getting job for queue: {}".format(queue_name))
+        # try yeilding to avoid getting stuck in redis
+        await asyncio.sleep(0)
         job = await self._job_queue.pop_queued_job(
             queue_name,
             self._server_key
@@ -427,7 +531,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         job_type = queue_job.get("job_type", None)
         if(job_type == "vcon_uuid"):
           for vcon_uuid in job.get("vcon_uuid", []):
-            lock = None
+            lock = "None"
             if(lock):
               locks.append(lock)
             else:
@@ -445,7 +549,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         else:
           logger.error("unsupported job_type: {} not queued in failure queue: {}".format(
               job_type,
-              pipe_def.pipeline_options.failure_queue
+              pipe_def.pipeline_options.get("failure_queue", None)
             ))
           continue
 
@@ -546,14 +650,28 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     """ handle a job which threw an exception and did not complete (including jobs that have been started and then cancelled) """
     job_id = results["id"]
     queue_job = results["job"]
+    job_type = queue_job.get("job_type", None)
     queue_name = results["queue"]
     job_type = queue_job["job_type"]
     pipeline = results.get("pipeline", None)
     if(pipeline):
-      failure_queue = pipeline["options"].get("failure_queue", None)
+      failure_queue = pipeline["pipeline_options"].get("failure_queue", None)
       if(failure_queue and failure_queue != ""):
         # TODO: add some info from failure
-        await self._job_queue.push_vcon_uuid_queue_job(failure_queue, queue_job["vcon_uuid"])
+        if(job_type == "vcon_uuids"):
+          logger.debug("queuing job: {} to failure queue: {}".format(
+              job_id,
+              queue_name
+            ))
+          await self._job_queue.push_vcon_uuid_queue_job(failure_queue, queue_job["vcon_uuid"])
+        else:
+          # should not get here as the job_type should have been screened at the start
+          logger.error("Unsupported job type: {}".format(job_type))
+    else:
+      logger.error("no pipeline definition for: {} job id: {}".format(
+         queue_name,
+         job_id
+        ))
 
     await self._job_queue.remove_in_progress_job(job_id)
 
