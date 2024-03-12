@@ -20,7 +20,7 @@ class RedisVconStorage(py_vcon_server.db.VconStorage):
       raise Exception("Redis Vcon storage interface already setup")
 
     # Connect
-    self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_uri)
+    self._redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(redis_uri, "VconStorage")
 
     # Setup connection pool
     self._redis_mgr.create_pool()
