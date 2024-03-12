@@ -11,7 +11,10 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
 LOGGING_CONFIG_FILE = os.getenv("LOGGING_CONFIG_FILE", Path(__file__).parent / 'logging.conf')
 LAUNCH_VCON_API = os.getenv("LAUNCH_VCON_API", True)
 LAUNCH_ADMIN_API = os.getenv("LAUNCH_ADMIN_API", True)
-NUM_WORKERS = os.getenv("NUM_WORKERS", os.cpu_count())
+try:
+  NUM_WORKERS = int(os.getenv("NUM_WORKERS", os.cpu_count()))
+except:
+  NUM_WORKERS = 0
 if(not isinstance(NUM_WORKERS, int)):
   print("Warning: NUM_WORKERS: {} should be an int, setting to: 0".format(NUM_WORKERS))
   NUM_WORKERS = 0
