@@ -4,7 +4,7 @@ import pytest
 import pytest_asyncio
 import fastapi.testclient
 import py_vcon_server
-from py_vcon_server.settings import PIPELINE_DB_URL, QUEUE_DB_URL, VCON_STORAGE_URL
+import py_vcon_server.settings
 from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 
 
@@ -69,14 +69,19 @@ PIPELINE_DEFINITION = {
     ]
 }
 
-PIPELINE_DB = None
-JOB_QUEUE = None
-VCON_STORAGE = None
+#PIPELINE_DB = None
+#JOB_QUEUE = None
+#VCON_STORAGE = None
 @pytest_asyncio.fixture(autouse=True)
 async def set_queue_config():
-  global VCON_STORAGE
-  vs = py_vcon_server.db.VconStorage.instantiate(VCON_STORAGE_URL)
-  VCON_STORAGE = vs
+  # Turn off workers so as to not interfer with queues used in testing
+  # and workers created in these unit tests.
+  num_workers = py_vcon_server.settings.NUM_WORKERS
+  py_vcon_server.settings.NUM_WORKERS = 0
+
+  #global VCON_STORAGE
+  #vs = py_vcon_server.db.VconStorage.instantiate(py_vcon_server.settings.VCON_STORAGE_URL)
+  #VCON_STORAGE = vs
 
   print("caching queue settings")
   saved_config = copy.deepcopy(py_vcon_server.settings.WORK_QUEUES)
@@ -84,34 +89,37 @@ async def set_queue_config():
   print("set queue settings")
   """ Setup Pipeline DB connection before test """
   print("initializing PipelineDB connection")
-  pdb = py_vcon_server.pipeline.PipelineDb(PIPELINE_DB_URL)
+  #pdb = py_vcon_server.pipeline.PipelineDb(py_vcon_server.settings.PIPELINE_DB_URL)
   print("initialized PipelineDB connection")
-  global PIPELINE_DB
-  PIPELINE_DB = pdb
+  #global PIPELINE_DB
+  #PIPELINE_DB = pdb
 
   print("initializing JobQueue connection")
-  jq = py_vcon_server.queue.JobQueue(QUEUE_DB_URL)
+  #jq = py_vcon_server.queue.JobQueue(py_vcon_server.settings.QUEUE_DB_URL)
   print("initialized JobQueue connection")
-  global JOB_QUEUE
-  JOB_QUEUE = jq
+  #global JOB_QUEUE
+  #JOB_QUEUE = jq
 
   yield
+
+  # Restore workers
+  py_vcon_server.settings.NUM_WORKERS = num_workers
 
   py_vcon_server.settings.WORK_QUEUES = saved_config
   print("reset queue settings")
 
   print("shutting down PipelineDB connection")
-  PIPELINE_DB = None
-  await pdb.shutdown()
+  #PIPELINE_DB = None
+  #await pdb.shutdown()
   print("shutdown PipelineDB connection")
 
   print("shutting down JobQueue connection")
-  JOB_QUEUE = None
-  await jq.shutdown()
+  #JOB_QUEUE = None
+  #await jq.shutdown()
   print("shutdown JobQueue connection")
 
-  VCON_STORAGE = None
-  await vs.shutdown()
+  #VCON_STORAGE = None
+  #await vs.shutdown()
 
 
 @pytest.mark.asyncio
@@ -201,12 +209,14 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
         )
       assert(delete_response.status_code in [200, 404])
 
-    assert(JOB_QUEUE is not None)
-    assert(PIPELINE_DB is not None)
+    #assert(JOB_QUEUE is not None)
+    #assert(PIPELINE_DB is not None)
 
     jobber = py_vcon_server.pipeline.PipelineJobHandler(
-        JOB_QUEUE,
-        PIPELINE_DB,
+        py_vcon_server.settings.QUEUE_DB_URL,
+        py_vcon_server.settings.PIPELINE_DB_URL,
+        #JOB_QUEUE,
+        #PIPELINE_DB,
         "unit_test_server"
       )
 
@@ -332,6 +342,8 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(get_response.status_code == 200)
     vcon_dict = get_response.json()
     assert(len(vcon_dict["analysis"]) == 2)
+    assert(vcon_dict["analysis"][0]["type"] == "transcript")
+    assert(vcon_dict["analysis"][1]["type"] == "summary")
 
     # run finished job
     await jobber.job_finished(job_result)
@@ -360,4 +372,121 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     in_progress = in_progress_jobs.get(job_id, None)
     assert(in_progress is None)
 
+    await jobber.done()
+
+
+
+@pytest.mark.asyncio
+async def test_pipeline_jobber_run_one_one(make_inline_audio_vcon):
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    # delete the test job queues, to clean up any 
+    # residual from prior tests
+    for q in SERVER_QUEUES.keys():
+      delete_response = client.delete(
+          "/queue/{}".format(q),
+          headers={"accept": "application/json"},
+        )
+      assert(delete_response.status_code in [200, 404])
+
+    #assert(JOB_QUEUE is not None)
+    #assert(PIPELINE_DB is not None)
+
+    jobber = py_vcon_server.pipeline.PipelineJobHandler(
+        py_vcon_server.settings.QUEUE_DB_URL,
+        py_vcon_server.settings.PIPELINE_DB_URL,
+        #JOB_QUEUE,
+        #PIPELINE_DB,
+        "unit_test_server"
+      )
+
+    # Expect no job as the pipeline is not defined
+    assert(await jobber.run_one_job() is None)
+
+    # Add the pipeline definition
+    set_response = client.put(
+        "/pipeline/{}".format(
+          list(SERVER_QUEUES.keys())[1]
+        ),
+        json = PIPELINE_DEFINITION,
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    assert(set_response.status_code == 204)
+
+    # Still expect no job as the queue does not exist yet
+    assert(await jobber.run_one_job() is None)
+
+    # Create the queue (empty)
+    post_response = client.post( 
+      "/queue/{}".format(
+          list(SERVER_QUEUES.keys())[1]
+        ),
+      headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 204)
+
+    # Still expect no job as the queue is empty
+    assert(await jobber.run_one_job() is None)
+
+    # put the vcon in Storage in a known state
+    assert(len(make_inline_audio_vcon.dialog) == 1)
+    assert(len(make_inline_audio_vcon.analysis) == 0)
+    set_response = client.post("/vcon", json = make_inline_audio_vcon.dumpd())
+    assert(set_response.status_code == 204)
+    assert(make_inline_audio_vcon.uuid == UUID)
+
+    # Add this vcon as a job in the queue
+    queue_job1 = { "job_type": "vcon_uuid", "vcon_uuid": [ UUID ] }
+    put_response = client.put(
+        "/queue/{}".format(
+            list(SERVER_QUEUES.keys())[1]
+          ),
+        headers={"accept": "application/json"},
+        content = json.dumps(queue_job1)
+      )
+    assert(put_response.status_code == 200)
+    queue_position = put_response.json()
+    assert(isinstance(queue_position, int) == 1)
+
+
+    # expect to get a job this time
+    job_id = await jobber.run_one_job()
+    assert(job_id is not None)
+    assert(len(job_id) > 0)
+
+    # Check job is not in job queue
+    get_response = client.get(
+        "/queue/{}".format(
+            list(SERVER_QUEUES.keys())[1]
+          ),
+        headers={"accept": "application/json"},
+        )
+    assert(get_response.status_code == 200)
+    job_list = get_response.json()
+    assert(isinstance(job_list, list))
+    assert(len(job_list) == 0)
+
+    # Confirm transcript and summary were created
+    get_response = client.get(
+      "/vcon/{}".format(UUID),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    vcon_dict = get_response.json()
+    assert(len(vcon_dict["analysis"]) == 2)
+    assert(vcon_dict["analysis"][0]["type"] == "transcript")
+    assert(vcon_dict["analysis"][1]["type"] == "summary")
+
+    # confirm job not in in_progress list
+    get_response = client.get(
+        "/in_progress",
+        headers={"accept": "application/json"},
+        )
+    assert(get_response.status_code == 200)
+    in_progress_jobs = get_response.json()
+    assert(isinstance(in_progress_jobs, dict))
+    in_progress = in_progress_jobs.get(job_id, None)
+    assert(in_progress is None)
+
+    await jobber.done()
 
