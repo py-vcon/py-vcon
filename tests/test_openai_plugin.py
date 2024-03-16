@@ -253,6 +253,7 @@ async def test_4_diarized_chat_completion_object_summary():
   assert(plugin.last_stats['num_dialog_list'] == 1)
   assert(55 <= plugin.last_stats['num_transcribe_analysis'] <= 63)
 
+  print("New analysis object: {}".format(out_vcon.analysis[original_analysis_count]))
   assert((after_analysis_count - original_analysis_count) == 1)
   assert(out_vcon.analysis[original_analysis_count]["type"] == "summary")
   assert(out_vcon.analysis[original_analysis_count]["dialog"] == 0)
@@ -270,7 +271,7 @@ async def test_4_diarized_chat_completion_object_summary():
 
 
 @pytest.mark.asyncio
-async def test_5_openai_triggers_trasncribe():
+async def test_5_openai_triggers_transcribe():
   """ Test OpenAIChatCompletion FilterPlugin with missing transcribe ananlysis, should transcribe"""
 
   in_vcon = vcon.Vcon()
