@@ -1,8 +1,13 @@
 # The py_vcon_server Python Package
 
-Please pardon the lack of content here.  We are still under construction.
+Please pardon the roughness of content here.  We are still under construction.
 
 The first release and documentation coming soon.
+
+The following is an overview of the Python vCon Server, architecture, components, configuration and use.
+The documentation on this page assumes the reader has a rough understanding of what a vCon is and what you can do with them at least at a high level.
+If that is not the case, you may want to start with [what is a vCon](../README.md#what-is-a-vcon).
+
 
 ## Table of Contents
 
@@ -23,12 +28,25 @@ The first release and documentation coming soon.
 
 
 ## Overview of vCon Server
-  * vCon RESTful API
+
+The Python vCon Server provides the ability to do the following:
+  * Store, retrieve, modify and delete vCons
+  * Perform operations on one or more vCons using a plugable framework of **vCon processors**
+  * Run a single **vCon processor** via a RESTful API, using provided or stored vCons
+  * Group a sequence of vCon operations (**vCon processors** to execute) and associated configuration into a **Pipeline** definition
+  * Run a **vCon pipeline**, via a RESTful API, using provide or stored vCons
+  * Queue vCon jobs for the **pipeline server** to run through **vCon pipelines**
+  * Administer and monitor the server and configuration via an Admin RESTful API
+
+
+The Python vCon server an be thought of as the aggregation of the following high level components:
+  * [vCon RESTful API](#vcon-restful-api)
   * vCon Pipeline Server
-  * vCon Processor Plugin Framework
-  * Admin RESTful API
+  * [vCon Processor Plugin Framework](#vcon-processor-plugins)
+  * [Admin RESTful API](#admin-restful-api)
   * Plugable DB Interfaces
-    
+
+
 ## Terms
  * **vCon processor** - a **VconProcessor** is an abstract interface for plugins to process or perform operations on one or more vCons.  A **VconProcessor** takes a **ProcessorIO** object and **ProcessorOptions** as input and returns a **VconProcessor** as output.  The **VconProcessor** contains or references the vCons for the input or output to the **VconProcessor**.
  * **pipeline** - a **VconPipeline** is an ordered set of operations or **VconProcessors** and their **ProcessorOptions** to be performed on the one or more vCons contained in a **ProcessorIO**.  The definition of a **VconProcessor** (its **PipelineOptions** and the list of names of **VconProcessors** and their input **ProcessorOptions**) is saved using a unique name in the **PipelineDB**.  A **ProcessorIO** is provided as input to the first **VconProcessor** in the **VconPipeline**, its output **ProcessorIO** is then passed as input to the next **VconProcessor** in the **VconPipeline**, continuing to the end of the list of **VconProcessors** in the **VconPipeline**.  A **VconPipeline** can be run either directly via the **vCon RESTful API** or in the **Pipeline Server**.
