@@ -21,15 +21,15 @@ Currently this consists of two primary Python packages:
    * [command line interface](vcon/bin/README.md) - supporting piping of Vcon construction and operations
    * [Filter plugins](#vcon-filter-plugins) - to extend operations to perform on a Vcon
 
- * The py-vcon-server package provides (release coming soon):
-   * RESTful API
+ * The [py-vcon-server package](py_vcon_server/README.md) provides (release coming soon):
+   * RESTful APIs
    * Flexible Architecture
    * Scales from 1 to 1000s of servers
    * Storage - abstracted to enable support for your favorite database
-   * Job Queuing - for processing operations on sets of vCons
-   * Batching - 
-   * Pipelining - naming and configuring sets of processor operations to repeatedly perform on sets of vCons
+   * Job Queuing - for performing a sequence of processing operations on vCons
+   * Pipelining - naming and configuring sequences of processor operations to repeatedly perform on vCons
    * Extensible modules - framework for adding open source or proprietary vCon processor operations
+
 
 ## Table of Contents
 
@@ -45,6 +45,7 @@ Currently this consists of two primary Python packages:
   + [Testing the Vcon Package](#testing-the-vcon-package)
   + [Support](#Support)
   + [Contributing](#contributing)
+
 
 ## What is a vCon?
 
