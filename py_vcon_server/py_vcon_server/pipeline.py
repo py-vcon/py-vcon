@@ -8,7 +8,7 @@ import pydantic
 import py_vcon_server.processor
 import py_vcon_server.job_worker_pool
 import py_vcon_server.logging_utils
-import remote_pdb
+#import remote_pdb
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
