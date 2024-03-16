@@ -375,9 +375,9 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     await jobber.done()
 
 
-
+@pytest.mark.skip(reason="BUG: causes \"Event loop is closed\" when run after test_pipeline_jobber") 
 @pytest.mark.asyncio
-async def test_pipeline_jobber_run_one_one(make_inline_audio_vcon):
+async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     # delete the test job queues, to clean up any 
     # residual from prior tests
