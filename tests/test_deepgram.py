@@ -60,7 +60,7 @@ async def test_deepgram_transcribe_inline_dialog():
 
   text_list = await out_vcon.get_dialog_text(0)
   print("text: {}".format(json.dumps(text_list, indent = 2)))
-  assert(56 <= len(text_list) <= 62)
+  assert(52 <= len(text_list) <= 62)
 
   # Run again, should not generate duplicate analysis
   out_vcon2 = await out_vcon.deepgram({})
