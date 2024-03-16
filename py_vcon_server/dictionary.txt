@@ -20,7 +20,7 @@ pileline
 PipelineDB
 PipelineIO
 PipelineOptions
-Plugable
+plugable
 png
 ProcessorIO
 ProcessorOptions
