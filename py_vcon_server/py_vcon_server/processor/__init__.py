@@ -592,6 +592,8 @@ class VconProcessor():
         self.__class__.__name__,
         ))
 
+    self.init_options = init_options
+
     if(processor_options_class is None or
       not issubclass(processor_options_class, VconProcessorOptions)):
       raise InvalidOptionsClass("processor_options_class type: {} for {} must be drived from: VconProcessorOptions".format(
