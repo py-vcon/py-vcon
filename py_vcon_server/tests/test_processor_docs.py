@@ -3,8 +3,11 @@
 """ Generate doc/README.md for processor plugins """
 import typing
 import inspect
+import pydantic
 import py_vcon_server.processor
 
+
+PYDANTIC_FIELD_ATTRIBUTES = ["name", "type", "title", "description", "example", "examples", "default"]
 
 PROCESSOR_TEMPLATE = """## {class_path} 
 
@@ -15,6 +18,18 @@ PROCESSOR_TEMPLATE = """## {class_path}
  - **Initialization options Object:** {class_init_options_link}
  - **Processing options Object:** {class_options_link}
 """
+
+
+FIELD_TEMPLATE = """
+##### {name} ({type})
+{title}
+{description}
+
+example{example}
+
+default: {default}
+"""
+
 
 OPTIONS_TEMPLATE = """## {class_path} 
 
@@ -109,6 +124,71 @@ def collect_processor_data(
   return(class_data)
 
 
+def collect_options_data(
+    options_type: typing.Type
+  ) -> typing.Dict[str, str]:
+
+  assert(issubclass(options_type, pydantic.BaseModel))
+  schema = options_type.schema()
+  class_data = {}
+  class_data["class_path"] = options_type.__module__ + "." + options_type.__name__
+  class_data["class_title"] = schema.get("title", "")
+  class_data["class_description"] = schema.get("description", "<no class doc>")
+  class_data["class_fields"] = "TBD"
+
+  field_data_text = ""
+  for _, field in options_type.__fields__.items():
+    assert(isinstance(field, pydantic.fields.ModelField))
+    field_data: typing.Dict[str, str] = {}
+    for attribute in PYDANTIC_FIELD_ATTRIBUTES:
+      if(hasattr(field, attribute)):
+        value = getattr(field, attribute)
+      elif(hasattr(field.field_info, attribute)):
+        value = getattr(field.field_info, attribute)
+      else:
+        value = None
+      if(value is None):
+        value = field.field_info.extra.get(attribute, None)
+      #if(value is not None):
+      field_data[attribute] = value
+
+    if(not hasattr(field.annotation, "__name__")):
+      field_type = str(field.annotation)
+      print("Field: {} in class: {} module: {} does not have a type hint set. annotation type: {} {}".format(
+        field_data["name"],
+        options_type.__name__,
+        options_type.__module__,
+        type(field.annotation),
+        field.annotation
+        ))
+    else:
+      field_type = field.annotation.__name__
+    field_data["type"] = field_type
+    if(field_type == "str" and
+      field_data.get("default", None) is not None):
+      # put quotes around default if this is type str
+      field_data["default"] = '"{}"'.format(field_data["default"])
+
+    # Tweak examples
+    if("examples" in field_data and
+      field_data["examples"] is not None and
+      field_data["examples"] != ""
+      ):
+      field_data["example"] = "s: " + str(field_data["examples"])
+    elif("example" in field_data and
+      field_data["example"] is not None
+      ):
+      field_data["example"] = ": " + field_data["example"]
+    else:
+      field_data["example"] = ": "
+
+    field_data_text += FIELD_TEMPLATE.format(**field_data)
+
+  class_data["class_fields"] = field_data_text
+
+  return(class_data)
+
+
 def build_processors_doc() -> str:
   readme_text = ""
   readme_data: typing.Dict[str, str] = {}
@@ -187,12 +267,14 @@ def build_processors_doc() -> str:
 
   readme_data["init_options_text"] = ""
   for init in sorted_init_options:
-    init_text = "Init type: {}".format(init.__name__)
+    init_data = collect_options_data(init)
+    init_text = OPTIONS_TEMPLATE.format(**init_data)
     readme_data["init_options_text"] += init_text + "\n"
 
   readme_data["options_text"] = ""
   for opt in sorted_options:
-    opt_text = "proc opt type: {}".format(opt.__name__)
+    opt_data = collect_options_data(opt)
+    opt_text = OPTIONS_TEMPLATE.format(**opt_data)
     readme_data["options_text"] += opt_text + "\n"
 
   #print("{}".format(readme_data))
