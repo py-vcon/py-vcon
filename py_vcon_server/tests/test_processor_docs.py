@@ -76,9 +76,45 @@ def make_section_link(target_title: str, label: str) -> str:
   return(link)
 
 
+def collect_processor_data(
+    processor_name: str,
+    processor_type: typing.Type,
+    processor_init_options_type: typing.Type,
+    processor_options_type: typing.Type,
+    title: str,
+    version: str,
+    description: str,
+    readme_data: typing.Dict[str, str],
+  ) -> typing.Dict[str, str]:
+  class_data = {}
+  class_data["class_name"] = processor_name
+  class_data["class_path"] = processor_type.__module__ + "." + processor_type.__name__
+  class_data["class_link"] = make_section_link(class_data["class_path"], class_data["class_path"])
+  readme_data["processor_toc"] += TOC_ENTRY.format(class_data["class_link"])
+  class_data["class_module"] = str(processor_type.__module__)
+  class_data["class_title"] = title
+  class_data["class_version"] = "\n - **Version:** {}".format(version)
+  class_data["class_description"] = description
+  class_data["class_options_path"] = class_data["class_module"] + "." + processor_options_type.__name__
+  class_data["class_options_link"] = make_section_link(class_data["class_options_path"], class_data["class_options_path"])
+  readme_data["options_toc"] += TOC_ENTRY.format(
+    class_data["class_options_link"])
+  class_data["class_init_options_path"] = class_data["class_module"] + "." + processor_init_options_type.__name__
+  class_data["class_init_options_link"] = make_section_link(
+    class_data["class_init_options_path"],
+    class_data["class_init_options_path"])
+  readme_data["init_options_toc"] += TOC_ENTRY.format(
+    class_data["class_init_options_link"])
+
+  return(class_data)
+
+
 def build_processors_doc() -> str:
   readme_text = ""
   readme_data: typing.Dict[str, str] = {}
+  readme_data["processor_toc"] = ""
+  readme_data["init_options_toc"] = ""
+  readme_data["options_toc"] = ""
   processors = set()
   processors.add(py_vcon_server.processor.VconProcessor)
   init_options = set()
@@ -89,53 +125,44 @@ def build_processors_doc() -> str:
   processor_class_data: typing.Dict[typing.Type, typing.Dict[str, str]] = {}
   processor_type = py_vcon_server.processor.VconProcessor
   processor_name = "VconProcessor"
-  class_data: typing.Dict[str, str] = {}
-  class_data["class_name"] = processor_name
-  class_data["class_path"] = processor_type.__module__ + "." + processor_type.__name__
-  class_data["class_module"] = str(processor_type.__module__)
-  class_data["class_title"] = "Abstract VconProcessor class"
-  class_data["class_version"] = ""
-  class_data["class_description"] = "{}".format(processor_type.__doc__)
-  processor_options_type = py_vcon_server.processor.VconProcessorOptions
-  class_data["class_options_path"] = class_data["class_module"] + "." + processor_options_type.__name__
-  class_data["class_options_link"] = make_section_link(class_data["class_options_path"], class_data["class_options_path"])
   processor_init_options_type = py_vcon_server.processor.VconProcessorInitOptions
-  class_data["class_init_options_path"] = class_data["class_module"] + "." + processor_init_options_type.__name__
-  class_data["class_init_options_link"] = make_section_link(
-    class_data["class_init_options_path"],
-    class_data["class_init_options_path"])
+  processor_options_type = py_vcon_server.processor.VconProcessorOptions
+  title = "Abstract VconProcessor class"
+  version = ""
+  description = "{}".format(processor_type.__doc__)
+  class_data = collect_processor_data(
+      processor_name,
+      processor_type,
+      processor_init_options_type,
+      processor_options_type,
+      title,
+      version,
+      description,
+      readme_data
+    )
   processor_class_data[processor_type] = class_data
 
-  readme_data["processor_toc"] = ""
-  readme_data["init_options_toc"] = ""
-  readme_data["options_toc"] = ""
   processor_names = py_vcon_server.processor.VconProcessorRegistry.get_processor_names()
   for processor_name in processor_names:
     processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
       processor_name)
     processor_type = type(processor_inst)
     processors.add(processor_type)
-    class_data = {}
-    class_data["class_name"] = processor_name
-    class_data["class_path"] = processor_type.__module__ + "." + processor_type.__name__
-    class_data["class_link"] = make_section_link(class_data["class_path"], class_data["class_path"])
-    readme_data["processor_toc"] += TOC_ENTRY.format(class_data["class_link"])
-    class_data["class_module"] = str(processor_type.__module__)
-    class_data["class_title"] = processor_inst.title()
-    class_data["class_version"] = "\n - **Version:** {}".format(processor_inst.version())
-    class_data["class_description"] = processor_inst.description()
-    processor_options_type = processor_inst.processor_options_class()
-    class_data["class_options_path"] = class_data["class_module"] + "." + processor_options_type.__name__
-    class_data["class_options_link"] = make_section_link(class_data["class_options_path"], class_data["class_options_path"])
-    readme_data["options_toc"] += TOC_ENTRY.format(
-      class_data["class_options_link"])
     processor_init_options_type = type(processor_inst.init_options)
-    class_data["class_init_options_path"] = class_data["class_module"] + "." + processor_init_options_type.__name__
-    class_data["class_init_options_link"] = make_section_link(
-      class_data["class_init_options_path"],
-      class_data["class_init_options_path"])
-    readme_data["init_options_toc"] += TOC_ENTRY.format(
-      class_data["class_init_options_link"])
+    processor_options_type = processor_inst.processor_options_class()
+    title = processor_inst.title()
+    version = processor_inst.version()
+    description = processor_inst.description()
+    class_data = collect_processor_data(
+        processor_name,
+        processor_type,
+        processor_init_options_type,
+        processor_options_type,
+        title,
+        version,
+        description,
+        readme_data
+      )
     print("adding class defs for: {}".format(processor_name))
     processor_class_data[processor_type] = class_data
     options.add(processor_options_type)
