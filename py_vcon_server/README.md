@@ -128,7 +128,7 @@ for running **Pipelines** on the given vCon or indicated vCon in **VconStorage**
 
 ## vCon Processor Plugins
 
-    [Processor plugin framework and plugin instances README](py_vcon_server/processor/README.md)
+  [Processor plugin framework and plugin instances README](py_vcon_server/processor/README.md)
 
     template for generated docs
       TOC
