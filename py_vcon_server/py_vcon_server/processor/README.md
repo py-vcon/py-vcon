@@ -149,17 +149,334 @@ The **Whisper** **Vcon** **filter_plug** for transcription is used which is buil
 
 # Processor Initialization Options Classes
 
-Init type: VconProcessorInitOptions
-Init type: DeepgramInitOptions
-Init type: OpenAiChatCompletionInitOptions
-Init type: WhisperInitOptions
+## py_vcon_server.processor.VconProcessorInitOptions 
+
+ - **Summary:** VconProcessorInitOptions
+
+Base class to options passed to initalize a **VconProcessor**
+derived class in the **VconProcessorRegistry**
+
+### Fields
+
+
+## abc.DeepgramInitOptions 
+
+ - **Summary:** Deepgram transcription **FilterPlugin** intialization object
+
+Base class to options passed to initalize a **VconProcessor**
+derived class in the **VconProcessorRegistry**
+
+### Fields
+
+##### deepgram_key (str)
+**Deepgram** API key
+
+The **deepgram_key** is used to access the Deepgram RESTful transcription service.
+It is required to use this **FilterPlugin**.
+
+You can get one at: https://console.deepgram.com/signup?jump=keys
+
+
+example: 123456789e96a1da774e57abcdefghijklmnop
+
+default: ""
+
+
+## abc.OpenAiChatCompletionInitOptions 
+
+ - **Summary:** OpenAI/ChatGPT Completion **FilterPlugin** intialization object
+
+Base class to options passed to initalize a **VconProcessor**
+derived class in the **VconProcessorRegistry**
+
+### Fields
+
+##### openai_api_key (str)
+**OpenAI** API key
+
+The **openai_api_key** is used to access the OpenAI RESTful service.
+It is required to use this **FilterPlugin**.
+
+You can get one at: https://platform.openai.com/account/api-keys
+
+
+example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
+
+default: None
+
+
+## abc.WhisperInitOptions 
+
+ - **Summary:** Whisper **FilterPlugin** intialization object
+
+Base class to options passed to initalize a **VconProcessor**
+derived class in the **VconProcessorRegistry**
+
+### Fields
+
+##### model_size (str)
+**Whisper** model size name
+
+Model size name to use for transcription", (e.g. "tiny", "base") as defined on
+https://github.com/openai/whisper#available-models-and-languages
+
+
+examples: ['tiny', 'base']
+
+default: "base"
+
+
 
 
 # Processor Options Classes
 
-proc opt type: VconProcessorOptions
-proc opt type: DeepgramOptions
-proc opt type: OpenAiChatCompletionOptions
-proc opt type: WhisperOptions
+## py_vcon_server.processor.VconProcessorOptions 
+
+ - **Summary:** VconProcessorOptions
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+
+## abc.DeepgramOptions 
+
+ - **Summary:** Deepgram transcription filter method options
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### language (str)
+transcription language
+None
+
+example: 
+
+default: "en"
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** recording **dialog** objects
+
+Indicates which recording **dialog** objects in the given **Vcon** are
+to be transcribed.
+
+ * **""** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.
+ * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.
+
+**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
+
+
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
+default: 
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+
+## abc.OpenAiChatCompletionOptions 
+
+ - **Summary:** OpenAI Chat Completion filter method options
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** text **dialog** objects
+
+Indicates which text **dialog** and recording **dialog** object's associated
+transcript **analysis** objects are to be input.  Recording **dialog**
+objects that do not have transcript **analysis** objects, are transcribed
+using the default FilterPlugin transcribe type.
+
+ * **""** (empty str or None) - all **dialogs** are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** 
+ * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are fed to the the model.
+
+**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.
+
+
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
+default: 
+
+##### model (str)
+**OpenAI** model name to use for generative AI
+
+The named model is used to feed the transcription/text and then ask it the
+given prompt.
+OpenAI has numerous trained models, the latest of which may not be listed here
+in examples.
+
+You can get the current list of of available models for
+your license/API key using the following:
+
+    import openai
+    openai.api_key = "your key here"
+    openai.Model.list()
+
+
+examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
+
+default: "gpt-4-1106-preview"
+
+##### prompt (str)
+the prompt or question to ask about the transcription/text
+
+The **OpenAI** model is given text from the dialog and
+given this prompt to instruct it what generative AI text
+that you would like from it.
+
+
+example: 
+
+default: "Summarize the transcript in these messages."
+
+##### max_tokens (int)
+maximum number of tokens of output
+
+The **max_tokens** limits the size of the output generative AI text.
+A token is approximately a syllable.  On average a word is 1.33 tokens.
+
+
+example: 
+
+default: 100
+
+##### temperature (float)
+**OpenAI** sampling temperature
+
+lower number is more deterministic, higher is more random.
+
+values should range from 0.0 to 2.0
+
+
+example: 
+
+default: 0.0
+
+##### jq_result (str)
+**jq** query of result
+
+The **OpenAI** completion outputs a JSON 
+[Completion Object](https://platform.openai.com/docs/api-reference/completions/object)
+
+The **jq_results** string contains a **jq**  filter/query string that
+is applied to the output to determine what is saved in the
+created **Vcon** **analysis** object.
+
+* **"."** - results in a query that returns the entire JSON object.
+* **".choices[0].text"** - results in a query which contains only the text portion of the completion output
+
+For more information on creating **jq filters** see:
+https://jqlang.github.io/jq/manual/
+
+
+
+examples: ['.', '.choices[0].text']
+
+default: ".choices[0].message.content"
+
+##### analysis_type (str)
+the **Vcon analysis** object type
+
+The results of the completion are saved in a new **analysis**
+object which is added to the input **Vcon**.
+**analysis_type** is the **analysis** type token that is set
+on the new **analysis** object in the **Vcon**.
+
+
+example: 
+
+default: "summary"
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+
+## abc.WhisperOptions 
+
+ - **Summary:** WhisperOptions
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### language (str)
+transcription language
+None
+
+example: 
+
+default: "en"
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** recording **dialog** objects
+
+Indicates which recording **dialog** objects in the given **Vcon** are
+to be transcribed.
+
+ * **""** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.
+ * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.
+
+**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
+
+
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
+default: 
+
+##### output_types (typing.List[str])
+transcription output types
+
+List of output types to generate.  Current set of value supported are:
+
+  * "vendor" - add the Whisper specific JSON format transcript as an analysis object
+  * "word_srt" - add a .srt file with timing on a word or small phrase basis as an analysis object
+  * "word_ass" - add a .ass file with sentence and highlighted word timeing as an analysis object
+       Not specifing "output_type" assumes all of the above will be output, each as a separate analysis object.
+
+
+example: 
+
+default: ['vendor', 'word_srt', 'word_ass']
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+
 
 
