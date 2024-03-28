@@ -514,13 +514,13 @@ class VconProcessor():
 
   The **VconProcessor** contains the method **process** which performs
   the work.  It takes a **VconProcessorIO** object as input which contains
-  the zero or vCon.  The ** process** method also takes a
+  the zero or vCon.  The **process** method also takes a
   **VconProcessorOptions** object which is where additional input 
   parameters are provided as defined by the **VconProcessor**.  The
   **processor** method always provides output in the return in
   the form of a **VconProcessorIO** object.  Typically this is the same
-  PipelilneIO that was input with some or no modification.  If
-  the input **VconProcessorIO** is not provided as ouput (if the
+  **VconProcessorIO** that was input with some or no modification.  If
+  vCon(s) in the input **VconProcessorIO** are not included in the output (if the
   **VconProcessorIO** was modified by prior **VconProcessor**s in
   the **Pipeline**) any created or modified vCons from the input
   will be lost and not saved to the **VconStorage** database.  Care
@@ -543,9 +543,9 @@ class VconProcessor():
 
   A **VconProcessor** is typically dynamically loaded at startup and gets
   registered in the **VconProcessorRegistry**.  A when a concrete 
-  **VconProcessor* is registered, it is loaded from a given package,
+  **VconProcessor** is registered, it is loaded from a given package,
   given a unique name and instantiated from the given class name from
-  that package.  The allow serveral instances of a concrete 
+  that package.  Ths allows serveral instances of a concrete 
   **VconProcessor** to be instantiated, each with a unique name and
   different set of initialization options.  The class MUST also
   implement a static parameter: **initialization_options_class**.
@@ -862,23 +862,46 @@ class FilterPluginProcessor(VconProcessor):
   """ Abstract Processor for **Vcon FilterPlugins** """
 
   @staticmethod
-  def makeInitOptions(name_prefix: str, plugin: vcon.filter_plugins.FilterPluginRegistration):
+  def makeInitOptions(
+      name_prefix: str,
+      plugin: vcon.filter_plugins.FilterPluginRegistration,
+      doc: str = None
+    ):
+    defs = {}
+    if(doc):
+      defs["__doc__"] = doc
+    else:
+      defs["__doc__"] = "initialization class for VconProcessor wrapper for {} **FilterPlugin**".format(
+          plugin.plugin().__class__.__name__
+        )
+
     return(
       type(
           name_prefix + "InitOptions",
           (py_vcon_server.processor.VconProcessorInitOptions, plugin.plugin().init_options_type),
-          {}
+          defs
         )
       )
 
 
   @staticmethod
-  def makeOptions(name_prefix: str, plugin: vcon.filter_plugins.FilterPluginRegistration):
+  def makeOptions(
+      name_prefix: str,
+      plugin: vcon.filter_plugins.FilterPluginRegistration,
+      doc: typing.Union[str, None] = None
+    ):
+    defs = {}
+    if(doc):
+      defs["__doc__"] = doc
+    else:
+      defs["__doc__"] = "processor options class for **processor** method of VconProcessor wrapper for {} **FilterPlugin**".format(
+          plugin.plugin().__class__.__name__
+        )
     return(
       type(
           name_prefix + "Options",
           (py_vcon_server.processor.VconProcessorOptions, plugin.plugin().options_type),
-          {}
+          defs
         )
       )
 
