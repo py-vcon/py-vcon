@@ -4,6 +4,7 @@
 import typing
 import inspect
 import pydantic
+import importlib
 import py_vcon_server.processor
 
 
@@ -17,6 +18,9 @@ PROCESSOR_TEMPLATE = """## {class_path}
 {class_description}
  - **Initialization options Object:** {class_init_options_link}
  - **Processing options Object:** {class_options_link}
+
+Methods:
+{class_method_signatures}
 """
 
 
@@ -41,7 +45,7 @@ OPTIONS_TEMPLATE = """## {class_path}
 {class_fields}
 """
 
-TOC_ENTRY = "  * {}\n"
+TOC_ENTRY = "   * {}\n"
 
 README_TEMPLATE = """
 <sub><sup>^This document is generated.  Do not edit directly.</sup></sub>
@@ -90,6 +94,45 @@ def make_section_link(target_title: str, label: str) -> str:
 
   return(link)
 
+def get_annotation_type_module(
+    processor_type,
+    method_name,
+    arg_name,
+    arg_annotation,
+    expected_arg_base_class
+  ):
+  if(not hasattr(arg_annotation, "__module__")):
+    module_name = processor_type.__module__
+    module = globals().get(module_name, None)
+    if(module is None):
+      # try to load the module
+      module = importlib.import_module(module_name)
+    processor_type = getattr(module, processor_type)
+    # assert(issubclass(option_arg_type, vcon.filter_plugins.FilterPluginInitOptions))
+    #arg_type = option_arg_type
+  else:
+    module_name = arg_annotation.__module__
+
+  # Sometimes arg_annotation is a string containing the name of the type
+  if(not hasattr(arg_annotation, "__name__")):
+    arg_type = str(arg_annotation)
+  # Sometimes arg_annotation is the type
+  # Don't ask me why.
+  else:
+    arg_type = arg_annotation.__name__
+
+  if(expected_arg_base_class and
+     not issubclass(arg_annotation, expected_arg_base_class)):
+    raise Exception("argument: {} in method: {} of FilterPlugin: {} in module: {} does not derived from: {}".format(
+      arg_name,
+      method_name,
+      processor_type.__name__,
+      processor_type.__module__,
+      expected_arg_base_class.__name__
+      ))
+
+  return(arg_type, module_name)
+
 
 def collect_processor_data(
     processor_name: str,
@@ -120,18 +163,67 @@ def collect_processor_data(
     class_data["class_init_options_path"])
   readme_data["init_options_toc"] += TOC_ENTRY.format(
     class_data["class_init_options_link"])
+  # TODO collect method interfaces (__init__, process, __del__)
+  method_names = ["__init__", "process"]
+  method_signatures = ""
+  for method_name in method_names:
+    if(method_name == "__init__"):
+      expected_arg_base_class = py_vcon_server.processor.VconProcessorInitOptions
+    elif(method_name == "process"):
+      expected_arg_base_class = py_vcon_server.processor.VconProcessorOptions
+    method = getattr(processor_type, method_name)
+    method_sig = inspect.signature(method)
+    print("{} init sig: {}".format(processor_name, method_sig))
+    args_doc = ""
+    for index, arg_name in enumerate(list(method_sig.parameters)):
+      if((processor_type == py_vcon_server.processor.VconProcessor
+           and index == 4) or
+           (processor_type != py_vcon_server.processor.VconProcessor and
+           index == 2)
+         ):
+        check_arg_type = expected_arg_base_class
+      else:
+        check_arg_type = None
+      arg_annotation = method_sig.parameters[arg_name].annotation
+      arg_type_name, module_name = get_annotation_type_module(
+          processor_type,
+          method_name,
+          arg_name,
+          arg_annotation,
+          check_arg_type
+        )
+      arg_doc = ""
+      if(len(args_doc) > 0):
+        arg_doc += ", "
+      arg_doc += arg_name
+      print("arg type: {}".format(arg_type_name))
+      if(len(arg_type_name) > 0 and
+         arg_type_name != "_empty"):
+        arg_doc += ": {}".format(arg_type_name)
+      args_doc += arg_doc
+
+    method_sig_doc = "**{}**({})".format(
+        method_name,
+        args_doc
+      )
+    method_signatures += "\n\n" +  method_sig_doc
+
+  class_data["class_method_signatures"] = method_signatures
 
   return(class_data)
 
 
 def collect_options_data(
-    options_type: typing.Type
+    options_type: typing.Type,
+    processor_type: typing.Type
   ) -> typing.Dict[str, str]:
 
   assert(issubclass(options_type, pydantic.BaseModel))
+  print("options {} dir: {}".format(options_type.__name__, dir(options_type)))
   schema = options_type.schema()
   class_data = {}
-  class_data["class_path"] = options_type.__module__ + "." + options_type.__name__
+  # TODO fix module name (always "abc")
+  class_data["class_path"] = processor_type.__module__ + "." + options_type.__name__
   class_data["class_title"] = schema.get("title", "")
   class_data["class_description"] = schema.get("description", "<no class doc>")
   class_data["class_fields"] = "TBD"
@@ -183,6 +275,9 @@ def collect_options_data(
       field_data["example"] = ": "
 
     field_data_text += FIELD_TEMPLATE.format(**field_data)
+
+  if(len(field_data_text) == 0):
+    field_data_text = "none"
 
   class_data["class_fields"] = field_data_text
 
@@ -247,9 +342,15 @@ def build_processors_doc() -> str:
     processor_class_data[processor_type] = class_data
     options.add(processor_options_type)
     #init_sig = inspect.signature(processor_inst.__init__)
-    #print("{} init: {}".format(processor_name, init_sig))
+    #print("{} init sig: {}".format(processor_name, init_sig))
     #init_options_arg_name = list(init_sig.parameters)[0]
     #init_options_type = init_sig.parameters[init_options_arg_name].annotation
+    #print("{}.__init__({}: {}.{})".format(
+    #    processor_name,
+    #    init_options_arg_name,
+    #    init_options_type.__module__,
+    #    init_options_type.__name__
+    #  ))
     # TODO: get init_options type from introspection of the plugin __init__ method
     init_options.add(processor_init_options_type)
     print("{} init: {}".format(processor_name, type(processor_inst.init_options)))
@@ -266,14 +367,14 @@ def build_processors_doc() -> str:
     readme_data["processor_text"] += proc_class_doc + "\n\n"
 
   readme_data["init_options_text"] = ""
-  for init in sorted_init_options:
-    init_data = collect_options_data(init)
+  for options_index, init in enumerate(sorted_init_options):
+    init_data = collect_options_data(init, sorted_processors[options_index])
     init_text = OPTIONS_TEMPLATE.format(**init_data)
     readme_data["init_options_text"] += init_text + "\n"
 
   readme_data["options_text"] = ""
-  for opt in sorted_options:
-    opt_data = collect_options_data(opt)
+  for options_index, opt in enumerate(sorted_options):
+    opt_data = collect_options_data(opt, sorted_processors[options_index])
     opt_text = OPTIONS_TEMPLATE.format(**opt_data)
     readme_data["options_text"] += opt_text + "\n"
 
