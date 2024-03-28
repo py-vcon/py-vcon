@@ -7,22 +7,22 @@
 ## Table of Contents
  + [Introduction](#introduction)
  + [Processor Classes](#processors)
-  * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
-  * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
-  * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
-  * [py_vcon_server.processor.builtin.whisper.Whisper](#py_vcon_serverprocessorbuiltinwhisperwhisper)
+   * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
+   * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
+   * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
+   * [py_vcon_server.processor.builtin.whisper.Whisper](#py_vcon_serverprocessorbuiltinwhisperwhisper)
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
-  * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
-  * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
-  * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
-  * [py_vcon_server.processor.builtin.whisper.WhisperInitOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperinitoptions)
+   * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
+   * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
+   * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
+   * [py_vcon_server.processor.builtin.whisper.WhisperInitOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperinitoptions)
 
  + [Processor Options Classes](#processor-options-classes)
-  * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
-  * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
-  * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
-  * [py_vcon_server.processor.builtin.whisper.WhisperOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperoptions)
+   * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
+   * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
+   * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
+   * [py_vcon_server.processor.builtin.whisper.WhisperOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperoptions)
 
 
 ## Introduction
@@ -56,13 +56,13 @@ TBD
 
   The **VconProcessor** contains the method **process** which performs
   the work.  It takes a **VconProcessorIO** object as input which contains
-  the zero or vCon.  The ** process** method also takes a
+  the zero or vCon.  The **process** method also takes a
   **VconProcessorOptions** object which is where additional input 
   parameters are provided as defined by the **VconProcessor**.  The
   **processor** method always provides output in the return in
   the form of a **VconProcessorIO** object.  Typically this is the same
-  PipelilneIO that was input with some or no modification.  If
-  the input **VconProcessorIO** is not provided as ouput (if the
+  **VconProcessorIO** that was input with some or no modification.  If
+  vCon(s) in the input **VconProcessorIO** are not included in the output (if the
   **VconProcessorIO** was modified by prior **VconProcessor**s in
   the **Pipeline**) any created or modified vCons from the input
   will be lost and not saved to the **VconStorage** database.  Care
@@ -85,9 +85,9 @@ TBD
 
   A **VconProcessor** is typically dynamically loaded at startup and gets
   registered in the **VconProcessorRegistry**.  A when a concrete 
-  **VconProcessor* is registered, it is loaded from a given package,
+  **VconProcessor** is registered, it is loaded from a given package,
   given a unique name and instantiated from the given class name from
-  that package.  The allow serveral instances of a concrete 
+  that package.  Ths allows serveral instances of a concrete 
   **VconProcessor** to be instantiated, each with a unique name and
   different set of initialization options.  The class MUST also
   implement a static parameter: **initialization_options_class**.
@@ -98,6 +98,13 @@ TBD
   
  - **Initialization options Object:** [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
  - **Processing options Object:** [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
+
+Methods:
+
+
+**__init__**(self, title: str, description: str, version: str, init_options: VconProcessorInitOptions, processor_options_class: typing.Type[py_vcon_server.processor.VconProcessorOptions], may_modify_vcons: bool)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
 ## py_vcon_server.processor.builtin.deepgram.Deepgram 
@@ -114,6 +121,13 @@ The **Deepgram** **Vcon** **filter_plug** for transcription is used.
  - **Initialization options Object:** [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
  - **Processing options Object:** [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
 
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
 
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletion 
 
@@ -128,6 +142,13 @@ The **openai_chat_completions** **Vcon** **filter_plug** is used.
       
  - **Initialization options Object:** [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
  - **Processing options Object:** [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
 ## py_vcon_server.processor.builtin.whisper.Whisper 
@@ -144,6 +165,13 @@ The **Whisper** **Vcon** **filter_plug** for transcription is used which is buil
  - **Initialization options Object:** [py_vcon_server.processor.builtin.whisper.WhisperInitOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperinitoptions)
  - **Processing options Object:** [py_vcon_server.processor.builtin.whisper.WhisperOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperoptions)
 
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
 
 
 
@@ -157,14 +185,13 @@ Base class to options passed to initalize a **VconProcessor**
 derived class in the **VconProcessorRegistry**
 
 ### Fields
+none
 
-
-## abc.DeepgramInitOptions 
+## py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions 
 
  - **Summary:** Deepgram transcription **FilterPlugin** intialization object
 
-Base class to options passed to initalize a **VconProcessor**
-derived class in the **VconProcessorRegistry**
+initialization class for VconProcessor wrapper for Deepgram **FilterPlugin**
 
 ### Fields
 
@@ -182,12 +209,11 @@ example: 123456789e96a1da774e57abcdefghijklmnop
 default: ""
 
 
-## abc.OpenAiChatCompletionInitOptions 
+## py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions 
 
  - **Summary:** OpenAI/ChatGPT Completion **FilterPlugin** intialization object
 
-Base class to options passed to initalize a **VconProcessor**
-derived class in the **VconProcessorRegistry**
+initialization class for VconProcessor wrapper for OpenAIChatCompletion **FilterPlugin**
 
 ### Fields
 
@@ -205,12 +231,11 @@ example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 default: None
 
 
-## abc.WhisperInitOptions 
+## py_vcon_server.processor.builtin.whisper.WhisperInitOptions 
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
-Base class to options passed to initalize a **VconProcessor**
-derived class in the **VconProcessorRegistry**
+initialization class for VconProcessor wrapper for Whisper **FilterPlugin**
 
 ### Fields
 
@@ -247,11 +272,11 @@ example:
 default: 0
 
 
-## abc.DeepgramOptions 
+## py_vcon_server.processor.builtin.deepgram.DeepgramOptions 
 
  - **Summary:** Deepgram transcription filter method options
 
-Base class options for **VconProcessor.processor** method 
+processor options class for **processor** method of VconProcessor wrapper for Deepgram **FilterPlugin**
 
 ### Fields
 
@@ -291,11 +316,11 @@ example:
 default: 0
 
 
-## abc.OpenAiChatCompletionOptions 
+## py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions 
 
  - **Summary:** OpenAI Chat Completion filter method options
 
-Base class options for **VconProcessor.processor** method 
+processor options class for **processor** method of VconProcessor wrapper for OpenAIChatCompletion **FilterPlugin**
 
 ### Fields
 
@@ -419,11 +444,11 @@ example:
 default: 0
 
 
-## abc.WhisperOptions 
+## py_vcon_server.processor.builtin.whisper.WhisperOptions 
 
  - **Summary:** WhisperOptions
 
-Base class options for **VconProcessor.processor** method 
+processor options class for **processor** method of VconProcessor wrapper for Whisper **FilterPlugin**
 
 ### Fields
 
