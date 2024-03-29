@@ -169,11 +169,62 @@ The unit tests for the server can be run using the following command in this dir
 
 ## Installing and Configuring
 
-TODO
+The following installation and configuration instructions are intended for development and testing purposes only.
+This is by no means instructions for a secure install.
+These instructions are intended for a setup where the develer is running a Docker server on a local host.
+It is most convenient to run two docker containers, one for the Redis server and a second for the vCon server.
+The following instructions are for this configuration.
 
-Redis server docker
+The [Dockerfile](docker_redis/Dockerfile) for the Redis server can be found in the [docker_redis](docker_redis) directory.
+The following comments will build the image and run the container:
+    cd docker_redis
+    ./dockerctl.sh build
+    ./dockerctl.sh run
 
-server in docker or from shell
+The Redis server will be bound to to the Docker server host's network on the default Redis port (6379).
+If you would like a shell on the Redis server container to use the Redis CLI to query the DB, the following will create a shell on the container:
+    ./dockerctl.sh shell
+
+If you do not setup your Redis server in the above configuration, you will need to setup your enviromental variables to indicate other wise with something like the following:
+    VCON_STORAGE_URL=redis://<your_host>:<your_port>
+
+For example:
+    echo VCON_STORAGE_URL=redis://192.168.0.1:8765 >> testenv
+
+The py_vcon_server can be run in another container or directly on the Docker server host.
+This is a personal choice.
+If you want to be able to run all of the unit tests and be able to take advantage of all of the vCon operations supported by the Python vCon and py_vcon_server packages, you will want to get API keys to use OpenAI and Deepgram services.
+You can find [instructions on getting third party API keys here](../README.md#third-party-api-keys).
+
+The network interface and port, upon which the vCon server Admin and vCon RESTful APIs, are exposed is configured with the REST_URL environment variable.
+
+### Run py_vcon_server Package
+If you are running the vCon server directly from the package, setup your environment like the following:
+    cat << EOF >> testenv
+    export REST_URL="http://<your_host_ip>:8000"
+    export OPENAI_API_KEY="your_openapi_key_here"
+    export DEEPGRAM_KEY="your_deepgram_api_key_here"
+    EOF
+
+
+To start the vCon server use the following commands:
+    source testenv
+    python3 -m py_vcon_server
+
+### Run py_vcon_server From Cloned Repo
+If you which to run the vCon server in a development mode, directly from the git clone, from the [py_vcon_server](.) directory, setup your environment variables using the following:
+    cat << EOF >> testenv
+    export PYTHONPATH=".:.."
+    export REST_URL="http://<your_host_ip>:8000"
+    export OPENAI_API_KEY="your_openapi_key_here"
+    export DEEPGRAM_KEY="your_deepgram_api_key_here"
+    EOF
+
+
+To start the vCon server use the following commands:
+    source testenv
+    python3 -m py_vcon_server
+
 
 ## First Steps
    * [1. Installing and Configuring](#installing-and-configuring)
