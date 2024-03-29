@@ -22,6 +22,7 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
   + [Access Control](#access-control)
   + [Building](#building)
   + [Installing and configuring](#installing-and-configuring)
+  + [First Steps](#first-steps)
   + [Testing the vCon server](#testing-the-vcon-server)
   + [Extending the vCon Server](#extending-the-vcon-server)
   + [Support](#support)
@@ -166,11 +167,105 @@ The unit tests for the server can be run using the following command in this dir
     source .env
     pytest -v -rP tests
 
-## Installing and configuring
+## Installing and Configuring
+
+TODO
+
 Redis server docker
 
 server in docker or from shell
+
+## First Steps
+   * [1. Installing and Configuring](#installing-and-configuring)
+   * [2. Build a vCon](#build-a-vcon)
+   * [3. Process a vCon](#process-a-vcon)
+   * [4. Create and Use a Pipeline](#create-and-use_a-pipeline)
+   * [5. Create a Job Queue and Queue a Job](#create-a-job-queue-and-queue-a-job)
+
+### Build a vCon
+
+There are a number of ways that you can build a vCon:
+
+  * Use the [Python vCon](../README.md#installing-py-vcon) package [Command Line Interface (CLI)](../vcon/bin/README.md) in a Linux shell
+
+  For example to create a vCon with a single audio recording dialog with an external reference to the audio file:`
+
+    wget https://github.com/py-vcon/py-vcon/blob/main/examples/agent_sample.wav?raw=true -O agent_sample.wav
+    vcon -i b.vcon add ex-recording agent_sample.wav "2023-03-06T20:07:43+00:00" "[0,1]"  https://github.com/py-vcon/py-vcon/blob/main/examples/agent_sample.wav?raw=true
+
+
+  * Use the [Python vCon](../README.md#installing-py-vcon) package [library](../vcon/README.md) and write some Python code to create your own vCon
+
+  * Create your own JSON vCon by hand or using other tools
+
+  * Use an [existing vCon](../tests/hello.vcon)
+
+### Process a vCon
+
+Now that you have a vCon you can do something with it.
+The py_vcon_server comes with a built in set of VconProcessor plugins that operate on vCons.
+The processors are exposed via the vCon RESTful API.
+The vCon Processor RESTful APIs require the vCon to be stored in in VconStorage in the server.
+You can put your vCon in VconStorage by [posting it via the vCon RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD/post_vcon_vcon_post).
+If your vCon contains or references a audio or video dialog, you might try the Whisper or Deepgram (requires API key from Deepgram) transcription processors as a first step.
+If your vCon contains only text from email or messages, you might try the openapi_chat_complitions (requires API key from OpenAI) processor to produce a summary of the text.
+Have a look at the [vCon Processor RESTful API Swagger documentation](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Processors)
+
+### Create and Use a Pipeline
+
+In the prior step you performed a single operation or process on a vCon.
+You can define a sequence of operations or processes to be performed on a vCon in what we call a Pipeline.
+When we define a Pipeline, we name each of the Processors, in the order that they are to be performed, along with the options for each of the Processors in the sequence.
+Here is a simple Pipeline definition.
+
+    {
+      "pipeline_options": {
+        "save_vcons": true,
+        "timeout": 10,
+        "failure_queue": null,
+        "success_queue": null
+      },
+      "processors": [
+        {
+          "processor_name": "deepgram",
+          "processor_options": {
+            "input_vcon_index": 0
+          }
+        },
+        {
+          "processor_name": "openai_chat_completion",
+          "processor_options": {
+            "input_vcon_index": 0
+          }
+        }
+      ]
+    }
+
+It has two parts at the top level.
+The pipeline_options and the processors sequence or list.
+The pipeline_options apply to the whole Pileline.
+The processors list defines the order of the processors to be run with the name of the processor and an optional set of options to provide when running that processor.
+Pipelines are stored and modified using the [Admin RESTful API for Pilelines](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Pipelines)
+When you create a Pipeline, you assign it a unique name or key, that you use to refer to your Pipeline.
+Now that you have created a Pipeline, you can test it out or push a single vCon through it using the [vCon Pipeline RESTful APIs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Pipelines)
+You can use these RESTful APIs to run your vCon in VconStorage or provided as the body of your HTTP POST request through the Pipeline.
+
+### Create a Job Queue and Queue a Job
+
+Once you have tested your Pipeline line and are happy with its configuration, you may then want to run a bunch of vCons through it.
+The py_vcon_server provides a job queuing capability for the Pipeline Server.
+If you create a job queue with the same name as the Pipeline, jobs will be pulled from the queue one at a time and run through the Pipeline having the same name.
+You create job queues using the [Admin Job Queue RESTful APIs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues).
+You add jobs to the queue using the [iPUT queue vCon Storage CRUD API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD/add_queue_job_queue__name__put).
+The py_vcon_server Pipeline Server will not start processing the jobs in you queue, until you configure the server to look at your queue.
+The Pipeline Server only looks at the queue names which you configure using the [Admin Server Queue RESTful APIs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers).
+
+
 ## Extending the Vcon Server
 
+TODO
+
 ## Support
+
+Commercial support for the py_vcon_server is available from [SIPez](www.sipez.com)
 
