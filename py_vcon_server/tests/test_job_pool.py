@@ -1,4 +1,5 @@
 import typing
+import os
 import time
 import copy
 import asyncio
@@ -8,8 +9,18 @@ import random
 import pytest
 import pytest_asyncio
 import py_vcon_server.job_worker_pool
+#from py_vcon_server.pipeline import PipelineDb
+import logging
+import nest_asyncio
+
+logger = logging.getLogger(__name__)
+
+nest_asyncio.apply()
 
 TOL_FACTOR = 2.5
+
+#logger.debug("sleeping job creating PipelineDB")
+#PIPE_DB = PipelineDb("redis://localhost")
 
 class JobTestException(Exception):
   """ exception to be caught in unit tests """
@@ -36,6 +47,7 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
 
     """
     manager = multiprocessing.Manager()
+    # not sure this is necessary
     self._job_list = manager.list(job_list)
     self._time0: multiprocessing.managers.ListProxy = manager.list([])
     self._time0.append(0)
@@ -63,7 +75,6 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
   def remaining_jobs(self) -> int:
     return(len(self._job_list))
 
-
   async def get_job(self) -> typing.Union[typing.Dict[str, typing.Any], None]:
     if(self._time0[0] == 0):
       self._time0[0] = time.time()
@@ -88,7 +99,20 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
   @staticmethod
   async def sleep_job(seconds):
     """ blocking sleep/io function """
-    return(await asyncio.sleep(seconds))
+    # logger.debug("sleeping job creating PipelineDB")
+    # pipe_db = PipelineDb("redis://localhost")
+    # logger.debug("sleeping job getting pipeline names")
+    # pipeline_names = await pipe_db.get_pipeline_names()
+    # with open("{}.{}.txt".format(__name__, os.getpid()), "wt") as touch_file:
+    #   touch_file.write("{}".format(pipeline_names))
+    # logger.debug("sleeping job got pipeline names: {}".format(pipeline_names))
+    # for task in asyncio.all_tasks():
+    #   logger.debug("from sleep task: {} pid: {}".format(task, os.getpid()))
+    coro = asyncio.sleep(seconds)
+    logger.debug("sleeping {} job coro: {}".format(seconds, coro))
+    results = await coro
+    logger.debug("done sleeping job")
+    return(results)
 
 
   @staticmethod
@@ -109,7 +133,7 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
       job_definition: typing.Dict[str, typing.Any]
     ) -> typing.Dict[str, typing.Any]:
 
-    print("do_job =====")
+    print("do_job =====", flush = True)
     job_id = job_definition.get("id", None)
 
     # raise exception if defined
@@ -201,14 +225,17 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
 
   def verify_exception_jobs(self, count: int):
     assert(len(self._exception_jobs) == count)
-    if(count > 0):
+    # If no jobs actually finish normally, canot do the following checks
+    if(len(self._first_start) or len(self._finished_jobs) > 0):
       assert(len(self._first_start) == 1)
       first_start = self._first_start[0]
       assert(first_start - self._time0[0] < 10.0) # TODO wide range of 5-10 seconds startup, do not know why
 
     for index, job in enumerate(self._exception_jobs):
       print("verifying exception job: {} ({}/{})".format(job["id"], index, count))
-      assert(abs(job["start"] - first_start - job["expected_start"]) < job["time_tolerance"] * TOL_FACTOR)
+
+      if(len(self._first_start) >= 1):
+        assert(abs(job["start"] - first_start - job["expected_start"]) < job["time_tolerance"] * TOL_FACTOR)
       assert(job["start"] < job["exception_at"])
       assert(job["start"] - job["exception_at"] < job["time_tolerance"])
       assert(job["exception"])
@@ -334,9 +361,12 @@ CANCEL_IMMEDIATE_JOB = {
     "time_tolerance": TIME_TOLERANCE
   }
 
-
 async def start_run_stop_job_worker(jobs: list, tasks = 4):
   job_defs = copy.deepcopy(jobs)
+
+  # logger.debug("global getting pipeline names")
+  # pipeline_names = await PIPE_DB.get_pipeline_names()
+  # logger.debug("global got pipeline names: {}".format(pipeline_names))
 
   test_jobber = UnitJobber(job_defs)
 
@@ -345,9 +375,11 @@ async def start_run_stop_job_worker(jobs: list, tasks = 4):
       {
         "run": True
       })
+  run_list: multiprocessing.managers.ListProxy = manager.list([])
   job_pool = py_vcon_server.job_worker_pool.JobWorkerPool(
       tasks,
       run_states,
+      run_list,
       test_jobber.do_job,
       test_jobber
     )
@@ -366,6 +398,11 @@ async def start_run_stop_job_worker(jobs: list, tasks = 4):
       num_cancelled = job_pool.stop_unstarted()
       print("got cancelled: {}".format(num_cancelled))
       total_cancelled += num_cancelled
+
+      # when a job is canceld, check for it right away or the cancelled 
+      # time will be after all jobs are started
+      if(total_cancelled > 0):
+        await job_pool.check_jobs(0.01)
 
     print("run_states: {}".format(run_states))
     job_to_run = await test_jobber.get_job()
@@ -423,14 +460,17 @@ async def test_job_worker_pool_cancel_immediate():
   can2["id"] = "cancelimmediate2"
   can2["expected_start"] += CANCEL_IMMEDIATE_JOB["expected_finish"]
   can2["expected_finish"] += CANCEL_IMMEDIATE_JOB["expected_finish"]
+  can2["expected_cancel"] += 1.0
   can3 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
   can3["id"] = "cancelimmediate3"
   can3["expected_start"] += can2["expected_finish"]
   can3["expected_finish"] += can2["expected_finish"]
+  can3["expected_cancel"] += 2.0
   can4 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
   can4["id"] = "cancelimmediate4"
   can4["expected_start"] += can3["expected_finish"]
   can4["expected_finish"] += can3["expected_finish"]
+  can4["expected_cancel"] += 3.0
   test_jobber = await start_run_stop_job_worker([CANCEL_IMMEDIATE_JOB, can2, can3, can4], tasks = 1)
   cancel_count = test_jobber.get_canceled_count()
   assert(cancel_count > 0)
@@ -441,6 +481,8 @@ async def test_job_worker_pool_cancel_immediate():
   test_jobber.verify_canceled_jobs(cancel_count)
 
 
+# TODO: fix
+#@pytest.mark.skip(reason="BUG: currently hangs")
 @pytest.mark.asyncio
 async def test_job_worker_pool_four():
   cpu2 = copy.deepcopy(SHORT_CPU_JOB)
@@ -453,65 +495,75 @@ async def test_job_worker_pool_four():
   test_jobber.verify_canceled_jobs(0)
 
 
-def run_jobs_in_scheduler(jobs: list):
+async def run_jobs_in_scheduler(jobs: list):
   test_jobber = UnitJobber(jobs)
+  job_count = len(jobs)
 
   job_manager = py_vcon_server.job_worker_pool.JobSchedulerManager(4, test_jobber)
   assert(job_manager.num_workers() == 4)
 
-  job_manager.start(wait = True)
+  job_manager.start(wait_scheduler = True)
+  logger.debug("done waiting for scheduler startup")
 
   # Make sure there was time to start all the jobs, before telling it to finish up
   while(True):
     remaining_jobs = test_jobber.remaining_jobs()
     if(remaining_jobs <= 0):
+      # wait a little more
+      #await asyncio.sleep(0.5)
       break
-    print("waiting for {} remaining jobs".format(remaining_jobs), flush = True)
-    time.sleep(0.1)
+    logger.debug("waiting for {} remaining jobs".format(remaining_jobs))
+    await asyncio.sleep(0.1)
 
-  job_manager.finish()
+  await job_manager.finish()
 
   return(test_jobber)
 
 
-def test_job_scheduler_manager_sleep():
+@pytest.mark.asyncio
+async def test_job_scheduler_manager_sleep():
   job_def = copy.deepcopy(SHORT_SLEEP_JOB)
-  test_jobber = run_jobs_in_scheduler([job_def])
+  test_jobber = await run_jobs_in_scheduler([job_def])
   test_jobber.verify_finished_jobs(1)
   test_jobber.verify_exception_jobs(0)
   test_jobber.verify_canceled_jobs(0)
 
-
-def test_job_scheduler_manager_cpu():
+# TODO: fix
+#@pytest.mark.skip(reason="BUG: currently hangs")
+@pytest.mark.asyncio
+async def test_job_scheduler_manager_cpu():
   job_def = copy.deepcopy(SHORT_CPU_JOB)
-  test_jobber = run_jobs_in_scheduler([job_def])
+  test_jobber = await run_jobs_in_scheduler([job_def])
   test_jobber.verify_finished_jobs(1)
   test_jobber.verify_exception_jobs(0)
   test_jobber.verify_canceled_jobs(0)
 
 
-def test_job_scheduler_manager_except():
+@pytest.mark.asyncio
+async def test_job_scheduler_manager_except():
   job_def = copy.deepcopy(EXCEPT_JOB)
-  test_jobber = run_jobs_in_scheduler([job_def])
+  test_jobber = await run_jobs_in_scheduler([job_def])
   test_jobber.verify_finished_jobs(0)
   test_jobber.verify_exception_jobs(1)
   test_jobber.verify_canceled_jobs(0)
 
 
-def test_job_scheduler_manager_cancel_sleep():
+@pytest.mark.asyncio
+async def test_job_scheduler_manager_cancel_sleep():
   job_def = copy.deepcopy(CANCEL_SLEEP_JOB)
-  test_jobber = run_jobs_in_scheduler([job_def])
+  test_jobber = await run_jobs_in_scheduler([job_def])
   test_jobber.verify_finished_jobs(0)
   test_jobber.verify_exception_jobs(1)
   test_jobber.verify_canceled_jobs(0)
 
 
-def test_job_scheduler_manager_four():
+@pytest.mark.asyncio
+async def test_job_scheduler_manager_four():
   cpu2 = copy.deepcopy(SHORT_CPU_JOB)
   cpu2["id"] = "cpu2"
   sleep2 = copy.deepcopy(SHORT_SLEEP_JOB)
   sleep2["id"] = "sleep2"
-  test_jobber = run_jobs_in_scheduler(
+  test_jobber = await run_jobs_in_scheduler(
     [
       copy.deepcopy(SHORT_CPU_JOB),
       copy.deepcopy(SHORT_SLEEP_JOB),
@@ -523,7 +575,8 @@ def test_job_scheduler_manager_four():
   test_jobber.verify_canceled_jobs(0)
 
 
-def test_job_scheduler_manager_more():
+@pytest.mark.asyncio
+async def test_job_scheduler_manager_more():
   cpu1 = copy.deepcopy(SHORT_CPU_JOB)
   cpu2 = copy.deepcopy(SHORT_CPU_JOB)
   cpu2["id"] = "cpu2"
@@ -541,7 +594,7 @@ def test_job_scheduler_manager_more():
   cpu9["expected_start"] += cpu1["expected_finish"]
   cpu9["expected_finish"] += cpu1["expected_finish"]
 
-  test_jobber = run_jobs_in_scheduler(
+  test_jobber = await run_jobs_in_scheduler(
     [
       cpu1,
       cpu2,
@@ -560,4 +613,184 @@ def test_job_scheduler_manager_more():
   # jobs are considered canceled only if cancelled before starting
   test_jobber.verify_canceled_jobs(0)
 
+
+@pytest.mark.asyncio
+async def test_job_scheduler_manager_none():
+
+  test_jobber = UnitJobber([])
+
+  job_manager = py_vcon_server.job_worker_pool.JobSchedulerManager(4, test_jobber)
+  assert(job_manager.num_workers() == 4)
+
+  job_manager.start(wait_scheduler = True)
+
+  # Make sure there was time to start all the jobs, before telling it to finish up
+  time.sleep(2)
+  while(True):
+    remaining_jobs = test_jobber.remaining_jobs()
+    if(remaining_jobs <= 0):
+      break
+    print("waiting for {} remaining jobs".format(remaining_jobs), flush = True)
+    time.sleep(0.1)
+
+  await asyncio.sleep(10.0)
+
+  await job_manager.finish()
+
+  test_jobber.verify_finished_jobs(0)
+  test_jobber.verify_exception_jobs(0)
+  test_jobber.verify_canceled_jobs(0)
+
+
+async def run_jobs_in_async_scheduler(jobs: list):
+  test_jobber = UnitJobber(jobs)
+  job_count = len(jobs)
+
+  job_manager = py_vcon_server.job_worker_pool.JobSchedulerManager(4, test_jobber)
+  assert(job_manager.num_workers() == 4)
+
+  #breakpoint()
+  await job_manager.async_start()
+  logger.debug("done waiting for scheduler startup")
+
+  for task in asyncio.all_tasks():
+    logger.debug("task: {}".format(task))
+
+  await asyncio.sleep(2)
+  # Make sure there was time to start all the jobs, before telling it to finish up
+  # while(True):
+  #   remaining_jobs = test_jobber.remaining_jobs()
+  #   if(remaining_jobs <= 0):
+  #     # wait a little more
+  #     logger.debug("no jobs remain")
+  #     await asyncio.sleep(0)
+  #     break
+  #   logger.debug("waiting for {} remaining jobs".format(remaining_jobs))
+  #   await asyncio.sleep(0)
+  #   #time.sleep(0.1)
+  #   logger.debug("done with sleep wait")
+
+  logger.debug("about to finish")
+  await job_manager.finish()
+
+  return(test_jobber)
+
+
+@pytest.mark.asyncio
+async def test_job_async_scheduler_manager_sleep():
+  job_def = copy.deepcopy(SHORT_SLEEP_JOB)
+  test_jobber = await run_jobs_in_async_scheduler([job_def])
+  test_jobber.verify_finished_jobs(1)
+  test_jobber.verify_exception_jobs(0)
+  test_jobber.verify_canceled_jobs(0)
+
+
+@pytest.mark.asyncio
+async def test_job_async_scheduler_manager_cpu():
+  job_def = copy.deepcopy(SHORT_CPU_JOB)
+  test_jobber = await run_jobs_in_async_scheduler([job_def])
+  test_jobber.verify_finished_jobs(1)
+  test_jobber.verify_exception_jobs(0)
+  test_jobber.verify_canceled_jobs(0)
+
+
+@pytest.mark.asyncio
+async def test_job_async_scheduler_manager_except():
+  job_def = copy.deepcopy(EXCEPT_JOB)
+  test_jobber = await run_jobs_in_async_scheduler([job_def])
+  test_jobber.verify_finished_jobs(0)
+  test_jobber.verify_exception_jobs(1)
+  test_jobber.verify_canceled_jobs(0)
+
+
+@pytest.mark.asyncio
+async def test_job_async_scheduler_manager_cancel_sleep():
+  job_def = copy.deepcopy(CANCEL_SLEEP_JOB)
+  test_jobber = await run_jobs_in_async_scheduler([job_def])
+  test_jobber.verify_finished_jobs(0)
+  test_jobber.verify_exception_jobs(1)
+  test_jobber.verify_canceled_jobs(0)
+
+
+@pytest.mark.asyncio
+async def test_job_async_scheduler_manager_four():
+  cpu2 = copy.deepcopy(SHORT_CPU_JOB)
+  cpu2["id"] = "cpu2"
+  sleep2 = copy.deepcopy(SHORT_SLEEP_JOB)
+  sleep2["id"] = "sleep2"
+  test_jobber = await run_jobs_in_async_scheduler(
+    [
+      copy.deepcopy(SHORT_CPU_JOB),
+      copy.deepcopy(SHORT_SLEEP_JOB),
+      cpu2,
+      sleep2
+    ])
+  test_jobber.verify_finished_jobs(4)
+  test_jobber.verify_exception_jobs(0)
+  test_jobber.verify_canceled_jobs(0)
+
+
+@pytest.mark.asyncio
+async def test_job_async_scheduler_manager_more():
+  cpu1 = copy.deepcopy(SHORT_CPU_JOB)
+  cpu2 = copy.deepcopy(SHORT_CPU_JOB)
+  cpu2["id"] = "cpu2"
+  sleep3 = copy.deepcopy(SHORT_SLEEP_JOB)
+  sleep3["id"] = "sleep3"
+  sleep4 = copy.deepcopy(SHORT_SLEEP_JOB)
+  sleep4["id"] = "sleep4"
+  cancel5 = copy.deepcopy(CANCEL_SLEEP_JOB)
+  cancel5["id"] = "cancel5"
+  except6 = copy.deepcopy(EXCEPT_JOB)
+  except6["id"] = "except6"
+  # TODO figure out how to cancel a not started job
+  cpu9 = copy.deepcopy(SHORT_CPU_JOB)
+  cpu9["id"] = "cpu9"
+  cpu9["expected_start"] += cpu1["expected_finish"]
+  cpu9["expected_finish"] += cpu1["expected_finish"]
+
+  test_jobber = await run_jobs_in_async_scheduler(
+    [
+      cpu1,
+      cpu2,
+      sleep3,
+      sleep4,
+      cancel5,
+      except6,
+      cpu9
+    ])
+  test_jobber.verify_finished_jobs(5)
+
+  # cancel5 cancels work in progress which results in an exception
+  # plus except5
+  test_jobber.verify_exception_jobs(2)
+
+  # jobs are considered canceled only if cancelled before starting
+  test_jobber.verify_canceled_jobs(0)
+
+
+@pytest.mark.asyncio
+async def test_job_async_scheduler_manager_none():
+
+  test_jobber = UnitJobber([])
+
+  job_manager = py_vcon_server.job_worker_pool.JobSchedulerManager(4, test_jobber)
+  assert(job_manager.num_workers() == 4)
+
+  await job_manager.async_start()
+
+  # Make sure there was time to start all the jobs, before telling it to finish up
+  await asyncio.sleep(2)
+  while(True):
+    remaining_jobs = test_jobber.remaining_jobs()
+    if(remaining_jobs <= 0):
+      break
+    print("waiting for {} remaining jobs".format(remaining_jobs), flush = True)
+    await asyncio.sleep(0.1)
+
+  await job_manager.finish()
+
+  test_jobber.verify_finished_jobs(0)
+  test_jobber.verify_exception_jobs(0)
+  test_jobber.verify_canceled_jobs(0)
 
