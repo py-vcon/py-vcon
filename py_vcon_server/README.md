@@ -67,27 +67,30 @@ The Python vCon server an be thought of as the aggregation of the following high
 ## Architecture
 ![Architecture Diagram](docs/Py_vCon_Server_Architecture.png)
 
+The North facing interfaces provide the **vCon RESTful APIs** which are entry points that perform vCOn CRUD and operations on vCons using **processor** plugins and configured **pipelines** of processor oeparations.
 
-    Components
-      vCon RESTful API built on FASTapi
-      Admin RESTful API built on FASTapi
-      Pipeline Server
+The West facing interfaces provide the **Admin RESTful APIS** which are entry points for adiminstration, configuration and monitoring of the vCon server.
 
-      Pluggable DB Interfaces
-        VconStorage
-        ServerState
-        JobQueue
-        PipelineDB
-        
-        PipelineIO
-        Pipeline
-        
-      Processor Plugin Framework
-        vCon Processor
-  
-      Concepts
-        vCon locking
-        ACL
+The South facing interfaces are plugable **vCon processors** which perform oprations on one or more vCon either as standalone functions or as wrappers to externally provided services.
+
+The East facing interfaces are plugable interfaces to database services for:
+  * vCon storage
+  * vCon server state and configuration
+  * vCon Job Queues and Job State
+  * Pipeline definitions and configuration
+
+At the core is the **Pipeline Server** which runs queued vCon jobs through the named **Pipeline**.
+
+Currently Redis is used for all of these database services.
+The RESTful APIs are all built on FASTapi.
+This initial release does not provide vCon locking.
+This means that nothing prevents multiple servers or jobs from modifying the same vCon at the same time, resulting in lost data.
+
+#### Next Release Focus
+
+In the next release we will focus on the following high level components:
+  * vCon locking
+  * Access Control Lists
 
 
 ## RESTful API Documentation
@@ -197,6 +200,9 @@ If you want to be able to run all of the unit tests and be able to take advantag
 You can find [instructions on getting third party API keys here](../README.md#third-party-api-keys).
 
 The network interface and port, upon which the vCon server Admin and vCon RESTful APIs, are exposed is configured with the REST_URL environment variable.
+
+We run unit tests on Python 3.8, 3.9 and 3.10.
+Other Python platforms are untested.
 
 ### Run py_vcon_server Package
 If you are running the vCon server directly from the package, setup your environment like the following:
