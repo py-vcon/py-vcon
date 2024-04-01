@@ -10,6 +10,8 @@ import py_vcon_server.job_worker_pool
 import py_vcon_server.logging_utils
 #import remote_pdb
 
+VERBOSE = False
+
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 PIPELINE_NAMES_KEY = "pipelines"
@@ -389,11 +391,13 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       logger.debug("initialising Pipeline DB: {}".format(self._pipeline_db_url))
       self._pipeline_db = py_vcon_server.pipeline.PipelineDb(self._pipeline_db_url)
       logger.debug("initialed Pipeline DB")
-      try:
-        pipe_def = await self._pipeline_db.get_pipeline("A")
-        logger.debug("test got Pipeline A: {}".format(pipe_def))
-      except Exception as e:
-        logger.debug("test pipeline A not found as expected: {}".format(e))
+      # test/debug junk for python multiprocessing, asycnio, redis interaction problem
+      # Multiprocessing is currently disabled
+      # try:
+      #   pipe_def = await self._pipeline_db.get_pipeline("A")
+      #   logger.debug("test got Pipeline A: {}".format(pipe_def))
+      # except Exception as e:
+      #   logger.debug("test pipeline A not found as expected: {}".format(e))
 
   async def run_one_job(self) -> typing.Union[str, None]:
     """
@@ -420,7 +424,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         await self.job_exception(job_def)
 
 
-    else:
+    elif(VERBOSE):
       logger.debug("no job")
 
     return(job_id)
@@ -449,12 +453,14 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     # Check for updates to server queue config every self._queue_check_time seconds
     now = time.time()
     if(now - self._last_queue_check > self._queue_check_time):
-      logger.debug("checking server job queue updates")
+      if(VERBOSE):
+        logger.debug("checking server job queue updates")
       if(self._queue_iterator.check_update()):
         logger.debug("updated job queue sequence")
       self._last_queue_check = now
     queue_cycle_count = self._queue_iterator.get_cycle_count()
-    logger.debug("got job queue cycle count: {}".format(queue_cycle_count))
+    if(VERBOSE):
+      logger.debug("got job queue cycle count: {}".format(queue_cycle_count))
     queues_checked = 0
 
     # loop no more than once through the queue cycle before giving up and not getting a job
