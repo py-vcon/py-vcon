@@ -19,14 +19,16 @@ RUN apt-get install -y $(grep -vE "^\s*#" /root/install/apt_package_list.txt | t
 RUN /usr/bin/python3 -m pip install --upgrade pip
 RUN /usr/bin/python3 -m pip install --upgrade pip
 #RUN pip3 list --outdated --format=freeze | grep -v '^\-e' | cut -d = -f 1 | xargs -n1 pip3 install -U
+# python sox package requires numpy be installed first
+RUN pip3 install numpy
 COPY pip_dev_package_list.txt /root/install
 RUN  pip3 install -r /root/install/pip_dev_package_list.txt
 COPY pip_package_list.txt /root/install
 RUN  pip3 install -r /root/install/pip_package_list.txt
 
 # server additional pip requirements
-#COPY pip_server_requirements.txt /root/install
-#RUN  pip3 install -r /root/install/pip_server_requirements.txt
+COPY pip_server_requirements.txt /root/install
+RUN  pip3 install -r /root/install/pip_server_requirements.txt
 
 # User setup
 ARG UID=1001
