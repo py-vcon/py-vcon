@@ -2,8 +2,8 @@ import os
 import multiprocessing
 from pathlib import Path
 
-VCON_STORAGE_URL = os.getenv("STORAGE_URL", "redis://localhost")
-QUEUE_DB_URL = os.getenv("STORAGE_URL", VCON_STORAGE_URL)
+VCON_STORAGE_URL = os.getenv("VCON_STORAGE_URL", "redis://localhost")
+QUEUE_DB_URL = os.getenv("QUEUE_DB__URL", VCON_STORAGE_URL)
 PIPELINE_DB_URL = os.getenv("PIPELINE_DB_URL", VCON_STORAGE_URL)
 STATE_DB_URL = os.getenv("STATE_DB_URL", VCON_STORAGE_URL)
 REST_URL = os.getenv("REST_URL", "http://localhost:8000")
@@ -12,7 +12,7 @@ LOGGING_CONFIG_FILE = os.getenv("LOGGING_CONFIG_FILE", Path(__file__).parent / '
 LAUNCH_VCON_API = os.getenv("LAUNCH_VCON_API", True)
 LAUNCH_ADMIN_API = os.getenv("LAUNCH_ADMIN_API", True)
 try:
-  NUM_WORKERS = int(os.getenv("NUM_WORKERS", os.cpu_count()))
+  NUM_WORKERS = int(os.getenv("NUM_WORKERS", 0)) #Python Multiprocessing, Syncio, Redis issue os.cpu_count()))
 except:
   NUM_WORKERS = 0
 if(not isinstance(NUM_WORKERS, int)):
