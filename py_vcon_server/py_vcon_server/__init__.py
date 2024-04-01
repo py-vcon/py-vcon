@@ -14,6 +14,8 @@ from py_vcon_server.logging_utils import init_logger
 import logging
 import nest_asyncio
 
+VERBOSE = False
+
 logger = init_logger(__name__)
 logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
@@ -61,9 +63,11 @@ async def run_background_jobs(job_interface) -> None:
 
     # Prevent a fast spin when no job in queue
     if(job_id is None):
-      logger.debug("no job waiting a bit")
+      if(VERBOSE):
+        logger.debug("no job waiting a bit")
       await asyncio.sleep(0.1)
-      logger.debug("no job done waiting")
+      if(VERBOSE):
+        logger.debug("no job done waiting")
 
     else:
       logger.debug("completed job: {} in background".format(job_id))
