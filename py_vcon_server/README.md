@@ -21,6 +21,7 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
   + [vCon Processor Plugins](#vcon-processor-plugins)
   + [Access Control](#access-control)
   + [Building](#building)
+  + [Environmental Variables](#environmental-variables)
   + [Installing and configuring](#installing-and-configuring)
   + [First Steps](#first-steps)
   + [Testing the vCon server](#testing-the-vcon-server)
@@ -67,11 +68,11 @@ The Python vCon server an be thought of as the aggregation of the following high
 ## Architecture
 ![Architecture Diagram](docs/Py_vCon_Server_Architecture.png)
 
-The North facing interfaces provide the **vCon RESTful APIs** which are entry points that perform vCOn CRUD and operations on vCons using **processor** plugins and configured **pipelines** of processor oeparations.
+The North facing interfaces provide the [vCon RESTful APIs](#vcon-restful-api) which are entry points that perform [vCon CRUD](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD) and operations on vCons using **processor** plugins and configured **pipelines** of processor oeparations.
 
-The West facing interfaces provide the **Admin RESTful APIS** which are entry points for adiminstration, configuration and monitoring of the vCon server.
+The West facing interfaces provide the [Admin RESTful API](#admin-restfuli-api) which are entry points for adiminstration, configuration and monitoring of the vCon server.
 
-The South facing interfaces are plugable **vCon processors** which perform oprations on one or more vCon either as standalone functions or as wrappers to externally provided services.
+The South facing interfaces are plugable [vCon processors](#vcon-processor-plugins) which perform oprations on one or more vCon either as standalone functions or as wrappers to externally provided services.
 
 The East facing interfaces are plugable interfaces to database services for:
   * vCon storage
@@ -79,7 +80,7 @@ The East facing interfaces are plugable interfaces to database services for:
   * vCon Job Queues and Job State
   * Pipeline definitions and configuration
 
-At the core is the **Pipeline Server** which runs queued vCon jobs through the named **Pipeline**.
+At the core is the **Pipeline Server** which runs queued vCon jobs through the named [Pipeline](#pipeline-processing)
 
 Currently Redis is used for all of these database services.
 The RESTful APIs are all built on FASTapi.
@@ -90,7 +91,7 @@ This means that nothing prevents multiple servers or jobs from modifying the sam
 
 In the next release we will focus on the following high level components:
   * vCon locking
-  * Access Control Lists
+  * [Access Control](#access-control) Lists
 
 
 ## RESTful API Documentation
@@ -149,32 +150,46 @@ We realize Access Control is an important aspect of the vCon Server.  The ACL ca
 
 ## Building
 
+Instructions for building the vCon server package can be found [here](BUILD.md)
+
 ## Testing the vCon Server
 
 A suite of pytest unit tests exist for the server in: [tests](tests)
 
-Running and testing the server requires a running instance of Redis.
+Running and testing the server requires a running instance of Redis [see](#installing-and-configuring)
 Be sure to create and edit your server/.env file to reflect your Redis server address and port.
 It can be generated like the following command line:
 
-    cat <<EOF>.env
+    cat <<EOF>testenv
     #!/usr/bin/sh
     export DEEPGRAM_KEY=ccccccccccccc
     export OPENAI_API_KEY=bbbbbbbbbbbbb
     export HOSTNAME=http://0.0.0.0:8000
-    export REDIS_URL=redis://172.17.0.4:6379
+    export REDIS_URL=redis://<redis_host_ip>:6379
     EOF
 
 The unit tests for the server can be run using the following command in this directory:
 
-    source .env
+    source testenv
     pytest -v -rP tests
+
+## Environmental Variables
+  +  **VCON_STORAGE_URL** - DB URL for vCon storage database (defaults to:"redis://localhost" )
+  +  **QUEUE_DB_URL** - DB URL for Job Queue and job status database (defaults to: same value as VCON_STORAGE_URL)
+  + **PIPELINE_DB_URL** - DB URL for Pipeline definition database (defaults to: same value as VCON_STORAGE_URL)
+  + **STATE_DB_URL** - DB URL for Server State database (defaults to: same value as VCON_STORAGE_URL )
+  + **REST_URL** - host and port on which to bind RESTful APIs (defaults to: "http://localhost:8000")
+  + **LOG_LEVEL** - server logging level (defaults to: "DEBUG")
+  + **LOGGING_CONFIG_FILE** -  (defaults to: "<install path>/logging.config")
+  + **LAUNCH_VCON_API** -  Enable vCon RESTful APIs True/False(defaults to: True)
+  + **LAUNCH_ADMIN_API** - Enable Admin RESTful APIs True/False (defaults to: True)
+  + **WORK_QUEUES** -  (defaults to: "{}")
 
 ## Installing and Configuring
 
 The following installation and configuration instructions are intended for development and testing purposes only.
 This is by no means instructions for a secure install.
-These instructions are intended for a setup where the develer is running a Docker server on a local host.
+These instructions are intended for a setup where the developer is running a Docker server on a local host.
 It is most convenient to run two docker containers, one for the Redis server and a second for the vCon server.
 The following instructions are for this configuration.
 
@@ -205,13 +220,15 @@ We run unit tests on Python 3.8, 3.9 and 3.10.
 Other Python platforms are untested.
 
 ### Run py_vcon_server Package
+Install the py_vcon_server package:
+    pip3 install py_vcon_server
+
 If you are running the vCon server directly from the package, setup your environment like the following:
     cat << EOF >> testenv
     export REST_URL="http://<your_host_ip>:8000"
     export OPENAI_API_KEY="your_openapi_key_here"
     export DEEPGRAM_KEY="your_deepgram_api_key_here"
     EOF
-
 
 To start the vCon server use the following commands:
     source testenv
