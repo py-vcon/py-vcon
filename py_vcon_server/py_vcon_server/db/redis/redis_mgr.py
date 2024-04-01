@@ -53,7 +53,10 @@ class RedisMgr():
             self._creation_stack,
             current_stack
           ))
-      logger.info("Creating Redis pool ({})...".format(self._label))
+      logger.info("Creating Redis pool ({}) for {} ...".format(
+          self._label,
+          self._redis_url
+        ))
       self._redis_pool_initialization_count += 1
       options = {"decode_responses": True}
       self._redis_pool = redis.asyncio.connection.ConnectionPool.from_url(self._redis_url,
