@@ -36,6 +36,8 @@ import json
 import vcon
 import py_vcon_server.db.redis.redis_mgr
 import py_vcon_server.logging_utils
+# Should remove this when abstracted from Redis
+import redis
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
@@ -105,7 +107,19 @@ class ServerState:
 
     # save to a redis hash
     logger.info("setting server state: {}".format(server_dict))
-    await redis_con.hset(self._hash_key, self.server_key(), value = json.dumps(server_dict))
+    try:
+      await redis_con.hset(self._hash_key, self.server_key(), value = json.dumps(server_dict))
+    except redis.exceptions.ConnectionError as redis_except:
+      logger.exception(redis_except)
+      logger.debug("Unable to connect to Redis State DB: host: {} port: {}".format(
+          self._redis_mgr._redis_pool.connection_kwargs.get("host", "None"),
+          self._redis_mgr._redis_pool.connection_kwargs.get("port", "None")
+        ))
+      raise Exception("Server State DB unable to connect to Redis host: {} port: {}".format(
+          self._redis_mgr._redis_pool.connection_kwargs.get("host", "None"),
+          self._redis_mgr._redis_pool.connection_kwargs.get("port", "None")
+        ))
+
 
   async def unregister(self) -> None:
     await self.delete_server_state(self.server_key())
