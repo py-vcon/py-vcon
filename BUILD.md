@@ -1,7 +1,7 @@
 # Build Instructions
 
   + [Building Vcon package](#building-vcon-package)
-  + [Building the Vcon Server package](#building-the-vcon-server-package)
+  + [Building the Vcon Server package](py_vcon_server/BUILD.md)
 
 ## Building Vcon package
 
@@ -20,13 +20,13 @@ Be sure to clean out the dist directory:
 
     rm dist/*
 
-In vcon directory (root containing setup.py and vcon sub-directory):
+In the vcon directory (root containing setup.py and vcon sub-directory):
 
     python3 -m build
 
 This creates sub-directory dist containing (x.x in the names below represents the version number):
 
-  * py-vcon-x.x-py3-none-any.whl
+  * py_vcon-x.x-py3-none-any.whl
   * py-vcon-x.x.tar.gz
 
 Push the package install files up to the pypi repo.
@@ -64,8 +64,4 @@ For the real/public repo, use the above steps, but substitute step 1 and 3 with 
 Commit all of the changes and tag the build release:
 
     git tag -a vcon_x.x [xxxxx_commit_SHA] -m "Vcon pypi release"
-
-## Building the server package
-
-TBD
 
