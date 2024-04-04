@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 """ Generate doc/README.md for processor plugins """
+import os
 import typing
 import inspect
 import pydantic
@@ -386,6 +387,8 @@ def build_processors_doc() -> str:
 def main():
   processor_readme_text = build_processors_doc()
 
+  if(not os.path.isdir("py_vcon_server/processor")):
+    os.makedirs("py_vcon_server/processor")
   with open("py_vcon_server/processor/README.md", "w") as readme_file:
     readme_file.write(processor_readme_text)
 
