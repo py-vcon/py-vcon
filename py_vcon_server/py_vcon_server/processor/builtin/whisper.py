@@ -25,8 +25,19 @@ class Whisper(py_vcon_server.processor.FilterPluginProcessor):
   plugin_version = "0.0.1"
   plugin_name = PLUGIN_NAME
   options_class =  WhisperOptions
+  try:
+    # TODO: fix this:
+    # Not sure why the following commented out line does not work.
+    # This only seems to be a provlem when not running the unit tests in place in the repo.
+    # For now hack the access of the member value directly.
+    #model_size = PLUGIN.plugin().init_options().model_size
+    model_size = PLUGIN.plugin()._init_options.model_size
+  except AttributeError as att_err:
+    logger.debug("PLUGIN type: {} dir: {}".format(type(PLUGIN), dir(PLUGIN)))
+    logger.debug("PLUGIN.plugin() type: {} dir: {}".format(type(PLUGIN.plugin()), dir(PLUGIN.plugin())))
+    raise att_err
   headline = "Whisper OpenAI transcription binding for **VconProcessor**  with model size: {}".format(
-    PLUGIN.plugin().init_options().model_size)
+      model_size)
   plugin_description = """
 
 This **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.
