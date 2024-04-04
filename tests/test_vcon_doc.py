@@ -1,5 +1,6 @@
 """ Test Vcon method doc """
 
+import os
 import inspect
 import vcon
 import tests.test_filter_plugin_docs
@@ -120,6 +121,8 @@ def test_vcon_doc():
 
   readme_text = introduction_template.format(TOC = TOC) + readme_text
 
+  if(not os.path.isdir("vcon")):
+    os.makedirs("vcon")
   with open("vcon/README.md", "wt") as rm_handle:
     rm_handle.write(readme_text)
 
