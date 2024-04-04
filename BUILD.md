@@ -51,7 +51,6 @@ For the test repo:
  7) copy tests and data files to a tmp directory to ensure the vcon package is not picked up
 
     mkdir -p /tmp/py_vcon_server
-    mkdir -p /tmp/vcon/filter_plugins
     cp -rp certs examples tests /tmp
     cp -rp py_vcon_server/tests /tmp/py_vcon_server
 
