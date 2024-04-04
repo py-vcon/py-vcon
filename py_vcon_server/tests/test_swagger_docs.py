@@ -1,3 +1,4 @@
+import os
 import pytest
 import pytest_asyncio
 import json
@@ -23,6 +24,10 @@ async def test_get_docs_html():
     # Fix absolute path server linkes
     # TODO content_html = content_html.replace("/openapi.json", "openapi.json")
 
+    # when running the unit tests outside the source tree docs 
+    # does not exist.
+    if(not os.path.isdir("docs")):
+      os.mkdir("docs")
     with open("docs/swagger.html", "wt") as html_file:
       html_file.write(content_html)
 
