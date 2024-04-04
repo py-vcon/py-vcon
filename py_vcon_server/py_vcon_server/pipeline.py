@@ -479,9 +479,10 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         # seem to hang in redis here, trying to yeild first
         logger.debug("yeilding before getting pipeline def")
         await asyncio.sleep(0)
+        # The following was part of debuging multiprocessing, asyncio, redis problem
         # see what else is running
-        for task in asyncio.all_tasks():
-          logger.debug("running task: {}".format(task))
+        # for task in asyncio.all_tasks():
+        #   logger.debug("running task: {}".format(task))
         logger.debug("getting pipeline def")
         pipe_def = await self._pipeline_db.get_pipeline(queue_name)
         if(pipe_def is None):
@@ -526,6 +527,8 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
 
       # the job is already labeled with the queue to which it belongs
       # so on need to set job["queue"] = queue_name
+
+      logger.debug("got job from queue")
 
       # Add pipeline def to job
       job["pipeline"] = pipe_def.dict()
