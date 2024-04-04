@@ -145,7 +145,11 @@ Instructions for building the Vcon package for pypi can be found [here](BUILD.md
 
 ## Testing the Vcon Package
 A suite of pytest unit tests exist for the Vcon package in: [tests](tests).
+If you do not run the unit tests in this directory in a clone of the repo, you will need to copy the following directories from the repo in order to run the unit tests:
 
+    cp -r tests examples certs <your_test_directory>
+    mkdir <your_test_directory>/py_vcon_server
+    cp -r py_vcon_server/tests <your_test_directory>/py_vcon_server
 
 These can be run using the following command in the current directory:
 
