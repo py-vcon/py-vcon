@@ -45,9 +45,13 @@ def get_version() -> str:
         assert(variable == "__version__")
         assert(equals == "=")
         version = version.strip('"')
-        version_double = float(version)
-        assert(version_double >= 0.01)
-        assert(version_double < 10.0)
+        versions = version.split(".")
+        assert(int(versions[0]) >= 0)
+        assert(int(versions[0]) < 10)
+        assert(2 <= len(versions) <= 3)
+        assert(int(versions[1]) >= 0)
+        if(len(versions) == 3):
+          assert(int(versions[2]) >= 0)
         break
 
       line = core_file.readline()
