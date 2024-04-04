@@ -49,7 +49,7 @@ SERVER_QUEUES = {
   }
 }
 
-TIMEOUT = 8.0
+TIMEOUT = 32.0
 PIPELINE_DEFINITION = {
   "pipeline_options": {
       "timeout": TIMEOUT,

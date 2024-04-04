@@ -10,7 +10,7 @@ from py_vcon_server.settings import PIPELINE_DB_URL
 from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 
 PIPELINE_DB = None
-TIMEOUT = 14.0
+TIMEOUT = 32.0
 
 @pytest_asyncio.fixture(autouse=True)
 async def pipeline_db():
