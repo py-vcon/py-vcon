@@ -1486,7 +1486,7 @@
             "default": 0
           }
         },
-        "description": "Base class options for **VconProcessor.processor** method "
+        "description": "processor options class for **processor** method of VconProcessor wrapper for Deepgram **FilterPlugin**"
       },
       "HTTPValidationError": {
         "title": "HTTPValidationError",
@@ -1550,7 +1550,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1705027887.5441089
+            "example": 1711727018.668578
           },
           "server": {
             "title": "server key",
@@ -1598,7 +1598,7 @@
             "title": "**OpenAI** model name to use for generative AI",
             "type": "string",
             "description": "\nThe named model is used to feed the transcription/text and then ask it the\ngiven prompt.\nOpenAI has numerous trained models, the latest of which may not be listed here\nin examples.\n\nYou can get the current list of of available models for\nyour license/API key using the following:\n\n    import openai\n    openai.api_key = \"your key here\"\n    openai.Model.list()\n",
-            "default": "gpt-4",
+            "default": "gpt-4-1106-preview",
             "examples": [
               "davinci",
               "gpt-4",
@@ -1701,7 +1701,7 @@
             "default": 0
           }
         },
-        "description": "Base class options for **VconProcessor.processor** method "
+        "description": "processor options class for **processor** method of VconProcessor wrapper for OpenAIChatCompletion **FilterPlugin**"
       },
       "PipelineDefinition": {
         "title": "PipelineDefinition",
@@ -1846,12 +1846,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1705027887.541268
+            "example": 1711727018.6657462
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 322023
+            "example": 82368
           }
         }
       },
@@ -1887,13 +1887,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 322023
+            "example": 82368
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1705027887.5420637
+            "example": 1711727018.666504
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -1916,7 +1916,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1705027887.54211
+            "example": 1711727018.6665332
           }
         }
       },
@@ -1988,12 +1988,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-01-12T02:51:27.531+00:00",
+            "example": "2024-03-29T15:43:38.656+00:00",
             "examples": [
-              1705027887,
-              1705027887.531606,
+              1711727018,
+              1711727018.6567793,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-01-12T02:51:27.531+00:00",
+              "2024-03-29T15:43:38.656+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -2137,7 +2137,7 @@
             "default": 0
           }
         },
-        "description": "Base class options for **VconProcessor.processor** method "
+        "description": "processor options class for **processor** method of VconProcessor wrapper for Whisper **FilterPlugin**"
       }
     }
   },
