@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
+""" Generate filter_plugins README and validate inheritance, interfaces and doc """
 
+import os
 import inspect
 import typing
 import importlib
@@ -412,6 +414,8 @@ def main() -> str:
 
 def test_filter_plugin_readme_doc():
   page_doc = main()
+  if(not os.path.isdir("vcon/filter_plugins")):
+    os.makedirs("vcon/filter_plugins")
   with open("vcon/filter_plugins/README.md", "w") as readme_file:
     readme_file.write(page_doc)
 
