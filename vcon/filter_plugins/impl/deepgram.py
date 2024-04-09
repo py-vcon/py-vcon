@@ -1,13 +1,16 @@
 """ FilterPlugin for Deepgram transcription """
 import typing
 import json
+import logging
 import pydantic
 import requests
+import tenacity
 import vcon.filter_plugins
 import deepgram
 
 logger = vcon.build_logger(__name__)
 
+DEEPGRAM_RETRY_EXCEPTIONS = (requests.exceptions.ReadTimeout)
 
 class DeepgramInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
@@ -75,6 +78,14 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
 
 
 
+  @tenacity.retry(
+      #retry=retry_if_exception_type((openai.error.APIError, openai.error.APIConnectionError, openai.error.RateLimitError, openai.error.ServiceUnavailableError, openai.error.Timeout)), 
+      retry = tenacity.retry_if_exception_type(DEEPGRAM_RETRY_EXCEPTIONS),
+      wait = tenacity.wait_random_exponential(multiplier = 1, max = 90),
+      stop = tenacity.stop_after_attempt(16),
+      before = tenacity.before_log(logger, logging.DEBUG),
+      after = tenacity.after_log(logger, logging.DEBUG)
+    )
   def request_transcribe(
     self,
     recording_data: typing.Dict[str, typing.Any],
