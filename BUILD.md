@@ -11,7 +11,7 @@ Make sure python build and twine packages are installed:
 
 Create a clean clone of the branch that you want to build as any files in your development area may get accidently included in the vcon package:
 
-    get clone https://github.com/py-vcon/py-vcon.git
+    git clone https://github.com/py-vcon/py-vcon.git
     git checkout [xxxxx_commit_SHA]
 
 Update the package __version__ number in vcon/vcon/__init__.py
@@ -62,5 +62,5 @@ For the real/public repo, use the above steps, but substitute step 1 and 3 with 
 
 Commit all of the changes and tag the build release:
 
-    git tag -a vcon_x.x [xxxxx_commit_SHA] -m "Vcon pypi release"
+    git tag -a python-vcon_x.x.x_build [xxxxx_commit_SHA] -m "Vcon pypi release"
 
