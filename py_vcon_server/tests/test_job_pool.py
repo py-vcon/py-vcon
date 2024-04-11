@@ -459,7 +459,7 @@ async def test_job_worker_pool_cancel_immediate():
   can2 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
   can2["id"] = "cancelimmediate2"
   can2["expected_start"] += CANCEL_IMMEDIATE_JOB["expected_finish"] - 2
-  can2["expected_finish"] += CANCEL_IMMEDIATE_JOB["expected_finish"]
+  can2["expected_finish"] += CANCEL_IMMEDIATE_JOB["expected_finish"] - 2
   can2["expected_cancel"] += 1.0
   can3 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
   can3["id"] = "cancelimmediate3"
