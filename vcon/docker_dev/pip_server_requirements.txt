@@ -23,7 +23,6 @@ filelock
 frozenlist
 future
 greenlet
-huggingface-hub
 humanize
 importlib-metadata
 importlib-resources
@@ -41,13 +40,10 @@ nbclient
 nbconvert
 nbformat
 nest-asyncio
-notebook
-notebook-shim
 packaging
 pandocfilters
 paramiko
 pathspec
-peewee
 pexpect
 phonenumbers
 pickleshare
@@ -64,14 +60,13 @@ pydub
 pyflakes
 Pygments
 PyJWT
-pymongo
 pyparsing
 pyrsistent
 python-dotenv
+python-vcon >= 0.3.1
 PyYAML
 pyzmq
 redis
-rocketry
 rsa
 s3transfer
 sentry-sdk
@@ -79,7 +74,6 @@ shortuuid
 simplejson
 six
 soundfile
-SQLAlchemy
 stack-data
 tinycss2
 tokenizers
