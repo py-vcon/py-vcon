@@ -83,8 +83,9 @@ setuptools.setup(
       'py_vcon_server.queue',
     ],
   data_files=[
-      ("py_vcon_server", ["pip_server_requirements.txt"]),
-      ("tests", ["tests/hello.wav", "tests/hello.m4a"]),
+      # ("py_vcon_server", ["pip_server_requirements.txt"]),
+      # These are needed for unit tests:
+      # ("tests", ["tests/hello.wav", "tests/hello.m4a"]),
     ],
   python_requires=">=3.7",
   tests_require=['pytest', 'pytest-asyncio', 'pytest-dependency', "pytest_httpserver"],
