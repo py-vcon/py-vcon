@@ -26,6 +26,7 @@ __version__ = "0.1"
 JOB_INTERFACE = None
 JOB_MANAGER = None
 RUN_BACKGROUND_JOBS = True
+BACKGROUND_JOBS_RUNNING = False
 BACKGROUND_JOB_TASK = None
 
 
@@ -54,11 +55,14 @@ restapi = py_vcon_server.restful_api.init()
 
 
 async def run_background_jobs(job_interface) -> None:
-  global RUN_BACKGROUND_JOBS
+  global BACKGROUND_JOBS_RUNNING
   # Wait a bit to start running jobs so that the rest of the system can get started
   await asyncio.sleep(5.0)
-  logger.debug("checking for pipeline jobs")
-  while(RUN_BACKGROUND_JOBS):
+  if(BACKGROUND_JOBS_RUNNING):
+    logger.debug("checking for pipeline jobs")
+  else:
+    logger.debug("background pipline server disabled")
+  while(BACKGROUND_JOBS_RUNNING):
     job_id = await job_interface.run_one_job()
 
     # Prevent a fast spin when no job in queue
@@ -71,6 +75,8 @@ async def run_background_jobs(job_interface) -> None:
 
     else:
       logger.debug("completed job: {} in background".format(job_id))
+
+  logger.debug("Not checking for background jobs")
 
 
 @restapi.on_event("startup")
@@ -117,6 +123,9 @@ async def startup():
     time.sleep(5.0)
 
   elif(RUN_BACKGROUND_JOBS):
+    global BACKGROUND_JOBS_RUNNING
+    BACKGROUND_JOBS_RUNNING = True
+    logger.info("starting background pipeline job server")
     BACKGROUND_JOB_TASK = asyncio.create_task(run_background_jobs(JOB_INTERFACE))
 
   await py_vcon_server.states.SERVER_STATE.starting()
@@ -140,12 +149,13 @@ async def shutdown():
   global JOB_MANAGER
   global JOB_INTERFACE
   global RUN_BACKGROUND_JOBS
+  global BACKGROUND_JOBS_RUNNING
   global BACKGROUND_JOB_TASK
   if(JOB_MANAGER):
     await JOB_MANAGER.finish()
     JOB_MANAGER = None
-  if(RUN_BACKGROUND_JOBS):
-    RUN_BACKGROUND_JOBS = False
+  if(BACKGROUND_JOBS_RUNNING):
+    BACKGROUND_JOBS_RUNNING = False
   if(BACKGROUND_JOB_TASK):
     logger.debug("waiting for background job to complete")
     await BACKGROUND_JOB_TASK
