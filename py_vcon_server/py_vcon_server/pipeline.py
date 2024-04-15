@@ -588,6 +588,10 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     pipeline = PipelineDefinition(**pipe_def)
 
     queue_name = job_definition.get("queue", None)
+    logger.info("doing job: {} from queue: {}".format(
+        job_id,
+        queue_name
+      ))
     queue_job = job_definition.get("job", None)
     if(queue_job is None):
       raise Exception("job id: {} with no queue job definition".format(job_definition.get("id")))
@@ -621,11 +625,18 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
 
     else:
       raise Exception("unsupported queue job type: {}".format(job_type))
+
+    logger.debug("running pipeline job: {}".format(
+        job_id
+      ))
     pipeline_output = await runner.run(pipeline_input)
 
     # Unfortunately, need to do the commit here
     save_vcons = pipeline.pipeline_options.save_vcons
     if(save_vcons):
+      logger.debug("committing pipeline results from job: {}".format(
+          job_id
+        ))
       # Save changed Vcons
       await VCON_STORAGE.commit(pipeline_output)
 
@@ -639,7 +650,14 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     """ handle a successful completion of a job """
     job_id = results["id"]
 
-    await self._job_queue.remove_in_progress_job(job_id)
+    removed_job = await self._job_queue.remove_in_progress_job(job_id)
+    if(removed_job.get("id", None) == job_id):
+      logger.debug("job: {} removed from in progress list".format(job_id))
+    else:
+      logger.warning("attempt to remove job: {} from in progress list yielded: {}".format(
+          job_id,
+          removed_job
+        ))
 
 
   async def job_canceled(
