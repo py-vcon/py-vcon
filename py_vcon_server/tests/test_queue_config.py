@@ -33,11 +33,13 @@ except Exception as e:
   else:
     raise e
 
-os.environ["WORK_QUEUES"] = "A:4 DDD:5 C:1 E: F G:14"
-importlib.reload(py_vcon_server.settings)
-
 @pytest.mark.asyncio
 async def test_queue_config():
+  # Need to reset WORK_QUEUES dict???
+  py_vcon_server.settings.WORK_QUEUES = {}
+  os.environ["WORK_QUEUES"] = "A:4 DDD:5 C:1 E: F G:14"
+  importlib.reload(py_vcon_server.settings)
+
   print("WORK_QUEUES in test: {}".format(py_vcon_server.settings.WORK_QUEUES))
   assert(len(py_vcon_server.settings.WORK_QUEUES.items()) == 6)
   assert(py_vcon_server.settings.WORK_QUEUES["A"]["weight"] == 4)
