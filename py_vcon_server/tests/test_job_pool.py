@@ -360,7 +360,7 @@ CANCEL_IMMEDIATE_JOB = {
     "cancel_time": 0,
     "timeout": None,
     "expected_start": 0.0, 
-    "expected_finish": 4.0,
+    "expected_finish": 2.0,
     "expected_cancel": 1.0,
     "expected_result": None,
     "expected_exception_type": "CancelledError",
@@ -464,19 +464,21 @@ async def test_job_worker_pool_cancel_sleep():
 async def test_job_worker_pool_cancel_immediate():
   can2 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
   can2["id"] = "cancelimmediate2"
-  can2["expected_start"] += CANCEL_IMMEDIATE_JOB["expected_finish"] - 2
-  can2["expected_finish"] += CANCEL_IMMEDIATE_JOB["expected_finish"] - 2
+  can2["expected_start"] = CANCEL_IMMEDIATE_JOB["expected_finish"]
+  can2["expected_finish"] = can2["expected_start"] + 2
   can2["expected_cancel"] += 1.0
   can3 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
   can3["id"] = "cancelimmediate3"
-  can3["expected_start"] += can2["expected_finish"]
-  can3["expected_finish"] += can2["expected_finish"]
+  can3["expected_start"] = can2["expected_finish"]
+  can3["expected_finish"] = can3["expected_start"] + 2
   can3["expected_cancel"] += 2.0
   can4 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
   can4["id"] = "cancelimmediate4"
-  can4["expected_start"] += can3["expected_finish"]
-  can4["expected_finish"] += can3["expected_finish"]
+  can4["expected_start"] = can3["expected_finish"]
+  can4["expected_finish"] = can4["expected_start"] + 2
   can4["expected_cancel"] += 3.0
+  print("CANCEL_IMMEDIATE times: \n{}\n{}\n{}\n{}".format(
+      CANCEL_IMMEDIATE_JOB, can2, can3, can4))
   test_jobber = await start_run_stop_job_worker([CANCEL_IMMEDIATE_JOB, can2, can3, can4], tasks = 1)
   cancel_count = test_jobber.get_canceled_count()
   assert(cancel_count > 0)
