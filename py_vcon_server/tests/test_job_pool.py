@@ -251,9 +251,15 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
 
   def verify_canceled_jobs(self, count: int):
     assert(len(self._canceled_jobs) == count)
+    # As its a matter of timeing we don't know how many jobs will actually get canceled.
+    # If at least one job did not get canceled, we have set first_start
     if(count > 0):
-      assert(len(self._first_start) == 1)
-      first_start = self._first_start[0]
+      if(len(self._finished_jobs) > 0):
+        assert(len(self._first_start) == 1)
+        first_start = self._first_start[0]
+      # If all jobs got canceled, just use the first cancel time
+      else:
+        first_start = self._canceled_jobs[0]["canceled_at"]
       assert(first_start - self._time0[0] < 10.0) # TODO wide range of 5-10 seconds startup, do not know why
 
     for index, job in enumerate(self._canceled_jobs):
