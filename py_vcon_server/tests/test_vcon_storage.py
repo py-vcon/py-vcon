@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Unit tests for **VconStorage** """
 
 import pytest

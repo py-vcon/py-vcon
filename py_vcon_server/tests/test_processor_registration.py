@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ unit tests to test VconProcessorRegistration and VconProcessorRegistry """
 import asyncio
 import pytest

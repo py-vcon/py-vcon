@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Unit tests for Pipeline and related data objects """
 import pydantic
 import pytest
@@ -21,6 +22,13 @@ async def pipeline_db():
   global PIPELINE_DB
   PIPELINE_DB = pdb
 
+  # Turn off workers so as to not interfer with queues used in testing
+  # and workers created in these unit tests.
+  num_workers = py_vcon_server.settings.NUM_WORKERS
+  py_vcon_server.settings.NUM_WORKERS = 0
+  #do_bg = py_vcon_server.RUN_BACKGROUND_JOBS
+  #py_vcon_server.RUN_BACKGROUND_JOBS = False
+
   # wait until teardown time
   yield pdb
 
@@ -29,6 +37,12 @@ async def pipeline_db():
   PIPELINE_DB = None
   await pdb.shutdown()
   print("shutdown PipelineDB connection")
+
+
+  # Restore workers config
+  py_vcon_server.settings.NUM_WORKERS = num_workers
+  #py_vcon_server.RUN_BACKGROUND_JOBS = do_bg
+
 
 def test_pipeline_objects():
 

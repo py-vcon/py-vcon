@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 
 """ Generate doc/README.md for processor plugins """
 import os

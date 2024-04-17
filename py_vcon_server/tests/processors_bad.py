@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ bad implementations of **VconProcessor** for testing """
 
 import py_vcon_server.processor

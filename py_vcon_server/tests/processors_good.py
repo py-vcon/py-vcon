@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ good implementations of **VconProcessor** for testing """
 
 import typing
