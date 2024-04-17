@@ -301,6 +301,13 @@ def doc_plugin(plugin_class: typing.Type[vcon.filter_plugins.FilterPlugin],
       #print("{}: {}".format(option_arg_name, option_arg_type))
       init_options.add(option_arg_type)
 
+    if(cls.__doc__ is None or len(cls.__doc__) < 1):
+      # Make sure method is documented
+      print("filter_plugin: {} method: {} not documented".format(
+          plugin_data["class_name"],
+          cls.__name__
+        ))
+    assert(cls.__doc__ is not None and len(cls.__doc__) > 0)
     plugin_data[name + "_description"] = clean_doc_indentation(cls.__doc__)
 
   return(PLUGIN_TEMPLATE.format(**plugin_data))
