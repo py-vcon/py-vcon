@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 import copy
 import json
 import time
@@ -31,7 +32,8 @@ TIMEOUT = 30.0
 PIPELINE_DEFINITION = {
   "pipeline_options": {
       "timeout": TIMEOUT,
-      "save_vcons": True
+      "save_vcons": True,
+      "failure_queue": ERROR_QUEUE
     },
   "processors": [
       {
@@ -47,6 +49,7 @@ PIPELINE_DEFINITION = {
     ]
 }
 
+NUM_JOBS_TO_RUN = 4
 
 @pytest.mark.asyncio
 #@pytest.mark.skip(reason="BUG: currently hangs")
@@ -73,12 +76,15 @@ async def test_pipeline(make_inline_audio_vcon):
     resp_content = set_response.content
     assert(set_response.status_code == 204)
 
-    # put the vcon in Storage in a known state
-    assert(len(make_inline_audio_vcon.dialog) == 1)
-    assert(len(make_inline_audio_vcon.analysis) == 0)
-    set_response = client.post("/vcon", json = make_inline_audio_vcon.dumpd())
-    assert(set_response.status_code == 204)
-    assert(make_inline_audio_vcon.uuid == UUID)
+    # put the vcon(s) in Storage in a known state
+    for job_count in range(NUM_JOBS_TO_RUN):
+      vcon_uuid = "{}-{}".format(UUID, job_count)
+      make_inline_audio_vcon._vcon_dict["uuid"] = vcon_uuid
+      assert(len(make_inline_audio_vcon.dialog) == 1)
+      assert(len(make_inline_audio_vcon.analysis) == 0)
+      set_response = client.post("/vcon", json = make_inline_audio_vcon.dumpd())
+      assert(set_response.status_code == 204)
+      assert(make_inline_audio_vcon.uuid == vcon_uuid)
 
     # Create the queue (empty)
     post_response = client.post( 
@@ -89,7 +95,7 @@ async def test_pipeline(make_inline_audio_vcon):
       )
     assert(post_response.status_code == 204)
 
-    # Create the queue (empty)
+    # Create the error queue (empty)
     post_response = client.post( 
       "/queue/{}".format(
           ERROR_QUEUE
@@ -98,23 +104,26 @@ async def test_pipeline(make_inline_audio_vcon):
       )
     assert(post_response.status_code == 204)
 
-    # Add this vcon as a job in the queue
-    queue_job1 = { "job_type": "vcon_uuid", "vcon_uuid": [ UUID ] }
-    put_response = client.put(
-        "/queue/{}".format(
-            WORK_QUEUE
-          ),
-        headers={"accept": "application/json"},
-        content = json.dumps(queue_job1)
-      )
-    assert(put_response.status_code == 200)
-    queue_position = put_response.json()
-    assert(queue_position == 1)
-    assert(isinstance(queue_position, int) == 1)
-    print("test {} queued job: {}".format(
-        __file__,
-        queue_position
-      ))
+    # Add the vcon(s) as a job in the queue
+    for job_count in range(NUM_JOBS_TO_RUN):
+      vcon_uuid = "{}-{}".format(UUID, job_count)
+      queue_job1 = { "job_type": "vcon_uuid", "vcon_uuid": [ vcon_uuid ] }
+      put_response = client.put(
+          "/queue/{}".format(
+              WORK_QUEUE
+            ),
+          headers={"accept": "application/json"},
+          content = json.dumps(queue_job1)
+        )
+      assert(put_response.status_code == 200)
+      queue_position = put_response.json()
+      assert(isinstance(queue_position, int))
+      assert(queue_position == 1 + job_count)
+      print("test {} queued job: {} vCon uuid: {}".format(
+          __file__,
+          queue_position,
+          vcon_uuid
+        ))
 
     # Enable the work queue on the pipeline server
     post_response = client.post(
@@ -126,7 +135,7 @@ async def test_pipeline(make_inline_audio_vcon):
     assert(post_response.text == "") 
 
     trys = 0
-    while(trys < 10):
+    while(trys < 8 * NUM_JOBS_TO_RUN):
       trys += 1
       # Check job is not in job queue
       get_response = client.get(
@@ -140,8 +149,39 @@ async def test_pipeline(make_inline_audio_vcon):
       assert(isinstance(job_list, list))
       if(len(job_list) == 0):
         break
+      print("check #{}, {} jobs still in queue".format(trys, len(job_list)))
       await asyncio.sleep(3.0)
 
     print("after {} trys".format(trys))
     assert(len(job_list) == 0)
+
+    # check that error queue is empty
+    get_response = client.get(
+        "/queue/{}".format(
+            ERROR_QUEUE
+          ),
+        headers={"accept": "application/json"},
+        )
+    assert(get_response.status_code == 200)
+    error_list = get_response.json()
+    assert(isinstance(error_list, list))
+    if(len(error_list) != 0):
+      print("{} jobs in error queue: {} jobs: {}".format(len(job_list), ERROR_QUEUE, error_list))
+    assert(len(error_list) == 0)
+
+    # check that vCon(s) have transcript and summary
+    for job_count in range(NUM_JOBS_TO_RUN):
+      vcon_uuid = "{}-{}".format(UUID, job_count)
+      get_response = client.get(
+        "/vcon/{}".format(vcon_uuid),
+        headers={"accept": "application/json"},
+        )
+      assert(get_response.status_code == 200)
+      vcon_dict = get_response.json()
+      print("checking vcon: {}".format(vcon_uuid))
+      assert(len(vcon_dict["analysis"]) == 2)
+      assert(vcon_dict["analysis"][0]["type"] == "transcript")
+      assert(vcon_dict["analysis"][1]["type"] == "summary")
+
+    # TODO: confirm job id's are not in progress 
 
