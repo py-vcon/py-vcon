@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Vcon Pipeline processor objects and methods """
 import os
 import typing
@@ -442,6 +443,13 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       self._pipeline_db = None
       await pipeline_db.shutdown()
 
+    global VCON_STORAGE
+    if(VCON_STORAGE):
+      logger.debug("shutting down PipelineJobHandler in done VconStorage")
+      vs = VCON_STORAGE
+      VCON_STORAGE = None
+      await vs.shutdown()
+
 
   async def get_job(self) -> typing.Union[typing.Dict[str, typing.Any], None]:
     """ Get the definition of the next job to run. Called in the context of the scheduler/dispatcher process. """
@@ -528,7 +536,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       # the job is already labeled with the queue to which it belongs
       # so on need to set job["queue"] = queue_name
 
-      logger.debug("got job from queue")
+      logger.debug("got job from queue: {} job: {}".format(queue_name, job))
 
       # Add pipeline def to job
       job["pipeline"] = pipe_def.dict()
@@ -548,12 +556,20 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
               #TODO: release locks that were taken
               for lock in locks:
                 pass
+              logger.info("lock not available for vCon: {} job: {}".format(
+                  vcon_uuid,
+                  job["id"]
+                ))
               jobs_locks_not_available.append(job)
               # skip to next queue job
-              continue
+              break
 
-            # Add the locks to the job
-            job["locks"] = locks
+          # Add the locks to the job
+          job["locks"] = locks
+
+          # Successfuly got a job and locked its vCons
+          logger.debug("got job: {} and locked its vCons".format(job["id"]))
+          break
 
         else:
           logger.error("unsupported job_type: {} not queued in failure queue: {}".format(
@@ -561,6 +577,9 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
               pipe_def.pipeline_options.get("failure_queue", None)
             ))
           continue
+
+      else:
+        logger.debug("read only vCon for job: {}, no locks needed".format(job["id"]))
 
 
     # Put jobs which were not lockable back in the queue
@@ -685,15 +704,25 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       failure_queue = pipeline["pipeline_options"].get("failure_queue", None)
       if(failure_queue and failure_queue != ""):
         # TODO: add some info from failure
-        if(job_type == "vcon_uuids"):
-          logger.debug("queuing job: {} to failure queue: {}".format(
+        if(job_type == "vcon_uuid"):
+          logger.debug("queuing job: {} from: {} to failure queue: {}".format(
               job_id,
-              queue_name
+              queue_name,
+              failure_queue
             ))
-          await self._job_queue.push_vcon_uuid_queue_job(failure_queue, queue_job["vcon_uuid"])
+          # add queue_name and job_id to job def in failure queue
+          await self._job_queue.push_vcon_uuid_queue_job(
+              failure_queue,
+              queue_job["vcon_uuid"],
+              queue_name,
+              job_id
+            )
         else:
           # should not get here as the job_type should have been screened at the start
           logger.error("Unsupported job type: {}".format(job_type))
+      else:
+        logger.info("no error queue for job: {} pipeline: {}".format(job_id, queue_name))
+
     else:
       logger.error("no pipeline definition for: {} job id: {}".format(
          queue_name,
