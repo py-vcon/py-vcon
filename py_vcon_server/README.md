@@ -25,6 +25,7 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
   + [Installing and configuring](#installing-and-configuring)
   + [First Steps](#first-steps)
   + [Testing the vCon server](#testing-the-vcon-server)
+  + [Future Release Features](#future-release-features)
   + [Extending the vCon Server](#extending-the-vcon-server)
   + [Support](#support)
 
@@ -33,7 +34,7 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
 
 The Python vCon Server provides the ability to do the following:
   * Store, retrieve, modify and delete vCons
-  * Perform operations on one or more vCons using a plugable framework of **vCon processors**
+  * Perform operations on one or more vCons using a pluggable framework of **vCon processors**
   * Run a single **vCon processor** via a RESTful API, using provided or stored vCons
   * Group a sequence of vCon operations (**vCon processors** to execute) and associated configuration into a **Pipeline** definition
   * Run a **vCon pipeline**, via a RESTful API, using provide or stored vCons
@@ -72,9 +73,9 @@ The North facing interfaces provide the [vCon RESTful APIs](#vcon-restful-api) w
 
 The West facing interfaces provide the [Admin RESTful API](#admin-restfuli-api) which are entry points for adiminstration, configuration and monitoring of the vCon server.
 
-The South facing interfaces are plugable [vCon processors](#vcon-processor-plugins) which perform oprations on one or more vCon either as standalone functions or as wrappers to externally provided services.
+The South facing interfaces are pluggable [vCon processors](#vcon-processor-plugins) which perform oprations on one or more vCon either as standalone functions or as wrappers to externally provided services.
 
-The East facing interfaces are plugable interfaces to database services for:
+The East facing interfaces are pluggable interfaces to database services for:
   * vCon storage
   * vCon server state and configuration
   * vCon Job Queues and Job State
@@ -334,10 +335,24 @@ You add jobs to the queue using the [iPUT queue vCon Storage CRUD API](https://r
 The py_vcon_server Pipeline Server will not start processing the jobs in you queue, until you configure the server to look at your queue.
 The Pipeline Server only looks at the queue names which you configure using the [Admin Server Queue RESTful APIs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers).
 
+## Future Release Features
+
+The following features are next to be implemented for the vCon server.
+[Sponsor us](https://github.com/sponsors/py-vcon) if you would like this development to be sped up or have different priorities.
+
+  * Transactional vCon locking to prevent multiple processors from modifying the same vCon
+  * Pipeline parameters to allow one vCon processor to set options for down stream processors
+  * vCon access control lists
+  * email and Slack notification processors
+  * Resolution of the Python multiprocessing, asyncio and Redis bug
+  * More vCon processor plugins
 
 ## Extending the Vcon Server
 
-TODO
+TODO how to:
+  * Bind a different back end DB
+  * Create new vCon processor plugins
+  * Create new vCon filter plugins
 
 ## Support
 
