@@ -1,12 +1,15 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 import copy
 import json
 import pytest
 import pytest_asyncio
 import fastapi.testclient
+import logging
 import py_vcon_server
 import py_vcon_server.settings
 from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 
+logger = logging.getLogger(__name__)
 
 class ItemIterator():
   def __init__(self):
@@ -78,6 +81,8 @@ async def set_queue_config():
   # and workers created in these unit tests.
   num_workers = py_vcon_server.settings.NUM_WORKERS
   py_vcon_server.settings.NUM_WORKERS = 0
+  #do_bg = py_vcon_server.RUN_BACKGROUND_JOBS
+  #py_vcon_server.RUN_BACKGROUND_JOBS = False
 
   #global VCON_STORAGE
   #vs = py_vcon_server.db.VconStorage.instantiate(py_vcon_server.settings.VCON_STORAGE_URL)
@@ -102,8 +107,9 @@ async def set_queue_config():
 
   yield
 
-  # Restore workers
+  # Restore workers config
   py_vcon_server.settings.NUM_WORKERS = num_workers
+  #py_vcon_server.RUN_BACKGROUND_JOBS = do_bg
 
   py_vcon_server.settings.WORK_QUEUES = saved_config
   print("reset queue settings")
@@ -199,10 +205,16 @@ async def test_server_queue_iterator():
 
 @pytest.mark.asyncio
 async def test_pipeline_jobber(make_inline_audio_vcon):
+  logger.debug("starting test_pipeline_jobber")
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     # delete the test job queues, to clean up any 
     # residual from prior tests
     for q in SERVER_QUEUES.keys():
+      print("deleting queue: {} file: {} test: {}".format(
+          q,
+          __file__,
+         "test_pipeline_jobber"
+         ))
       delete_response = client.delete(
           "/queue/{}".format(q),
           headers={"accept": "application/json"},
@@ -271,6 +283,10 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(put_response.status_code == 200)
     queue_position = put_response.json()
     assert(isinstance(queue_position, int) == 1)
+    print("test {} queued job: {}".format(
+        __file__,
+        queue_position
+      ))
 
 
     job = await jobber.get_job()
@@ -375,9 +391,10 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     await jobber.done()
 
 
-@pytest.mark.skip(reason="BUG: causes \"Event loop is closed\" when run after test_pipeline_jobber") 
+#@pytest.mark.skip(reason="BUG: causes \"Event loop is closed\" when run after test_pipeline_jobber") 
 @pytest.mark.asyncio
 async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
+  logger.debug("starting test_pipeline_jobber_run_one_job")
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     # delete the test job queues, to clean up any 
     # residual from prior tests
