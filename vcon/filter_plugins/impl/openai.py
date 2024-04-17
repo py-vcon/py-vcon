@@ -87,7 +87,7 @@ your license/API key using the following:
     openai.api_key = "your key here"
     openai.Model.list()
 """,
-    default = 'text-davinci-003',
+    default = 'gpt-4-1106-preview',
     examples = [
       'davinci',
       'gpt-4',
@@ -289,6 +289,14 @@ class OpenAIClient():
 
     return(chat_completion_result)
 
+  def close(self):
+    if(hasattr(self, "client")):
+      logger.debug("closing OpenAI client")
+      self.client.close()
+      self.client = None
+    else:
+      logger.debug("None OpenAI client")
+
 
 class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
   """
@@ -447,6 +455,17 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     return(out_vcon)
 
 
+  def __del__(self):
+    """ Close down OpenAI client if created. """
+    if(self.client):
+      logger.debug("OpenAICompletion closing OpenAIClient")
+      self.client.close()
+      self.client = None
+    else:
+      logger.debug("OpenAICompletion None OpenAIClient")
+    super().__del__()
+
+
 chat_completions_init_options_defaults = {
 }
 
@@ -460,7 +479,9 @@ class OpenAIChatCompletionInitOptions(
 
 chat_completion_options_defaults = {
   "jq_result": ".choices[0].message.content",
-  "model": "gpt-4",
+  #"model": "gpt-3.5-turbo-0125",
+  #"model": "gpt-4",
+  #"model": "gpt-4-1106-preview",
   "prompt": "Summarize the transcript in these messages."
   }
 
@@ -497,6 +518,7 @@ class OpenAIChatCompletion(OpenAICompletion):
 
     self.options_type = OpenAIChatCompletionOptions
 
+    logger.debug("OpenAIChatComplete setting client")
     self.client =  OpenAIClient(init_options, self.__class__.__name__)
 
     self.last_stats: typing.Dict[str, int] = {}
@@ -707,4 +729,16 @@ class OpenAIChatCompletion(OpenAICompletion):
       )
 
     return(out_vcon)
+
+
+  def __del__(self):
+    """ Close down OpenAI client if created. """
+    if(self.client):
+      logger.debug("OpenAIChatCompletion closing OpenAIClient")
+      self.client.close()
+      self.client = None
+    else:
+      logger.debug("OpenAIChatCompletion None OpenAIClient")
+    super().__del__()
+
 
