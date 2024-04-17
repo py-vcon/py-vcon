@@ -91,6 +91,10 @@ async def test_registry():
   assert(plugin_whisper is not None)
   init_options = vcon.filter_plugins.FilterPluginInitOptions(model_size = "base")
   assert(plugin_whisper.import_plugin(init_options))
+  # force open AI chat plugin to be instantiated so that we can test delete/close of the client
+  plugin_openai_chat = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion")
+  assert(plugin_openai_chat is not None)
+  assert(plugin_openai_chat.import_plugin({"openai_api_key": "abc"}))
 
   # Verify whisper is the default transcribe type filter plugin
   assert(vcon.filter_plugins.FilterPluginRegistry.get_type_default_name("transcribe") == "whisper")
@@ -115,4 +119,6 @@ async def test_registry():
   except vcon.filter_plugins.FilterPluginModuleNotFound as fp_no_mod_error:
     # should get here
     print("got {}".format(fp_no_mod_error))
+
+  vcon.filter_plugins.FilterPluginRegistry.shutdown_plugins()
 
