@@ -640,19 +640,24 @@ class FilterPluginRegistry:
       raise FilterPluginNotRegistered("Filter plugin default type name {} is not set".format(plugin_type))
     return(FilterPluginRegistry.get(name))
 
-
-#class TranscriptionFilter(FilterPlugin):
-  # TODO abstraction of transcription filters, iterates through dialogs
-  # def __init__(self, options):
-  #   super().__init__(options)
-
-  def iterateDialogs(self, in_vcon: Vcon, scope: str ="new"):
+  @staticmethod
+  def shutdown_plugins():
     """
-    Iterate through the dialogs in the given vCon
-
-    Parameters:
-      scope = "all", "new"
-         "new" = dialogs containing a recording for which there is no transcript
-         "all" = all dialogs which contain a recording
+    Shutdown any of the registered filter_plugins which have been instantiated.
+    This invokes the __del__ method on any of the loaded/instantiated filter_plugins,
+    but does not unregister them.
     """
+    plugin_name_list = FilterPluginRegistry._registry.keys()
+    for plugin_name in plugin_name_list:
+      logger.debug("shutting down plugin: {}".format(plugin_name))
+      plugin = FilterPluginRegistry._registry[plugin_name]
+
+      # Reset load states as we are only shutting down the plugin,
+      # not onregistering it or preventing it from be re-loaded
+      plugin._module_load_attempted = False
+      plugin._module_not_found = False
+      plugin._class_not_found = False
+      # This should cause __del__ to be invoked on the plugin
+      del plugin._plugin
+      plugin._plugin = None
 
