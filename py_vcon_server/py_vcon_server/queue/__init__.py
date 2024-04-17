@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """
    Interface for managing job queues and in progress jobs.
 
@@ -382,7 +383,9 @@ class JobQueue():
 
   async def push_vcon_uuid_queue_job(self,
     name: str,
-    vcon_uuids: [str]
+    vcon_uuids: [str],
+    from_queue: typing.Union[str, None] = None,
+    failed_job: typing.Union[int, None] = None
     ) -> int:
     """
     Push a vCon UUID queue job object onto the named queue.
@@ -410,6 +413,10 @@ class JobQueue():
       raise Exception("currently only support exactly 1 UUID")
 
     job_json = { "job_type": "vcon_uuid", "vcon_uuid": vcon_uuids }
+    if(from_queue and len(from_queue) > 0):
+      job_json["queue"] = from_queue
+    if(failed_job):
+      job_json["failed_job_id"] = failed_job
 
     keys = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name]
     args = [ name, json.dumps(job_json)]
