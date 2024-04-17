@@ -1,4 +1,5 @@
-""" Implementaiton of the Vcon API entry points """
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+""" Implementation of the Vcon API entry points """
 
 import os
 import typing

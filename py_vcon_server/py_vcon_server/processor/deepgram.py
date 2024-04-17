@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Registration for the Deepgram transcription **VconProcessor** """
 import os
 import py_vcon_server.processor

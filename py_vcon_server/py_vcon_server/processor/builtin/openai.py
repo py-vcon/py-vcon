@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ VconProcessor binding for the Vcon OpenAI chat_completion filter_plugin """
 
 import typing
