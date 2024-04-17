@@ -205,11 +205,7 @@ Returns:
 ### OpenAIChatCompletion.\_\_del__
 \_\_del__(self)
 
-
-Teardown/uninitialization method for the plugin
-
-Parameters: None
-
+Close down OpenAI client if created. 
 
 
 ## vcon.filter_plugins.impl.openai.OpenAICompletion
@@ -261,11 +257,7 @@ Returns:
 ### OpenAICompletion.\_\_del__
 \_\_del__(self)
 
-
-Teardown/uninitialization method for the plugin
-
-Parameters: None
-
+Close down OpenAI client if created. 
 
 
 ## vcon.filter_plugins.impl.whisper.Whisper
@@ -518,7 +510,7 @@ your license/API key using the following:
 
 examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
 
-default: "gpt-4"
+default: "gpt-4-1106-preview"
 
 ##### prompt (str)
 the prompt or question to ask about the transcription/text
@@ -641,7 +633,7 @@ your license/API key using the following:
 
 examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
 
-default: "text-davinci-003"
+default: "gpt-4-1106-preview"
 
 ##### prompt (str)
 the prompt or question to ask about the transcription/text
