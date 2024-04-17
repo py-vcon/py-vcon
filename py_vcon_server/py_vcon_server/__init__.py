@@ -3,6 +3,7 @@ import sys
 import time
 import asyncio
 import fastapi
+import vcon
 
 # For dev purposes, look for relative vcon package
 sys.path.append("..")
@@ -22,7 +23,7 @@ logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
 nest_asyncio.apply()
 
-__version__ = "0.1"
+__version__ = "0.1.0"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
@@ -175,6 +176,9 @@ async def shutdown():
   await py_vcon_server.states.SERVER_STATE.unregister()
 
   py_vcon_server.states.SERVER_STATE = None
+
+  # Shutdown the filter_plugins as some create stateful connections
+  vcon.filter_plugins.FilterPluginRegistry.shutdown_plugins()
 
   logger.info("event shutdown completed")
 
