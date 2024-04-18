@@ -10,7 +10,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.1"
+    "version": "0.1.0"
   },
   "paths": {
     "/server/info": {
@@ -1550,7 +1550,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1711727018.668578
+            "example": 1713447044.5755115
           },
           "server": {
             "title": "server key",
@@ -1834,24 +1834,24 @@
             "title": "server version",
             "type": "string",
             "description": "Python package py_vcon_server version number",
-            "default": "0.1"
+            "default": "0.1.0"
           },
           "vcon": {
             "title": "vcon version",
             "type": "string",
             "description": "Python package **py_vcon** version number",
-            "default": "0.3"
+            "default": "0.3.2"
           },
           "start_time": {
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1711727018.6657462
+            "example": 1713447044.5725393
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 82368
+            "example": 231900
           }
         }
       },
@@ -1887,13 +1887,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 82368
+            "example": 231900
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1711727018.666504
+            "example": 1713447044.573392
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -1916,7 +1916,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1711727018.6665332
+            "example": 1713447044.573433
           }
         }
       },
@@ -1988,12 +1988,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-03-29T15:43:38.656+00:00",
+            "example": "2024-04-18T13:30:44.562+00:00",
             "examples": [
-              1711727018,
-              1711727018.6567793,
+              1713447044,
+              1713447044.562938,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-03-29T15:43:38.656+00:00",
+              "2024-04-18T13:30:44.562+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
