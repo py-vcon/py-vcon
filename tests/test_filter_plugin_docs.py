@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Generate filter_plugins README and validate inheritance, interfaces and doc """
 
 import os

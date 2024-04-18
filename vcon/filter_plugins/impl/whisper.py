@@ -1,3 +1,5 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+""" Whisper transcriptiont FilterPlugin implentation """
 import os
 import sys
 import typing

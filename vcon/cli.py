@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """
 Module for vcon command line interface script functions.  Pulled out of vcon CLI
 script file so that it coould more easily be tested with pytest.

@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Deepgram audio transcription filter plugin registration """
 import os
 import datetime

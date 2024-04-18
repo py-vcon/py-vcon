@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Whisper audio transcription filter plugin registration """
 import datetime
 import vcon.filter_plugins

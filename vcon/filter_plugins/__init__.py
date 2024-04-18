@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Vcon module providing frameword for filter plugins which take a Von in and provide a Vcon output """
 from __future__ import annotations
 import importlib
@@ -119,7 +120,7 @@ class FilterPlugin():
   """
   Base class for plugins to operate on a vcon.
 
-  **FilterPlugin** take a **Vcon* and some options as
+  **FilterPlugin** take a **Vcon** and some options as
   input and output a **Vcon** which may be the input **Vcon**
   modified.
 
