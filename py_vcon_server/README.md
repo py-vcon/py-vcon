@@ -331,7 +331,7 @@ Once you have tested your Pipeline line and are happy with its configuration, yo
 The py_vcon_server provides a job queuing capability for the Pipeline Server.
 If you create a job queue with the same name as the Pipeline, jobs will be pulled from the queue one at a time and run through the Pipeline having the same name.
 You create job queues using the [Admin Job Queue RESTful APIs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues).
-You add jobs to the queue using the [iPUT queue vCon Storage CRUD API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD/add_queue_job_queue__name__put).
+You add jobs to the queue using the [PUT queue vCon Storage CRUD API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD/add_queue_job_queue__name__put).
 The py_vcon_server Pipeline Server will not start processing the jobs in you queue, until you configure the server to look at your queue.
 The Pipeline Server only looks at the queue names which you configure using the [Admin Server Queue RESTful APIs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers).
 
@@ -340,21 +340,31 @@ The Pipeline Server only looks at the queue names which you configure using the 
 The following features are next to be implemented for the vCon server.
 [Sponsor us](https://github.com/sponsors/py-vcon) if you would like this development to be sped up or have different priorities.
 
-  * Transactional vCon locking to prevent multiple processors from modifying the same vCon
+  * Transactional vCon locking to prevent multiple processors from modifying a vCon at the same time
   * Pipeline parameters to allow one vCon processor to set options for down stream processors
   * vCon access control lists
-  * email and Slack notification processors
+  * email and Slack notification vCon processors
   * Resolution of the Python multiprocessing, asyncio and Redis bug
   * More vCon processor plugins
 
 ## Extending the Vcon Server
 
-TODO how to:
-  * Bind a different back end DB
+TODO:  Overview of extendable frameworks in the vCon server
+
+How to:
   * Create new vCon processor plugins
+    + [Example VconProcessor wrapper for Deepgram vCon FilterPlugin](py_vcon_server/processor/builtin/deepgram.py)
+    + [Example regisration for Deepgram VconProcessor](py_vcon_server/processor/deepgram.py)
+    + [Abstract VconProcessor interface documentation](py_vcon_server/processor#py_vcon_serverprocessorvconprocessor)
   * Create new vCon filter plugins
+    + [Example vCon FilterPlugin for Deepgram](../vcon/filter_plugins/impl/deepgram.py)
+    + [Example registration for Deepgram FilterPlugin](../vcon/filter_plugins/deepgram.py)
+    + [Abstract FilterPlugin interface documentation](../vcon/filter_plugins#vconfilter_pluginsfilterplugin)
+  * Bind a different back end DB
+    + [Example Redis binding for VconStorage](py_vcon_server/db/redis/__init__.py)
+    + [Example registration of Redis binding for VconStorage](py_vcon_server/db/redis_registration.py)
 
 ## Support
 
-Commercial support for the py_vcon_server is available from [SIPez](www.sipez.com)
+Commercial support for the py_vcon_server is available from [SIPez](http://www.sipez.com)
 
