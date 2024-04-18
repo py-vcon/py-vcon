@@ -179,6 +179,16 @@ async def test_pipeline(make_inline_audio_vcon):
       assert(get_response.status_code == 200)
       vcon_dict = get_response.json()
       print("checking vcon: {}".format(vcon_uuid))
+      if(job_count == NUM_JOBS_TO_RUN - 1 and len(vcon_dict["analysis"]) < 2):
+        # Give the last job time to run and commit
+        print("waiting for last job to commit")
+        await asyncio.sleep(10.0)
+        get_response = client.get(
+          "/vcon/{}".format(vcon_uuid),
+          headers={"accept": "application/json"},
+          )
+        assert(get_response.status_code == 200)
+        vcon_dict = get_response.json()
       assert(len(vcon_dict["analysis"]) == 2)
       assert(vcon_dict["analysis"][0]["type"] == "transcript")
       assert(vcon_dict["analysis"][1]["type"] == "summary")
