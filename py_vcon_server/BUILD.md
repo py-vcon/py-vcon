@@ -61,5 +61,5 @@ For the real/public repo, use the above steps, but substitute step 1 and 3 with 
 
 Commit all of the changes and tag the build release:
 
-    git tag -a vcon_server_x.x [xxxxx_commit_SHA] -m "Vcon Server pypi release"
+    git tag -a py-vcon-server_x.x.x_build [xxxxx_commit_SHA] -m "Vcon Server pypi release"
 
