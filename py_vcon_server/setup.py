@@ -56,7 +56,7 @@ def get_version() -> str:
         versions = version.split(".")
         assert(int(versions[0]) >= 0)
         assert(int(versions[0]) < 10)
-        assert(2 <= len(versions) <= 3)
+        assert(2 <= len(versions) <= 4)
         assert(int(versions[1]) >= 0)
         if(len(versions) == 3):
           assert(int(versions[2]) >= 0)
@@ -88,7 +88,7 @@ setuptools.setup(
       'py_vcon_server.queue',
     ],
   data_files=[
-      # ("py_vcon_server", ["pip_server_requirements.txt"]),
+      ("py_vcon_server", ["pip_server_requirements.txt"])
       # These are needed for unit tests:
       # ("tests", ["tests/hello.wav", "tests/hello.m4a"]),
     ],
