@@ -249,6 +249,10 @@ To start the vCon server use the following commands:
     source testenv
     python3 -m py_vcon_server
 
+The live swagger documentation for the RESTful APIs along with developer test UI is available at the following once the server is started:
+    http://<your_host_ip>:8000/docs
+
+Note: a static image of the swagger documentation (without developer test UI) can be viewed [here](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html).
 
 ## First Steps
    * [1. Installing and Configuring](#installing-and-configuring)
