@@ -120,6 +120,11 @@ jobs:
           # Run all Vcon server package unit tests
           (cd py_vcon_server; pytest -v -rP tests)
 
+      - name: get pip freeze config for successful run
+
+        run: |
+          pip3 freeze
+
       - name: fix pip cache issue by creating dir
         run: |
           mkdir -p -- "$(pip cache dir)"
