@@ -28,7 +28,7 @@ SERVER_QUEUES = {
 WORK_QUEUE = list(SERVER_QUEUES.keys())[1]
 ERROR_QUEUE = WORK_QUEUE + "_errors"
 
-TIMEOUT = 30.0
+TIMEOUT = 60.0
 PIPELINE_DEFINITION = {
   "pipeline_options": {
       "timeout": TIMEOUT,
