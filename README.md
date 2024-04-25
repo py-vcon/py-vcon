@@ -76,6 +76,7 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
 
 ## Vcon Filter Plugins
 
+![FilterPlugin Diagram](../docs/FilterPlugin.png)
 [Filter plugins](vcon/filter_plugins/README.md) are plugin modules that perform some sort of operation on a Vcon.
 They perform an operation on an input Vcon and provide a resulting Vcon as the output.
 A FilterPlugin takes a set of options as input which have defaults, but may be overrided.
