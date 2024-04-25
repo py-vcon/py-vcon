@@ -74,6 +74,7 @@ The North facing interfaces provide the [vCon RESTful APIs](#vcon-restful-api) w
 The West facing interfaces provide the [Admin RESTful API](#admin-restfuli-api) which are entry points for adiminstration, configuration and monitoring of the vCon server.
 
 The South facing interfaces are pluggable [vCon processors](#vcon-processor-plugins) which perform oprations on one or more vCon either as standalone functions or as wrappers to externally provided services.
+
 ![VconProcessor Diagram](docs/VconProcessor.png)
 
 The East facing interfaces are pluggable interfaces to database services for:
@@ -358,21 +359,21 @@ The following features are next to be implemented for the vCon server.
 
 TODO:  Overview of extendable frameworks in the vCon server
 
-How to:
 ![VconProcessor Diagram](docs/VconProcessor.png)
-  * Create new vCon processor plugins
-    + [Example VconProcessor wrapper for Deepgram vCon FilterPlugin](py_vcon_server/processor/builtin/deepgram.py)
-    + [Example regisration for Deepgram VconProcessor](py_vcon_server/processor/deepgram.py)
-    + [Abstract VconProcessor interface documentation](py_vcon_server/processor#py_vcon_serverprocessorvconprocessor)
+How to: Create new vCon processor plugins
+  + [Example VconProcessor wrapper for Deepgram vCon FilterPlugin](py_vcon_server/processor/builtin/deepgram.py)
+  + [Example regisration for Deepgram VconProcessor](py_vcon_server/processor/deepgram.py)
+  + [Abstract VconProcessor interface documentation](py_vcon_server/processor#py_vcon_serverprocessorvconprocessor)
 
 ![FilterPlugin Diagram](../docs/FilterPlugin.png)
-  * Create new vCon filter plugins
-    + [Example vCon FilterPlugin for Deepgram](../vcon/filter_plugins/impl/deepgram.py)
-    + [Example registration for Deepgram FilterPlugin](../vcon/filter_plugins/deepgram.py)
-    + [Abstract FilterPlugin interface documentation](../vcon/filter_plugins#vconfilter_pluginsfilterplugin)
-  * Bind a different back end DB
-    + [Example Redis binding for VconStorage](py_vcon_server/db/redis/__init__.py)
-    + [Example registration of Redis binding for VconStorage](py_vcon_server/db/redis_registration.py)
+How to: Create new vCon filter plugins
+  + [Example vCon FilterPlugin for Deepgram](../vcon/filter_plugins/impl/deepgram.py)
+  + [Example registration for Deepgram FilterPlugin](../vcon/filter_plugins/deepgram.py)
+  + [Abstract FilterPlugin interface documentation](../vcon/filter_plugins#vconfilter_pluginsfilterplugin)
+
+How to: Bind a different backend DB
+  + [Example Redis binding for VconStorage](py_vcon_server/db/redis/__init__.py)
+  + [Example registration of Redis binding for VconStorage](py_vcon_server/db/redis_registration.py)
 
 ## Support
 
