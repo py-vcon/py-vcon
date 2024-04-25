@@ -77,6 +77,7 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
 ## Vcon Filter Plugins
 
 ![FilterPlugin Diagram](docs/FilterPlugin.png)
+
 [Filter plugins](vcon/filter_plugins/README.md) are plugin modules that perform some sort of operation on a Vcon.
 They perform an operation on an input Vcon and provide a resulting Vcon as the output.
 A FilterPlugin takes a set of options as input which have defaults, but may be overrided.
@@ -122,6 +123,11 @@ Parameters:
                      if False throw an exception if a plugin of the same name is already register
 
 Returns: none
+
+Example code:
+  + [Example vCon FilterPlugin for Deepgram](vcon/filter_plugins/impl/deepgram.py)
+  + [Example registration for Deepgram FilterPlugin](vcon/filter_plugins/deepgram.py)
+  + [Abstract FilterPlugin interface documentation](vcon/filter_plugins#vconfilter_pluginsfilterplugin)
 
 ## Third Party API Keys
 Some of the [Vcon Filter Plugins](#Vcon-filter-plugins) use third party provided functionality that require API keys to use or test the full functionality.
