@@ -74,6 +74,7 @@ The North facing interfaces provide the [vCon RESTful APIs](#vcon-restful-api) w
 The West facing interfaces provide the [Admin RESTful API](#admin-restfuli-api) which are entry points for adiminstration, configuration and monitoring of the vCon server.
 
 The South facing interfaces are pluggable [vCon processors](#vcon-processor-plugins) which perform oprations on one or more vCon either as standalone functions or as wrappers to externally provided services.
+![VconProcessor Diagram](docs/VconProcessor.png)
 
 The East facing interfaces are pluggable interfaces to database services for:
   * vCon storage
@@ -82,6 +83,7 @@ The East facing interfaces are pluggable interfaces to database services for:
   * Pipeline definitions and configuration
 
 At the core is the **Pipeline Server** which runs queued vCon jobs through the named [Pipeline](#pipeline-processing)
+![PipelineServer Flow Diagram](docs/PipelineServerFlow.png)
 
 Currently Redis is used for all of these database services.
 The RESTful APIs are all built on FASTapi.
@@ -132,14 +134,15 @@ for running **Pipelines** on the given vCon or indicated vCon in **VconStorage**
 
 ## Pipeline Processing
 
+![vCon PipelineDefinition Diagram](docs/PipelineDefinition.png)
+![vCon Pipeline Processing Diagram](docs/PipelineProcessing.png)
+![vCon Pipeline Server Flow Diagram](docs/PipelineServerFlow.png)
+
 ## vCon Processor Plugins
 
   [Processor plugin framework and plugin instances README](py_vcon_server/processor/README.md)
 
-    template for generated docs
-      TOC
-      iterate through processors and grab doc
-      gather all init_options types and processor options types
+![VconProcessor Diagram](docs/VconProcessor.png)
 
 
 ## Access Control
@@ -356,10 +359,13 @@ The following features are next to be implemented for the vCon server.
 TODO:  Overview of extendable frameworks in the vCon server
 
 How to:
+![VconProcessor Diagram](docs/VconProcessor.png)
   * Create new vCon processor plugins
     + [Example VconProcessor wrapper for Deepgram vCon FilterPlugin](py_vcon_server/processor/builtin/deepgram.py)
     + [Example regisration for Deepgram VconProcessor](py_vcon_server/processor/deepgram.py)
     + [Abstract VconProcessor interface documentation](py_vcon_server/processor#py_vcon_serverprocessorvconprocessor)
+
+![FilterPlugin Diagram](../docs/FilterPlugin.png)
   * Create new vCon filter plugins
     + [Example vCon FilterPlugin for Deepgram](../vcon/filter_plugins/impl/deepgram.py)
     + [Example registration for Deepgram FilterPlugin](../vcon/filter_plugins/deepgram.py)
