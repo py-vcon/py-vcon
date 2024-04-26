@@ -115,6 +115,7 @@ jobs:
         env:
           OPENAI_API_KEY: ${{  secrets.OPENAI_API_KEY }}
           DEEPGRAM_KEY: ${{  secrets.DEEPGRAM_KEY }}
+          PYTHONPATH: tests/processors
         
         run: |
           # Run all Vcon server package unit tests
