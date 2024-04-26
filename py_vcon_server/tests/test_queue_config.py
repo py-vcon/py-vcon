@@ -8,7 +8,7 @@ import py_vcon_server
 import py_vcon_server.settings
 import fastapi.testclient
 
-os.environ["WORK_QUEUES"] = "A:4 DDD:5 C:1 E: F G:a"
+os.environ["WORK_QUEUES"] = "A:4,DDD:5,C:1,E:,F,G:a"
 
 try:
   importlib.reload(py_vcon_server.settings)
@@ -21,7 +21,7 @@ except Exception as e:
   else:
     raise e
 
-os.environ["WORK_QUEUES"] = "A:4 DDD:5 C:1 E: F G:1:4"
+os.environ["WORK_QUEUES"] = "A:4,DDD:5,C:1,E:,F,G:1:4"
 
 try:
   importlib.reload(py_vcon_server.settings)
@@ -38,7 +38,7 @@ except Exception as e:
 async def test_queue_config():
   # Need to reset WORK_QUEUES dict???
   py_vcon_server.settings.WORK_QUEUES = {}
-  os.environ["WORK_QUEUES"] = "A:4 DDD:5 C:1 E: F G:14"
+  os.environ["WORK_QUEUES"] = "A:4,DDD:5,C:1,E:,F,G:14"
   importlib.reload(py_vcon_server.settings)
 
   print("WORK_QUEUES in test: {}".format(py_vcon_server.settings.WORK_QUEUES))
