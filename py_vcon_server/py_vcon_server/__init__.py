@@ -23,7 +23,7 @@ logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
 nest_asyncio.apply()
 
-__version__ = "0.1.0.alpha1"
+__version__ = "0.1.0.alpha2"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
@@ -41,6 +41,16 @@ py_vcon_server.db.import_bindings(
   py_vcon_server.db.__name__ + ".", # binding module name prefix
   "DB" # label
   )
+
+# Load site specific plugins
+for path in py_vcon_server.settings.PLUGIN_PATHS:
+  if(path and len(path) > 0):
+    logger.info("checking for plugins in: \"{}\"".format(path))
+    py_vcon_server.db.import_bindings(
+      path,
+      "", # module prefix, allowing anything
+      "site" # label
+      )
 
 # The following imports depend upon the DB binding.
 # So they must be done afterwards
