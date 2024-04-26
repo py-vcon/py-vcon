@@ -43,11 +43,12 @@ py_vcon_server.db.import_bindings(
   )
 
 # Load site specific plugins
+logger.debug("PLUGIN_PATHS: {}".format(py_vcon_server.settings.PLUGIN_PATHS))
 for path in py_vcon_server.settings.PLUGIN_PATHS:
   if(path and len(path) > 0):
     logger.info("checking for plugins in: \"{}\"".format(path))
     py_vcon_server.db.import_bindings(
-      path,
+      [path],
       "", # module prefix, allowing anything
       "site" # label
       )
