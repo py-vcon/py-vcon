@@ -36,7 +36,7 @@ TBD
 
   Base class for plugins to operate on a vcon.
 
-  **FilterPlugin** take a **Vcon* and some options as
+  **FilterPlugin** take a **Vcon** and some options as
   input and output a **Vcon** which may be the input **Vcon**
   modified.
 
