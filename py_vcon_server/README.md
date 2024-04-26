@@ -188,7 +188,8 @@ The unit tests for the server can be run using the following command in this dir
   + **LOGGING_CONFIG_FILE** -  (defaults to: "<install path>/logging.config")
   + **LAUNCH_VCON_API** -  Enable vCon RESTful APIs True/False(defaults to: True)
   + **LAUNCH_ADMIN_API** - Enable Admin RESTful APIs True/False (defaults to: True)
-  + **WORK_QUEUES** -  (defaults to: "{}")
+  + **WORK_QUEUES** -  List of job queues the pipeline server is to pull jobs from.  If no queue names are specified, the pipeline server will not run any jobs.  This list of queue names can be [added](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/set_server_queue_properties_server_queue__name__post) and [removed](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/delete_server_queue_server_queue__name__delete) on a live server using the [Admin Server set of RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers).  The environmental variable has the format of comma separated queue names, each with an optional colon separated weith integer.  The weigh specifies the number of jobs to pull from the queue before iterating to the next queue.  Example: "a:4,b"  (defaults to: "")
+  + **PLUGIN_PATHS** - comma separated list of absolute or relative path names in which to load plugins ([filter_plugins](../README.md#adding-vcon-filter-plugins) or [vCon Processor](#extending-the-vcon-server)).  (defaults to: "")
 
 ## Installing and Configuring
 
@@ -366,9 +367,14 @@ How to create new vCon processor plugins
   + [Example regisration for Deepgram VconProcessor](py_vcon_server/processor/deepgram.py)
   + [Abstract VconProcessor interface documentation](py_vcon_server/processor#py_vcon_serverprocessorvconprocessor)
 
+Note: to load your proprietary vCon plugins, you need to add the path to your plugin registration to the [PLUGIN_PATHS environemental variable](#environmental-variables).  Plugins are only loaded upon startup.
+
+
 ![FilterPlugin Diagram](../docs/FilterPlugin.png)
 
 [How to create new vCon filter plugins](../README.md#adding-vcon-filter-plugins)
+
+Note: to load your proprietary filter_plugins, you need to add the path to your plugin registration to the [PLUGIN_PATHS environemental variable](#environmental-variables).  Plugins are only loaded upon startup.
 
 How to bind a different backend DB
   + [Example Redis binding for VconStorage](py_vcon_server/db/redis/__init__.py)
