@@ -20,11 +20,13 @@ if(not isinstance(NUM_WORKERS, int)):
   print("Warning: NUM_WORKERS: {} should be an int, setting to: 0".format(NUM_WORKERS))
   NUM_WORKERS = 0
 
+PLUGIN_PATHS = os.getenv("PLUGIN_PATHS", "").split(",")
+
 # parse out optional weights from name for each queue
 manager = multiprocessing.Manager()
 #WORK_QUEUES: multiprocessing.managers.DictProxy = manager.dict({})
 WORK_QUEUES = {}
-queue_tokens = os.getenv("WORK_QUEUES", "").split()
+queue_tokens = os.getenv("WORK_QUEUES", "").split(",")
 for token in queue_tokens:
   name_weight = token.split(":")
   name = name_weight[0]
