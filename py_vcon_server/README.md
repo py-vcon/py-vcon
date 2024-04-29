@@ -171,7 +171,7 @@ It can be generated like the following command line:
     export OPENAI_API_KEY=bbbbbbbbbbbbb
     export HOSTNAME=http://0.0.0.0:8000
     export VCON_STORAGE_URL=redis://<redis_host_ip>:6379
-    export PYTHONPATH=.:..:tests/processors
+    export PYTHONPATH=.
     EOF
 
 The unit tests for the server can be run using the following command in this directory:
@@ -197,7 +197,6 @@ The weight specifies the number of jobs to pull from the queue before iterating 
 Example: "a:4,b"
 (defaults to: "")
   + **PLUGIN_PATHS** - comma separated list of absolute or relative path names from which to load plugin registrations ([filter_plugins](../README.md#adding-vcon-filter-plugins) or [vCon Processor](#extending-the-vcon-server)).
-You may also need to include these paths in your **PYTHONPATH** environment variable as well (which uses a colon separator).
 (defaults to: "")
 
 ## Installing and Configuring
@@ -218,8 +217,6 @@ The following will start a shell in the Docker container and start the Redis CLI
     redis-cli -h localhost -p 6379
 
 The Redis server will be bound to to the Docker server host's network on the default Redis port (6379).
-If you would like a shell on the Redis server container to use the Redis CLI to query the DB, the following will create a shell on the container:
-    ./dockerctl.sh shell
 
 If you do not setup your Redis server in the above configuration, you will need to setup your enviromental variables to indicate other wise with something like the following:
     VCON_STORAGE_URL=redis://<your_host>:<your_port>
@@ -255,7 +252,7 @@ To start the vCon server use the following commands:
 ### Run py_vcon_server From Cloned Repo
 If you which to run the vCon server in a development mode, directly from the git clone, from the [py_vcon_server](.) directory, setup your environment variables using the following:
     cat << EOF >> testenv
-    export PYTHONPATH=".:.."
+    export PYTHONPATH="."
     export REST_URL="http://<your_host_ip>:8000"
     export OPENAI_API_KEY="your_openapi_key_here"
     export DEEPGRAM_KEY="your_deepgram_api_key_here"
