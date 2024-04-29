@@ -20,8 +20,13 @@ def import_bindings(path: typing.List[str], module_prefix: str, label: str):
     path,
     module_prefix
     ):
-    logger.info("{} module load: {}".format(label, module_name))
-    importlib.import_module(module_name)
+    #logger.debug("finder type: {} dir: {}".format(type(finder), dir(finder)))
+    mod_found = finder.find_module(module_name)
+    #logger.debug("mod_found type: {} dir: {}".format(type(mod_found), dir(mod_found)))
+    logger.info("{} module load: {} is_package: {}".format(label, module_name, is_package))
+    # Use finder to load the module as import_module will fail if path is not in PYTHONPATH
+    mod_found.load_module(module_name)
+    #importlib.import_module(module_name)
 
 
 # Should this be a class or global methods??
