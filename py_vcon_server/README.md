@@ -209,19 +209,23 @@ The vCon server requires some of the JSON commands in the Redis stack server.
 The following instructions are for running the configuration with two Docker containers: one for the Redis server, one for the vCon server.
 
 The following docker command will retrieve the Redis stack server image and run the container:
+
     docker run -d --name redis-stack-server -p 6379:6379 redis/redis-stack-server:latest
 
 For developers, it may be useful to create a shell on the Redis server to use the Redis CLI.
 The following will start a shell in the Docker container and start the Redis CLI:
+
     docker exec -it redis-stack-server /bin/bash
     redis-cli -h localhost -p 6379
 
 The Redis server will be bound to to the Docker server host's network on the default Redis port (6379).
 
 If you do not setup your Redis server in the above configuration, you will need to setup your enviromental variables to indicate other wise with something like the following:
+
     VCON_STORAGE_URL=redis://<your_host>:<your_port>
 
 For example:
+
     echo VCON_STORAGE_URL=redis://192.168.0.1:8765 >> testenv
 
 The py_vcon_server can be run in another container or directly on the Docker server host.
@@ -236,9 +240,11 @@ Other Python platforms are untested.
 
 ### Run py_vcon_server Package
 Install the py_vcon_server package:
+
     pip3 install py_vcon_server
 
 If you are running the vCon server directly from the package, setup your environment like the following:
+
     cat << EOF >> testenv
     export REST_URL="http://<your_host_ip>:8000"
     export OPENAI_API_KEY="your_openapi_key_here"
@@ -246,11 +252,13 @@ If you are running the vCon server directly from the package, setup your environ
     EOF
 
 To start the vCon server use the following commands:
+
     source testenv
     python3 -m py_vcon_server
 
 ### Run py_vcon_server From Cloned Repo
 If you which to run the vCon server in a development mode, directly from the git clone, from the [py_vcon_server](.) directory, setup your environment variables using the following:
+
     cat << EOF >> testenv
     export PYTHONPATH="."
     export REST_URL="http://<your_host_ip>:8000"
@@ -260,10 +268,12 @@ If you which to run the vCon server in a development mode, directly from the git
 
 
 To start the vCon server use the following commands:
+
     source testenv
     python3 -m py_vcon_server
 
 The live swagger documentation for the RESTful APIs along with developer test UI is available at the following once the server is started:
+
     http://<your_host_ip>:8000/docs
 
 Note: a static image of the swagger documentation (without developer test UI) can be viewed [here](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html).
