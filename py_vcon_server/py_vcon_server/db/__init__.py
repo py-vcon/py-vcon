@@ -14,7 +14,7 @@ class VconNotFound(Exception):
   """ Rasied when the vCon for the given UUID does not exist """
 
 
-def import_bindings(path: str, module_prefix: str, label: str):
+def import_bindings(path: typing.List[str], module_prefix: str, label: str):
   """ Import the modules and interface registrations """
   for finder, module_name, is_package in pkgutil.iter_modules(
     path,
