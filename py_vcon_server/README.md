@@ -171,6 +171,7 @@ It can be generated like the following command line:
     export OPENAI_API_KEY=bbbbbbbbbbbbb
     export HOSTNAME=http://0.0.0.0:8000
     export REDIS_URL=redis://<redis_host_ip>:6379
+    export PYTHONPATH=.:..:tests/processors
     EOF
 
 The unit tests for the server can be run using the following command in this directory:
@@ -196,7 +197,7 @@ The weight specifies the number of jobs to pull from the queue before iterating 
 Example: "a:4,b"
 (defaults to: "")
   + **PLUGIN_PATHS** - comma separated list of absolute or relative path names from which to load plugin registrations ([filter_plugins](../README.md#adding-vcon-filter-plugins) or [vCon Processor](#extending-the-vcon-server)).
-You may also need to include these paths in your PYTHONPATH environment variable as well (which uses a colon separator).
+You may also need to include these paths in your **PYTHONPATH** environment variable as well (which uses a colon separator).
 (defaults to: "")
 
 ## Installing and Configuring
@@ -204,14 +205,17 @@ You may also need to include these paths in your PYTHONPATH environment variable
 The following installation and configuration instructions are intended for development and testing purposes only.
 This is by no means instructions for a secure install.
 These instructions are intended for a setup where the developer is running a Docker server on a local host.
-It is most convenient to run two docker containers, one for the Redis server and a second for the vCon server.
-The following instructions are for this configuration.
+It is most convenient to run two Docker containers, one for the Redis server and a second for the vCon server.
+The vCon server requires some of the JSON commands in the Redis stack server.
+The following instructions are for running the configuration with two Docker containers: one for the Redis server, one for the vCon server.
 
-The [Dockerfile](docker_redis/Dockerfile) for the Redis server can be found in the [docker_redis](docker_redis) directory.
-The following comments will build the image and run the container:
-    cd docker_redis
-    ./dockerctl.sh build
-    ./dockerctl.sh run
+The following docker command will retrieve the Redis stack server image and run the container:
+    docker run -d --name redis-stack-server -p 6379:6379 redis/redis-stack-server:latest
+
+For developers, it may be useful to create a shell on the Redis server to use the Redis CLI.
+The following will start a shell in the Docker container and start the Redis CLI:
+    docker exec -it redis-stack-server /bin/bash
+    redis-cli -h localhost -p 6379
 
 The Redis server will be bound to to the Docker server host's network on the default Redis port (6379).
 If you would like a shell on the Redis server container to use the Redis CLI to query the DB, the following will create a shell on the container:
