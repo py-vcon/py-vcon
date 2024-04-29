@@ -2,7 +2,7 @@
 
 # configuration
 
-IMAGE_NAME="vcon_core_pydev3_8"
+IMAGE_NAME="dev_redis"
 CONTAINER_NAME="${IMAGE_NAME}_container"
 CONTAINER_HOSTNAME="${IMAGE_NAME}_${HOSTNAME}"
 
