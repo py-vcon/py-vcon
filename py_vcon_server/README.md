@@ -314,7 +314,7 @@ You will have to change the examples to your specifics.
 
 * Use the **vcon** CLI:
 
-    vcon -i hello.vcon -p 192.168.0.2 8000
+      vcon -i hello.vcon -p 192.168.0.2 8000
 
 * Use vCon server [POST /vcon entry point](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Pipelines).
 For test purposes, you can use the swagger docuementation test interface:
@@ -326,11 +326,11 @@ For test purposes, you can use the swagger docuementation test interface:
 
 * Use **wget**:
 
-    wget --method POST --header="Content-Type: application/json" --body-file=hello.vcon http://192.168.0.100:8000/vcon
+      wget --method POST --header="Content-Type: application/json" --body-file=hello.vcon http://192.168.0.100:8000/vcon
 
 * Use **curl**:
 
-    curl -i -X POST http://192.168.0.100:8000/vcon -H "Content-Type: application/json" --data-binary "@hello.vcon"
+      curl -i -X POST http://192.168.0.100:8000/vcon -H "Content-Type: application/json" --data-binary "@hello.vcon"
 
 Note: If you do not know the UUID for your vCon you can look at it in a text editor.
 Alternatively, you can query the JSON vCon using the jq command:
