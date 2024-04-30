@@ -312,23 +312,23 @@ To perform an operation on a stored vCon you will want to remember its UUID.
 The following examples assume that your vcon is contained locally in a file call hello.vcon, your vCon server is configured to run the vCon RESTful API on the IP address: 192.168.0.2 and is bound to port 8000.
 You will have to change the examples to your specifics.
 
-1) Use the vcon CLI:
+* Use the **vcon** CLI:
 
     vcon -i hello.vcon -p 192.168.0.2 8000
 
-2) Use vCon server [POST /vcon entry point](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Pipelines).
-iFor test purposes, you can use the swagger docuementation test interface:
+* Use vCon server [POST /vcon entry point](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Pipelines).
+For test purposes, you can use the swagger docuementation test interface:
 
-  1) Go to http://192.168.0.2:8000/docs#/vCon%3A%20Storage%20CRUD/post_vcon_vcon_post
-  2) Click the **Try it out** button
-  2) Copy and paste your vCon into the **Request Body** field
-  4) Click the **Execute** button
+    1) Go to http://192.168.0.2:8000/docs#/vCon%3A%20Storage%20CRUD/post_vcon_vcon_post
+    2) Click the **Try it out** button
+    3) Copy and paste your vCon into the **Request Body** field
+    4) Click the **Execute** button
 
-3) Use wget:
+* Use **wget**:
 
     wget --method POST --header="Content-Type: application/json" --body-file=hello.vcon http://192.168.0.100:8000/vcon
 
-4) Use curl:
+* Use **curl**:
 
     curl -i -X POST http://192.168.0.100:8000/vcon -H "Content-Type: application/json" --data-binary "@hello.vcon"
 
