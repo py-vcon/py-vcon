@@ -281,9 +281,10 @@ Note: a static image of the swagger documentation (without developer test UI) ca
 ## First Steps
    * [1. Installing and Configuring](#installing-and-configuring)
    * [2. Build a vCon](#build-a-vcon)
-   * [3. Process a vCon](#process-a-vcon)
-   * [4. Create and Use a Pipeline](#create-and-use_a-pipeline)
-   * [5. Create a Job Queue and Queue a Job](#create-a-job-queue-and-queue-a-job)
+   * [3  Store a vCon on the server](#store-a-vcon-on-the-server)
+   * [4. Process a vCon](#process-a-vcon)
+   * [5. Create and Use a Pipeline](#create-and-use_a-pipeline)
+   * [6. Create a Job Queue and Queue a Job](#create-a-job-queue-and-queue-a-job)
 
 ### Build a vCon
 
@@ -302,6 +303,39 @@ There are a number of ways that you can build a vCon:
   * Create your own JSON vCon by hand or using other tools
 
   * Use an [existing vCon](../tests/hello.vcon)
+
+### Store a vCon on the server
+
+There are a number of ways to put your vCon on the server and store it.
+vCons are stored using it's UUID as the key.
+To perform an operation on a stored vCon you will want to remember its UUID.
+The following examples assume that your vcon is contained locally in a file call hello.vcon, your vCon server is configured to run the vCon RESTful API on the IP address: 192.168.0.2 and is bound to port 8000.
+You will have to change the examples to your specifics.
+
+1) Use the vcon CLI:
+
+    vcon -i hello.vcon -p 192.168.0.2 8000
+
+2) Use vCon server [POST /vcon entry point](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Pipelines).
+iFor test purposes, you can use the swagger docuementation test interface:
+
+  1) Go to http://192.168.0.2:8000/docs#/vCon%3A%20Storage%20CRUD/post_vcon_vcon_post
+  2) Click the **Try it out** button
+  2) Copy and paste your vCon into the **Request Body** field
+  4) Click the **Execute** button
+
+3) Use wget:
+
+    wget --method POST --header="Content-Type: application/json" --body-file=hello.vcon http://192.168.0.100:8000/vcon
+
+4) Use curl:
+
+    curl -i -X POST http://192.168.0.100:8000/vcon -H "Content-Type: application/json" --data-binary "@hello.vcon"
+
+Note: If you do not know the UUID for your vCon you can look at it in a text editor.
+Alternatively, you can query the JSON vCon using the jq command:
+
+    jq ".uuid" hello.vcon
 
 ### Process a vCon
 
