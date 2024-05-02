@@ -283,7 +283,7 @@ Note: a static image of the swagger documentation (without developer test UI) ca
    * [2. Build a vCon](#build-a-vcon)
    * [3  Store a vCon on the server](#store-a-vcon-on-the-server)
    * [4. Process a vCon](#process-a-vcon)
-   * [5. Create and Use a Pipeline](#create-and-use_a-pipeline)
+   * [5. Create and Use a Pipeline](#create-and-use-a-pipeline)
    * [6. Create a Job Queue and Queue a Job](#create-a-job-queue-and-queue-a-job)
 
 ### Build a vCon
