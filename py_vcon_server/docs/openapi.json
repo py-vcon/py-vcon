@@ -10,7 +10,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.1.0"
+    "version": "0.1.0.alpha2"
   },
   "paths": {
     "/server/info": {
@@ -1199,6 +1199,99 @@
         }
       }
     },
+    "/process/{vcon_uuid}/set_parameters": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "set VconProcessorIO parameters from process options input",
+        "description": "set VconProcessorIO parameters from the parameters dict field provided in the processor options",
+        "operationId": "run_vcon_processor_process__vcon_uuid__set_parameters_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetParametersOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process/{vcon_uuid}/whisper_base": {
       "post": {
         "tags": [
@@ -1550,7 +1643,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1713447044.5755115
+            "example": 1715812382.4262497
           },
           "server": {
             "title": "server key",
@@ -1834,7 +1927,7 @@
             "title": "server version",
             "type": "string",
             "description": "Python package py_vcon_server version number",
-            "default": "0.1.0"
+            "default": "0.1.0.alpha2"
           },
           "vcon": {
             "title": "vcon version",
@@ -1846,12 +1939,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1713447044.5725393
+            "example": 1715812382.42329
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 231900
+            "example": 303953
           }
         }
       },
@@ -1887,13 +1980,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 231900
+            "example": 303953
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1713447044.573392
+            "example": 1715812382.4241374
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -1916,9 +2009,27 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1713447044.573433
+            "example": 1715812382.4241805
           }
         }
+      },
+      "SetParametersOptions": {
+        "title": "SetParametersOptions",
+        "type": "object",
+        "properties": {
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "parameters": {
+            "title": "dict of parameters to set in the output from VconProcessor",
+            "type": "object",
+            "default": {}
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
       },
       "ValidationError": {
         "title": "ValidationError",
@@ -1988,12 +2099,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-04-18T13:30:44.562+00:00",
+            "example": "2024-05-15T22:33:02.413+00:00",
             "examples": [
-              1713447044,
-              1713447044.562938,
+              1715812382,
+              1715812382.4136794,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-04-18T13:30:44.562+00:00",
+              "2024-05-15T22:33:02.413+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -2074,6 +2185,11 @@
               "type": "boolean"
             },
             "default": []
+          },
+          "parameters": {
+            "title": "dict of parameters passed as input to and output from VconProcessor",
+            "type": "object",
+            "default": {}
           }
         },
         "description": "Serializable Output results from a VconProcessor "
