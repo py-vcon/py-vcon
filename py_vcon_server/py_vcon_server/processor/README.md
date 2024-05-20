@@ -10,18 +10,21 @@
    * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
+   * [py_vcon_server.processor.builtin.set_parameters.SetParameters](#py_vcon_serverprocessorbuiltinset_parameterssetparameters)
    * [py_vcon_server.processor.builtin.whisper.Whisper](#py_vcon_serverprocessorbuiltinwhisperwhisper)
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
    * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
+   * [py_vcon_server.processor.builtin.set_parameters.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinset_parametersvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.whisper.WhisperInitOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperinitoptions)
 
  + [Processor Options Classes](#processor-options-classes)
    * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
+   * [py_vcon_server.processor.builtin.set_parameters.SetParametersOptions](#py_vcon_serverprocessorbuiltinset_parameterssetparametersoptions)
    * [py_vcon_server.processor.builtin.whisper.WhisperOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperoptions)
 
 
@@ -151,6 +154,24 @@ Methods:
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
+## py_vcon_server.processor.builtin.set_parameters.SetParameters 
+
+ - **Name:** set_parameters 
+ - **Version:** 0.0.1
+ - **Summary:** set VconProcessorIO parameters from process options input
+
+set VconProcessorIO parameters from the parameters dict field provided in the processor options
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.set_parameters.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinset_parametersvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.set_parameters.SetParametersOptions](#py_vcon_serverprocessorbuiltinset_parameterssetparametersoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: SetParametersInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SetParametersOptions)
+
+
 ## py_vcon_server.processor.builtin.whisper.Whisper 
 
  - **Name:** whisper_base 
@@ -231,7 +252,7 @@ example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 default: None
 
 
-## py_vcon_server.processor.builtin.whisper.WhisperInitOptions 
+## py_vcon_server.processor.builtin.set_parameters.WhisperInitOptions 
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
@@ -442,6 +463,31 @@ Index to which vCon in the VconProcessorIO is to be used for input
 example: 
 
 default: 0
+
+
+## py_vcon_server.processor.builtin.set_parameters.SetParametersOptions 
+
+ - **Summary:** SetParametersOptions
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+##### parameters (typing.Dict[str, typing.Any])
+dict of parameters to set in the output from VconProcessor
+None
+
+example: 
+
+default: {}
 
 
 ## py_vcon_server.processor.builtin.whisper.WhisperOptions 
