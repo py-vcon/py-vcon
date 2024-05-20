@@ -112,7 +112,6 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   assert(rw_io_object._vcon_locks[0] == "fake_key")
   assert(not rw_io_object._vcon_update[0])
 
-
   await rw_io_object.update_vcon(vcon2_object)
   assert(len(rw_io_object._vcons) == 1)
   assert(len(rw_io_object._vcon_locks) == 1)
@@ -133,4 +132,19 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   assert(rw_io_object._vcon_update[0])
   assert(rw_io_object._vcon_update[1])
   assert(len((await rw_io_object.get_vcon(1)).parties) == 0)
+
+  # test parameters
+  try:
+    rw_io_object.get_parameter("foo")
+    raise Exception("Expected throw of parameter foo not found")
+
+  except KeyError as foo_not_found:
+    # expected
+    pass
+
+  rw_io_object.set_parameter("foo", "bar")
+  assert(rw_io_object.get_parameter("foo") == "bar")
+  rw_io_object.set_parameter("x", 5)
+  assert(rw_io_object.get_parameter("x") == 5)
+
 
