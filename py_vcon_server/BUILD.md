@@ -63,3 +63,9 @@ Commit all of the changes and tag the build release:
 
     git tag -a py-vcon-server_x.x.x_build [xxxxx_commit_SHA] -m "Vcon Server pypi release"
 
+Note: it may be necessary to push the tag.  You can test it out, before actually pushing using:
+
+    git push --tags --dry-run
+
+Then do it again without the --dry-run option if it looks right.
+
