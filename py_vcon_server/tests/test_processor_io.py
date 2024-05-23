@@ -147,4 +147,15 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   rw_io_object.set_parameter("x", 5)
   assert(rw_io_object.get_parameter("x") == 5)
 
+  format_options = {
+      "input_vcon_index": "{x}",
+      "yyy": "{foo} {foo} {x}"
+    }
+  generic_options = py_vcon_server.processor.VconProcessorOptions(format_options = format_options)
+
+  formated_options = rw_io_object.format_parameters_to_options(generic_options)
+  assert(isinstance(formated_options, py_vcon_server.processor.VconProcessorOptions))
+  assert(isinstance(formated_options.input_vcon_index, int))
+  assert(formated_options.input_vcon_index == 5)
+  assert(formated_options.yyy == "bar bar 5")
 
