@@ -506,6 +506,43 @@ class VconProcessorIO():
     return(self._parameters[name])
 
 
+  def format_parameters_to_options_dict(
+      self,
+      options: typing.Dict[str, typing.Any]
+    ) -> None:
+    """
+    Recurse through options dict tree and apply formatting to
+    string values using parameters as input to format.
+    """
+
+    formats = options.get("format_options", {})
+    for name in formats.keys():
+      # Do not recurse
+      if(name != "format_options"):
+        options[name] = formats[name].format(**self._parameters)
+
+
+  def format_parameters_to_options(
+      self,
+      options: VconProcessorOptions
+    ) -> VconProcessorOptions:
+    """
+    Format/apply parameters to string values in options
+    """
+    if(isinstance(options, dict)):
+      self.format_parameters_to_options_dict(options)
+      return(options)
+
+    elif(isinstance(options, VconProcessorOptions)):
+      options_dict = options.dict()
+      self.format_parameters_to_options_dict(options_dict)
+      # Reconstruct to get pydantic to do type coersion/conversions and validations
+      return(options.__class__(**options_dict))
+
+    else:
+      raise Exception("options type: {} not dict or VconProcessorOptions".format(type(options)))
+
+
   async def get_output(self) -> VconProcessorOutput:
     """ Get **VconProcessorOutput** serializable output form of **VconProcessorIO** """
     out_vcons = []
@@ -646,32 +683,6 @@ class VconProcessor():
     self._version = version
     self._processor_options_class = processor_options_class
     self._may_modify_vcons = may_modify_vcons
-
-
- #  @staticmethod
- #  def apply_parameters_to_dict(parameters: dict, options: dict) -> dict:
- #    """
- #    Recurse through options dict tree and applyt formatting to 
- #    string values using parameters as input to format.
- #    """
- #    raise Exception("not implemented")
-
-
- #  @staticmethod
- #  def apply_parameters_to_options(parameters: dict, options: VconProcessorOptions) -> VconProcessorOptions:
- #    """
- #    Format/apply parameters to string values in options
- #    """
- #    if(isinstance(options, dict)):
- #      return(VconProcessor.apply_parameters_to_dict(parameters, copy.deepcopy(options)))
-
- #    elif(isinstance(options, VconProcessorOptions)):
- #      de_parameterized_options_dict = VconProcessor.apply_parameters_to_dict(parameters, options.dict())
- #      # Reconstruct to get pydantic to do type conversions and validations
- #      return(options.__class__(**de_parameterized_options_dict))
-
- #    else:
- #      raise Exception("options type: {} not dict or VconPRocessorOptions".format(type(options)))
 
 
   async def process(
