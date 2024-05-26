@@ -319,6 +319,12 @@ class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
     description = "Index to which vCon in the VconProcessorIO is to be used for input",
     default = 0
     )
+
+  format_options: typing.Dict[str, str] = pydantic.Field(
+    title = "set VconProcessorOptions fields with formated strings build from parameters",
+    description = "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+    default = {}
+    )
   #rename_output: dict[str, str]
 
 class VconProcessorOutput(pydantic.BaseModel, extra=pydantic.Extra.allow):
