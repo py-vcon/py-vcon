@@ -1577,6 +1577,15 @@
             "type": "integer",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
           }
         },
         "description": "processor options class for **processor** method of VconProcessor wrapper for Deepgram **FilterPlugin**"
@@ -1643,7 +1652,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1715812382.4262497
+            "example": 1716735798.6019034
           },
           "server": {
             "title": "server key",
@@ -1792,6 +1801,15 @@
             "type": "integer",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
           }
         },
         "description": "processor options class for **processor** method of VconProcessor wrapper for OpenAIChatCompletion **FilterPlugin**"
@@ -1939,12 +1957,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1715812382.42329
+            "example": 1716735798.599186
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 303953
+            "example": 330914
           }
         }
       },
@@ -1980,13 +1998,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 303953
+            "example": 330914
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1715812382.4241374
+            "example": 1716735798.5998907
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -2009,7 +2027,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1715812382.4241805
+            "example": 1716735798.5999196
           }
         }
       },
@@ -2022,6 +2040,15 @@
             "type": "integer",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
           },
           "parameters": {
             "title": "dict of parameters to set in the output from VconProcessor",
@@ -2099,12 +2126,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-05-15T22:33:02.413+00:00",
+            "example": "2024-05-26T15:03:18.589+00:00",
             "examples": [
-              1715812382,
-              1715812382.4136794,
+              1716735798,
+              1716735798.5892067,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-05-15T22:33:02.413+00:00",
+              "2024-05-26T15:03:18.589+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -2162,6 +2189,15 @@
             "type": "integer",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
           }
         },
         "description": "Base class options for **VconProcessor.processor** method "
@@ -2251,6 +2287,15 @@
             "type": "integer",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
           }
         },
         "description": "processor options class for **processor** method of VconProcessor wrapper for Whisper **FilterPlugin**"
