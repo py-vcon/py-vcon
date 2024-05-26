@@ -292,6 +292,14 @@ example:
 
 default: 0
 
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
 
 ## py_vcon_server.processor.builtin.deepgram.DeepgramOptions 
 
@@ -335,6 +343,14 @@ Index to which vCon in the VconProcessorIO is to be used for input
 example: 
 
 default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
 
 
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions 
@@ -464,6 +480,14 @@ example:
 
 default: 0
 
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
 
 ## py_vcon_server.processor.builtin.set_parameters.SetParametersOptions 
 
@@ -480,6 +504,14 @@ Index to which vCon in the VconProcessorIO is to be used for input
 example: 
 
 default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
 
 ##### parameters (typing.Dict[str, typing.Any])
 dict of parameters to set in the output from VconProcessor
@@ -547,6 +579,14 @@ Index to which vCon in the VconProcessorIO is to be used for input
 example: 
 
 default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
 
 
 
