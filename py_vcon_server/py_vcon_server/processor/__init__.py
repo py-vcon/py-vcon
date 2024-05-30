@@ -999,7 +999,8 @@ class FilterPluginProcessor(VconProcessor):
     Run the indicated **Vcon** through the self._plugin_name **Vcon** **filter_plugin**
     """
 
-    index = options.input_vcon_index
+    formatted_options = processor_input.format_parameters_to_options(options)
+    index = formatted_options.input_vcon_index
     in_vcon: vcon.Vcon = await processor_input.get_vcon(index)
     if(in_vcon is None):
       raise Exception("Vcon not found for index: {}".format(index))
@@ -1014,7 +1015,7 @@ class FilterPluginProcessor(VconProcessor):
       num_dialog
       ))
 
-    out_vcon = await in_vcon.filter(self.plugin_name, options)
+    out_vcon = await in_vcon.filter(self.plugin_name, formatted_options)
 
     await processor_input.update_vcon(out_vcon)
 
