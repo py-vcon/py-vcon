@@ -1199,6 +1199,99 @@
         }
       }
     },
+    "/process/{vcon_uuid}/send_email": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "VconProcessor to send email message",
+        "description": "used to send SMTP messages using content from vCon or VconProcessorIP parameters.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__send_email_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process/{vcon_uuid}/set_parameters": {
       "post": {
         "tags": [
@@ -1652,7 +1745,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1716735798.6019034
+            "example": 1717101686.1201558
           },
           "server": {
             "title": "server key",
@@ -1933,6 +2026,98 @@
           }
         }
       },
+      "SendEmailOptions": {
+        "title": "SendEmailOptions",
+        "type": "object",
+        "properties": {
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          },
+          "smtp_host": {
+            "title": "SMTP server host to connect to, to send email messages",
+            "type": "string",
+            "description": "Should be set if authentication is required.  If unset or emtpy string, the server name in the To address is used",
+            "default": ""
+          },
+          "smtp_port": {
+            "title": "SMTP server port to connect to, to send email messages",
+            "type": "integer",
+            "description": "Should be set if authentication is required.",
+            "default": 0
+          },
+          "smtp_user": {
+            "title": "authentication user ID to used to login to SMTP server",
+            "type": "string",
+            "default": ""
+          },
+          "smtp_password": {
+            "title": "authentication password to used to login to SMTP server",
+            "type": "string",
+            "default": ""
+          },
+          "use_tls": {
+            "title": "connect to SMTP server using TLS",
+            "type": "boolean",
+            "default": false
+          },
+          "from_address": {
+            "title": "email address for sender",
+            "type": "string",
+            "description": "string containing From address to send message from.  Address must be of the form: 'user@host' or 'First Last \\<user@host\\>'",
+            "default": ""
+          },
+          "to": {
+            "title": "list of To email addresses",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "list of strings containing To address(es) to send message to.  Address must be of the form: 'user@host' or 'First Last \\<user@host\\>'",
+            "default": []
+          },
+          "cc": {
+            "title": "list of Cc email addresses",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "list of strings containing Cc address(es) to copy/send message to.  Address must be of the form: 'user@host' or 'First Last \\<user@host\\>'",
+            "default": []
+          },
+          "bcc": {
+            "title": "list of Bcc email addresses",
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "list of strings containing Bcc address(es) to blind copy/send message to.  Address must be of the form: 'user@host' or 'First Last \\<user@host\\>'",
+            "default": []
+          },
+          "subject": {
+            "title": "subject field for the email message to be sent",
+            "type": "string",
+            "default": ""
+          },
+          "text_body": {
+            "title": "main text body of the email message to be sent",
+            "type": "string",
+            "default": ""
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
+      },
       "ServerInfo": {
         "title": "ServerInfo",
         "required": [
@@ -1957,12 +2142,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1716735798.599186
+            "example": 1717101686.1174428
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 330914
+            "example": 358201
           }
         }
       },
@@ -1998,13 +2183,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 330914
+            "example": 358201
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1716735798.5998907
+            "example": 1717101686.1183448
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -2027,7 +2212,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1716735798.5999196
+            "example": 1717101686.1183863
           }
         }
       },
@@ -2126,12 +2311,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-05-26T15:03:18.589+00:00",
+            "example": "2024-05-30T20:41:26.107+00:00",
             "examples": [
-              1716735798,
-              1716735798.5892067,
+              1717101686,
+              1717101686.1079144,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-05-26T15:03:18.589+00:00",
+              "2024-05-30T20:41:26.107+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
