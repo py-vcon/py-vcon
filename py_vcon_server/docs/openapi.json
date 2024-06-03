@@ -1106,6 +1106,99 @@
         }
       }
     },
+    "/process/{vcon_uuid}/jq": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "set VconProcessorIO parameter(s) from result(s) of JQ query(s) on VconPRocessorIO input",
+        "description": "For each name, value pair in jq_queries field in ProcessorOptions, save the result of the JQ query defined in value in the VconProcessorIO parameter in name.  The query is into a dict representation of the input VconProcessorIO.  At the top level this dict contains: 'vcons', an array of the zero or more input vCons and 'parameters', the dict of parameters in the input VconProcessorIO.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__jq_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JQOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process/{vcon_uuid}/openai_chat_completion": {
       "post": {
         "tags": [
@@ -1745,7 +1838,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1717101686.1201558
+            "example": 1717448482.0035133
           },
           "server": {
             "title": "server key",
@@ -1754,6 +1847,36 @@
             "example": "localhost:8000:765:1692125691.2032259"
           }
         }
+      },
+      "JQOptions": {
+        "title": "JQOptions",
+        "type": "object",
+        "properties": {
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          },
+          "jq_queries": {
+            "title": "dict of JQ queries to perform on VconProcessorIO input.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {}
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
       },
       "OpenAiChatCompletionOptions": {
         "title": "OpenAI Chat Completion filter method options",
@@ -2142,12 +2265,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1717101686.1174428
+            "example": 1717448482.00066
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 358201
+            "example": 365241
           }
         }
       },
@@ -2183,13 +2306,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 358201
+            "example": 365241
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1717101686.1183448
+            "example": 1717448482.0015326
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -2212,7 +2335,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1717101686.1183863
+            "example": 1717448482.0015748
           }
         }
       },
@@ -2311,12 +2434,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-05-30T20:41:26.107+00:00",
+            "example": "2024-06-03T21:01:21.990+00:00",
             "examples": [
-              1717101686,
-              1717101686.1079144,
+              1717448481,
+              1717448481.9909735,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-05-30T20:41:26.107+00:00",
+              "2024-06-03T21:01:21.990+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
