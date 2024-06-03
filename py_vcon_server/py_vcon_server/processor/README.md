@@ -9,6 +9,7 @@
  + [Processor Classes](#processors)
    * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
+   * [py_vcon_server.processor.builtin.jq.JQProcessor](#py_vcon_serverprocessorbuiltinjqjqprocessor)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
    * [py_vcon_server.processor.builtin.send_email.SendEmail](#py_vcon_serverprocessorbuiltinsend_emailsendemail)
    * [py_vcon_server.processor.builtin.set_parameters.SetParameters](#py_vcon_serverprocessorbuiltinset_parameterssetparameters)
@@ -17,6 +18,7 @@
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
    * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
+   * [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
    * [py_vcon_server.processor.builtin.send_email.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinsend_emailvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.set_parameters.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinset_parametersvconprocessorinitoptions)
@@ -25,6 +27,7 @@
  + [Processor Options Classes](#processor-options-classes)
    * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
+   * [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
    * [py_vcon_server.processor.builtin.send_email.SendEmailOptions](#py_vcon_serverprocessorbuiltinsend_emailsendemailoptions)
    * [py_vcon_server.processor.builtin.set_parameters.SetParametersOptions](#py_vcon_serverprocessorbuiltinset_parameterssetparametersoptions)
@@ -133,6 +136,24 @@ Methods:
 **__init__**(self, init_options: VconProcessorInitOptions)
 
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
+## py_vcon_server.processor.builtin.jq.JQProcessor 
+
+ - **Name:** jq 
+ - **Version:** 0.0.1
+ - **Summary:** set VconProcessorIO parameter(s) from result(s) of JQ query(s) on VconPRocessorIO input
+
+For each name, value pair in jq_queries field in ProcessorOptions, save the result of the JQ query defined in value in the VconProcessorIO parameter in name.  The query is into a dict representation of the input VconProcessorIO.  At the top level this dict contains: 'vcons', an array of the zero or more input vCons and 'parameters', the dict of parameters in the input VconProcessorIO.
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: JQInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: JQOptions)
 
 
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletion 
@@ -251,7 +272,7 @@ example: 123456789e96a1da774e57abcdefghijklmnop
 default: ""
 
 
-## py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions 
+## py_vcon_server.processor.builtin.jq.OpenAiChatCompletionInitOptions 
 
  - **Summary:** OpenAI/ChatGPT Completion **FilterPlugin** intialization object
 
@@ -273,7 +294,7 @@ example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 default: None
 
 
-## py_vcon_server.processor.builtin.send_email.WhisperInitOptions 
+## py_vcon_server.processor.builtin.openai.WhisperInitOptions 
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
@@ -368,6 +389,39 @@ default: 0
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formated strings build from parameters
 dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
+
+## py_vcon_server.processor.builtin.jq.JQOptions 
+
+ - **Summary:** JQOptions
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
+##### jq_queries (typing.Dict[str, str])
+dict of JQ queries to perform on VconProcessorIO input.
+None
 
 example: 
 
