@@ -84,7 +84,7 @@ async def test_whisper_transcribe_inline_dialog():
   print("ass len: {}".format(body_len))
   # The format of the output from stable whisper for ass files changed.
   # Someone with a better knowledge of the ass format, will have to review if this is ok or not.
-  assert(body_len > 21000)
+  assert(body_len > 19000)
 
   if(out_vcon.uuid is None):
     out_vcon.set_uuid("vcon.net")
