@@ -676,6 +676,14 @@ example:
 
 default: ""
 
+##### client_hostname (str)
+FQHN provided for SMTP client when connecting to SMTP server.
+None
+
+example: 
+
+default: ""
+
 
 ## py_vcon_server.processor.builtin.set_parameters.SetParametersOptions 
 
