@@ -73,6 +73,11 @@ class SendEmailOptions(py_vcon_server.processor.VconProcessorOptions):
       default = ""
     )
 
+  client_hostname: str = pydantic.Field(
+      title = "FQHN provided for SMTP client when connecting to SMTP server.",
+      default = ""
+    )
+
 
 class SendEmail(py_vcon_server.processor.VconProcessor):
   """ Processor to set VconProcessorIO parameters from options """
@@ -146,6 +151,12 @@ class SendEmail(py_vcon_server.processor.VconProcessor):
     else:
       password = None
 
+    if(formatted_options.client_hostname is not None and
+       len(formatted_options.client_hostname)):
+      local_hostname = formatted_options.client_hostname
+    else:
+      local_hostname = None
+
     logger.debug("sending message via SMTP server: {} port: {} using TLS: {}".format(host, port, use_tls))
     await aiosmtplib.send(
         email_message,
@@ -153,7 +164,8 @@ class SendEmail(py_vcon_server.processor.VconProcessor):
         port = port,
         username = smtp_user,
         password = password,
-        use_tls = use_tls
+        use_tls = use_tls,
+        local_hostname = local_hostname
       )
 
     return(processor_input)
