@@ -1838,7 +1838,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1717448482.0035133
+            "example": 1717544155.5841534
           },
           "server": {
             "title": "server key",
@@ -2237,6 +2237,11 @@
             "title": "main text body of the email message to be sent",
             "type": "string",
             "default": ""
+          },
+          "client_hostname": {
+            "title": "FQHN provided for SMTP client when connecting to SMTP server.",
+            "type": "string",
+            "default": ""
           }
         },
         "description": "Base class options for **VconProcessor.processor** method "
@@ -2265,12 +2270,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1717448482.00066
+            "example": 1717544155.5810113
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 365241
+            "example": 369864
           }
         }
       },
@@ -2306,13 +2311,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 365241
+            "example": 369864
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1717448482.0015326
+            "example": 1717544155.5819983
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -2335,7 +2340,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1717448482.0015748
+            "example": 1717544155.5820405
           }
         }
       },
@@ -2434,12 +2439,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-06-03T21:01:21.990+00:00",
+            "example": "2024-06-04T23:35:55.571+00:00",
             "examples": [
-              1717448481,
-              1717448481.9909735,
+              1717544155,
+              1717544155.5710108,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-06-03T21:01:21.990+00:00",
+              "2024-06-04T23:35:55.571+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
