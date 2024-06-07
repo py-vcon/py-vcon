@@ -157,13 +157,13 @@ Pipeline definitions can be created and modified using the [Admin: Pipeline REST
 
 ![vCon PipelineDefinition Diagram](docs/PipelineDefinition.png)
 
-A pipeline can be run one time using the [vCon: Pipelines RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Pipelines`) or many jobs can be queued for the pipeline server to run through any of the defined pipelines using the [Admin: Job Queues RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put).
+A pipeline can be run one time using the [vCon: Pipelines RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Pipelines) or many jobs can be queued for the pipeline server to run through any of the defined pipelines using the [Admin: Job Queues RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put).
 
 ![vCon Pipeline Server Flow Diagram](docs/PipelineServerFlow.png)
 
 ### Simple Pipeline Example
 
-Here is example is [a simple 2 processor pipeline](#create-and-use-a-pipeline) which uses the deepgram processor to transcribe a recording which is saved as an analysis object and the openai_chat_completion to create a summary of the transcript which is saved a a second analysis object in the vCon.
+Here is an example of a [simple 2 processor pipeline](#create-and-use-a-pipeline) which uses the deepgram processor to transcribe a recording which is saved as an analysis object and the openai_chat_completion to create a summary of the transcript which is saved a a second analysis object in the vCon.
 
 ### Advanced Pipeline Example
 
