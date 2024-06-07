@@ -159,6 +159,23 @@ Pipeline definitions can be created and modified using the [Admin: Pipeline REST
 
 A pipeline can be run one time using the [vCon: Pipelines RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Pipelines) or many jobs can be queued for the pipeline server to run through any of the defined pipelines using the [Admin: Job Queues RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put).
 
+The **Pipeline Server** will:
+  * automatically check for jobs in it's configured set of **Job Queues**
+  * pull one job out at a time
+  * put the job in the **In Progress** queue while it is being processed
+  * run the job through the pipeline
+  * optionally commit modified or newly created vCons
+  * queue the job in the success or failure **Job Queues** if provided
+  * remove the job from the **In Progress** queue
+  * repeat the process for other jobs in the **Pipeline Server's** configured **Job Queues**
+
+To run vCons through pipelines using the **Pipeline Server**, you need to do the following:
+
+  1) Define a pipeline ([create a pipeline definition](#create-and-use-a-pipeline))
+  2) Create a **Job Queue** with the same name as the pipeline ([create a job queue](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put))
+  3) Configure the **Pipeline Server** to process the job queue ([set pipeline server queue properties](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/set_server_queue_properties_server_queue__name__post))
+  4) Add one or more jobs to the **Job Queue** ([add a job to job queue](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put))
+
 ![vCon Pipeline Server Flow Diagram](docs/PipelineServerFlow.png)
 
 ### Simple Pipeline Example
