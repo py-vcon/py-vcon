@@ -172,7 +172,7 @@ The **Pipeline Server** will:
 To run vCons through pipelines using the **Pipeline Server**, you need to do the following:
 
   1) Define a pipeline ([create a pipeline definition](#create-and-use-a-pipeline))
-  2) Create a **Job Queue** with the same name as the pipeline ([create a job queue](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put))
+  2) Create a **Job Queue** with the same name as the pipeline ([create a job queue](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/create_new_job_queue_queue__name__post))
   3) Configure the **Pipeline Server** to process the job queue ([set pipeline server queue properties](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/set_server_queue_properties_server_queue__name__post))
   4) Add one or more jobs to the **Job Queue** ([add a job to job queue](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put))
 
