@@ -137,13 +137,13 @@ for running **Pipelines** on the given vCon or indicated vCon in **VconStorage**
 
 ## Pipeline Processing
 
-A pipeline provides the means to run a sequence of VconProcessors.
+A pipeline provides the means to run a sequence of **VconProcessors**.
 This is useful as often we want to perform the same sets of operations on many different vCons.
-A processor is given a **VconProcessorIO** object and as set of **VconProcessorOptions** for the specific processor type.
+A processor is given a **VconProcessorIO** object and a set of **VconProcessorOptions** for the specific processor type.
 The processor provides a **VconProcessorIO** object as output.
 The **VconProcessorIO** object may contain zero or more vCons and a set of parameters.
 The processor may modify the vCon(s) and parameters from the input **VconProcessorIO** to create the **VconProcessorIO** output object.
-A pipeline is provided an input **VconProcessorIO** which is passed, along with the processor options for the first processor configured in the pipeline's processors list.
+A pipeline is provided an input **VconProcessorIO** which is passed, along with the processor options for the first processor configured in the pipeline's **processors** list.
 The output from the first processor is then passed to the second processor configured in the pipeline definition's **processors** list along with it's processor options.
 This process is repeated through the sequence of processors configured in the pipeline definition's **processors** list.
 
@@ -157,7 +157,7 @@ Pipeline definitions can be created and modified using the [Admin: Pipeline REST
 
 ![vCon PipelineDefinition Diagram](docs/PipelineDefinition.png)
 
-A pipeline can be run once using the [vCon: Pipelines RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#vCon%3A%20Pipelines`) or jobs can be queued for the pipeline server to run using the [Admin: Job Queues RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put).
+A pipeline can be run one time using the [vCon: Pipelines RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Pipelines`) or many jobs can be queued for the pipeline server to run through any of the defined pipelines using the [Admin: Job Queues RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put).
 
 ![vCon Pipeline Server Flow Diagram](docs/PipelineServerFlow.png)
 
