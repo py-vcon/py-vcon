@@ -171,7 +171,7 @@ The **Pipeline Server** will:
 
 A couple of key points to make here are:
 
-  * a **Pipeline Server** will only look at **Job Queue(s)** that is is configured to process
+  * a **Pipeline Server** will only look at **Job Queue(s)** that is(are) configured to process
   * a **Pipeline Server** can be configured to process multiple **Job Queues** with weighted priorities
   * multiple **Pipeline Servers** can be run at the same time on the same or different machines and they can be configured to process the same or different **Job Queues**
   * a **Job Queue's** name implies the name of the **Pipeline Definition** that will be used for jobs in that queue
