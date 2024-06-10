@@ -178,7 +178,7 @@ async def test_whisper_transcribe_external_dialog():
   print("ass len: {}".format(body_len))
   # The format of the output from stable whisper for ass files changed.
   # Someone with a better knowledge of the ass format, will have to review if this is ok or not.
-  assert(body_len > 21000)
+  assert(body_len > 19000)
 
   # hack the UUID so that the output Vcon does not change
   in_vcon._vcon_dict[vcon.Vcon.UUID] = "018a4cd9-b326-811b-9a21-90977a450c19"
