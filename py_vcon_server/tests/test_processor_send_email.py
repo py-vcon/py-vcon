@@ -3,7 +3,8 @@
 import asyncio
 import pytest
 import pytest_asyncio
-#import smtpdfix # provides fixture smtpd
+import smtpdfix # provides fixture smtpd, does not need to imported, but
+# makes more obvious error when the fixture is not installed.
 import fastapi.testclient
 import vcon
 import py_vcon_server
