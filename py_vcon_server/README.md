@@ -161,13 +161,21 @@ A pipeline can be run one time using the [vCon: Pipelines RESTful API](https://r
 
 The **Pipeline Server** will:
   * automatically check for jobs in it's configured set of **Job Queues**
-  * pull one job out at a time
+  * pull one job out of a queue at a time and assign it a job ID
   * put the job in the **In Progress** queue while it is being processed
   * run the job through the pipeline
   * optionally commit modified or newly created vCons
   * queue the job in the success or failure **Job Queues** if provided
   * remove the job from the **In Progress** queue
-  * repeat the process for other jobs in the **Pipeline Server's** configured **Job Queues**
+  * repeat the process for other jobs in the **Job Queues** that the **Pipeline Server(s)** is(are) configured to process 
+
+A couple of key points to make here are:
+
+  * a **Pipeline Server** will only look at **Job Queue(s)** that is is configured to process
+  * a **Pipeline Server** can be configured to process multiple **Job Queues** with weighted priorities
+  * multiple **Pipeline Servers** can be run at the same time on the same or different machines and they can be configured to process the same or different **Job Queues**
+  * a **Job Queue's** name implies the name of the **Pipeline Definition** that will be used for jobs in that queue
+  * **In Progress** jobs have a job ID assigned and can be referenced by the job ID in the **In Progress Queue**, which is used for all **Pipeline Server** instances running
 
 To run vCons through pipelines using the **Pipeline Server**, you need to do the following:
 
@@ -461,9 +469,8 @@ The following features are next to be implemented for the vCon server.
 [Sponsor us](https://github.com/sponsors/py-vcon) if you would like this development to be sped up or have different priorities.
 
   * Transactional vCon locking to prevent multiple processors from modifying a vCon at the same time
-  * Pipeline parameters to allow one vCon processor to set options for down stream processors
   * vCon access control lists
-  * email and Slack notification vCon processors
+  * Slack notification vCon processors
   * Resolution of the Python multiprocessing, asyncio and Redis bug
   * More vCon processor plugins
 
