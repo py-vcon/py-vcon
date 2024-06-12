@@ -1,0 +1,192 @@
+
+vcon = {
+    vcon_version_type,
+    uuid_type,
+    ? subject: tstr,
+    ? created_at: date_type,
+    ? updated_at: date_type,
+    ? redacted: vcon_reference_type,
+    ? ammended: vcon_reference_type,
+    ? parties: [* party_object_type],
+    ? group: [* vcon_reference_type],
+    ? dialog: [* dialog_object_type],
+    ? attachments: [* attachment_object_type],
+    ? analysis: [* analysis_object_type],
+  }
+
+; Object and multi-parameter types
+;_________________________________
+
+vcon_reference_type =
+    vcon_uuid_reference_type / vcon_inline_type / vcon_url_reference_type
+
+party_object_type = {
+    ? tel: tstr,
+    ? str: tstr,
+    ? mailto: tstr,
+    ? name: tstr,
+    ? validataion: tstr,
+    ? gmlpos: tstr,
+    ? civicaddress: civicaddress_type,
+    ? uuid_type,
+    ? role: tstr
+  }
+
+dialog_object_type = {
+    start: date_type,
+    ? party_history: [* party_event_type],
+    dialog_recording_object_type // dialog_text_object_type // dialog_transfer_object_type // dialog_incomplete_object_type,
+  }
+
+vcon_uuid_reference_type = {
+    uuid_type
+  }
+
+vcon_inline_type = {
+    inline_content_type 
+  }
+
+vcon_url_reference_type = {
+    url_referenced_content_type 
+  }
+
+dialog_recording_object_type = (
+    type: "recording",
+    ? duration: uint,
+    parties: dialog_parties_type,
+    ? originator: party_index_type,
+    inline_content_type // url_referenced_content_type
+  )
+
+dialog_text_object_type = (
+    type: "text",
+    ? duration: uint,
+    parties: dialog_parties_type,
+    ? originator: party_index_type,
+    inline_content_type // url_referenced_content_type
+  )
+
+dialog_transfer_object_type = (
+    type: "transfer",
+    transferee: party_index_type,
+    transferor: party_index_type,
+    transfer-target: party_index_type,
+    original: dialog_index_type,
+    ? consulation: dialog_index_type,
+    target-dialog: dialog_index_type,
+  )
+
+dialog_incomplete_object_type = (
+    type: "incomplete",
+    disposition: tstr
+  )
+
+attachment_object_type = {
+    type: tstr,
+    start: date_type,
+    party: party_index_type,
+    content_parameters_type,
+    inline_content_type // url_referenced_content_type
+  }
+
+analysis_object_type = {
+    type: tstr,
+    dialog: dialog_index_type,
+    content_parameters_type,
+    ? vendor: tstr,
+    ? product: tstr,
+    ? schema: tstr
+    inline_content_type // url_referenced_content_type
+  }
+
+;content_type = 
+;    inline_content_type / url_referenced_content_type
+  
+
+url_referenced_content_type = (
+    content_parameters_type,
+    url_type,
+    signature_algorithm_type,
+    signature_type
+  )
+
+
+inline_content_type = (
+    content_parameters_type,
+    body: tstr,
+    encoding_type
+  )
+
+content_parameters_type = (
+    ? mime_type,
+    ? filename: tstr,
+  )
+
+party_event_type = {
+    party: party_index_type,
+    event: "join" / "drop" / "hold" / "unhold" / "mute" / "unmute",
+    time: date_type
+  }
+
+civicaddress_type = {
+    ? country: tstr,
+    ? a1: tstr,
+    ? a2: tstr,
+    ? a3: tstr,
+    ? a4: tstr,
+    ? a5: tstr,
+    ? a6: tstr,
+    ? prd: tstr,
+    ? pod: tstr,
+    ? sts: tstr,
+    ? hno: tstr,
+    ? hns: tstr,
+    ? lmk: tstr,
+    ? loc: tstr,
+    ? flr: tstr,
+    ? nam: tstr,
+    ? pc: tstr
+  }
+
+; Basic types and single parameter types
+; ______________________________________
+
+date_type = tstr
+
+dialog_index_type = uint
+
+dialog_parties_type = 
+    party_index_type / [* party_index_or_list_type]
+
+encoding_type = (
+    encoding: "none" / "json" / "base64url"
+  )
+
+mime_type = (
+    mimetype: tstr
+  )
+
+party_index_or_list_type =
+    party_index_type / [* party_index_type]
+
+party_index_type = uint
+
+signature_algorithm_type = (
+    alg: tstr
+  )
+
+signature_type = (
+    signature: tstr
+  )
+
+uuid_type = (
+    uuid: tstr
+  )
+
+url_type = (
+    url: tstr
+  )
+
+vcon_version_type = (
+    "vcon": tstr
+  )
