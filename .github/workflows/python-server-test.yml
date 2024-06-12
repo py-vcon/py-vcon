@@ -1,4 +1,4 @@
-name: Python vCon server unit test
+name: py_vcon_server unit tests
 on: 
   push:
     # all
