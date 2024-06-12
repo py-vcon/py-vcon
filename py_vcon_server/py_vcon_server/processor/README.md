@@ -9,19 +9,28 @@
  + [Processor Classes](#processors)
    * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
+   * [py_vcon_server.processor.builtin.jq.JQProcessor](#py_vcon_serverprocessorbuiltinjqjqprocessor)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
+   * [py_vcon_server.processor.builtin.send_email.SendEmail](#py_vcon_serverprocessorbuiltinsend_emailsendemail)
+   * [py_vcon_server.processor.builtin.set_parameters.SetParameters](#py_vcon_serverprocessorbuiltinset_parameterssetparameters)
    * [py_vcon_server.processor.builtin.whisper.Whisper](#py_vcon_serverprocessorbuiltinwhisperwhisper)
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
    * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
+   * [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
+   * [py_vcon_server.processor.builtin.send_email.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinsend_emailvconprocessorinitoptions)
+   * [py_vcon_server.processor.builtin.set_parameters.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinset_parametersvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.whisper.WhisperInitOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperinitoptions)
 
  + [Processor Options Classes](#processor-options-classes)
    * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
+   * [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
+   * [py_vcon_server.processor.builtin.send_email.SendEmailOptions](#py_vcon_serverprocessorbuiltinsend_emailsendemailoptions)
+   * [py_vcon_server.processor.builtin.set_parameters.SetParametersOptions](#py_vcon_serverprocessorbuiltinset_parameterssetparametersoptions)
    * [py_vcon_server.processor.builtin.whisper.WhisperOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperoptions)
 
 
@@ -129,6 +138,24 @@ Methods:
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
+## py_vcon_server.processor.builtin.jq.JQProcessor 
+
+ - **Name:** jq 
+ - **Version:** 0.0.1
+ - **Summary:** set VconProcessorIO parameter(s) from result(s) of JQ query(s) on VconPRocessorIO input
+
+For each name, value pair in jq_queries field in ProcessorOptions, save the result of the JQ query defined in value in the VconProcessorIO parameter in name.  The query is into a dict representation of the input VconProcessorIO.  At the top level this dict contains: 'vcons', an array of the zero or more input vCons and 'parameters', the dict of parameters in the input VconProcessorIO.
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: JQInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: JQOptions)
+
+
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletion 
 
  - **Name:** openai_chat_completion 
@@ -149,6 +176,42 @@ Methods:
 **__init__**(self, init_options: VconProcessorInitOptions)
 
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
+## py_vcon_server.processor.builtin.send_email.SendEmail 
+
+ - **Name:** send_email 
+ - **Version:** 0.0.1
+ - **Summary:** VconProcessor to send email message
+
+used to send SMTP messages using content from vCon or VconProcessorIP parameters.
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.send_email.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinsend_emailvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.send_email.SendEmailOptions](#py_vcon_serverprocessorbuiltinsend_emailsendemailoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: SendEmailInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SendEmailOptions)
+
+
+## py_vcon_server.processor.builtin.set_parameters.SetParameters 
+
+ - **Name:** set_parameters 
+ - **Version:** 0.0.1
+ - **Summary:** set VconProcessorIO parameters from process options input
+
+set VconProcessorIO parameters from the parameters dict field provided in the processor options
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.set_parameters.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinset_parametersvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.set_parameters.SetParametersOptions](#py_vcon_serverprocessorbuiltinset_parameterssetparametersoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: SetParametersInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SetParametersOptions)
 
 
 ## py_vcon_server.processor.builtin.whisper.Whisper 
@@ -209,7 +272,7 @@ example: 123456789e96a1da774e57abcdefghijklmnop
 default: ""
 
 
-## py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions 
+## py_vcon_server.processor.builtin.jq.OpenAiChatCompletionInitOptions 
 
  - **Summary:** OpenAI/ChatGPT Completion **FilterPlugin** intialization object
 
@@ -231,7 +294,7 @@ example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 default: None
 
 
-## py_vcon_server.processor.builtin.whisper.WhisperInitOptions 
+## py_vcon_server.processor.builtin.openai.WhisperInitOptions 
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
@@ -270,6 +333,14 @@ Index to which vCon in the VconProcessorIO is to be used for input
 example: 
 
 default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
 
 
 ## py_vcon_server.processor.builtin.deepgram.DeepgramOptions 
@@ -314,6 +385,47 @@ Index to which vCon in the VconProcessorIO is to be used for input
 example: 
 
 default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
+
+## py_vcon_server.processor.builtin.jq.JQOptions 
+
+ - **Summary:** JQOptions
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
+##### jq_queries (typing.Dict[str, str])
+dict of JQ queries to perform on VconProcessorIO input.
+None
+
+example: 
+
+default: {}
 
 
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions 
@@ -443,6 +555,168 @@ example:
 
 default: 0
 
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
+
+## py_vcon_server.processor.builtin.send_email.SendEmailOptions 
+
+ - **Summary:** SendEmailOptions
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
+##### smtp_host (str)
+SMTP server host to connect to, to send email messages
+Should be set if authentication is required.  If unset or emtpy string, the server name in the To address is used
+
+example: 
+
+default: ""
+
+##### smtp_port (int)
+SMTP server port to connect to, to send email messages
+Should be set if authentication is required.
+
+example: 
+
+default: 0
+
+##### smtp_user (str)
+authentication user ID to used to login to SMTP server
+None
+
+example: 
+
+default: ""
+
+##### smtp_password (str)
+authentication password to used to login to SMTP server
+None
+
+example: 
+
+default: ""
+
+##### use_tls (bool)
+connect to SMTP server using TLS
+None
+
+example: 
+
+default: False
+
+##### from_address (str)
+email address for sender
+string containing From address to send message from.  Address must be of the form: 'user@host' or 'First Last \<user@host\>'
+
+example: 
+
+default: ""
+
+##### to (typing.List[str])
+list of To email addresses
+list of strings containing To address(es) to send message to.  Address must be of the form: 'user@host' or 'First Last \<user@host\>'
+
+example: 
+
+default: []
+
+##### cc (typing.List[str])
+list of Cc email addresses
+list of strings containing Cc address(es) to copy/send message to.  Address must be of the form: 'user@host' or 'First Last \<user@host\>'
+
+example: 
+
+default: []
+
+##### bcc (typing.List[str])
+list of Bcc email addresses
+list of strings containing Bcc address(es) to blind copy/send message to.  Address must be of the form: 'user@host' or 'First Last \<user@host\>'
+
+example: 
+
+default: []
+
+##### subject (str)
+subject field for the email message to be sent
+None
+
+example: 
+
+default: ""
+
+##### text_body (str)
+main text body of the email message to be sent
+None
+
+example: 
+
+default: ""
+
+##### client_hostname (str)
+FQHN provided for SMTP client when connecting to SMTP server.
+None
+
+example: 
+
+default: ""
+
+
+## py_vcon_server.processor.builtin.set_parameters.SetParametersOptions 
+
+ - **Summary:** SetParametersOptions
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example: 
+
+default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
+
+##### parameters (typing.Dict[str, typing.Any])
+dict of parameters to set in the output from VconProcessor
+None
+
+example: 
+
+default: {}
+
 
 ## py_vcon_server.processor.builtin.whisper.WhisperOptions 
 
@@ -501,6 +775,14 @@ Index to which vCon in the VconProcessorIO is to be used for input
 example: 
 
 default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example: 
+
+default: {}
 
 
 

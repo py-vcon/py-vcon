@@ -463,12 +463,16 @@ async def test_job_worker_pool_cancel_sleep():
 
 @pytest.mark.asyncio
 async def test_job_worker_pool_cancel_immediate():
+  can1 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
+  can1["expected_finish"] = 1.25
   can2 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
   can2["id"] = "cancelimmediate2"
-  can2["expected_start"] = CANCEL_IMMEDIATE_JOB["expected_finish"]
+  can2["expected_start"] = can1["expected_finish"]
   can2["expected_finish"] = can2["expected_start"] + 1.25
   can2["expected_cancel"] += 1.0
+  can2["time_tolerance"] += 0.6
   can3 = copy.deepcopy(CANCEL_IMMEDIATE_JOB)
+  can3["time_tolerance"] += 0.6
   can3["id"] = "cancelimmediate3"
   can3["expected_start"] = can2["expected_finish"]
   can3["expected_finish"] = can3["expected_start"] + 1.25
@@ -478,9 +482,9 @@ async def test_job_worker_pool_cancel_immediate():
   can4["expected_start"] = can3["expected_finish"]
   can4["expected_finish"] = can4["expected_start"] + 1.25
   can4["expected_cancel"] += 3.0
-  can4["time_tolerance"] += 1.5
+  can4["time_tolerance"] += 1.7
   print("CANCEL_IMMEDIATE times: \n{}\n{}\n{}\n{}".format(
-      CANCEL_IMMEDIATE_JOB, can2, can3, can4))
+      can1, can2, can3, can4))
   test_jobber = await start_run_stop_job_worker([CANCEL_IMMEDIATE_JOB, can2, can3, can4], tasks = 1)
   cancel_count = test_jobber.get_canceled_count()
   assert(cancel_count > 0)

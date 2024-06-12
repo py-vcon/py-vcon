@@ -1,0 +1,68 @@
+{
+  "pipeline_options": {
+    "save_vcons": true,
+    "timeout": 30,
+    "failure_queue": null,
+    "success_queue": null
+  },
+  "processors": [
+    {
+      "comment": "Transcribe the vCon",
+      "processor_name": "deepgram",
+      "processor_options": {
+      }
+    },
+    {
+      "comment": "Create a summary of the transcription",
+      "processor_name": "openai_chat_completion",
+      "processor_options": {
+      }
+    },
+    {
+      "comment": "Generate a list of action items for the transcription",
+      "processor_name": "openai_chat_completion",
+      "processor_options": {
+        "prompt": "Provide a bullet list of action items, without a preface, from the transcript in these messages.",
+        "analysis_type": "action items"
+      }
+    },
+    {
+      "comment": "Generate notes for the transcription",
+      "processor_name": "openai_chat_completion",
+      "processor_options": {
+        "prompt": "Provide a bullet list of notes for the transcript in these messages.",
+        "analysis_type": "notes"
+      }
+    },
+    {
+      "comment": "Query parts of the vCon and store them as VconProcessorIO parameters",
+      "processor_name": "jq",
+      "processor_options": {
+        "jq_queries": {
+          "ATTENDEES": "[(.vcons[0].parties[] | \"\\(.name) x\\(.tel)\")] | join(\"\n\")",
+          "SUMMARY": "(.vcons[0].analysis[] | select(.type == \"summary\")) .body",
+          "NOTES": "(.vcons[0].analysis[] | select(.type == \"notes\")) .body",
+          "ACTION_ITEMS": "(.vcons[0].analysis[] | select(.type == \"action items\")) .body",
+          "DATE": ".vcons[0].dialog[0].start"
+        }
+      }
+    },
+    {
+      "comment": "Generate a message using VconProcessorIO parameters and send it as email",
+      "processor_name": "send_email",
+      "processor_options": {
+        "format_options": {
+          "subject": "Meeting notes {DATE}",
+          "text_body": "Summary:\n{SUMMARY}\n\nAttendees:\n{ATTENDEES}\n\nNotes:\n{NOTES}\n\nAction Items:\n{ACTION_ITEMS}\n\n"
+        },
+        "comment": "Note: you have to change the hostname (yourdomain) in the following fields to your real domain and real email addresses",
+        "to": [
+          "you@yourdomain.com"
+        ],
+        "client_hostname": "vcon_server.yourdomain.com",
+        "from_address": "py_vcon_server@yourdomain.com",
+        "smtp_host": "mail.yourdomain.com"
+      }
+    }
+  ]
+}
