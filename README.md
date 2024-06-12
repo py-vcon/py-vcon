@@ -1,5 +1,7 @@
 # The Repo for the python-vcon and py-vcon-server Projects
 
+![python_vcon unit tests (python 3.8, 3.9, 3.10)](https://github.com/py-vcon/py-vcon/actions/workflows/python-test.yml/badge.svg?branch=main)
+
 ## Introduction
 
 We are working to make vCon a new IETF standard for containing conversational data.  Conversational data may consists of:
