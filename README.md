@@ -1,6 +1,7 @@
 # The Repo for the python-vcon and py-vcon-server Projects
 
-![python_vcon unit tests (python 3.8, 3.9, 3.10)](https://github.com/py-vcon/py-vcon/actions/workflows/python-test.yml/badge.svg?branch=main)
+![python**_**vcon unit tests (python 3.8, 3.9, 3.10)](https://github.com/py-vcon/py-vcon/actions/workflows/python-test.yml/badge.svg?branch=main)
+![python_vcon PyPI Version](https://img.shields.io/pypi/v/python_vcon.svg)
 
 ## Introduction
 
