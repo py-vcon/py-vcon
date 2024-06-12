@@ -1,8 +1,18 @@
 # The py_vcon_server Python Package
 
-Please pardon the roughness of content here.  We are still under construction.
+## Python Packages:
+![vcon package name](https://img.shields.io/badge/pip_install-python__vcon-blue)
+![python_vcon PyPI Version](https://img.shields.io/pypi/v/python_vcon.svg)
+[![vcon unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-test.yml/badge.svg?branch=main&python-version=3)](https://github.com/py-vcon/py-vcon/actions)
 
-The first release and documentation coming soon.
+![vcon server package name](https://img.shields.io/badge/pip_install-py__vcon__server-blue)
+![python_vcon PyPI Version](https://img.shields.io/pypi/v/py_vcon_server.svg)
+[![vcon server unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-server-test.yml/badge.svg?branch=main)](https://github.com/py-vcon/py-vcon/actions)
+
+![Python 3.6](https://img.shields.io/badge/python-3.8-blue.svg)
+![Python 3.6](https://img.shields.io/badge/python-3.9-blue.svg)
+![Python 3.6](https://img.shields.io/badge/python-3.10-blue.svg)
+
 
 The following is an overview of the Python vCon Server, architecture, components, configuration and use.
 The documentation on this page assumes the reader has a rough understanding of what a vCon is and what you can do with them at least at a high level.
