@@ -5,20 +5,28 @@ vcon = {
     ? subject: tstr,
     ? created_at: date_type,
     ? updated_at: date_type,
-    ? redacted: vcon_reference_type,
-    ? ammended: vcon_reference_type,
+    ? redacted: redacted_reference_type / empty_object_type,
+    ? ammended: vcon_reference_type / empty_object_type,
     ? parties: [* party_object_type],
     ? group: [* vcon_reference_type],
     ? dialog: [* dialog_object_type],
     ? attachments: [* attachment_object_type],
     ? analysis: [* analysis_object_type],
+    extension_object_type 
   }
 
 ; Object and multi-parameter types
 ;_________________________________
 
-vcon_reference_type =
-    vcon_uuid_reference_type / vcon_inline_type / vcon_url_reference_type
+
+redacted_reference_type = {
+    type: tstr,
+    ~vcon_reference_type
+  }
+
+vcon_reference_type = {
+    ~vcon_uuid_reference_type // ~vcon_inline_type // ~vcon_url_reference_type
+  }
 
 party_object_type = {
     ? tel: tstr,
@@ -29,13 +37,17 @@ party_object_type = {
     ? gmlpos: tstr,
     ? civicaddress: civicaddress_type,
     ? uuid_type,
-    ? role: tstr
+    ? role: tstr,
+    extension_object_type 
   }
 
 dialog_object_type = {
     start: date_type,
     ? party_history: [* party_event_type],
-    dialog_recording_object_type // dialog_text_object_type // dialog_transfer_object_type // dialog_incomplete_object_type,
+    (dialog_recording_object_type // dialog_text_object_type // dialog_transfer_object_type // dialog_incomplete_object_type),
+    ? campaign: tstr,
+    ? interaction: tstr,
+    extension_object_type 
   }
 
 vcon_uuid_reference_type = {
@@ -43,17 +55,18 @@ vcon_uuid_reference_type = {
   }
 
 vcon_inline_type = {
-    inline_content_type 
+    inline_content_type
   }
 
 vcon_url_reference_type = {
-    url_referenced_content_type 
+    url_referenced_content_type
   }
 
 dialog_recording_object_type = (
     type: "recording",
     ? duration: uint,
     parties: dialog_parties_type,
+    content_parameters_type,
     ? originator: party_index_type,
     inline_content_type // url_referenced_content_type
   )
@@ -62,6 +75,7 @@ dialog_text_object_type = (
     type: "text",
     ? duration: uint,
     parties: dialog_parties_type,
+    content_parameters_type,
     ? originator: party_index_type,
     inline_content_type // url_referenced_content_type
   )
@@ -86,7 +100,8 @@ attachment_object_type = {
     start: date_type,
     party: party_index_type,
     content_parameters_type,
-    inline_content_type // url_referenced_content_type
+    (inline_content_type // url_referenced_content_type),
+    extension_object_type 
   }
 
 analysis_object_type = {
@@ -95,26 +110,29 @@ analysis_object_type = {
     content_parameters_type,
     ? vendor: tstr,
     ? product: tstr,
-    ? schema: tstr
-    inline_content_type // url_referenced_content_type
+    ? schema: tstr,
+    (inline_content_type // url_referenced_content_type),
+    extension_object_type 
   }
 
-;content_type = 
-;    inline_content_type / url_referenced_content_type
-  
-
 url_referenced_content_type = (
-    content_parameters_type,
     url_type,
     signature_algorithm_type,
     signature_type
   )
 
-
 inline_content_type = (
-    content_parameters_type,
-    body: tstr,
-    encoding_type
+    ( text_body_type // binary_body_type )
+  )
+
+text_body_type = (
+    encoding: "none" / "json"
+    body: tstr
+  )
+
+binary_body_type = (
+    encoding: "base64url"
+    body: #6.21(bstr)
   )
 
 content_parameters_type = (
@@ -125,7 +143,8 @@ content_parameters_type = (
 party_event_type = {
     party: party_index_type,
     event: "join" / "drop" / "hold" / "unhold" / "mute" / "unmute",
-    time: date_type
+    time: date_type,
+    extension_object_type 
   }
 
 civicaddress_type = {
@@ -145,21 +164,25 @@ civicaddress_type = {
     ? loc: tstr,
     ? flr: tstr,
     ? nam: tstr,
-    ? pc: tstr
+    ? pc: tstr,
+    extension_object_type 
   }
 
 ; Basic types and single parameter types
 ; ______________________________________
 
-date_type = tstr
+
+date_type = tdate
 
 dialog_index_type = uint
 
 dialog_parties_type = 
     party_index_type / [* party_index_or_list_type]
 
-encoding_type = (
-    encoding: "none" / "json" / "base64url"
+empty_object_type = {}
+
+extension_object_type = (
+   * tstr => any
   )
 
 mime_type = (
@@ -190,3 +213,4 @@ url_type = (
 vcon_version_type = (
     "vcon": tstr
   )
+
