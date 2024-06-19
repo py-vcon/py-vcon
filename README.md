@@ -34,7 +34,7 @@ Currently this consists of two primary Python packages:
    * [command line interface](vcon/bin/README.md) - supporting piping of Vcon construction and operations
    * [Filter plugins](#vcon-filter-plugins) - to extend operations to perform on a Vcon
 
- * The [py-vcon-server package](py_vcon_server/README.md) provides (release coming soon):
+ * The [py-vcon-server package](py_vcon_server/README.md) provides:
    * RESTful APIs
    * Flexible Architecture
    * Scales from 1 to 1000s of servers
