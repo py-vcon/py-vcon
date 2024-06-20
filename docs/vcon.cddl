@@ -7,8 +7,8 @@ vcon = {
     ? updated_at: date_type,
     ? redacted: redacted_reference_type / empty_object_type,
     ? ammended: vcon_reference_type / empty_object_type,
-    ? parties: [* party_object_type],
     ? group: [* vcon_reference_type],
+    ? parties: [* party_object_type],
     ? dialog: [* dialog_object_type],
     ? attachments: [* attachment_object_type],
     ? analysis: [* analysis_object_type],
@@ -173,6 +173,8 @@ civicaddress_type = {
 
 
 date_type = tdate
+; Ruby cddl seems to always find tdate strings invalid, even ones it generates.
+;date_type = tstr
 
 dialog_index_type = uint
 
