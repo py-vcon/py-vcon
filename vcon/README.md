@@ -395,7 +395,7 @@ int: if success, positive int index of party in list
 
 ### decrypt
 
-**decrypt**(self, private_key_pem_file_name: 'str', cert_pem_file_name: 'str') -> 'None'
+**decrypt**(self, private_key_pem_file: 'str', cert_pem_file: 'str') -> 'None'
 
 
 Decrypt a vCon using private and public key file.
@@ -403,8 +403,8 @@ Decrypt a vCon using private and public key file.
 vCon must be in encrypted state and will be in signed state after decryption.
 
 Parameters:  
-**private_key_pem_file_name** (str): the private key to use for decrypting the vcon.  
-**cert_pem_file_name** (str): the public key/cert to use for decrypting the vcon.
+**private_key_pem_file** (str): file name or PEM string for the private key to use for decrypting the vcon.  
+**cert_pem_file** (str): file name or PEM string for the public key/cert to use for decrypting the vcon.
 
 Returns: none
 
@@ -412,7 +412,7 @@ Returns: none
 
 ### encrypt
 
-**encrypt**(self, cert_pem_file_name: 'str') -> 'None'
+**encrypt**(self, cert_pem_file: 'str') -> 'None'
 
 
 encrypt a Signed vcon using the given public key from the give certificate.
@@ -420,7 +420,7 @@ encrypt a Signed vcon using the given public key from the give certificate.
 vcon must be signed first.
 
 Parameters:  
-**cert_pem_file_name** (str): the public key/cert to use for encrypting the vcon.
+**cert_pem_file** (str): file name or PEM string for the public key/cert to use for encrypting the vcon.
 
 Returns: none
 
@@ -676,14 +676,14 @@ Returns:
 
 ### sign
 
-**sign**(self, private_key_pem_file_name: 'str', cert_chain_pem_file_names: 'typing.List[str]') -> 'None'
+**sign**(self, private_key_pem_file: 'str', cert_chain_pem_files: 'typing.List[str]') -> 'None'
 
 
 Sign the vcon using the given private key from the give certificate chain.
 
 Parameters:  
-**private_key_pem_file_name** (str): the private key to use for signing the vcon.  
-**cert_chain_pem_file_names** (List[str]): file names for the pem format certicate chain for the
+**private_key_pem_file** (str): file name or string containing PEM format private key to use for signing the vcon.  
+**cert_chain_pem_files** (List[str]): file names or PEM strings, for the pem format certicate chain for the
     private key to use for signing.  The cert/public key corresponding to the private key should be the
     first cert.  THe certificate authority root should be the last cert.
 
@@ -693,13 +693,13 @@ Returns: none
 
 ### verify
 
-**verify**(self, ca_cert_pem_file_names: 'typing.List[str]') -> 'None'
+**verify**(self, ca_cert_pem_files: 'typing.List[str]') -> 'None'
 
 
 Verify the signed vCon and its certificate chain which should be issued by one of the given CAs
 
 Parameters:  
-  **ca_cert_pem_file_names** (List[str]): list of Certificate Authority certificate PEM file names
+  **ca_cert_pem_files** (List[str]): file name or PEM string list containing Certificate Authority certificates 
     to verify the vCon's certificate chain.
 
 Returns: none
