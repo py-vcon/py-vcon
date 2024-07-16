@@ -10,12 +10,17 @@ import datetime
 import hsslms
 import hashlib
 
+CERT_PARTIAL_PREFIX = "--BEGIN CERTIFICATE--"
+CERT_PARTIAL_SUFFIX = "--END CERTIFICATE--"
+KEY_PARTIAL_PREFIX = "--BEGIN PRIVATE KEY--"
+KEY_PARTIAL_SUFFIX = "--END PRIVATE KEY--"
 
 # =============================== JWS, JWK Helper Functions ===========================
 #              JOSE JSON Web Key and JSON Web Signature RFC7515, RFC7517
 
 class InvalidCertDate(Exception):
   """ Cert not_valid_before or not_valid_after dates don't include today """
+
 
 def load_string_from_file(file_name : str):
   file_contents_string = None
@@ -24,14 +29,21 @@ def load_string_from_file(file_name : str):
 
   return(file_contents_string)
 
+
 def load_pem_cert(cert_file : str) -> typing.Tuple[cryptography.x509.Certificate, str]:
   """
   Load PEM formate certificate containing public key and construct cert object and DER representation of PEM file.
 
+  cert_file - may be a file name or a string containing the certificate PEM format (BEGIN CERT prefix, base64 encoded cert and END CERT suffix)
+
   Returns:
     Tuple(cert_object, str): cert object and DER string
   """
-  cert_string = load_string_from_file(cert_file)
+  if(cert_file.find(CERT_PARTIAL_PREFIX) >= 0 and
+     cert_file.find(CERT_PARTIAL_SUFFIX) >= 0):
+    cert_string = cert_file
+  else:
+    cert_string = load_string_from_file(cert_file)
 
   # Need the base64 encoded cert with no header, footer or white space for the x5c field in the key
   #bytes_start = cert_string.find('-\n') + 1
@@ -55,27 +67,29 @@ def load_pem_cert(cert_file : str) -> typing.Tuple[cryptography.x509.Certificate
 
   return(cert_object, der)
 
-def load_x5c_from_pem_certs(cert_pem_file_names : typing.List[str]) -> typing.List[str]:
+
+def load_x5c_from_pem_certs(cert_pem_files : typing.List[str]) -> typing.List[str]:
   """
   Construct a x5c compatible list (RFC7515,RFC7517,RFC7518) from certifcate PEM files.
 
   Parameters:
-    cert_pem_file_names (List[str]): list of PEM file names representing the certificate chain
+    cert_pem_files (List[str]): list of PEM file names or PEM strings containing the certificate chain
              sorted in order from the signing cert for the JWS/JWE to the certificate authority
              root of the chain.
 
   Returns:
-    List(str): The certifcate chain in DER format campatible with the c5c parameter in the
+    List(str): The certificate chain in DER format campatible with the c5c parameter in the
              above reference RFCs.
 
   """
 
   c5x_list = []
-  for file_name in cert_pem_file_names:
-    der_string = load_pem_cert(file_name)[1]
+  for pem_file in cert_pem_files:
+    der_string = load_pem_cert(pem_file)[1]
     c5x_list.append(der_string)
 
   return(c5x_list)
+
 
 def der_to_certs(x5c : typing.List[str]) -> typing.List[cryptography.x509.Certificate]:
   """
@@ -94,14 +108,21 @@ def der_to_certs(x5c : typing.List[str]) -> typing.List[cryptography.x509.Certif
 
   return(cert_list)
 
-def load_pem_key(key_file_name : str) -> cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey:
+def load_pem_key(key_file: str) -> cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey:
   """
   Load PEM format private key and construct private key object
+
+  key_file - may be a string file name or the key as a PEM format string.
 
   Returns:
     Tuple(cert_object, str): cert object and DER string
   """
-  pem_key_string = load_string_from_file(key_file_name)
+
+  if(key_file.find(KEY_PARTIAL_PREFIX) >= 0 and
+     key_file.find(KEY_PARTIAL_SUFFIX) >= 0):
+    pem_key_string = key_file
+  else:
+    pem_key_string = load_string_from_file(key_file)
 
   # cryptography.x509.load_pem_x509_private_key does not exist.  So we much wade through hazmat
   private_key_object = cryptography.hazmat.primitives.serialization.load_pem_private_key(bytes(pem_key_string, 'utf-8'), None, backend=None)
@@ -110,14 +131,14 @@ def load_pem_key(key_file_name : str) -> cryptography.hazmat.primitives.asymmetr
 
   return(private_key_object)
 
-def build_signing_jwk_from_pem_files(private_key_pem_file_name : str, cert_chain_pem_file_names : typing.List[str]) -> typing.Tuple[dict, dict]:
+def build_signing_jwk_from_pem_files(private_key_pem_file: str, cert_chain_pem_files: typing.List[str]) -> typing.Tuple[dict, dict]:
   """
   Read PEM files for pricate key and certificate chain all in PEM format and construct header and JWK for signing
 
   Parameters:
-    private_key_pem_file_name (str): the private key to use for signing the vcon.
+    private_key_pem_file (str): file name or PEM string containing the private key to use for signing the vcon.
 
-    cert_chain_pem_file_names (List{str]): file names for the pem format certicate chain for the
+    cert_chain_pem_files (List{str]): file names or PEM strings containing the pem format certicate chain for the
       private key to use for signing.  The cert/public key corresponding to the private key should be the
       first cert.  THe certificate authority root should be the last cert.
 
@@ -128,7 +149,7 @@ def build_signing_jwk_from_pem_files(private_key_pem_file_name : str, cert_chain
 
   """
   # Load the cert chain into a x5c compatible array
-  x5c = load_x5c_from_pem_certs(cert_chain_pem_file_names)
+  x5c = load_x5c_from_pem_certs(cert_chain_pem_files)
 
   algorithm = "RS256"
 
@@ -136,7 +157,7 @@ def build_signing_jwk_from_pem_files(private_key_pem_file_name : str, cert_chain
   header['x5c'] = x5c
   header["alg"] = algorithm
 
-  private_key_object = load_pem_key(private_key_pem_file_name)
+  private_key_object = load_pem_key(private_key_pem_file)
 
   # Only need the public key/object for the first/signing cert
   cert_object = der_to_certs([x5c[0]])[0]
@@ -246,9 +267,21 @@ def verify_cert(cert_to_verify : cryptography.x509.Certificate, issuer_cert : cr
 
 # =============================== JOSE JWE Helper Functions ===========================
 
-def build_encryption_jwk_from_pem_file(cert_pem_file_name : str) -> dict:
+def build_encryption_jwk_from_pem_file(cert_pem_file: str) -> dict:
+  """
+  Build a Jose JWK from a PEM file.
 
-  pem_string = load_string_from_file(cert_pem_file_name)
+  Parameters:
+    cert_pem_file (str) - file name or PEM string containing the PEM key
+
+  Returns:
+    JWK useful for JWE encryption
+  """
+  if(cert_pem_file.find(CERT_PARTIAL_PREFIX) >= 0 and
+     cert_pem_file.find(CERT_PARTIAL_SUFFIX) >= 0):
+    pem_string = cert_pem_file
+  else:
+    pem_string = load_string_from_file(cert_pem_file)
 
   public_key_object = cryptography.x509.load_pem_x509_certificate(bytes(pem_string, "utf-8"))
 
