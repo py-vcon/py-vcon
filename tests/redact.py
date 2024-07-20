@@ -5,7 +5,11 @@ import os
 import json
 import csv
 import scrubadub
-from dataprofiler import Data, Profiler
+import pandas as pd
+import tensorflow as tf
+import dataprofiler
+from dataprofiler import Data, Profiler, DataLabeler
+
 
 DIALOG_DATA_CSV     = "tests/redact_input.csv"
 DIALOG_DATA_FIELDS  = ['parties', 'start', 'duration', 'text']
@@ -123,5 +127,17 @@ class Redact(vcon.filter_plugins.FilterPlugin):
     # Save the profiler output
     with open(PROFILER_REPORT, "w") as output_file:
       output_file.write(json.dumps(profiler_output, indent=4))
+
+    # Label the data
+    # structured labeler doesnt work as it considers entire dialog as a string
+    # and hence is unable to come up with a label for the entire column
+    labeler = DataLabeler(labeler_type='unstructured')
+    labeler.set_params(
+      { 'postprocessor' : {'output_format':'ner', 'use_word_level_argmax': True}}
+    )
+    predictions = labeler.predict(data)
+    for pred in predictions['pred']:
+      print(pred)
+      print('------------')
 
     return(out_vcon)
