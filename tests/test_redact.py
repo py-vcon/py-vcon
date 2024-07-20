@@ -8,26 +8,26 @@ import asyncio
 
 # test foo registration file
 import tests.redact_reg
-
+import tests.redact
+ 
 pytest_plugins = ('pytest_asyncio',)
+TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE = "tests/example_deepgram_external_dialog.vcon"
 
 @pytest.mark.asyncio
-async def test_registry():
-  print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+async def test_redaction():
   plugin_names = vcon.filter_plugins.FilterPluginRegistry.get_names()
 
   print("found {} plugins: {}".format(len(plugin_names), plugin_names))
 
   # Test redact a test plugin, not fully implemented
   plugin_redact = vcon.filter_plugins.FilterPluginRegistry.get("redact")
-  init_options = vcon.filter_plugins.FilterPluginInitOptions()
-  options = vcon.filter_plugins.FilterPluginOptions()
+  init_options = tests.redact.RedactInitOptions()
+  options = tests.redact.RedactOptions()
   assert(plugin_redact is not None)
   assert(plugin_redact.import_plugin(init_options))
   
-  await plugin_redact.filter(None, options)
-
   in_vcon = vcon.Vcon()
+  in_vcon.load(TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE)
   out_vcon = await in_vcon.redact(options)
 
   vcon.filter_plugins.FilterPluginRegistry.shutdown_plugins()
