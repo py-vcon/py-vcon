@@ -4,6 +4,7 @@ import sys
 import vcon
 import vcon.filter_plugins
 import pytest
+import json
 import asyncio
 
 # test foo registration file
@@ -30,5 +31,10 @@ async def test_redaction():
   in_vcon.load(TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE)
   out_vcon = await in_vcon.redact(options)
 
+  # Save the profiler output
+  with open("tests/updated_vcon.json", "w") as output_file:
+    output_file.write(json.dumps(out_vcon.dumps(), indent=4))
+    
+  
   vcon.filter_plugins.FilterPluginRegistry.shutdown_plugins()
 
