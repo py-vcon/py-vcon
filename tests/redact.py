@@ -134,13 +134,13 @@ class Redact(vcon.filter_plugins.FilterPlugin):
         dialog_index,
         True, # find text from transcript analysis if dialog is a recording and transcript exists
         False # do not transcribe this recording dialog if transcript does not exist
-        )
+      )
       
       # no text, no analysis
       if(len(dialog_texts) == 0):
         continue
 
-      with open(DIALOG_DATA_CSV, "a") as dialogCSV:
+      with open(DIALOG_DATA_CSV, "w") as dialogCSV:
         writer = csv.DictWriter(dialogCSV, fieldnames=DIALOG_DATA_FIELDS)
         # write header (just once)
         if csv_has_header == False:
@@ -149,27 +149,32 @@ class Redact(vcon.filter_plugins.FilterPlugin):
         # write data rows
         writer.writerows(dialog_texts)
 
-    # Label the data using CapitalOne libraries
-    # structured labeler doesnt work as it considers entire dialog as a string
-    # and hence is unable to come up with a label for the entire column
-    options = {'selected_columns': ['text']}
-    data = Data(DIALOG_DATA_CSV, options=options)
-    labeler = DataLabeler(labeler_type='unstructured')
-    labeler.set_params(
-      { 'postprocessor' : {'output_format':'ner', 'use_word_level_argmax': True}}
-    )
-    predictions = labeler.predict(data)
-    
-    analysis_extras = {
-      "product": "capitalone"
+      # Label the data using CapitalOne libraries
+      # structured labeler doesnt work as it considers entire dialog as a string
+      # and hence is unable to come up with a label for the entire column
+      options = {'selected_columns': ['text']}
+      data = Data(DIALOG_DATA_CSV, options=options)
+      labeler = DataLabeler(labeler_type='unstructured')
+      labeler.set_params(
+        { 'postprocessor' : {'output_format':'ner', 'use_word_level_argmax': True}}
+      )
+      predictions = labeler.predict(data)
+      
+      analysis_extras = {
+        "product": "capitalone"
       }
     
-    for row_num, row in data.data.iterrows():
-      redacted_dialog = self.redact_text_helper(row, row_num, predictions)
+      redacted_texts = []
+      for i, row in data.data.iterrows():
+        redacted_dialog = self.redact_text_helper(row, i, predictions)
+        dialog_texts[i]['redacted'] = redacted_dialog
+        if redacted_dialog != row.text:
+          redacted_texts.append(dialog_texts[i])
+
       out_vcon.add_analysis(
         dialog_index,
         'pii-labels',
-        redacted_dialog,
+        redacted_texts,
         'capitalone',
         'data_labeler_schema',
         **analysis_extras

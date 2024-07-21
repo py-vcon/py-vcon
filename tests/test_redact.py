@@ -32,7 +32,7 @@ async def test_redaction():
   out_vcon = await in_vcon.redact(options)
 
   # Save the profiler output
-  with open("tests/updated_vcon.json", "w") as output_file:
+  with open("tests/redaction_analysis_vcon.json", "w") as output_file:
     output_file.write(json.dumps(out_vcon.dumps(), indent=4))
     
   
