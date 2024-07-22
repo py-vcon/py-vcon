@@ -13,6 +13,7 @@ import copy
 import logging
 import logging.config
 import enum
+import cbor2
 import time
 import hashlib
 import inspect
@@ -1334,7 +1335,7 @@ class Vcon():
       indent: typing.Union[int, None] = None
     ) -> str:
     """
-    Dump the vCon as a JSON string.
+    Dump the vCon as a JSON format string.
 
     Parameters:  
     **signed** (Boolean): If the vCon is signed locally or verfied,  
@@ -1345,6 +1346,78 @@ class Vcon():
              String containing JSON representation of the vCon.
     """
     return(json.dumps(self.dumpd(signed, False), indent = indent, default=lambda o: o.__dict__, **dumps_options))
+
+
+  class VconBase64Bytes():
+    """
+    Class to handle encoding and conversion of base64url strings to/from bytes for JSON and CBOR
+    """
+    def __init__(self, encoded_base64url):
+      self._base64url = encoded_base64url
+
+    def base64url(self) -> str:
+      return(self._base64url)
+
+    def bytes(self) -> bytes:
+      return(jose.utils.base64url_decode(bytes(self._base64url, 'utf-8')))
+
+    @staticmethod
+    def isBase64Object(dict_object: dict) -> bool:
+      if({"encoding", "body"} <= dict_object.keys()):
+        if(dict_object["encoding"] == "base64url"):
+          return(True)
+      return(False)
+
+    @staticmethod
+    def objectizeBase64Object(dict_object: dict) -> None:
+      dict_object["encoding"] = "binary"
+      dict_object["body"] = Vcon.VconBase64Bytes(dict_object["body"])
+
+
+  @staticmethod
+  def vcon_object_cbor_encoder(cbor_encoder, value):
+    if(isinstance(value, Vcon.VconBase64Bytes)):
+       cbor_encoder.encode(cbor2.CBORTag(21, value.bytes()))
+    else:
+      raise(Exception("Unsupported type: {} for CBOR encoding"))
+
+
+  @tag_serialize
+  def dumpc(
+      self
+    ) -> bytes:
+    """
+    Dump the vCon as CBOR format bytes.
+
+    Parameters:
+
+    Returns:  
+             String containing JSON representation of the vCon.
+    """
+
+    # TODO: would be better not to deep copy the dict
+    vcon_dict = self.dumpd(False, True) # deep copy as we modify the copy and do not want this to be permient
+
+    # Iterate body parameters in redacted and ammended
+    for reference in ["redacted", "ammended"]:
+      # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
+      if(reference in vcon_dict and
+          Vcon.VconBase64Bytes.isBase64Object(vcon_dict["redacted"])
+        ):
+        Vcon.VconBase64Bytes.objectizeBase64Object(vcon_dict["redacted"])
+
+    # Iterate body parameters in objects in group, parties, dialog, attachments and analysis arrays
+    for object_array_name in ["group", "dialog", "attachemnts", "analysis"]:
+      object_array = vcon_dict.get(object_array_name, None)
+      if(object_array):
+        for reference_object in object_array:
+          # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
+          if(reference_object is not None and
+              Vcon.VconBase64Bytes.isBase64Object(reference_object)
+            ):
+            Vcon.VconBase64Bytes.objectizeBase64Object(reference_object)
+
+    return(cbor2.dumps(vcon_dict, default = Vcon.vcon_object_cbor_encoder))
 
 
   @tag_serialize
@@ -1546,6 +1619,111 @@ class Vcon():
       ('analysis' in vcon_dict) or
       ('attachments' in vcon_dict)
       )):
+
+      # validate version
+      version_string = vcon_dict.get(self.VCON_VERSION, "not set")
+      if(version_string != "0.0.1"):
+        raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
+
+      self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+
+    # Unknown
+    else:
+      raise InvalidVconJson("Not recognized as a unsigned , signed or encrypted form of JSON vCon." +
+        "  Unsigned vcon must have vcon version and at least one of: parties, dialog, analyisis or attachment object arrays." +
+        "  Signed vcon must have payload and signatures fields." +
+        "  Encrypted vcon must have cyphertext and recipients fields."
+        )
+
+
+  @tag_serialize
+  def loadc(self, vcon_cbor : bytes) -> None:
+    """
+    Load the vCon from a CBOR bytes array.
+    Assumes that this vCon is an empty vCon as it is not cleared.
+
+    Decision as to what json form to be deserialized is:
+    1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+    2) JWS vCon must have a payload and signatures
+    3) JWE vCon must have a cyphertext and recipients
+
+    Parameters:  
+      **vcon_json** (str): string containing JSON representation of a vCon
+
+    Returns: none
+    """
+
+    self._attempting_modify()
+
+    #TODO: Should check unsafe stuff is not loaded
+
+    # TODO should use self._attempting_modify() ???
+    if(self._state != VconStates.UNSIGNED):
+      raise InvalidVconState("Cannot load Vcon unless current state is UNSIGNED.  Current state: {}".format(self._state))
+
+    vcon_dict = cbor2.loads(vcon_cbor)
+
+    # TODO: iterate object and replace CBORTag 21 with base64url encoded string and set encoding to "base64url"
+
+    # we need to check the format as to whether it is signed or
+    # not and deconstruct the loaded object.
+    # load differently based upon the contents of the JSON
+
+    # Signed vCon (JWS)
+    if(("payload" in vcon_dict) and
+      ("signatures" in vcon_dict)
+      ):
+      self._vcon_dict = {}
+
+      self._state = VconStates.UNVERIFIED
+      self._jws_dict = vcon_dict
+
+    # encrypted vCon (JWE)
+    elif(("cyphertext" in vcon_dict) and
+      ("recipients" in vcon_dict)
+      ):
+      self._vcon_dict = {}
+
+      self._state = VconStates.ENCRYPTED
+      self._jwe_dict = vcon_dict
+
+    # Unsigned vCon has to have vcon version and
+    elif((self.VCON_VERSION in vcon_dict) and (
+      # one of the following arrays
+      ('parties' in vcon_dict) or
+      ('dialog' in vcon_dict) or
+      ('analysis' in vcon_dict) or
+      ('attachments' in vcon_dict)
+      )):
+
+      # Check for CBOR tags that need to be replaced
+      # This is not easily done with hooks int the CBOR parser as we need to change the body and the encoding parameters.
+
+      # Iterate body parameters in redacted and ammended
+      for reference in ["redacted", "ammended"]:
+        # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
+        if(reference in vcon_dict and
+           "body" in vcon_dict[reference] and
+           isinstance(vcon_dict[reference]["body"], cbor2.CBORTag)):
+          raise Exception("unimplemented CBORTag for: {}".format(reference))
+
+      for object_array_name in ["group", "dialog", "attachemnts", "analysis"]:
+        object_array = vcon_dict.get(object_array_name, None)
+        if(object_array):
+          for reference_object in object_array:
+            # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
+            if(reference_object is not None and
+               "body" in reference_object and
+               isinstance(reference_object["body"], cbor2.CBORTag)
+              ):
+              if(reference_object["body"].tag != 21):
+                raise Exception("CBOR tag: {} not support in: {}".format(
+                    reference_object["body"].tag,
+                    object_array_name
+                  ))
+
+              reference_object["body"] = jose.utils.base64url_encode(reference_object["body"].value).decode('utf-8')
+              reference_object["encoding"] = "base64url"
 
       # validate version
       version_string = vcon_dict.get(self.VCON_VERSION, "not set")
