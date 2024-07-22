@@ -37,10 +37,12 @@ The following categories of methods are implemented on the Vcon class.
    * [encrypt](#encrypt)
  * Methods to serialize or deserialize from/to the given Vcon
    * [dump](#dump)
+   * [dumpc](#dumpc)
    * [dumpd](#dumpd)
    * [dumps](#dumps)
    * [get](#get)
    * [load](#load)
+   * [loadc](#loadc)
    * [loadd](#loadd)
    * [loads](#loads)
    * [post](#post)
@@ -445,6 +447,20 @@ Return: none
 
 
 
+### dumpc
+
+**dumpc**(self) -> 'bytes'
+
+
+Dump the vCon as CBOR format bytes.
+
+Parameters:
+
+Returns:  
+         String containing JSON representation of the vCon.
+
+
+
 ### dumpd
 
 **dumpd**(self, signed: 'bool' = True, deepcopy: 'bool' = True) -> 'dict'
@@ -473,7 +489,7 @@ Returns:
 **dumps**(self, signed: 'bool' = True, indent: 'typing.Union[int, None]' = None) -> 'str'
 
 
-Dump the vCon as a JSON string.
+Dump the vCon as a JSON format string.
 
 Parameters:  
 **signed** (Boolean): If the vCon is signed locally or verfied,  
@@ -514,6 +530,26 @@ see Vcon.loads for more details.
 
 Parameters: 
 **vconfile** (str, TextIO) - if string, file name else file like object to write Vcon JSON to.  
+
+Returns: none
+
+
+
+### loadc
+
+**loadc**(self, vcon_cbor: 'bytes') -> 'None'
+
+
+Load the vCon from a CBOR bytes array.
+Assumes that this vCon is an empty vCon as it is not cleared.
+
+Decision as to what json form to be deserialized is:
+1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+2) JWS vCon must have a payload and signatures
+3) JWE vCon must have a cyphertext and recipients
+
+Parameters:  
+  **vcon_json** (str): string containing JSON representation of a vCon
 
 Returns: none
 
