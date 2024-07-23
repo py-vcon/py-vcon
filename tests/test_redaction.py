@@ -5,6 +5,11 @@ import vcon
 import pytest
 import json
 import asyncio
+
+# This test requires ML libraries to be installed manually. 
+# Skip when running the unit test suite.
+pytest.importorskip("pandas")
+
 # Register and load the redaction filter plugin
 import examples.redact_vcon
  
