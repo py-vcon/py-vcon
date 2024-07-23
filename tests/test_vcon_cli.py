@@ -19,7 +19,7 @@ WAVE_FILE_URL = "https://github.com/py-vcon/py-vcon/blob/main/examples/agent_sam
 WAVE_FILE_SIZE = os.path.getsize(WAVE_FILE_NAME)
 VCON_WITH_DIALOG_FILE_NAME = "py_vcon_server/tests/hello.vcon"
 SMTP_MESSAGE_W_IMAGE_FILE_NAME = "tests/email_acct_prob_bob_image.txt"
-GOOGLE_MEET_RECORDING = "tests/google_meet/test meeting-2023-09-06-20-27-GMT-4-18af10d0"
+GOOGLE_MEET_RECORDING = "tests/google_meet/test meeting (2023-09-06 20:27 GMT-4) (18af10d0)"
 ZOOM_MEETING_RECORDING = "tests/zoom/Zoom recording to computer 09 18 23"
 
 
