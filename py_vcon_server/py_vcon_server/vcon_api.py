@@ -176,7 +176,7 @@ def init(restapi):
 
         # Get the processor form the registry
         processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
-          processor_name)
+          processor_name_from_path)
 
         # Run the processor
         processor_output = await processor_inst.process(

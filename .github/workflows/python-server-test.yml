@@ -1,4 +1,4 @@
-name: Python vCon server unit test
+name: py_vcon_server unit tests
 on: 
   push:
     # all
@@ -115,10 +115,16 @@ jobs:
         env:
           OPENAI_API_KEY: ${{  secrets.OPENAI_API_KEY }}
           DEEPGRAM_KEY: ${{  secrets.DEEPGRAM_KEY }}
+          PYTHONPATH: tests/processors
         
         run: |
           # Run all Vcon server package unit tests
           (cd py_vcon_server; pytest -v -rP tests)
+
+      - name: get pip freeze config for successful run
+
+        run: |
+          pip3 freeze
 
       - name: fix pip cache issue by creating dir
         run: |

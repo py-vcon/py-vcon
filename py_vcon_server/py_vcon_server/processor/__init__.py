@@ -3,6 +3,7 @@
 
 import enum
 import typing
+import copy
 import time
 import datetime
 import asyncio
@@ -318,17 +319,27 @@ class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
     description = "Index to which vCon in the VconProcessorIO is to be used for input",
     default = 0
     )
+
+  format_options: typing.Dict[str, str] = pydantic.Field(
+    title = "set VconProcessorOptions fields with formated strings build from parameters",
+    description = "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+    default = {}
+    )
   #rename_output: dict[str, str]
 
 class VconProcessorOutput(pydantic.BaseModel, extra=pydantic.Extra.allow):
   """ Serializable Output results from a VconProcessor """
   vcons: typing.List[VconObject] = pydantic.Field(
-    title = "array of **Vcon** objects",
-    default = []
+      title = "array of **Vcon** objects",
+      default = []
     )
   vcons_modified: typing.List[bool] = pydantic.Field(
-    title = "boolean indicated if the **Vcon** in the **vcons** array has been modified from the input version",
-    default = []
+      title = "boolean indicated if the **Vcon** in the **vcons** array has been modified from the input version",
+      default = []
+    )
+  parameters: typing.Dict[str, typing.Any] = pydantic.Field(
+      title = "dict of parameters passed as input to and output from VconProcessor",
+      default = {}
     )
 
 
@@ -341,6 +352,7 @@ class VconProcessorIO():
     self._vcons: typing.List[MultifariousVcon] = []
     self._vcon_locks: typing.List[str] = []
     self._vcon_update: typing.List[bool] = []
+    self._parameters: typing.Dict[str, typing.Any] = {}
     self._vcon_storage = vcon_storage
 
 
@@ -474,11 +486,67 @@ class VconProcessorIO():
 
     raise Exception("vCon {} not found in VconProcessorIO".format(uuid))
 
-  def set_parameter(self, name: str, value, rename: typing.Dict[str, str]) -> None:
+  def set_parameter(
+      self,
+      name: str,
+      value,
+    ) -> None:
     """
-    set and output parameter value, applying the rename to the given name.
+    set parameter value
     """
-    raise Exception("not implemented")
+    self._parameters[name] = value
+
+
+  # Not sure if this is needed
+  #def rename_parameters(rename: typing.Dict[str, str]) -> None:
+  # applying the rename dict from/to the given name.
+
+
+  def get_parameter(
+      self,
+      name: str
+    ) -> typing.Any:
+    """
+    get parameter value
+    """
+    return(self._parameters[name])
+
+
+  def format_parameters_to_options_dict(
+      self,
+      options: typing.Dict[str, typing.Any]
+    ) -> None:
+    """
+    Recurse through options dict tree and apply formatting to
+    string values using parameters as input to format.
+    """
+
+    formats = options.get("format_options", {})
+    for name in formats.keys():
+      # Do not recurse
+      if(name != "format_options"):
+        options[name] = formats[name].format(**self._parameters)
+
+
+  def format_parameters_to_options(
+      self,
+      options: VconProcessorOptions
+    ) -> VconProcessorOptions:
+    """
+    Format/apply parameters to string values in options
+    """
+    if(isinstance(options, dict)):
+      self.format_parameters_to_options_dict(options)
+      return(options)
+
+    elif(isinstance(options, VconProcessorOptions)):
+      options_dict = options.dict()
+      self.format_parameters_to_options_dict(options_dict)
+      # Reconstruct to get pydantic to do type coersion/conversions and validations
+      return(options.__class__(**options_dict))
+
+    else:
+      raise Exception("options type: {} not dict or VconProcessorOptions".format(type(options)))
 
 
   async def get_output(self) -> VconProcessorOutput:
@@ -489,7 +557,8 @@ class VconProcessorIO():
 
     response_output = VconProcessorOutput(
       vcons = out_vcons,
-      vcons_modified = self._vcon_update
+      vcons_modified = self._vcon_update,
+      parameters = self._parameters
       )
 
     return(response_output)
@@ -930,7 +999,8 @@ class FilterPluginProcessor(VconProcessor):
     Run the indicated **Vcon** through the self._plugin_name **Vcon** **filter_plugin**
     """
 
-    index = options.input_vcon_index
+    formatted_options = processor_input.format_parameters_to_options(options)
+    index = formatted_options.input_vcon_index
     in_vcon: vcon.Vcon = await processor_input.get_vcon(index)
     if(in_vcon is None):
       raise Exception("Vcon not found for index: {}".format(index))
@@ -945,7 +1015,7 @@ class FilterPluginProcessor(VconProcessor):
       num_dialog
       ))
 
-    out_vcon = await in_vcon.filter(self.plugin_name, options)
+    out_vcon = await in_vcon.filter(self.plugin_name, formatted_options)
 
     await processor_input.update_vcon(out_vcon)
 

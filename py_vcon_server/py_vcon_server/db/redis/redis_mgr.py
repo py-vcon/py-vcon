@@ -134,10 +134,11 @@ class RedisMgr():
       raise RedisPoolNotInitialized("redis pool ({}) not initialize".format(self._label))
 
     client = redis.asyncio.client.Redis(connection_pool=self._redis_pool)
-    logger.debug("redis ({}) client type: {}".format(
-        self._label,
-        type(client)
-      ))
+    if(VERBOSE):
+      logger.debug("redis ({}) client type: {}".format(
+          self._label,
+          type(client)
+        ))
 
     if(VERBOSE):
       try:

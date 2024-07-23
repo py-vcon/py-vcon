@@ -1,5 +1,18 @@
 # The Repo for the python-vcon and py-vcon-server Projects
 
+## Python Packages:
+![vcon package name](https://img.shields.io/badge/pip_install-python__vcon-blue)
+![python_vcon PyPI Version](https://img.shields.io/pypi/v/python_vcon.svg)
+[![vcon unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-test.yml/badge.svg?branch=main&python-version=3)](https://github.com/py-vcon/py-vcon/actions)
+
+![vcon server package name](https://img.shields.io/badge/pip_install-py__vcon__server-blue)
+![python_vcon PyPI Version](https://img.shields.io/pypi/v/py_vcon_server.svg)
+[![vcon server unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-server-test.yml/badge.svg?branch=main)](https://github.com/py-vcon/py-vcon/actions)
+
+![Python 3.6](https://img.shields.io/badge/python-3.8-blue.svg)
+![Python 3.6](https://img.shields.io/badge/python-3.9-blue.svg)
+![Python 3.6](https://img.shields.io/badge/python-3.10-blue.svg)
+
 ## Introduction
 
 We are working to make vCon a new IETF standard for containing conversational data.  Conversational data may consists of:
@@ -21,7 +34,7 @@ Currently this consists of two primary Python packages:
    * [command line interface](vcon/bin/README.md) - supporting piping of Vcon construction and operations
    * [Filter plugins](#vcon-filter-plugins) - to extend operations to perform on a Vcon
 
- * The [py-vcon-server package](py_vcon_server/README.md) provides (release coming soon):
+ * The [py-vcon-server package](py_vcon_server/README.md) provides:
    * RESTful APIs
    * Flexible Architecture
    * Scales from 1 to 1000s of servers
@@ -53,6 +66,7 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
 
 ### vCon Presentations, Whitepapers and Tutorials
 
+ * See the [vCon presentation at the SIP Forum AI Summit](https://register.gotowebinar.com/register/408072084535831130)
  * Read the [IETF Contact Center Requirements draft proposal](https://datatracker.ietf.org/doc/draft-rosenberg-vcon-cc-usecases/)
  * Read the [IETF draft proposal](https://datatracker.ietf.org/doc/html/draft-petrie-vcon)
  * Participate in the [IETF vCon Working Group](https://datatracker.ietf.org/group/vcon/about/)
@@ -75,6 +89,8 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
     pip install python-vcon
 
 ## Vcon Filter Plugins
+
+![FilterPlugin Diagram](docs/FilterPlugin.png)
 
 [Filter plugins](vcon/filter_plugins/README.md) are plugin modules that perform some sort of operation on a Vcon.
 They perform an operation on an input Vcon and provide a resulting Vcon as the output.
@@ -121,6 +137,11 @@ Parameters:
                      if False throw an exception if a plugin of the same name is already register
 
 Returns: none
+
+Example code:
+  + [Example vCon FilterPlugin for Deepgram](vcon/filter_plugins/impl/deepgram.py)
+  + [Example registration for Deepgram FilterPlugin](vcon/filter_plugins/deepgram.py)
+  + [Abstract FilterPlugin interface documentation](vcon/filter_plugins#vconfilter_pluginsfilterplugin)
 
 ## Third Party API Keys
 Some of the [Vcon Filter Plugins](#Vcon-filter-plugins) use third party provided functionality that require API keys to use or test the full functionality.

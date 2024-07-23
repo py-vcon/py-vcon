@@ -1,12 +1,13 @@
 # Dev stuff:
-pylint
-mypy
+build
 flake8
+mypy
+pylint
 pytest
 pytest-asyncio
 pytest-dependency
-build
-twine
 pytest_httpserver
+smtpdfix
+twine
 
 

@@ -1,5 +1,6 @@
 
 aiohttp
+aiosmtplib
 async-timeout
 black
 bleach
@@ -63,7 +64,7 @@ PyJWT
 pyparsing
 pyrsistent
 python-dotenv
-python-vcon >= 0.3.1
+python-vcon >= 0.3.2
 PyYAML
 pyzmq
 redis

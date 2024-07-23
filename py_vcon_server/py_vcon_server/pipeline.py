@@ -6,6 +6,7 @@ import time
 import asyncio
 import json
 import pydantic
+import redis
 import py_vcon_server.processor
 import py_vcon_server.job_worker_pool
 import py_vcon_server.logging_utils
@@ -140,6 +141,23 @@ class PipelineDb():
 
 
 
+  async def test(self):
+    try:
+      pipe_def = await self.get_pipeline("fubar")
+
+    except py_vcon_server.pipeline.PipelineNotFound:
+      # Expected, just testing that JSON command is supported on Redis server
+      pass
+
+    except redis.exceptions.ResponseError as command_error:
+      logger.critical("Redis server does not support JSON commands.  Redis stack server required")
+      raise command_error
+    except Exception as unknown_exception:
+      logger.critical("Redis server test failed with exception type: {}".format(
+        type(unknown_exception)))
+      raise unknown_exception
+
+
   async def shutdown(self):
     """ Shutdown the DB connection """
     if(self._redis_mgr):
@@ -203,16 +221,19 @@ class PipelineDb():
              exception PipelineNotFound if name does not exist
     """
     redis_con = self._redis_mgr.get_client()
-    logger.debug("getting pipeline: {} redis con: {} pid: {}".format(name, redis_con, os.getpid()))
+    if(VERBOSE):
+      logger.debug("getting pipeline: {} redis con: {} pid: {}".format(name, redis_con, os.getpid()))
     try:
       pipeline_dict = await redis_con.json().get(PIPELINE_NAME_PREFIX + name, "$")
-      logger.debug("returned from getting pipeline: {}".format(name))
+      if(VERBOSE):
+        logger.debug("returned from getting pipeline: {}".format(name))
     except Exception as e:
-      logger.debug("pipeline redis get exception: {}".format(e))
+      logger.debug("pipeline redis get exception: {} type: {}".format(e, type(e)))
       raise e
 
     if(pipeline_dict is None):
-      logger.debug("pipeline: {} not found".format(name))
+      if(VERBOSE):
+        logger.debug("pipeline: {} not found".format(name))
       raise PipelineNotFound("Pipeline {} not found".format(name))
 
     if(len(pipeline_dict) != 1):
@@ -476,7 +497,8 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       # get server's next queue from list (considering weights)
       queues_checked += 1
       queue_name = self._queue_iterator.get_next_queue()
-      logger.debug("attempting schedule queue: {}".format(queue_name))
+      if(VERBOSE):
+        logger.debug("attempting schedule queue: {}".format(queue_name))
       # TODO: we can do some optimization here and skip repeated weighted queues
       # i.e. those with weight greter than 1 will be repeated, if we just checked
       # the queue and it was empty, no sense in getting pipeline def and checking
@@ -485,13 +507,14 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       # Get the pipeline definition
       try:
         # seem to hang in redis here, trying to yeild first
-        logger.debug("yeilding before getting pipeline def")
-        await asyncio.sleep(0)
+        #logger.debug("yeilding before getting pipeline def")
+        #await asyncio.sleep(0)
         # The following was part of debuging multiprocessing, asyncio, redis problem
         # see what else is running
         # for task in asyncio.all_tasks():
         #   logger.debug("running task: {}".format(task))
-        logger.debug("getting pipeline def")
+        if(VERBOSE):
+          logger.debug("getting pipeline def")
         pipe_def = await self._pipeline_db.get_pipeline(queue_name)
         if(pipe_def is None):
           logger.error("get_pipeine is not supposed to return None, should have thrown exception")
@@ -501,7 +524,8 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
 
       except py_vcon_server.pipeline.PipelineNotFound:
         # TODO: this message should be throttled for some period or number of times
-        logger.warning("no definition for pipeline: {}".format(queue_name))
+        if(VERBOSE):
+          logger.warning("no definition for pipeline: {}".format(queue_name))
         # nothing to do for this queue
         continue
       except Exception as e:
@@ -524,13 +548,15 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       except py_vcon_server.queue.EmptyJobQueue:
         # No jobs in queue, go to next queue
         # TODO: This will be too noisy, disable it after debugging
-        logger.debug("queue: {} is emtpy".format(queue_name))
+        if(VERBOSE):
+          logger.debug("queue: {} is emtpy".format(queue_name))
         continue
 
       except py_vcon_server.queue.QueueDoesNotExist:
         # TODO: throttle down the logging of repeated messages or create
         # a queue black list for some period of time
-        logger.warning("queue: {} does not exist".format(queue_name))
+        if(VERBOSE):
+          logger.warning("queue: {} does not exist".format(queue_name))
         continue
 
       # the job is already labeled with the queue to which it belongs

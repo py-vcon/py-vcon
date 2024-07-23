@@ -23,7 +23,7 @@ logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
 nest_asyncio.apply()
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
@@ -42,12 +42,27 @@ py_vcon_server.db.import_bindings(
   "DB" # label
   )
 
+# Load site specific plugins
+logger.debug("PLUGIN_PATHS: {}".format(py_vcon_server.settings.PLUGIN_PATHS))
+for path in py_vcon_server.settings.PLUGIN_PATHS:
+  if(path and len(path) > 0):
+    logger.info("checking for plugins in: \"{}\"".format(path))
+    py_vcon_server.db.import_bindings(
+      [path],
+      "", # module prefix, allowing anything
+      "site" # label
+      )
+
 # The following imports depend upon the DB binding.
 # So they must be done afterwards
 import py_vcon_server.vcon_api
 import py_vcon_server.admin_api
 
 # Load the VconProcessor bindings
+logger.debug("loading VconProcessors from: {} with prefix: {}".format(
+    py_vcon_server.processor.__path__,
+    py_vcon_server.processor.__name__ + "."
+  ))
 py_vcon_server.db.import_bindings(
   py_vcon_server.processor.__path__, # path
   py_vcon_server.processor.__name__ + ".", # binding module name prefix
@@ -137,6 +152,7 @@ async def startup():
   py_vcon_server.queue.JOB_QUEUE = py_vcon_server.queue.JobQueue(py_vcon_server.settings.QUEUE_DB_URL)
 
   py_vcon_server.pipeline.PIPELINE_DB = py_vcon_server.pipeline.PipelineDb(py_vcon_server.settings.PIPELINE_DB_URL)
+  await py_vcon_server.pipeline.PIPELINE_DB.test()
 
   await py_vcon_server.states.SERVER_STATE.running()
   logger.info("event startup completed")

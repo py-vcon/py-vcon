@@ -1,8 +1,18 @@
 # The py_vcon_server Python Package
 
-Please pardon the roughness of content here.  We are still under construction.
+## Python Packages:
+![vcon package name](https://img.shields.io/badge/pip_install-python__vcon-blue)
+![python_vcon PyPI Version](https://img.shields.io/pypi/v/python_vcon.svg)
+[![vcon unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-test.yml/badge.svg?branch=main&python-version=3)](https://github.com/py-vcon/py-vcon/actions)
 
-The first release and documentation coming soon.
+![vcon server package name](https://img.shields.io/badge/pip_install-py__vcon__server-blue)
+![python_vcon PyPI Version](https://img.shields.io/pypi/v/py_vcon_server.svg)
+[![vcon server unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-server-test.yml/badge.svg?branch=main)](https://github.com/py-vcon/py-vcon/actions)
+
+![Python 3.6](https://img.shields.io/badge/python-3.8-blue.svg)
+![Python 3.6](https://img.shields.io/badge/python-3.9-blue.svg)
+![Python 3.6](https://img.shields.io/badge/python-3.10-blue.svg)
+
 
 The following is an overview of the Python vCon Server, architecture, components, configuration and use.
 The documentation on this page assumes the reader has a rough understanding of what a vCon is and what you can do with them at least at a high level.
@@ -18,6 +28,8 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
     + [Admin RESTful API](#admin-restful-api)
     + [vCon RESTful API](#vcon-restful-api)
   + [Pipeline Processing](#pipeline-processing)
+    + [Simple Pipeline Example](#simple-pipeline-example)
+    + [Advanced Pipeline Example](#advanced-pipeline-example)
   + [vCon Processor Plugins](#vcon-processor-plugins)
   + [Access Control](#access-control)
   + [Building](#building)
@@ -69,11 +81,13 @@ The Python vCon server an be thought of as the aggregation of the following high
 ## Architecture
 ![Architecture Diagram](docs/Py_vCon_Server_Architecture.png)
 
-The North facing interfaces provide the [vCon RESTful APIs](#vcon-restful-api) which are entry points that perform [vCon CRUD](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD) and operations on vCons using **processor** plugins and configured **pipelines** of processor oeparations.
+The North facing interfaces provide the [vCon RESTful APIs](#vcon-restful-api) which are entry points that perform [vCon CRUD](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD) and operations on vCons using **processor** plugins and configured **pipelines** of processor operations.
 
-The West facing interfaces provide the [Admin RESTful API](#admin-restfuli-api) which are entry points for adiminstration, configuration and monitoring of the vCon server.
+The West facing interfaces provide the [Admin RESTful API](#admin-restful-api) which are entry points for administration, configuration and monitoring of the vCon server.
 
-The South facing interfaces are pluggable [vCon processors](#vcon-processor-plugins) which perform oprations on one or more vCon either as standalone functions or as wrappers to externally provided services.
+The South facing interfaces are pluggable [vCon processors](#vcon-processor-plugins) which perform operations on one or more vCon either as standalone functions or as wrappers to externally provided services.
+
+![VconProcessor Diagram](docs/VconProcessor.png)
 
 The East facing interfaces are pluggable interfaces to database services for:
   * vCon storage
@@ -82,9 +96,10 @@ The East facing interfaces are pluggable interfaces to database services for:
   * Pipeline definitions and configuration
 
 At the core is the **Pipeline Server** which runs queued vCon jobs through the named [Pipeline](#pipeline-processing)
+![PipelineServer Flow Diagram](docs/PipelineServerFlow.png)
 
 Currently Redis is used for all of these database services.
-The RESTful APIs are all built on FASTapi.
+The RESTful APIs are all built on FastAPI.
 This initial release does not provide vCon locking.
 This means that nothing prevents multiple servers or jobs from modifying the same vCon at the same time, resulting in lost data.
 
@@ -132,14 +147,79 @@ for running **Pipelines** on the given vCon or indicated vCon in **VconStorage**
 
 ## Pipeline Processing
 
+A pipeline provides the means to run a sequence of **VconProcessors**.
+This is useful as often we want to perform the same sets of operations on many different vCons.
+A processor is given a **VconProcessorIO** object and a set of **VconProcessorOptions** for the specific processor type.
+The processor provides a **VconProcessorIO** object as output.
+The **VconProcessorIO** object may contain zero or more vCons and a set of parameters.
+The processor may modify the vCon(s) and parameters from the input **VconProcessorIO** to create the **VconProcessorIO** output object.
+A pipeline is provided an input **VconProcessorIO** which is passed, along with the processor options for the first processor configured in the pipeline's **processors** list.
+The output from the first processor is then passed to the second processor configured in the pipeline definition's **processors** list along with it's processor options.
+This process is repeated through the sequence of processors configured in the pipeline definition's **processors** list.
+
+![vCon Pipeline Processing Diagram](docs/PipelineProcessing.png)
+
+A pipeline definition is divided up into two high level objects.
+The **pipeline_options** object which sets general overall options for the pipeline.
+The **processors** object list, which defines which processors are to be run, in the give order and with the given processor specific options.
+
+Pipeline definitions can be created and modified using the [Admin: Pipeline RESTful APIs](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Pipelines)
+
+![vCon PipelineDefinition Diagram](docs/PipelineDefinition.png)
+
+A pipeline can be run one time using the [vCon: Pipelines RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Pipelines) or many jobs can be queued for the pipeline server to run through any of the defined pipelines using the [Admin: Job Queues RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put).
+
+The **Pipeline Server** will:
+  * automatically check for jobs in it's configured set of **Job Queues**
+  * pull one job out of a queue at a time and assign it a job ID
+  * put the job in the **In Progress** queue while it is being processed
+  * run the job through the pipeline
+  * optionally commit modified or newly created vCons
+  * queue the job in the success or failure **Job Queues** if provided
+  * remove the job from the **In Progress** queue
+  * repeat the process for other jobs in the **Job Queues** that the **Pipeline Server(s)** is(are) configured to process 
+
+A couple of key points to make here are:
+
+  * a **Pipeline Server** will only look at **Job Queue(s)** that it is(are) configured to process
+  * a **Pipeline Server** can be configured to process multiple **Job Queues** with weighted priorities
+  * multiple **Pipeline Servers** can be run at the same time on the same or different machines and they can be configured to process the same or different **Job Queues**
+  * a **Job Queue's** name implies the name of the **Pipeline Definition** that will be used for jobs in that queue
+  * **In Progress** jobs have a job ID assigned and can be referenced by the job ID in the **In Progress Queue**, which is used for all **Pipeline Server** instances running
+
+To run vCons through pipelines using the **Pipeline Server**, you need to do the following:
+
+  1) Define a pipeline ([create a pipeline definition](#create-and-use-a-pipeline))
+  2) Create a **Job Queue** with the same name as the pipeline ([create a job queue](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/create_new_job_queue_queue__name__post))
+  3) Configure the **Pipeline Server** to process the job queue ([set pipeline server queue properties](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/set_server_queue_properties_server_queue__name__post))
+  4) Add one or more jobs to the **Job Queue** ([add a job to job queue](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Job%20Queues/add_queue_job_queue__name__put))
+
+![vCon Pipeline Server Flow Diagram](docs/PipelineServerFlow.png)
+
+### Simple Pipeline Example
+
+Here is an example of a [simple 2 processor pipeline](#create-and-use-a-pipeline) which uses the deepgram processor to transcribe a recording which is saved as an analysis object and the openai_chat_completion to create a summary of the transcript which is saved a a second analysis object in the vCon.
+
+### Advanced Pipeline Example
+
+A more advanced example of a pipeline definition can be found at the following link:
+[Advanced pipeline definition example](docs/email_meeting_notes_pipeline.json)
+
+This pipeline is defined to run 6 processors on the vCon input.
+It does the following:
+
+  * run the deepgram transcription processor (line 9)
+  * run the openai_chat_completion processor with default summary prompt (line 16)
+  * run the openai_chat_completion processor with action items prompt (line 21)
+  * run the openai_chat_completion processor with notes prompt (line 29)
+  * run the openai_jq processor with queries on vCon (line 37)
+  * run the send_email processor with parameters message content (line 50)
+
 ## vCon Processor Plugins
 
   [Processor plugin framework and plugin instances README](py_vcon_server/processor/README.md)
 
-    template for generated docs
-      TOC
-      iterate through processors and grab doc
-      gather all init_options types and processor options types
+![VconProcessor Diagram](docs/VconProcessor.png)
 
 
 ## Access Control
@@ -147,7 +227,7 @@ We realize Access Control is an important aspect of the vCon Server.  The ACL ca
 
 ## Authentication and JWT
 
-[Guide to authentication with fastAPI](https://dev.to/spaceofmiah/implementing-authorization-in-fastapi-a-step-by-step-guide-for-securing-your-web-applications-3b1l#:~:text=FastAPI%20has%20built%2Din%20support,resources%20or%20perform%20certain%20actions.)
+[Guide to authentication with FastAPI](https://dev.to/spaceofmiah/implementing-authorization-in-fastapi-a-step-by-step-guide-for-securing-your-web-applications-3b1l#:~:text=FastAPI%20has%20built%2Din%20support,resources%20or%20perform%20certain%20actions.)
 
 ## Building
 
@@ -166,7 +246,8 @@ It can be generated like the following command line:
     export DEEPGRAM_KEY=ccccccccccccc
     export OPENAI_API_KEY=bbbbbbbbbbbbb
     export HOSTNAME=http://0.0.0.0:8000
-    export REDIS_URL=redis://<redis_host_ip>:6379
+    export VCON_STORAGE_URL=redis://<redis_host_ip>:6379
+    export PYTHONPATH=.
     EOF
 
 The unit tests for the server can be run using the following command in this directory:
@@ -184,30 +265,43 @@ The unit tests for the server can be run using the following command in this dir
   + **LOGGING_CONFIG_FILE** -  (defaults to: "<install path>/logging.config")
   + **LAUNCH_VCON_API** -  Enable vCon RESTful APIs True/False(defaults to: True)
   + **LAUNCH_ADMIN_API** - Enable Admin RESTful APIs True/False (defaults to: True)
-  + **WORK_QUEUES** -  (defaults to: "{}")
+  + **WORK_QUEUES** -  List of job queues the pipeline server is to pull jobs from.
+If no queue names are specified, the pipeline server will not run any jobs.
+This list of queue names can be [added](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/set_server_queue_properties_server_queue__name__post) and [removed](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/delete_server_queue_server_queue__name__delete) on a live server using the [Admin Server set of RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers).
+The environmental variable has the format of comma separated queue names, each with an optional colon separated weight integer.
+The weight specifies the number of jobs to pull from the queue before iterating to the next queue.
+Example: "a:4,b"
+(defaults to: "")
+  + **PLUGIN_PATHS** - comma separated list of absolute or relative path names from which to load plugin registrations ([filter_plugins](../README.md#adding-vcon-filter-plugins) or [vCon Processor](#extending-the-vcon-server)).
+(defaults to: "")
 
 ## Installing and Configuring
 
 The following installation and configuration instructions are intended for development and testing purposes only.
 This is by no means instructions for a secure install.
 These instructions are intended for a setup where the developer is running a Docker server on a local host.
-It is most convenient to run two docker containers, one for the Redis server and a second for the vCon server.
-The following instructions are for this configuration.
+It is most convenient to run two Docker containers, one for the Redis server and a second for the vCon server.
+The vCon server requires some of the JSON commands in the Redis stack server.
+The following instructions are for running the configuration with two Docker containers: one for the Redis server, one for the vCon server.
 
-The [Dockerfile](docker_redis/Dockerfile) for the Redis server can be found in the [docker_redis](docker_redis) directory.
-The following comments will build the image and run the container:
-    cd docker_redis
-    ./dockerctl.sh build
-    ./dockerctl.sh run
+The following docker command will retrieve the Redis stack server image and run the container:
+
+    docker run -d --name redis-stack-server -p 6379:6379 redis/redis-stack-server:latest
+
+For developers, it may be useful to create a shell on the Redis server to use the Redis CLI.
+The following will start a shell in the Docker container and start the Redis CLI:
+
+    docker exec -it redis-stack-server /bin/bash
+    redis-cli -h localhost -p 6379
 
 The Redis server will be bound to to the Docker server host's network on the default Redis port (6379).
-If you would like a shell on the Redis server container to use the Redis CLI to query the DB, the following will create a shell on the container:
-    ./dockerctl.sh shell
 
-If you do not setup your Redis server in the above configuration, you will need to setup your enviromental variables to indicate other wise with something like the following:
+If you do not setup your Redis server in the above configuration, you will need to setup your environmental variables to indicate other wise with something like the following:
+
     VCON_STORAGE_URL=redis://<your_host>:<your_port>
 
 For example:
+
     echo VCON_STORAGE_URL=redis://192.168.0.1:8765 >> testenv
 
 The py_vcon_server can be run in another container or directly on the Docker server host.
@@ -222,40 +316,51 @@ Other Python platforms are untested.
 
 ### Run py_vcon_server Package
 Install the py_vcon_server package:
+
     pip3 install py_vcon_server
 
 If you are running the vCon server directly from the package, setup your environment like the following:
+
     cat << EOF >> testenv
     export REST_URL="http://<your_host_ip>:8000"
-    export OPENAI_API_KEY="your_openapi_key_here"
+    export OPENAI_API_KEY="your_openai_key_here"
     export DEEPGRAM_KEY="your_deepgram_api_key_here"
     EOF
 
 To start the vCon server use the following commands:
+
     source testenv
     python3 -m py_vcon_server
 
 ### Run py_vcon_server From Cloned Repo
 If you which to run the vCon server in a development mode, directly from the git clone, from the [py_vcon_server](.) directory, setup your environment variables using the following:
+
     cat << EOF >> testenv
-    export PYTHONPATH=".:.."
+    export PYTHONPATH="."
     export REST_URL="http://<your_host_ip>:8000"
-    export OPENAI_API_KEY="your_openapi_key_here"
+    export OPENAI_API_KEY="your_openai_key_here"
     export DEEPGRAM_KEY="your_deepgram_api_key_here"
     EOF
 
 
 To start the vCon server use the following commands:
+
     source testenv
     python3 -m py_vcon_server
 
+The live swagger documentation for the RESTful APIs along with developer test UI is available at the following once the server is started:
+
+    http://<your_host_ip>:8000/docs
+
+Note: a static image of the swagger documentation (without developer test UI) can be viewed [here](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html).
 
 ## First Steps
    * [1. Installing and Configuring](#installing-and-configuring)
    * [2. Build a vCon](#build-a-vcon)
-   * [3. Process a vCon](#process-a-vcon)
-   * [4. Create and Use a Pipeline](#create-and-use_a-pipeline)
-   * [5. Create a Job Queue and Queue a Job](#create-a-job-queue-and-queue-a-job)
+   * [3  Store a vCon on the server](#store-a-vcon-on-the-server)
+   * [4. Process a vCon](#process-a-vcon)
+   * [5. Create and Use a Pipeline](#create-and-use-a-pipeline)
+   * [6. Create a Job Queue and Queue a Job](#create-a-job-queue-and-queue-a-job)
 
 ### Build a vCon
 
@@ -275,6 +380,39 @@ There are a number of ways that you can build a vCon:
 
   * Use an [existing vCon](../tests/hello.vcon)
 
+### Store a vCon on the server
+
+There are a number of ways to put your vCon on the server and store it.
+vCons are stored using it's UUID as the key.
+To perform an operation on a stored vCon you will want to remember its UUID.
+The following examples assume that your vcon is contained locally in a file call hello.vcon, your vCon server is configured to run the vCon RESTful API on the IP address: 192.168.0.2 and is bound to port 8000.
+You will have to change the examples to your specifics.
+
+* Use the **vcon** CLI:
+
+      vcon -i hello.vcon -p 192.168.0.2 8000
+
+* Use vCon server [POST /vcon entry point](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Pipelines).
+For test purposes, you can use the swagger documentation test interface:
+
+    1) Go to http://192.168.0.2:8000/docs#/vCon%3A%20Storage%20CRUD/post_vcon_vcon_post
+    2) Click the **Try it out** button
+    3) Copy and paste your vCon into the **Request Body** field
+    4) Click the **Execute** button
+
+* Use **wget**:
+
+      wget --method POST --header="Content-Type: application/json" --body-file=hello.vcon http://192.168.0.100:8000/vcon
+
+* Use **curl**:
+
+      curl -i -X POST http://192.168.0.100:8000/vcon -H "Content-Type: application/json" --data-binary "@hello.vcon"
+
+Note: If you do not know the UUID for your vCon you can look at it in a text editor.
+Alternatively, you can query the JSON vCon using the jq command:
+
+    jq ".uuid" hello.vcon
+
 ### Process a vCon
 
 Now that you have a vCon you can do something with it.
@@ -283,7 +421,7 @@ The processors are exposed via the vCon RESTful API.
 The vCon Processor RESTful APIs require the vCon to be stored in in VconStorage in the server.
 You can put your vCon in VconStorage by [posting it via the vCon RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD/post_vcon_vcon_post).
 If your vCon contains or references a audio or video dialog, you might try the Whisper or Deepgram (requires API key from Deepgram) transcription processors as a first step.
-If your vCon contains only text from email or messages, you might try the openapi_chat_complitions (requires API key from OpenAI) processor to produce a summary of the text.
+If your vCon contains only text from email or messages, you might try the openai_chat_completion (requires API key from OpenAI) processor to produce a summary of the text.
 Have a look at the [vCon Processor RESTful API Swagger documentation](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Processors)
 
 ### Create and Use a Pipeline
@@ -341,9 +479,8 @@ The following features are next to be implemented for the vCon server.
 [Sponsor us](https://github.com/sponsors/py-vcon) if you would like this development to be sped up or have different priorities.
 
   * Transactional vCon locking to prevent multiple processors from modifying a vCon at the same time
-  * Pipeline parameters to allow one vCon processor to set options for down stream processors
   * vCon access control lists
-  * email and Slack notification vCon processors
+  * Slack notification vCon processors
   * Resolution of the Python multiprocessing, asyncio and Redis bug
   * More vCon processor plugins
 
@@ -351,18 +488,27 @@ The following features are next to be implemented for the vCon server.
 
 TODO:  Overview of extendable frameworks in the vCon server
 
-How to:
-  * Create new vCon processor plugins
-    + [Example VconProcessor wrapper for Deepgram vCon FilterPlugin](py_vcon_server/processor/builtin/deepgram.py)
-    + [Example regisration for Deepgram VconProcessor](py_vcon_server/processor/deepgram.py)
-    + [Abstract VconProcessor interface documentation](py_vcon_server/processor#py_vcon_serverprocessorvconprocessor)
-  * Create new vCon filter plugins
-    + [Example vCon FilterPlugin for Deepgram](../vcon/filter_plugins/impl/deepgram.py)
-    + [Example registration for Deepgram FilterPlugin](../vcon/filter_plugins/deepgram.py)
-    + [Abstract FilterPlugin interface documentation](../vcon/filter_plugins#vconfilter_pluginsfilterplugin)
-  * Bind a different back end DB
-    + [Example Redis binding for VconStorage](py_vcon_server/db/redis/__init__.py)
-    + [Example registration of Redis binding for VconStorage](py_vcon_server/db/redis_registration.py)
+![VconProcessor Diagram](docs/VconProcessor.png)
+
+How to create new vCon processor plugins
+  + [Example VconProcessor wrapper for Deepgram vCon FilterPlugin](py_vcon_server/processor/builtin/deepgram.py)
+  + [Example registration for Deepgram VconProcessor](py_vcon_server/processor/deepgram.py)
+  + [Abstract VconProcessor interface documentation](py_vcon_server/processor#py_vcon_serverprocessorvconprocessor)
+
+Note: to load your proprietary vCon plugins, you need to add the path to your plugin registration to the [PLUGIN_PATHS environmental variable](#environmental-variables).
+Plugins are only loaded upon startup.
+
+
+![FilterPlugin Diagram](../docs/FilterPlugin.png)
+
+[How to create new vCon filter plugins](../README.md#adding-vcon-filter-plugins)
+
+Note: to load your proprietary filter_plugins, you need to add the path to your plugin registration to the [PLUGIN_PATHS environmental variable](#environmental-variables).
+Plugins are only loaded upon startup.
+
+How to bind a different backend DB
+  + [Example Redis binding for VconStorage](py_vcon_server/db/redis/__init__.py)
+  + [Example registration of Redis binding for VconStorage](py_vcon_server/db/redis_registration.py)
 
 ## Support
 
