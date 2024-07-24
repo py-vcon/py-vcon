@@ -47,6 +47,7 @@ expected_tags = [
     'operation',
     'signing'
     'encrypting',
+    "redacted",
   ]
 
 tag_titles = {
@@ -58,7 +59,8 @@ tag_titles = {
     'attachment': "access or modify Vcon Attachment objects",
     'operation': "perform operations on Vcon's",
     'signing': "sign or verify a signed Vcon",
-    'encrypting': "encrypt or decript a Vcon`"
+    'encrypting': "encrypt or decript a Vcon`",
+    'redacted': "reference the unredacted version of a vCon"
   }
 
 def test_vcon_doc():
@@ -99,7 +101,7 @@ def test_vcon_doc():
   print("tags: {}".format(list(tagged_methods.keys())))
   assert(total_methods - num_tagged_methods <= 14)
   # if the tags change, may need to check the layout and order
-  assert(len(tagged_methods) == 9)
+  assert(len(tagged_methods) == 10)
 
   TOC = ""
   readme_text = ""
