@@ -53,6 +53,8 @@ The following categories of methods are implemented on the Vcon class.
    * [set_created_at](#set_created_at)
    * [set_subject](#set_subject)
    * [set_uuid](#set_uuid)
+ * Methods to reference the unredacted version of a vCon
+   * [set_redacted](#set_redacted)
  * Methods to sign or verify a signed Vcon
    * [sign](#sign)
    * [verify](#verify)
@@ -703,6 +705,25 @@ Returns:
   UUID version 8 string
   (vCon uuid parameter is also set)
 
+
+
+
+
+## Methods to reference the unredacted version of a vCon
+
+
+### set_redacted
+
+**set_redacted**(self, uuid: 'str', redacted_type: 'str') -> 'None'
+
+
+Set/replace the parameters of the Redacted Object for reference by UUID
+
+Parameters:  
+  **uuid** - the UUID of the less redacted form of this vCon
+  **redacted_type** - the reason or content that was redacted from the referenced vCon
+
+Returns:  None
 
 
 
