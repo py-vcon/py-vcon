@@ -176,6 +176,12 @@ def tag_operation(func):
   return(func)
 
 
+def tag_redacted(func):
+  """ decorator to tag with redaction category """
+  func._tag = "redacted"
+  return(func)
+
+
 class VconAttribute:
   """ descriptor base class for attributes in vcon """
   def __init__(self, doc : typing.Union[str, None] = None):
@@ -2124,6 +2130,28 @@ class Vcon():
     self._vcon_dict[Vcon.UUID] = uuid
 
     return(uuid)
+
+
+  @tag_redacted
+  def set_redacted(self, uuid: str, redacted_type: str) -> None:
+    """
+    Set/replace the parameters of the Redacted Object for reference by UUID
+
+    Parameters:  
+      **uuid** - the UUID of the less redacted form of this vCon
+      **redacted_type** - the reason or content that was redacted from the referenced vCon
+
+    Returns:  None
+    """
+
+    self._attempting_modify()
+
+    new_redacted = {}
+    new_redacted["type"] = redacted_type
+    new_redacted["uuid"] = uuid
+
+    self._vcon_dict[Vcon.REDACTED] = new_redacted
+
 
   @staticmethod
   def attribute_exists(name : str) -> bool:
