@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 
 import vcon
 
@@ -7,8 +8,12 @@ def test_empty_vcon():
   cbor_bytes = empty_vcon.dumpc()
   print("empty len: {}".format(len(cbor_bytes)))
   print("cbor: {}".format(cbor_bytes))
+  print("bype[0]: {}".format(cbor_bytes[0]))
+  print("bype[1]: {}".format(cbor_bytes[1]))
 
-  print("json: {}".format(empty_vcon.dumps()))
+  json_str = empty_vcon.dumps()
+  print("json: {}".format(json_str))
+  print("Size ratio: {}".format(len(cbor_bytes)/len(json_str)))
   reconstituted_vcon = vcon.Vcon()
   reconstituted_vcon.loadc(cbor_bytes)
   print("reconstituted: {}".format(reconstituted_vcon.dumps()))
@@ -22,10 +27,17 @@ def test_simple_vcon():
   cbor_bytes = hello_vcon.dumpc()
 
   print("cbor: {}".format(cbor_bytes))
+  print("bype[0]: {}".format(cbor_bytes[0]))
+  print("bype[1]: {}".format(cbor_bytes[1]))
 
   reconstituted_vcon = vcon.Vcon()
   reconstituted_vcon.loadc(cbor_bytes)
-  print("reconstituted: {}".format(reconstituted_vcon.dumps()))
+  with open("tests/hello.cbor", "wb") as cbor_file:
+    cbor_file.write(cbor_bytes)
+
+  json_str = reconstituted_vcon.dumps()
+  print("reconstituted: {}".format(json_str))
+  print("Size ratio: {}".format(len(cbor_bytes)/len(json_str)))
   assert(hello_vcon.uuid == reconstituted_vcon.uuid)
   assert(hello_vcon.created_at == reconstituted_vcon.created_at)
   assert(hello_vcon.dialog[0]["body"] == reconstituted_vcon.dialog[0]["body"])
