@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """
 Module for creating and modifying vCon conversation containers.
 see https:/vcon.dev
@@ -74,6 +75,14 @@ for finder, module_name, is_package in pkgutil.iter_modules(vcon.filter_plugins.
   logger.info("plugin registration: {}".format(module_name))
   importlib.import_module(module_name)
 
+
+class ExperimentalWarning(Warning):
+  """
+  Warning for methods which modify or construct vCons with experimental or non-vCon standards
+  complient forms or parameters.  Note: these may be depricated.
+  """
+
+
 def deprecated(reason : str):
   """
   Decorator for marking and emmiting warnings on deprecated methods and classes
@@ -98,6 +107,34 @@ def deprecated(reason : str):
     return new_func
 
   return decorator
+
+
+def experimental(reason : str):
+  """
+  Decorator for marking and emmiting warnings on experimental or non-vCon standard following methods and classes.
+  Note: these may be depricated.
+  """
+
+  def decorator(func):
+    if inspect.isclass(func):
+      msg = "Call to experimental class {{}} ({}).".format(reason)
+    else:
+      msg = "Call to experimental function {{}} ({}).".format(reason)
+
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+      warnings.simplefilter('always', ExperimentalWarning)
+      warnings.warn(
+        msg.format(func.__name__),
+        category = ExperimentalWarning,
+        stacklevel=2)
+      warnings.simplefilter('default', ExperimentalWarning)
+      return func(*args, **kwargs)
+
+    return new_func
+
+  return decorator
+
 
 class VconStates(enum.Enum):
   """ Vcon states WRT signing and verification """
@@ -1388,6 +1425,7 @@ class Vcon():
       raise(Exception("Unsupported type: {} for CBOR encoding"))
 
 
+  @experimental("CBOR format is non-standard for vCon")
   @tag_serialize
   def dumpc(
       self
@@ -1642,6 +1680,7 @@ class Vcon():
         )
 
 
+  @experimental("CBOR format is non-standard for vCon")
   @tag_serialize
   def loadc(self, vcon_cbor : bytes) -> None:
     """
