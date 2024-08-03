@@ -147,7 +147,7 @@ def doc_pydantic(pydantic_type: typing.Type[pydantic.BaseModel]) -> str:
       ):
       field_data["example"] = ": " + field_data["example"]
     else:
-      field_data["example"] = ": "
+      field_data["example"] = ":"
 
     doc += FIELD_TEMPLATE.format(**field_data)
 

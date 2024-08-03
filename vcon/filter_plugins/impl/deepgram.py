@@ -51,7 +51,7 @@ class DeepgramOptions(
 
 class Deepgram(vcon.filter_plugins.FilterPlugin):
   """
-  **FilterPlugin** to for transcription using **Deepgram** 
+  **FilterPlugin** for transcription using **Deepgram**
   """
   init_options_type = DeepgramInitOptions
 
