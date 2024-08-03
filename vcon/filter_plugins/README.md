@@ -11,18 +11,21 @@
    - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
    - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
+   - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPlugin](#vconfilter_pluginsimplsignfilterpluginsignfilterplugin)
    - [vcon.filter_plugins.impl.whisper.Whisper](#vconfilter_pluginsimplwhisperwhisper)
  + [Filter Plugin Initialization Options Classes](#filter-plugin-initialization-options-classes)
    - [vcon.filter_plugins.FilterPluginInitOptions](#vconfilter_pluginsfilterplugininitoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
+   - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginInitOptions](#vconfilter_pluginsimplsignfilterpluginsignfilterplugininitoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
  + [Filter Plugin Options Classes](#filter-plugin-options-classes)
    - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
+   - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginOptions](#vconfilter_pluginsimplsignfilterpluginsignfilterpluginoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperOptions](#vconfilter_pluginsimplwhisperwhisperoptions)
 
 ## Introduction
@@ -120,7 +123,7 @@ Parameters: None
 
 ## vcon.filter_plugins.impl.deepgram.Deepgram
 
-  **FilterPlugin** to for transcription using **Deepgram** 
+  **FilterPlugin** for transcription using **Deepgram**
   
 
 **Methods**:
@@ -260,6 +263,47 @@ Returns:
 Close down OpenAI client if created. 
 
 
+## vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPlugin
+
+  **FilterPlugin** for JWS signing of vCon
+  
+
+**Methods**:
+
+### SignFilterPlugin.\_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginInitOptions)
+
+Parameters:
+  init_options (SignFilterPluginInitOptions) - the initialization options for JWS signing of vCon in plugin
+
+
+**init_options** - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginInitOptions](#vconfilter_pluginsimplsignfilterpluginsignfilterplugininitoptions)
+
+### SignFilterPlugin.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginOptions) -> vcon.Vcon
+
+
+sign vCon using JWS
+
+Parameters:
+  options (SignFilterPluginOptions)
+
+Returns:
+  the signed Vcon object (JWS)
+
+
+**options** - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginOptions](#vconfilter_pluginsimplsignfilterpluginsignfilterpluginoptions)
+
+### SignFilterPlugin.\_\_del__
+\_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
 ## vcon.filter_plugins.impl.whisper.Whisper
 
   **FilterPlugin** to generate transcriptions for a **Vcon**
@@ -388,6 +432,35 @@ example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 
 default: None
 
+## vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginInitOptions
+ - JWS signing of vCon **FilterPlugin** intialization object
+
+A **SignFilterPluginInitOptions** object is provided to the
+**Sign FilterPlugin.__init__** method when it is first loaded.  Its
+attributes effect how the registered **FilterPlugin** functions.
+
+#### Fields:
+
+##### private_pem_key (typing.Union[str, NoneType])
+default PEM format private key to use for signing vCon
+
+
+
+example:
+
+default: None
+
+##### cert_chain_pems (typing.List[str])
+default PEM certificate chain
+
+default PEM format certificate chain to include in the signed (JWS x5c) vCon
+and used for verification of the signed vCon.
+
+
+example:
+
+default: []
+
 ## vcon.filter_plugins.impl.whisper.WhisperInitOptions
  - Whisper **FilterPlugin** intialization object
 
@@ -436,7 +509,7 @@ https://developers.deepgram.com/reference/pre-recorded
 transcription language
 None
 
-example: 
+example:
 
 default: "en"
 
@@ -520,7 +593,7 @@ given this prompt to instruct it what generative AI text
 that you would like from it.
 
 
-example: 
+example:
 
 default: "Summarize the transcript in these messages."
 
@@ -531,7 +604,7 @@ The **max_tokens** limits the size of the output generative AI text.
 A token is approximately a syllable.  On average a word is 1.33 tokens.
 
 
-example: 
+example:
 
 default: 100
 
@@ -543,7 +616,7 @@ lower number is more deterministic, higher is more random.
 values should range from 0.0 to 2.0
 
 
-example: 
+example:
 
 default: 0.0
 
@@ -578,7 +651,7 @@ object which is added to the input **Vcon**.
 on the new **analysis** object in the **Vcon**.
 
 
-example: 
+example:
 
 default: "summary"
 
@@ -643,7 +716,7 @@ given this prompt to instruct it what generative AI text
 that you would like from it.
 
 
-example: 
+example:
 
 default: "Summarize this conversation: "
 
@@ -654,7 +727,7 @@ The **max_tokens** limits the size of the output generative AI text.
 A token is approximately a syllable.  On average a word is 1.33 tokens.
 
 
-example: 
+example:
 
 default: 100
 
@@ -666,7 +739,7 @@ lower number is more deterministic, higher is more random.
 values should range from 0.0 to 2.0
 
 
-example: 
+example:
 
 default: 0.0
 
@@ -701,9 +774,37 @@ object which is added to the input **Vcon**.
 on the new **analysis** object in the **Vcon**.
 
 
-example: 
+example:
 
 default: "summary"
+
+## vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginOptions
+ - Sign filter method options
+
+Options for signing vCon in filter_plugin.
+
+#### Fields:
+
+##### private_pem_key (typing.Union[str, NoneType])
+PEM format private key to use for signing vCon
+
+    Override the default PEM format private key for signing.
+
+
+example:
+
+default: None
+
+##### cert_chain_pems (typing.List[str])
+PEM certificate chain
+
+Override default PEM format certificate chain to include in the signed (JWS x5c) vCon
+and used for verification of the signed vCon.
+
+
+example:
+
+default: []
 
 ## vcon.filter_plugins.impl.whisper.WhisperOptions
  - WhisperOptions
@@ -716,7 +817,7 @@ Options for transcribing the one or all dialogs in a **Vcon** using the **OpenAI
 transcription language
 None
 
-example: 
+example:
 
 default: "en"
 
@@ -750,7 +851,7 @@ List of output types to generate.  Current set of value supported are:
        Not specifing "output_type" assumes all of the above will be output, each as a separate analysis object.
 
 
-example: 
+example:
 
 default: ['vendor', 'word_srt', 'word_ass']
 
