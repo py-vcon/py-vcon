@@ -2137,9 +2137,19 @@ class Vcon():
     Returns:  
       the filter modified Vcon
     """
-    self._attempting_modify()
 
-    plugin = vcon.filter_plugins.FilterPluginRegistry.get(filter_name, True)
+    plugin_reg = vcon.filter_plugins.FilterPluginRegistry.get(filter_name, True)
+
+    plugin = plugin_reg.plugin()
+    if(plugin is None):
+      message = "plugin: {} not loaded as module: {} was not found".format(plugin_reg.name, plugin_reg._module_name)
+      raise vcon.filter_plugins.FilterPluginModuleNotFound(message)
+
+    plugin.check_valid_state(self)
+
+    # Force defaulting and typing for plugin specific options
+    if(isinstance(options, dict)):
+      options = plugin.options_type(**options)
 
     return(await plugin.filter(self, options))
 
