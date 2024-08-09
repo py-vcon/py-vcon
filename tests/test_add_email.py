@@ -1,3 +1,4 @@
+""" Unit tests for adding email message dialog """
 import os
 import vcon
 import pytest

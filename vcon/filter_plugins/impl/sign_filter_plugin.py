@@ -1,5 +1,5 @@
 # Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
-""" FilterPlugin for Deepgram transcription """
+""" FilterPlugin for JWS signing of vCon """
 import typing
 import pydantic
 import vcon.filter_plugins

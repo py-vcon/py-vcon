@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Unit test for HTTP depdendent Vcon functionality (e.g. get and post) """
 
 #import httpretty
