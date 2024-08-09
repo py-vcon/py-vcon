@@ -87,9 +87,10 @@ async def test_sign_2party(two_party_tel_vcon : vcon.Vcon) -> None:
   print("sig keys: {}".format(signed_dict["signatures"][0]["header"].keys()))
   assert(len(signed_dict["signatures"][0]["header"]["x5c"]) == 3)
 
-  deserialized_signed_vcon.verify([ca_cert_string])
+  await deserialized_signed_vcon.verifyfilter({"allowed_ca_cert_pems": [ca_cert_string]})
   assert(deserialized_signed_vcon._state == vcon.VconStates.VERIFIED)
   assert(len(deserialized_signed_vcon.parties) == 2)
   assert(deserialized_signed_vcon.parties[0]['tel'] == call_data['source'])
   assert(deserialized_signed_vcon.parties[1]['tel'] == call_data['destination'])
+
 
