@@ -18,7 +18,7 @@ class VerifyFilterPluginInitOptions(
   allowed_ca_cert_pems: typing.List[str] = pydantic.Field(
     title = "default list of trusted CA PEMs",
     description = """
-default list of trusted Certificate Authority certificate PEMs.  
+default list of trusted Certificate Authority certificate PEMs.
 In order to be valid/trusted, one of the certs in the JWS x5c certificate chain
 must be a trusted CA (i.e. in this list).  verifcation will fail if
 this is not the case.
