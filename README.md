@@ -66,6 +66,7 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
 
 ### vCon Presentations, Whitepapers and Tutorials
 
+ * See the [vCon presentation at the SIP Forum AI Summit](https://register.gotowebinar.com/register/408072084535831130)
  * Read the [IETF Contact Center Requirements draft proposal](https://datatracker.ietf.org/doc/draft-rosenberg-vcon-cc-usecases/)
  * Read the [IETF draft proposal](https://datatracker.ietf.org/doc/html/draft-petrie-vcon)
  * Participate in the [IETF vCon Working Group](https://datatracker.ietf.org/group/vcon/about/)
