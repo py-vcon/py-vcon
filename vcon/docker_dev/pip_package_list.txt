@@ -34,4 +34,5 @@ stable-ts > 2
 # redaction dependencies
 pandas
 tensorflow
+scikit-learn
 dataprofiler
