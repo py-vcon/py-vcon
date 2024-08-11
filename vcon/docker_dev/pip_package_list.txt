@@ -32,3 +32,8 @@ numpy
 torch >= 2.1
 stable-ts > 2
 
+# redaction dependencies
+pandas
+tensorflow
+scikit-learn
+dataprofiler
