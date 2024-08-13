@@ -314,6 +314,8 @@ class Vcon():
   # Some commonly used MIME types for convenience
   MIMETYPE_TEXT_PLAIN = "text/plain"
   MIMETYPE_JSON = "application/json"
+  MIMETYPE_VCON = "application/vcon"
+  MIMETYPE_VCON_JSON = "application/vcon+json"
   MIMETYPE_IMAGE_PNG = "image/png"
   MIMETYPE_AUDIO_WAV = "audio/x-wav"
   MIMETYPE_AUDIO_MP3 = "audio/x-mp3"
@@ -1858,6 +1860,9 @@ class Vcon():
     protected_header, payload, signature = jws_token.split('.')
     #print("decoded header: {}".format(jose.utils.base64url_decode(bytes(protected_header, 'utf-8'))))
 
+    # For convenience add the uuid to the header
+    header[Vcon.UUID] = self.uuid
+
     jws_serialization = {}
     jws_serialization['payload'] = payload
     jws_serialization['signatures'] = []
@@ -2177,6 +2182,44 @@ class Vcon():
     uuid = self.uuid8_domain_name(domain_name)
 
     self._vcon_dict[Vcon.UUID] = uuid
+
+    return(uuid)
+
+
+  @tag_meta
+  @staticmethod
+  def get_dict_uuid(vcon_dict: dict) -> str:
+    """
+    Get the vCon UUID from the given dict.
+
+    The dict may be the unsigned, signed (JWS) or encrypted (JWE) forms.
+    """
+
+    # signed (JWS) form of vCon
+    if({"payload", "signatures"} <= vcon_dict.keys() and
+       len(vcon_dict["signatures"]) > 0 and
+        "header" in vcon_dict["signatures"][0]
+      ):
+      uuid = vcon_dict["signatures"][0]["header"].get("uuid", None)
+      if(uuid is None):
+        # decode the payload and parse JSON to get UUID
+        vcon_json_string = jose.utils.base64url_decode(bytes(vcon_dict["payload"], 'utf-8'))
+        payload_vcon_dict = json.loads(vcon_json_string)
+        uuid = payload_vcon_dict["uuid"]
+
+
+    # encrypted (JWE) form of vCon
+    elif({"unprotected", "ciphertext"} <= vcon_dict.keys() and
+        "cty" in vcon_dict["unprotected"] and
+        Vcon.MIMETYPE_VCON in vcon_dict["unprotected"]["cty"]
+      ):
+        uuid = vcon_dict["unprotected"].get("uuid", None)
+        if(uuid is None):
+          raise Exception("encrypted form of vCon (JWE) unprotected.uuid not set")
+
+    # Unsigned form
+    else:
+      uuid = vcon_dict["uuid"]
 
     return(uuid)
 
