@@ -92,5 +92,6 @@ async def test_sign_2party(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(len(deserialized_signed_vcon.parties) == 2)
   assert(deserialized_signed_vcon.parties[0]['tel'] == call_data['source'])
   assert(deserialized_signed_vcon.parties[1]['tel'] == call_data['destination'])
+  print("verified vCon: {}".format(deserialized_signed_vcon.dumps()))
 
 
