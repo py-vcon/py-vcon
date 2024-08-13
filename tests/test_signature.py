@@ -340,11 +340,20 @@ def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
 
   two_party_tel_vcon.set_uuid("vcon.dev")
   uuid = two_party_tel_vcon.uuid
+  assert(uuid == vcon.Vcon.get_dict_uuid(two_party_tel_vcon.dumpd()))
   # Now this should work as we have set a UUID
   two_party_tel_vcon.sign(group_private_key_string, [group_cert_string, division_cert_string, ca_cert_string])
 
   # Should still be valid to read UUID
   assert(uuid == two_party_tel_vcon.uuid)
+  vcon_dict = two_party_tel_vcon.dumpd()
+  print("signed vcon dict keys: {}".format(vcon_dict.keys()))
+  print("header[0]: {}".format(vcon_dict["signatures"][0]["header"].keys()))
+  assert(uuid == vcon.Vcon.get_dict_uuid(vcon_dict))
+  # To test both ways the uuid can be set in a JWS, remove it from header
+  del vcon_dict["signatures"][0]["header"]["uuid"]
+  assert("uuid" not in vcon_dict["signatures"][0]["header"])
+  assert(uuid == vcon.Vcon.get_dict_uuid(vcon_dict))
 
   try:
     two_party_tel_vcon.sign(group_private_key_string, [group_cert_string, division_cert_string, ca_cert_string])
@@ -369,6 +378,7 @@ def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
 
   deserialized_signed_vcon = vcon.Vcon()
   deserialized_signed_vcon.loads(vcon_json)
+  assert(uuid == vcon.Vcon.get_dict_uuid(deserialized_signed_vcon.dumpd()))
 
   try:
     duuid = deserialized_signed_vcon.uuid
@@ -393,4 +403,5 @@ def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(deserialized_signed_vcon.parties[0]['tel'] == call_data['source'])
   assert(deserialized_signed_vcon.parties[1]['tel'] == call_data['destination'])
   assert(uuid == deserialized_signed_vcon.uuid)
+  assert(uuid == vcon.Vcon.get_dict_uuid(deserialized_signed_vcon.dumpd()))
 
