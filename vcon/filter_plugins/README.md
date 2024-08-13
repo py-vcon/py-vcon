@@ -12,7 +12,7 @@
    - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
    - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
-   - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPlugin](#vconfilter_pluginsimplsignfilterpluginsignfilterplugin)
+   - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPlugin](#vconfilter_pluginsimplsign_filter_pluginsignfilterplugin)
    - [vcon.filter_plugins.impl.verify_filter_plugin.VerifyFilterPlugin](#vconfilter_pluginsimplverify_filter_pluginverifyfilterplugin)
    - [vcon.filter_plugins.impl.whisper.Whisper](#vconfilter_pluginsimplwhisperwhisper)
  + [Filter Plugin Initialization Options Classes](#filter-plugin-initialization-options-classes)
@@ -20,7 +20,7 @@
    - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
-   - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginInitOptions](#vconfilter_pluginsimplsignfilterpluginsignfilterplugininitoptions)
+   - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginInitOptions](#vconfilter_pluginsimplsign_filter_pluginsignfilterplugininitoptions)
    - [vcon.filter_plugins.impl.verify_filter_plugin.VerifyFilterPluginInitOptions](#vconfilter_pluginsimplverify_filter_pluginverifyfilterplugininitoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
  + [Filter Plugin Options Classes](#filter-plugin-options-classes)
@@ -28,7 +28,7 @@
    - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
-   - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginOptions](#vconfilter_pluginsimplsignfilterpluginsignfilterpluginoptions)
+   - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginOptions](#vconfilter_pluginsimplsign_filter_pluginsignfilterpluginoptions)
    - [vcon.filter_plugins.impl.verify_filter_plugin.VerifyFilterPluginOptions](#vconfilter_pluginsimplverify_filter_pluginverifyfilterpluginoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperOptions](#vconfilter_pluginsimplwhisperwhisperoptions)
 
@@ -267,7 +267,7 @@ Returns:
 Close down OpenAI client if created. 
 
 
-## vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPlugin
+## vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPlugin
 
   **FilterPlugin** for JWS signing of vCon
   
@@ -275,16 +275,16 @@ Close down OpenAI client if created.
 **Methods**:
 
 ### SignFilterPlugin.\_\_init__
-\_\_init__(self, init_options: vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginInitOptions)
+\_\_init__(self, init_options: vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginInitOptions)
 
 Parameters:
   init_options (SignFilterPluginInitOptions) - the initialization options for JWS signing of vCon in plugin
 
 
-**init_options** - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginInitOptions](#vconfilter_pluginsimplsignfilterpluginsignfilterplugininitoptions)
+**init_options** - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginInitOptions](#vconfilter_pluginsimplsign_filter_pluginsignfilterplugininitoptions)
 
 ### SignFilterPlugin.filter
-filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginOptions) -> vcon.Vcon
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginOptions) -> vcon.Vcon
 
 
 sign vCon using JWS
@@ -296,7 +296,7 @@ Returns:
   the signed Vcon object (JWS)
 
 
-**options** - [vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginOptions](#vconfilter_pluginsimplsignfilterpluginsignfilterpluginoptions)
+**options** - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginOptions](#vconfilter_pluginsimplsign_filter_pluginsignfilterpluginoptions)
 
 ### SignFilterPlugin.\_\_del__
 \_\_del__(self)
@@ -477,7 +477,7 @@ example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 
 default: None
 
-## vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginInitOptions
+## vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginInitOptions
  - JWS signing of vCon **FilterPlugin** intialization object
 
 A **SignFilterPluginInitOptions** object is provided to the
@@ -845,7 +845,7 @@ example:
 
 default: "summary"
 
-## vcon.filter_plugins.impl.SignFilterPlugin.SignFilterPluginOptions
+## vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginOptions
  - Sign filter method options
 
 Options for signing vCon in filter_plugin.
