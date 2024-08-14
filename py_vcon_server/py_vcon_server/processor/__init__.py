@@ -281,7 +281,7 @@ date_examples = [ int(time.time()),
 
 # TODO: use the following to avoid getting arrays or parameters set to None???
 # bar.dict(exclude_unset=True)
-class VconObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class VconUnsignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
   vcon: str = pydantic.Field(
     title = "vCon format version",
     #description = "vCon format version,
@@ -304,6 +304,55 @@ class VconObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
   analysis: typing.Optional[typing.Union[typing.List[dict], None]] = None
   attachments: typing.Optional[typing.Union[typing.List[dict], None]] = None
 
+
+class JwsHeader(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  alg: str = pydantic.Field(
+    title = "JWS algorithm",
+    description = "defined in RFC 7515 section 4.1.1"
+    )
+
+  x5c: typing.Optional[typing.List[str]] = pydantic.Field(
+    title = "JWS certificate chain",
+    description = "certifcate chain in the form of an array of string defined in RFC 7515 section 4.1.6"
+    )
+
+  x5u: typing.Optional[typing.List[str]] = pydantic.Field(
+    title = "JWS certificate chain URLs",
+    description = "certifcate chain in the form of an array of HTTPS URLs defined in RFC 7515 section 4.1.6"
+    )
+
+
+class JwsSignature(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  header: JwsHeader = pydantic.Field(
+    title = "JWS Header Object",
+    description = "defined in RFC 7515 section 7.2.1"
+    )
+
+  protected: str = pydantic.Field(
+    title = "JWS protected",
+    description = "defined in RFC 7515 section 7.2.1"
+    )
+
+  signature: str = pydantic.Field(
+    title = "JWS signature",
+    description = "defined in RFC 7515 section 7.2.1"
+    )
+
+
+class VconSignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """
+  vCon in signed form (JWS RFC 7515)
+  """
+  payload: str = pydantic.Field(
+    title = "vCon payload in unsigned form",
+    description = "Base64Url Encoded string containing the unsigned form of the JSON vCon."
+    )
+
+  signatures: typing.List[JwsSignature] = pydantic.Field(
+    title = "JWS Signature Object",
+    description = "defined in RFC 7515 section 7.2.1",
+    default = []
+    )
 
 class VconProcessorInitOptions(pydantic.BaseModel):
   """
@@ -329,7 +378,7 @@ class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
 
 class VconProcessorOutput(pydantic.BaseModel, extra=pydantic.Extra.allow):
   """ Serializable Output results from a VconProcessor """
-  vcons: typing.List[VconObject] = pydantic.Field(
+  vcons: typing.List[typing.Union[VconUnsignedObject, VconSignedObject]] = pydantic.Field(
       title = "array of **Vcon** objects",
       default = []
     )
@@ -1000,6 +1049,10 @@ class FilterPluginProcessor(VconProcessor):
     """
 
     formatted_options = processor_input.format_parameters_to_options(options)
+    # force pydantic typing and defaults
+    if(isinstance(formatted_options, dict)):
+      formatted_options = (self.processor_options_class())(**formatted_options)
+
     index = formatted_options.input_vcon_index
     in_vcon: vcon.Vcon = await processor_input.get_vcon(index)
     if(in_vcon is None):
