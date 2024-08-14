@@ -54,11 +54,11 @@ class RedisVconStorage(py_vcon_server.db.VconStorage):
 
     elif(isinstance(save_vcon, dict)):
       vcon_dict = save_vcon
-      uuid = save_vcon["uuid"]
+      uuid = vcon.Vcon.get_dict_uuid(save_vcon)
 
     elif(isinstance(save_vcon, str)):
       vcon_dict = json.loads(save_vcon)
-      uuid = vcon_dict["uuid"]
+      uuid = vcon.Vcon.get_dict_uuid(vcon_dict)
 
     else:
       raise Exception("Invalid type: {} for Vcon to be saved to redis".format(type(save_vcon)))
