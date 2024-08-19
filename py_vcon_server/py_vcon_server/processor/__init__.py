@@ -104,7 +104,7 @@ class MultifariousVcon():
         self._vcon_forms[VconTypes.UUID] = new_vcon.uuid
 
       elif(vcon_type == VconTypes.DICT):
-        self._vcon_forms[VconTypes.UUID] = new_vcon["uuid"]
+        self._vcon_forms[VconTypes.UUID] = vcon.Vcon.get_dict_uuid(new_vcon)
 
       # String JSON, don't parse to get UUID, wait until we need to
 
@@ -145,7 +145,7 @@ class MultifariousVcon():
         uuid = self._vcon_forms[VconTypes.OBJECT].uuid
 
       elif(VconTypes.DICT in forms):
-        uuid = self._vcon_forms[VconTypes.DICT]["uuid"]
+        uuid = vcon.Vcon.get_dict_uuid(self._vcon_forms[VconTypes.DICT])
 
       elif(VconTypes.JSON in forms):
         # Have to parse the JSON string, build a Vcon
@@ -1058,14 +1058,9 @@ class FilterPluginProcessor(VconProcessor):
     if(in_vcon is None):
       raise Exception("Vcon not found for index: {}".format(index))
 
-    if(in_vcon.dialog is not None):
-      num_dialog = len(in_vcon.dialog)
-    else:
-      num_dialog = None
-    logger.debug("{} filter_plugin on Vcon UUID: {} dialog count: {}".format(
+    logger.debug("{} filter_plugin on Vcon UUID: {}".format(
       self.plugin_name,
-      in_vcon.uuid,
-      num_dialog
+      in_vcon.uuid
       ))
 
     out_vcon = await in_vcon.filter(self.plugin_name, formatted_options)
