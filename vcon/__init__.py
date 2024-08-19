@@ -253,6 +253,31 @@ class VconString(VconAttribute):
     super().__init__(doc = doc)
     self._type_name = "String"
 
+
+class VconUuid(VconAttribute):
+  """ descriptor for UUID attribute in vcon """
+  def __init__(self, doc : typing.Union[str, None] = None):
+    super().__init__(doc = doc)
+    self._type_name = "UUID"
+
+
+  def __get__(self, instance_object, class_type = None):
+
+    # UNSIGNED, SIGNED or VERIFIED
+    if(instance_object._state in [VconStates.UNSIGNED, VconStates.SIGNED, VconStates.VERIFIED]):
+      return(Vcon.get_dict_uuid(instance_object._vcon_dict))
+
+    # DECRIPTED or UNVERIFIED
+    if(instance_object._state in [VconStates.UNVERIFIED, VconStates.DECRYPTED]):
+      return(Vcon.get_dict_uuid(instance_object._jws_dict))
+
+    # ENCRYPTED
+    if(instance_object._state in [VconStates.ENCRYPTED]):
+      return(Vcon.get_dict_uuid(instance_object._jwe_dict))
+
+    raise Exception("Unexpected state: {}".format(instance_object._state ))
+
+
 class VconDict(VconAttribute):
   """ descriptor for Lists of dicts in vcon """
 
@@ -359,7 +384,7 @@ class Vcon():
   PARTIES_OBJECT_STRING_PARAMETERS = ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone", "role", "extension"]
 
   vcon = VconString(doc = "vCon version string attribute")
-  uuid = VconString(doc = "vCon UUID string attribute")
+  uuid = VconUuid(doc = "vCon UUID string attribute")
   created_at = VconString(doc = "vCon creation date string attribute")
   subject = VconString(doc = "vCon subject string attribute")
 
@@ -1913,6 +1938,8 @@ class Vcon():
     for ca in ca_cert_pem_files:
       ca_cert_object_list.append(vcon.security.load_pem_cert(ca)[0])
 
+    # TODO: what does it mean if ca_cert_pem_files is empty?  Should we verify and
+    # assume that the cert chain is trusted?
     last_exception = Exception("Internal error in Vcon.verify this exception should never be thrown")
     chain_count = 0
     for signature in self._jws_dict['signatures']:
@@ -2195,6 +2222,9 @@ class Vcon():
     The dict may be the unsigned, signed (JWS) or encrypted (JWE) forms.
     """
 
+    if(not isinstance(vcon_dict, dict)):
+      raise Exception("get_dict_uuid expected dict, got: {} {}".format(type(vcon_dict), vcon_dict))
+
     # signed (JWS) form of vCon
     if({"payload", "signatures"} <= vcon_dict.keys() and
        len(vcon_dict["signatures"]) > 0 and
@@ -2219,7 +2249,7 @@ class Vcon():
 
     # Unsigned form
     else:
-      uuid = vcon_dict["uuid"]
+      uuid = vcon_dict.get("uuid", None)
 
     return(uuid)
 
