@@ -302,6 +302,8 @@ def test_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
 
   try:
     duuid = deserialized_signed_vcon.uuid
+    assert(len(duuid) > 10)
+    party_count = len(deserialized_signed_vcon.parties)
     raise Exception("Should be an exception thrown here as vCon is signed, but not verified")
 
   except vcon.UnverifiedVcon as e:
@@ -382,6 +384,8 @@ def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
 
   try:
     duuid = deserialized_signed_vcon.uuid
+    assert(len(duuid) > 10)
+    party_count = len(deserialized_signed_vcon.parties)
     raise Exception("Should be an exception thrown here as vCon is signed, but not verified")
 
   except vcon.UnverifiedVcon as e:
