@@ -15,6 +15,7 @@
    * [py_vcon_server.processor.builtin.send_email.SendEmail](#py_vcon_serverprocessorbuiltinsend_emailsendemail)
    * [py_vcon_server.processor.builtin.set_parameters.SetParameters](#py_vcon_serverprocessorbuiltinset_parameterssetparameters)
    * [py_vcon_server.processor.builtin.sign.Sign](#py_vcon_serverprocessorbuiltinsignsign)
+   * [py_vcon_server.processor.builtin.verify.Verify](#py_vcon_serverprocessorbuiltinverifyverify)
    * [py_vcon_server.processor.builtin.whisper.Whisper](#py_vcon_serverprocessorbuiltinwhisperwhisper)
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
@@ -25,6 +26,7 @@
    * [py_vcon_server.processor.builtin.send_email.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinsend_emailvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.set_parameters.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinset_parametersvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.sign.SignFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinsignsignfilterplugininitoptions)
+   * [py_vcon_server.processor.builtin.verify.VerifyFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinverifyverifyfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.whisper.WhisperInitOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperinitoptions)
 
  + [Processor Options Classes](#processor-options-classes)
@@ -35,6 +37,7 @@
    * [py_vcon_server.processor.builtin.send_email.SendEmailOptions](#py_vcon_serverprocessorbuiltinsend_emailsendemailoptions)
    * [py_vcon_server.processor.builtin.set_parameters.SetParametersOptions](#py_vcon_serverprocessorbuiltinset_parameterssetparametersoptions)
    * [py_vcon_server.processor.builtin.sign.SignFilterPluginOptions](#py_vcon_serverprocessorbuiltinsignsignfilterpluginoptions)
+   * [py_vcon_server.processor.builtin.verify.VerifyFilterPluginOptions](#py_vcon_serverprocessorbuiltinverifyverifyfilterpluginoptions)
    * [py_vcon_server.processor.builtin.whisper.WhisperOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperoptions)
 
 
@@ -237,6 +240,26 @@ Methods:
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
+## py_vcon_server.processor.builtin.verify.Verify
+
+ - **Name:** verify
+ - **Version:** 0.0.1
+ - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+
+vCon verification **VconProcessor**
+This **VconProcessor** will verify the JWS signed Vcon.
+
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.verify.VerifyFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinverifyverifyfilterplugininitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.verify.VerifyFilterPluginOptions](#py_vcon_serverprocessorbuiltinverifyverifyfilterpluginoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
 ## py_vcon_server.processor.builtin.whisper.Whisper
 
  - **Name:** whisper_base
@@ -346,7 +369,29 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.send_email.WhisperInitOptions
+## py_vcon_server.processor.builtin.send_email.VerifyFilterPluginInitOptions
+
+ - **Summary:** JWS verification of vCon **FilterPlugin** intialization object
+
+initialization class for VconProcessor wrapper for VerifyFilterPlugin **FilterPlugin**
+
+### Fields
+
+##### allowed_ca_cert_pems (typing.List[str])
+default list of trusted CA PEMs
+
+default list of trusted Certificate Authority certificate PEMs.
+In order to be valid/trusted, one of the certs in the JWS x5c certificate chain
+must be a trusted CA (i.e. in this list).  verifcation will fail if
+this is not the case.
+
+
+example:
+
+default: []
+
+
+## py_vcon_server.processor.builtin.set_parameters.WhisperInitOptions
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
@@ -793,6 +838,44 @@ PEM certificate chain
 
 Override default PEM format certificate chain to include in the signed (JWS x5c) vCon
 and used for verification of the signed vCon.
+
+
+example:
+
+default: []
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example:
+
+default: {}
+
+
+## py_vcon_server.processor.builtin.verify.VerifyFilterPluginOptions
+
+ - **Summary:** verify filter method options
+
+processor options class for **processor** method of VconProcessor wrapper for VerifyFilterPlugin **FilterPlugin**
+
+### Fields
+
+##### allowed_ca_cert_pems (typing.List[str])
+list of trusted CA PEMs
+
+list of trusted Certificate Authority certificate PEMs to use in filter method.
+In order to be valid/trusted, one of the certs in the JWS x5c certificate chain
+must be a trusted CA (i.e. in this list).  Verifcation will fail if
+this is not the case.
 
 
 example:
