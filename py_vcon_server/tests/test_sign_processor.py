@@ -205,3 +205,325 @@ async def test_sign_processor_api(make_2_party_tel_vcon : vcon.Vcon) -> None:
     print("responces: {}".format(verify_out_dict))
     assert(verify_out_dict["exception_class"] == "InvalidSignature")
 
+SIGN_PIPE_DEF_DICT = {
+  "pipeline_options": {
+      "timeout": 33
+    },
+  "processors": [
+      {
+        "processor_name": "sign",
+        "processor_options": {
+          "private_pem_key": vcon.security.load_string_from_file(GROUP_PRIVATE_KEY), 
+          "cert_chain_pems": [
+              vcon.security.load_string_from_file(GROUP_CERT),
+              vcon.security.load_string_from_file(DIVISION_CERT),
+              vcon.security.load_string_from_file(CA_CERT)
+            ]
+          }
+      },
+      {
+        "processor_name": "verify",
+        "processor_options":  {
+          "allowed_ca_cert_pems": [vcon.security.load_string_from_file(CA2_CERT)]
+          }
+      }
+    ]
+}
+
+
+SIGN_PIPE_DEF2_DICT = {
+  "pipeline_options": {
+      "timeout": 33
+    },
+  "processors": [
+      {
+        "processor_name": "sign",
+        "processor_options": {
+          "private_pem_key": vcon.security.load_string_from_file(GROUP_PRIVATE_KEY), 
+          "cert_chain_pems": [
+              vcon.security.load_string_from_file(GROUP_CERT),
+              vcon.security.load_string_from_file(DIVISION_CERT),
+              vcon.security.load_string_from_file(CA_CERT)
+            ]
+          }
+      }
+    ]
+}
+
+SIGN_PIPE_DEF3_DICT = {
+  "pipeline_options": {
+      "timeout": 33
+    },
+  "processors": [
+      {
+        "processor_name": "verify",
+        "processor_options":  {
+          "allowed_ca_cert_pems": [vcon.security.load_string_from_file(CA2_CERT)]
+          }
+      }
+    ]
+}
+
+SIGN_PIPE_DEF4_DICT = {
+  "pipeline_options": {
+      "timeout": 33
+    },
+  "processors": [
+      {
+        "processor_name": "verify",
+        "processor_options":  {
+          "allowed_ca_cert_pems": [vcon.security.load_string_from_file(CA_CERT)]
+          }
+      },
+      {
+        "processor_name": "jq",
+        "processor_options": {
+            "jq_queries": {
+                "num_vcons": ".vcons | length",
+                "num_dialogs": ".vcons[0].dialog | length",
+                "dialog_type": ".vcons[0].dialog[0].type",
+                "num_analysis": ".vcons[0].analysis | length",
+                "num_parties": ".vcons[0].parties | length",
+                "is_three": ".parameters.three == \"three\"",
+                "is_four": ".parameters.four == \"four\""
+              }
+          }
+      }
+    ]
+}
+
+SIGN_PIPE_DEF5_DICT = {
+  "pipeline_options": {
+      "timeout": 33
+    },
+  "processors": [
+      {
+        "processor_name": "jq",
+        "processor_options": {
+            "jq_queries": {
+                "num_vcons": ".vcons | length",
+                "num_dialogs": ".vcons[0].dialog | length",
+                "num_analysis": ".vcons[0].analysis | length",
+                "num_parties": ".vcons[0].parties | length",
+                "num_signatures": ".vcons[0].signatures | length",
+                "is_three": ".parameters.three == \"three\"",
+                "is_four": ".parameters.four == \"four\""
+              }
+          }
+      }
+    ]
+}
+
+@pytest.mark.asyncio
+async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
+  pipe_name = "unit_test_pipe1"
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = SIGN_PIPE_DEF_DICT,
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    if(set_response.status_code != 204):
+      print("put: /pipeline/{} returned: {} {}".format(
+          pipe_name,
+          set_response.status_code,
+          resp_content 
+        ))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
+    set_response = client.post("/vcon", json = make_inline_audio_vcon.dumpd())
+    assert(set_response.status_code == 204)
+    assert(make_inline_audio_vcon.uuid == UUID)
+
+    # run should fail to validate, as this was signed locally
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe_name,
+          UUID
+        ),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 500)
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(pipeline_out_dict["exception_class"] == "InvalidVconState")
+
+    # pipeline to just sign and store
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = SIGN_PIPE_DEF2_DICT,
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    if(set_response.status_code != 204):
+      print("put: /pipeline/{} returned: {} {}".format(
+          pipe_name,
+          set_response.status_code,
+          resp_content 
+        ))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
+    # run should succeed to sign and store
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe_name,
+          UUID
+        ),
+        params = {
+            "save_vcons": True,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 200)
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(len(pipeline_out_dict["vcons"]) == 1)
+    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+    assert(pipeline_out_dict["vcons_modified"][0])
+    modified_vcon = vcon.Vcon()
+    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    # signed and then serialized, makes it unverified
+    assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
+
+    # put pipeline with wrong trusted cert list
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = SIGN_PIPE_DEF3_DICT,
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    if(set_response.status_code != 204):
+      print("put: /pipeline/{} returned: {} {}".format(
+          pipe_name,
+          set_response.status_code,
+          resp_content 
+        ))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
+    # vCon is signed in DB, this pipeline does not have signed chain in trusted cert list
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe_name,
+          UUID
+        ),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 500)
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(pipeline_out_dict["exception_class"] == "InvalidSignature")
+
+    # put pipeline with correct trusted cert list
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = SIGN_PIPE_DEF4_DICT,
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    if(set_response.status_code != 204):
+      print("put: /pipeline/{} returned: {} {}".format(
+          pipe_name,
+          set_response.status_code,
+          resp_content 
+        ))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
+    # vCon is signed in DB, this pipeline has signed CA in trusted cert list
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe_name,
+          UUID
+        ),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 200)
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    modified_vcon = vcon.Vcon()
+    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    # signed and then serialized, makes it unverified
+    assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
+
+    assert(pipeline_out_dict["parameters"]["num_vcons"] == 1)
+    assert(pipeline_out_dict["parameters"]["num_dialogs"] == 1)
+    assert(pipeline_out_dict["parameters"]["dialog_type"] == "recording")
+    assert(pipeline_out_dict["parameters"]["num_analysis"] == 0)
+    assert(pipeline_out_dict["parameters"]["num_parties"] == 2)
+    assert(pipeline_out_dict["parameters"]["is_three"] == False)
+
+    # put pipeline with no verification and jq processor
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = SIGN_PIPE_DEF5_DICT,
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    if(set_response.status_code != 204):
+      print("put: /pipeline/{} returned: {} {}".format(
+          pipe_name,
+          set_response.status_code,
+          resp_content 
+        ))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
+    # vCon is signed in DB, no verification before processing with jq
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe_name,
+          UUID
+        ),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 200)
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    modified_vcon = vcon.Vcon()
+    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    # signed and then serialized, makes it unverified
+    assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
+
+    assert(pipeline_out_dict["parameters"]["num_vcons"] == 1)
+    # TODO: the vCon is in a signed state, so all these queries
+    # come out zero.  Not sure whether to allow this or force
+    # failures for state in jq processor.  In some ways its useful
+    # to be able to query the signed JWS.
+    assert(pipeline_out_dict["parameters"]["num_dialogs"] == 0)
+    assert(pipeline_out_dict["parameters"]["num_analysis"] == 0)
+    assert(pipeline_out_dict["parameters"]["num_parties"] == 0)
+    assert(pipeline_out_dict["parameters"]["num_signatures"] == 1)
+    assert(pipeline_out_dict["parameters"]["is_three"] == False)
+
