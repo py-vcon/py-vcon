@@ -16,7 +16,7 @@ class SignFilterPluginInitOptions(
   ):
   """
   A **SignFilterPluginInitOptions** object is provided to the
-  **Sign FilterPlugin.__init__** method when it is first loaded.  Its
+  **SignFilterPlugin.__init__** method when it is first loaded.  Its
   attributes effect how the registered **FilterPlugin** functions.
   """
   private_pem_key: typing.Union[str, None] = pydantic.Field(
