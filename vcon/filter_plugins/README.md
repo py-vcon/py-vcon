@@ -10,6 +10,7 @@
  + [Filter Plugin Classes](#filter-plugin-classes)
    - [vcon.filter_plugins.FilterPlugin](#vconfilter_pluginsfilterplugin)
    - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
+   - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPlugin](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugin)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
    - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
    - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPlugin](#vconfilter_pluginsimplsign_filter_pluginsignfilterplugin)
@@ -18,6 +19,7 @@
  + [Filter Plugin Initialization Options Classes](#filter-plugin-initialization-options-classes)
    - [vcon.filter_plugins.FilterPluginInitOptions](#vconfilter_pluginsfilterplugininitoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
+   - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugininitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
    - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginInitOptions](#vconfilter_pluginsimplsign_filter_pluginsignfilterplugininitoptions)
@@ -26,6 +28,7 @@
  + [Filter Plugin Options Classes](#filter-plugin-options-classes)
    - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
+   - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
    - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginOptions](#vconfilter_pluginsimplsign_filter_pluginsignfilterpluginoptions)
@@ -157,6 +160,47 @@ Returns:
 **options** - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
 
 ### Deepgram.\_\_del__
+\_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
+## vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPlugin
+
+  **FilterPlugin** for JWE encrypting of vCon
+  
+
+**Methods**:
+
+### EncryptFilterPlugin.\_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions)
+
+Parameters:
+  init_options (EncryptFilterPluginInitOptions) - the initialization options for JWE encrypting of vCon in plugin
+
+
+**init_options** - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugininitoptions)
+
+### EncryptFilterPlugin.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions) -> vcon.Vcon
+
+
+encrypt vCon using JWE
+
+Parameters:
+  options (EncryptFilterPluginOptions)
+
+Returns:
+  the encrypted Vcon object (JWE)
+
+
+**options** - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
+
+### EncryptFilterPlugin.\_\_del__
 \_\_del__(self)
 
 
@@ -433,6 +477,24 @@ example: 123456789e96a1da774e57abcdefghijklmnop
 
 default: ""
 
+## vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions
+ - JWE encryption of vCon **FilterPlugin** intialization object
+
+A **EncryptFilterPluginInitOptions** object is provided to the
+**EncryptFilterPlugin.__init__** method when it is first loaded.  Its
+attributes effect how the registered **FilterPlugin** functions.
+
+#### Fields:
+
+##### private_pem_key (typing.Union[str, NoneType])
+default PEM format private key to use for encrypting a vCon
+
+
+
+example:
+
+default: None
+
 ## vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions
  - OpenAI/ChatGPT Chat Completion **FilterPlugin** intialization object
 
@@ -481,7 +543,7 @@ default: None
  - JWS signing of vCon **FilterPlugin** intialization object
 
 A **SignFilterPluginInitOptions** object is provided to the
-**Sign FilterPlugin.__init__** method when it is first loaded.  Its
+**SignFilterPlugin.__init__** method when it is first loaded.  Its
 attributes effect how the registered **FilterPlugin** functions.
 
 #### Fields:
@@ -598,6 +660,23 @@ to be transcribed.
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
 default: 
+
+## vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions
+ - encrypt filter method options
+
+Options for encrypting the vCon in filter_plugin.
+
+#### Fields:
+
+##### private_pem_key (typing.Union[str, NoneType])
+PEM format private key to use for encrypting the vCon
+
+    Override the default PEM format private key for encrypting.
+
+
+example:
+
+default: None
 
 ## vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions
  - OpenAI Chat Completion filter method options
