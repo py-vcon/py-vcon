@@ -2036,6 +2036,14 @@ class Vcon():
 
     jwe_compact_token = jose.jwe.encrypt(plaintext, encryption_key, encryption, encryption_key['alg']).decode('utf-8')
     jwe_complete_serialization = vcon.security.jwe_compact_token_to_complete_serialization(jwe_compact_token, enc = encryption, x5c = [])
+
+    # Add unprotected stuff
+    jwe_complete_serialization["unprotected"] = {}
+    # Add UUID to unprotected for easy reference
+    jwe_complete_serialization["unprotected"]["uuid"] = self.uuid
+    jwe_complete_serialization["unprotected"]["cty"] = Vcon.MIMETYPE_VCON_JSON
+    jwe_complete_serialization["unprotected"]["enc"] = "A256CBC-HS512"
+
     self._jwe_dict = jwe_complete_serialization
     self._state = VconStates.ENCRYPTED
 
@@ -2235,17 +2243,14 @@ class Vcon():
         # decode the payload and parse JSON to get UUID
         vcon_json_string = jose.utils.base64url_decode(bytes(vcon_dict["payload"], 'utf-8'))
         payload_vcon_dict = json.loads(vcon_json_string)
-        uuid = payload_vcon_dict["uuid"]
-
+        uuid = payload_vcon_dict.get("uuid", None)
 
     # encrypted (JWE) form of vCon
-    elif({"unprotected", "ciphertext"} <= vcon_dict.keys() and
-        "cty" in vcon_dict["unprotected"] and
-        Vcon.MIMETYPE_VCON in vcon_dict["unprotected"]["cty"]
-      ):
+    elif({"protected", "cyphertext"} <= vcon_dict.keys()):
+      if("unprotected" in vcon_dict.keys()):
         uuid = vcon_dict["unprotected"].get("uuid", None)
-        if(uuid is None):
-          raise Exception("encrypted form of vCon (JWE) unprotected.uuid not set")
+      else:
+        uuid = None
 
     # Unsigned form
     else:
