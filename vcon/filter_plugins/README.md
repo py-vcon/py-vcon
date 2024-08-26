@@ -9,6 +9,7 @@
  + [Introduction](#introduction)
  + [Filter Plugin Classes](#filter-plugin-classes)
    - [vcon.filter_plugins.FilterPlugin](#vconfilter_pluginsfilterplugin)
+   - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPlugin](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugin)
    - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPlugin](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugin)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
@@ -18,6 +19,7 @@
    - [vcon.filter_plugins.impl.whisper.Whisper](#vconfilter_pluginsimplwhisperwhisper)
  + [Filter Plugin Initialization Options Classes](#filter-plugin-initialization-options-classes)
    - [vcon.filter_plugins.FilterPluginInitOptions](#vconfilter_pluginsfilterplugininitoptions)
+   - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginInitOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugininitoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugininitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
@@ -27,6 +29,7 @@
    - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
  + [Filter Plugin Options Classes](#filter-plugin-options-classes)
    - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
+   - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterpluginoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
@@ -119,6 +122,47 @@ Returns:
 **options** - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
 
 ### FilterPlugin.\_\_del__
+\_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
+## vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPlugin
+
+  **FilterPlugin** for JWE decrypting of vCon
+  
+
+**Methods**:
+
+### DecryptFilterPlugin.\_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginInitOptions)
+
+Parameters:
+  init_options (DecryptFilterPluginInitOptions) - the initialization options for JWE decrypting of vCon in plugin
+
+
+**init_options** - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginInitOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugininitoptions)
+
+### DecryptFilterPlugin.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginOptions) -> vcon.Vcon
+
+
+decrypt vCon using JWE
+
+Parameters:
+  options (DecryptFilterPluginOptions)
+
+Returns:
+  the decrypted Vcon object 
+
+
+**options** - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterpluginoptions)
+
+### DecryptFilterPlugin.\_\_del__
 \_\_del__(self)
 
 
@@ -455,6 +499,33 @@ base class for **FilterPlugin** initialization options
 #### Fields:
 None
 
+## vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginInitOptions
+ - JWE decripting of vCon **FilterPlugin** intialization object
+
+A **DecryptFilterPluginInitOptions** object is provided to the
+**DecryptFilterPlugin.__init__** method when it is first loaded.  Its
+attributes effect how the registered **FilterPlugin** functions.
+
+#### Fields:
+
+##### private_pem_key (typing.Union[str, NoneType])
+default PEM format private key to use for decrypting a vCon
+
+
+
+example:
+
+default: None
+
+##### public_pem_key (typing.Union[str, NoneType])
+default PEM format public key/cert to use for decrypting a vCon
+
+
+
+example:
+
+default: None
+
 ## vcon.filter_plugins.impl.deepgram.DeepgramInitOptions
  - Deepgram transcription **FilterPlugin** intialization object
 
@@ -486,8 +557,8 @@ attributes effect how the registered **FilterPlugin** functions.
 
 #### Fields:
 
-##### private_pem_key (typing.Union[str, NoneType])
-default PEM format private key to use for encrypting a vCon
+##### public_pem_key (typing.Union[str, NoneType])
+default PEM format public key/cert to use for encrypting a vCon
 
 
 
@@ -622,6 +693,33 @@ base class for **FilterPlugin.filter** method options
 #### Fields:
 None
 
+## vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginOptions
+ - decrypt filter method options
+
+Options for encrypting the vCon in filter_plugin.
+
+#### Fields:
+
+##### private_pem_key (typing.Union[str, NoneType])
+PEM format private key to use for decrypting the vCon
+
+    Override the default PEM format private key for encrypting.
+
+
+example:
+
+default: None
+
+##### public_pem_key (typing.Union[str, NoneType])
+PEM format public key/cert to use for encrypting the vCon
+
+    Override the default PEM format public key/cert for encrypting.
+
+
+example:
+
+default: None
+
 ## vcon.filter_plugins.impl.deepgram.DeepgramOptions
  - Deepgram transcription filter method options
 
@@ -668,10 +766,10 @@ Options for encrypting the vCon in filter_plugin.
 
 #### Fields:
 
-##### private_pem_key (typing.Union[str, NoneType])
-PEM format private key to use for encrypting the vCon
+##### public_pem_key (typing.Union[str, NoneType])
+PEM format public key/cert to use for encrypting the vCon
 
-    Override the default PEM format private key for encrypting.
+    Override the default PEM format public key/cert for encrypting.
 
 
 example:
