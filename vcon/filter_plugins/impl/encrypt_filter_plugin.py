@@ -7,6 +7,10 @@ import vcon.filter_plugins
 logger = vcon.build_logger(__name__)
 
 
+class NoPublicKey(Exception):
+  """ Raised when private key is missing """
+
+
 class EncryptFilterPluginInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
   title = "JWE encryption of vCon **FilterPlugin** intialization object"
@@ -16,8 +20,8 @@ class EncryptFilterPluginInitOptions(
   **EncryptFilterPlugin.__init__** method when it is first loaded.  Its
   attributes effect how the registered **FilterPlugin** functions.
   """
-  private_pem_key: typing.Union[str, None] = pydantic.Field(
-    title = "default PEM format private key to use for encrypting a vCon",
+  public_pem_key: typing.Union[str, None] = pydantic.Field(
+    title = "default PEM format public key/cert to use for encrypting a vCon",
     description = """
 """,
     default = None
@@ -32,10 +36,10 @@ class EncryptFilterPluginOptions(
   Options for encrypting the vCon in filter_plugin.
   """
 
-  private_pem_key: typing.Union[str, None] = pydantic.Field(
-    title = "PEM format private key to use for encrypting the vCon",
+  public_pem_key: typing.Union[str, None] = pydantic.Field(
+    title = "PEM format public key/cert to use for encrypting the vCon",
     description = """
-    Override the default PEM format private key for encrypting.
+    Override the default PEM format public key/cert for encrypting.
 """,
     default = None
     )
@@ -77,14 +81,14 @@ class EncryptFilterPlugin(vcon.filter_plugins.FilterPlugin):
     """
     out_vcon = in_vcon
 
-    private_key = options.private_pem_key
+    public_key = options.public_pem_key
     # Use default if not provided
-    if(private_key is None or len(private_key) == 0):
-      private_key = self._init_options.private_pem_key
-      if(private_key is None or len(private_key) == 0):
-        raise NoPrivateKey("Encrypt filter plugin: {} no private key in EncryptFilterPluginInitOptions or EncryptFilterPluginOptions")
+    if(public_key is None or len(public_key) == 0):
+      public_key = self._init_options.public_pem_key
+      if(public_key is None or len(public_key) == 0):
+        raise NoPublicKey("Encrypt filter plugin: {} no public key in EncryptFilterPluginInitOptions or EncryptFilterPluginOptions")
 
-    out_vcon.encrypt(private_key)
+    out_vcon.encrypt(public_key)
     return(out_vcon)
 
   def check_valid_state(
