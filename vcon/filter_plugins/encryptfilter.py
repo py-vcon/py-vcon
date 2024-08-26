@@ -4,7 +4,7 @@ import os
 import datetime
 import vcon.filter_plugins
 
-# Register the EncryptFilterPlugin for JWE signing
+# Register the EncryptFilterPlugin for JWE encrypting
 init_options = {}
 
 vcon.filter_plugins.FilterPluginRegistry.register(
