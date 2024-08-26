@@ -549,7 +549,7 @@ Assumes that this vCon is an empty vCon as it is not cleared.
 Decision as to what json form to be deserialized is:
 1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
 2) JWS vCon must have a payload and signatures
-3) JWE vCon must have a cyphertext and recipients
+3) JWE vCon must have a ciphertext and recipients
 
 Parameters:  
   **vcon_json** (str): string containing JSON representation of a vCon
@@ -569,7 +569,7 @@ Assumes that this vCon is an empty vCon as it is not cleared.
 Decision as to what json form to be deserialized is:
 1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
 2) JWS vCon must have a payload and signatures
-3) JWE vCon must have a cyphertext and recipients
+3) JWE vCon must have a ciphertext and recipients
 
 Parameters:  
   **vcon_dict** (dict): dict containing JSON representation of a vCon
@@ -589,7 +589,7 @@ Assumes that this vCon is an empty vCon as it is not cleared.
 Decision as to what json form to be deserialized is:
 1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
 2) JWS vCon must have a payload and signatures
-3) JWE vCon must have a cyphertext and recipients
+3) JWE vCon must have a ciphertext and recipients
 
 Parameters:  
   **vcon_json** (str): string containing JSON representation of a vCon

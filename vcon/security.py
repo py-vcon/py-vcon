@@ -306,13 +306,13 @@ def jwe_compact_token_to_complete_serialization(jwe_token : str, enc : str = "",
     dict containing Complete JWE JSON Serialization Representation
   """
 
-  (protected, content_encrypted_key, iv, cyphertext, authentication_tag) = jwe_token.split('.')
-  #(header, encrypted_key, recip_iv, recip_cyphertext, recip_authentication_tag) = jwe_token.split('.')
+  (protected, content_encrypted_key, iv, ciphertext, authentication_tag) = jwe_token.split('.')
+  #(header, encrypted_key, recip_iv, recip_ciphertext, recip_authentication_tag) = jwe_token.split('.')
 
   jwe_complete_serialization = {}
   jwe_complete_serialization["protected"] = protected
   jwe_complete_serialization["iv"] =  iv
-  jwe_complete_serialization["cyphertext"] =  cyphertext
+  jwe_complete_serialization["ciphertext"] =  ciphertext
   jwe_complete_serialization["tag"] =  authentication_tag
   jwe_complete_serialization["recipients"] =  []
 
@@ -337,7 +337,7 @@ def jwe_complete_serialization_to_compact_token(jwe_complete_serialization : dic
   jwe_vector.append(jwe_complete_serialization["protected"])
   jwe_vector.append(jwe_complete_serialization["recipients"][0]["encrypted_key"])
   jwe_vector.append(jwe_complete_serialization["iv"])
-  jwe_vector.append(jwe_complete_serialization["cyphertext"])
+  jwe_vector.append(jwe_complete_serialization["ciphertext"])
   jwe_vector.append(jwe_complete_serialization["tag"])
 
   jwe_compact_token = ".".join(jwe_vector)

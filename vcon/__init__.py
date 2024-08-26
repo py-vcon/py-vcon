@@ -1618,7 +1618,7 @@ class Vcon():
     Decision as to what json form to be deserialized is:
     1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
     2) JWS vCon must have a payload and signatures
-    3) JWE vCon must have a cyphertext and recipients
+    3) JWE vCon must have a ciphertext and recipients
 
     Parameters:  
       **vcon_dict** (dict): dict containing JSON representation of a vCon
@@ -1642,7 +1642,7 @@ class Vcon():
     Decision as to what json form to be deserialized is:
     1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
     2) JWS vCon must have a payload and signatures
-    3) JWE vCon must have a cyphertext and recipients
+    3) JWE vCon must have a ciphertext and recipients
 
     Parameters:  
       **vcon_json** (str): string containing JSON representation of a vCon
@@ -1674,7 +1674,7 @@ class Vcon():
       self._jws_dict = vcon_dict
 
     # encrypted vCon (JWE)
-    elif(("cyphertext" in vcon_dict) and
+    elif(("ciphertext" in vcon_dict) and
       ("recipients" in vcon_dict)
       ):
       self._vcon_dict = {}
@@ -1703,7 +1703,7 @@ class Vcon():
       raise InvalidVconJson("Not recognized as a unsigned , signed or encrypted form of JSON vCon." +
         "  Unsigned vcon must have vcon version and at least one of: parties, dialog, analyisis or attachment object arrays." +
         "  Signed vcon must have payload and signatures fields." +
-        "  Encrypted vcon must have cyphertext and recipients fields."
+        "  Encrypted vcon must have ciphertext and recipients fields."
         )
 
 
@@ -1717,7 +1717,7 @@ class Vcon():
     Decision as to what json form to be deserialized is:
     1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
     2) JWS vCon must have a payload and signatures
-    3) JWE vCon must have a cyphertext and recipients
+    3) JWE vCon must have a ciphertext and recipients
 
     Parameters:  
       **vcon_json** (str): string containing JSON representation of a vCon
@@ -1751,7 +1751,7 @@ class Vcon():
       self._jws_dict = vcon_dict
 
     # encrypted vCon (JWE)
-    elif(("cyphertext" in vcon_dict) and
+    elif(("ciphertext" in vcon_dict) and
       ("recipients" in vcon_dict)
       ):
       self._vcon_dict = {}
@@ -1809,7 +1809,7 @@ class Vcon():
       raise InvalidVconJson("Not recognized as a unsigned , signed or encrypted form of JSON vCon." +
         "  Unsigned vcon must have vcon version and at least one of: parties, dialog, analyisis or attachment object arrays." +
         "  Signed vcon must have payload and signatures fields." +
-        "  Encrypted vcon must have cyphertext and recipients fields."
+        "  Encrypted vcon must have ciphertext and recipients fields."
         )
 
 
@@ -2246,7 +2246,7 @@ class Vcon():
         uuid = payload_vcon_dict.get("uuid", None)
 
     # encrypted (JWE) form of vCon
-    elif({"protected", "cyphertext"} <= vcon_dict.keys()):
+    elif({"protected", "ciphertext"} <= vcon_dict.keys()):
       if("unprotected" in vcon_dict.keys()):
         uuid = vcon_dict["unprotected"].get("uuid", None)
       else:
