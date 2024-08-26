@@ -51,7 +51,12 @@ async def test_encrypt_2party(two_party_tel_vcon : vcon.Vcon) -> None:
     }
 
   encrypt_options = {
-      "private_pem_key": group_cert_string
+      "public_pem_key": group_cert_string
+    }
+
+  decrypt_options = {
+      "private_pem_key": group_private_key_string,
+      "public_pem_key": group_cert_string
     }
 
   assert(two_party_tel_vcon._state == vcon.VconStates.UNSIGNED)
@@ -63,11 +68,28 @@ async def test_encrypt_2party(two_party_tel_vcon : vcon.Vcon) -> None:
     # expected
     pass
 
+  try:
+    await two_party_tel_vcon.decryptfilter(decrypt_options)
+    raise Exception("Should have failed for not being encrypted first")
+
+  except vcon.InvalidVconState as invalid_state:
+    # expected
+    pass
+
   two_party_tel_vcon = await two_party_tel_vcon.signfilter(sign_options)
   assert(two_party_tel_vcon._state == vcon.VconStates.SIGNED)
   assert(two_party_tel_vcon.uuid == uuid)
 
   print("JWS keys: {}".format(two_party_tel_vcon._jws_dict.keys()))
+
+  try:
+    await two_party_tel_vcon.decryptfilter(decrypt_options)
+    raise Exception("Should have failed for not being encrypted first")
+
+  except vcon.InvalidVconState as invalid_state:
+    # expected
+    pass
+
   two_party_tel_vcon = await two_party_tel_vcon.encryptfilter(encrypt_options)
   print(two_party_tel_vcon.dumps())
   assert(two_party_tel_vcon._state == vcon.VconStates.ENCRYPTED)
@@ -81,5 +103,14 @@ async def test_encrypt_2party(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(deserialized_vcon._state == vcon.VconStates.ENCRYPTED)
   assert(deserialized_vcon.uuid == uuid)
 
-
+  deserialized_vcon = await deserialized_vcon.decryptfilter(decrypt_options)
+  assert(deserialized_vcon._state == vcon.VconStates.UNVERIFIED)
+  assert(deserialized_vcon.uuid == uuid)
  
+  await deserialized_vcon.verifyfilter({"allowed_ca_cert_pems": [ca_cert_string]})
+  assert(deserialized_vcon._state == vcon.VconStates.VERIFIED)
+  assert(len(deserialized_vcon.parties) == 2)
+  assert(deserialized_vcon.parties[0]['tel'] == call_data['source'])
+  assert(deserialized_vcon.parties[1]['tel'] == call_data['destination'])
+  print("verified vCon: {}".format(deserialized_vcon.dumps()))
+
