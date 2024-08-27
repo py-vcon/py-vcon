@@ -733,6 +733,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/VconSignedObject"
+                    },
+                    {
+                      "$ref": "#/components/schemas/VconEncryptedObject"
                     }
                   ]
                 }
@@ -845,6 +848,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/VconSignedObject"
+                  },
+                  {
+                    "$ref": "#/components/schemas/VconEncryptedObject"
                   }
                 ]
               }
@@ -1029,6 +1035,99 @@
         }
       }
     },
+    "/process/{vcon_uuid}/decrypt": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "description": "vCon decryption **VconProcessor**\nThis **VconProcessor** will decrypt the JWE form vCon into the signed/unverified JWS vCon form.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__decrypt_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecryptFilterPluginOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process/{vcon_uuid}/deepgram": {
       "post": {
         "tags": [
@@ -1073,6 +1172,99 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DeepgramOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/encrypt": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "description": "vCon encryption **VconProcessor**\nThis **VconProcessor** will encrypt the Vcon into its JWE form.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__encrypt_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncryptFilterPluginOptions"
               }
             }
           },
@@ -1779,7 +1971,7 @@
           "vCon: Pipelines"
         ],
         "summary": "Run a pipeline of processors on the vCon given in the request body",
-        "description": "Run the given Vcon through the named pipeline.\n\nNote: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:\n\n  **failure_queue** assumed to be None <br>\n  **success_queue** assumed to be None <br>\n  **save_vcons** <br>\n\nParameters:\n\n  **name** (str) - name of the pipeline defined in the pipeline DB\n\n  **vCon** (py_vcon_server.processor.VconSignedObject or \n    py_vcon_server.processor.VconSignedObject) - vCon from body, assumes vCon/UUID does NOT exist in storage\n\n  **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline\n      processing.  Ignores/overides the **PipelineOptions.save_vcons**\n\n  **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline\n\nReturns:\n\n  If return_results is true, return the VconProcessorOutput, otherwise return None",
+        "description": "Run the given Vcon through the named pipeline.\n\nNote: the following **PipelineOptions** are ignored when the pipeline is run via this RESTful interface:\n\n  **failure_queue** assumed to be None <br>\n  **success_queue** assumed to be None <br>\n  **save_vcons** <br>\n\nParameters:\n\n  **name** (str) - name of the pipeline defined in the pipeline DB\n\n  **vCon** (py_vcon_server.processor.VconUnsignedObject or \n    py_vcon_server.processor.VconSignedObject or\n    py_vcon_server.processor.VconEncryptObject) - \n      vCon from body, assumes vCon/UUID does NOT exist in storage\n\n  **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline\n      processing.  Ignores/overides the **PipelineOptions.save_vcons**\n\n  **return_results** (bool) - return the VconProcessorOutput from the end of the pipeline\n\nReturns:\n\n  If return_results is true, return the VconProcessorOutput, otherwise return None",
         "operationId": "run_pipeline_pipeline__name__run_post",
         "parameters": [
           {
@@ -1823,6 +2015,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/VconSignedObject"
+                  },
+                  {
+                    "$ref": "#/components/schemas/VconEncryptedObject"
                   }
                 ]
               }
@@ -1929,6 +2124,38 @@
   },
   "components": {
     "schemas": {
+      "DecryptFilterPluginOptions": {
+        "title": "decrypt filter method options",
+        "type": "object",
+        "properties": {
+          "private_pem_key": {
+            "title": "PEM format private key to use for decrypting the vCon",
+            "type": "string",
+            "description": "\n    Override the default PEM format private key for encrypting.\n"
+          },
+          "public_pem_key": {
+            "title": "PEM format public key/cert to use for encrypting the vCon",
+            "type": "string",
+            "description": "\n    Override the default PEM format public key/cert for encrypting.\n"
+          },
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          }
+        },
+        "description": "processor options class for **processor** method of VconProcessor wrapper for DecryptFilterPlugin **FilterPlugin**"
+      },
       "DeepgramOptions": {
         "title": "Deepgram transcription filter method options",
         "type": "object",
@@ -1985,6 +2212,33 @@
           }
         },
         "description": "processor options class for **processor** method of VconProcessor wrapper for Deepgram **FilterPlugin**"
+      },
+      "EncryptFilterPluginOptions": {
+        "title": "encrypt filter method options",
+        "type": "object",
+        "properties": {
+          "public_pem_key": {
+            "title": "PEM format public key/cert to use for encrypting the vCon",
+            "type": "string",
+            "description": "\n    Override the default PEM format public key/cert for encrypting.\n"
+          },
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          }
+        },
+        "description": "processor options class for **processor** method of VconProcessor wrapper for EncryptFilterPlugin **FilterPlugin**"
       },
       "HTTPValidationError": {
         "title": "HTTPValidationError",
@@ -2048,7 +2302,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1724103925.857285
+            "example": 1724787709.018983
           },
           "server": {
             "title": "server key",
@@ -2087,6 +2341,27 @@
           }
         },
         "description": "Base class options for **VconProcessor.processor** method "
+      },
+      "JweUnprotectedObject": {
+        "title": "JweUnprotectedObject",
+        "type": "object",
+        "properties": {
+          "cty": {
+            "title": "mimetype of the decrypted ciphertext",
+            "type": "string",
+            "description": "defined in RFC 7516 section 4.1.12"
+          },
+          "uuid": {
+            "title": "vCon uuid",
+            "type": "string"
+          },
+          "enc": {
+            "title": "encryption algoritym",
+            "type": "string",
+            "description": "defined in RFC 7516 section 4.1.2"
+          }
+        },
+        "description": "JWE Unprotected Object part of JWE RFC 7516\nDefined in RFC 7516 section 7.2.1"
       },
       "JwsHeader": {
         "title": "JwsHeader",
@@ -2540,12 +2815,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1724103925.8544128
+            "example": 1724787709.0162258
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 419884
+            "example": 2244
           }
         }
       },
@@ -2581,13 +2856,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 419884
+            "example": 2244
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1724103925.8551857
+            "example": 1724787709.0169265
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -2610,7 +2885,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1724103925.8552213
+            "example": 1724787709.0169632
           }
         }
       },
@@ -2710,6 +2985,52 @@
           }
         }
       },
+      "VconEncryptedObject": {
+        "title": "VconEncryptedObject",
+        "required": [
+          "iv",
+          "ciphertext",
+          "tag"
+        ],
+        "type": "object",
+        "properties": {
+          "unprotected": {
+            "title": "JWS Signature Object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/JweUnprotectedObject"
+              }
+            ],
+            "description": "defined in RFC 7515 section 7.2.1",
+            "default": []
+          },
+          "recipients": {
+            "title": "recipients list of objects",
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "defined in RFC 7516 section 7.2.1",
+            "default": []
+          },
+          "iv": {
+            "title": "initialization vector",
+            "type": "string",
+            "description": "defined in RFC 7516 section 7.2.1"
+          },
+          "ciphertext": {
+            "title": "ciphertext of encrypted vCon",
+            "type": "string",
+            "description": "defined in RFC 7516 section 4.1.12"
+          },
+          "tag": {
+            "title": "authentication tag",
+            "type": "string",
+            "description": "defined in RFC 7516 section 7.2.1"
+          }
+        },
+        "description": "vCon in encrypted form (JWE RFC 7516)"
+      },
       "VconPartiesObject": {
         "title": "VconPartiesObject",
         "required": [
@@ -2761,6 +3082,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/VconSignedObject"
+                },
+                {
+                  "$ref": "#/components/schemas/VconEncryptedObject"
                 }
               ]
             },
@@ -2841,12 +3165,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-08-19T21:45:25.841+00:00",
+            "example": "2024-08-27T19:41:49.002+00:00",
             "examples": [
-              1724103925,
-              1724103925.8411746,
+              1724787709,
+              1724787709.002319,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-08-19T21:45:25.841+00:00",
+              "2024-08-27T19:41:49.002+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
