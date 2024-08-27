@@ -9,7 +9,9 @@
  + [Introduction](#introduction)
  + [Processor Classes](#processors)
    * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
+   * [py_vcon_server.processor.builtin.decrypt.Decrypt](#py_vcon_serverprocessorbuiltindecryptdecrypt)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
+   * [py_vcon_server.processor.builtin.encrypt.Encrypt](#py_vcon_serverprocessorbuiltinencryptencrypt)
    * [py_vcon_server.processor.builtin.jq.JQProcessor](#py_vcon_serverprocessorbuiltinjqjqprocessor)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
    * [py_vcon_server.processor.builtin.send_email.SendEmail](#py_vcon_serverprocessorbuiltinsend_emailsendemail)
@@ -20,7 +22,9 @@
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
    * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
+   * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
+   * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
    * [py_vcon_server.processor.builtin.send_email.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinsend_emailvconprocessorinitoptions)
@@ -31,7 +35,9 @@
 
  + [Processor Options Classes](#processor-options-classes)
    * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
+   * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
+   * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
    * [py_vcon_server.processor.builtin.send_email.SendEmailOptions](#py_vcon_serverprocessorbuiltinsend_emailsendemailoptions)
@@ -123,6 +129,26 @@ Methods:
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
+## py_vcon_server.processor.builtin.decrypt.Decrypt
+
+ - **Name:** decrypt
+ - **Version:** 0.0.1
+ - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+
+vCon decryption **VconProcessor**
+This **VconProcessor** will decrypt the JWE form vCon into the signed/unverified JWS vCon form.
+
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterplugininitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterpluginoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
 ## py_vcon_server.processor.builtin.deepgram.Deepgram
 
  - **Name:** deepgram
@@ -135,6 +161,26 @@ The **Deepgram** **Vcon** **filter_plug** for transcription is used.
 
  - **Initialization options Object:** [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
  - **Processing options Object:** [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
+## py_vcon_server.processor.builtin.encrypt.Encrypt
+
+ - **Name:** encrypt
+ - **Version:** 0.0.1
+ - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+
+vCon encryption **VconProcessor**
+This **VconProcessor** will encrypt the Vcon into its JWE form.
+
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
 
 Methods:
 
@@ -296,6 +342,33 @@ derived class in the **VconProcessorRegistry**
 ### Fields
 none
 
+## py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions
+
+ - **Summary:** JWE decripting of vCon **FilterPlugin** intialization object
+
+initialization class for VconProcessor wrapper for DecryptFilterPlugin **FilterPlugin**
+
+### Fields
+
+##### private_pem_key (typing.Union[str, NoneType])
+default PEM format private key to use for decrypting a vCon
+
+
+
+example:
+
+default: None
+
+##### public_pem_key (typing.Union[str, NoneType])
+default PEM format public key/cert to use for decrypting a vCon
+
+
+
+example:
+
+default: None
+
+
 ## py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions
 
  - **Summary:** Deepgram transcription **FilterPlugin** intialization object
@@ -316,6 +389,24 @@ You can get one at: https://console.deepgram.com/signup?jump=keys
 example: 123456789e96a1da774e57abcdefghijklmnop
 
 default: ""
+
+
+## py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions
+
+ - **Summary:** JWE encryption of vCon **FilterPlugin** intialization object
+
+initialization class for VconProcessor wrapper for EncryptFilterPlugin **FilterPlugin**
+
+### Fields
+
+##### public_pem_key (typing.Union[str, NoneType])
+default PEM format public key/cert to use for encrypting a vCon
+
+
+
+example:
+
+default: None
 
 
 ## py_vcon_server.processor.builtin.jq.OpenAiChatCompletionInitOptions
@@ -440,6 +531,51 @@ example:
 default: {}
 
 
+## py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginOptions
+
+ - **Summary:** decrypt filter method options
+
+processor options class for **processor** method of VconProcessor wrapper for DecryptFilterPlugin **FilterPlugin**
+
+### Fields
+
+##### private_pem_key (typing.Union[str, NoneType])
+PEM format private key to use for decrypting the vCon
+
+    Override the default PEM format private key for encrypting.
+
+
+example:
+
+default: None
+
+##### public_pem_key (typing.Union[str, NoneType])
+PEM format public key/cert to use for encrypting the vCon
+
+    Override the default PEM format public key/cert for encrypting.
+
+
+example:
+
+default: None
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example:
+
+default: {}
+
+
 ## py_vcon_server.processor.builtin.deepgram.DeepgramOptions
 
  - **Summary:** Deepgram transcription filter method options
@@ -474,6 +610,41 @@ to be transcribed.
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
 default: 
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example:
+
+default: {}
+
+
+## py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions
+
+ - **Summary:** encrypt filter method options
+
+processor options class for **processor** method of VconProcessor wrapper for EncryptFilterPlugin **FilterPlugin**
+
+### Fields
+
+##### public_pem_key (typing.Union[str, NoneType])
+PEM format public key/cert to use for encrypting the vCon
+
+    Override the default PEM format public key/cert for encrypting.
+
+
+example:
+
+default: None
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
