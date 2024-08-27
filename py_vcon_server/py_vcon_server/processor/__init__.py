@@ -354,6 +354,60 @@ class VconSignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
     default = []
     )
 
+
+class JweUnprotectedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """
+  JWE Unprotected Object part of JWE RFC 7516
+  Defined in RFC 7516 section 7.2.1
+  """
+  cty: typing.Optional[str] = pydantic.Field(
+    title = "mimetype of the decrypted ciphertext",
+    description = "defined in RFC 7516 section 4.1.12",
+    )
+
+  uuid: typing.Optional[str] = pydantic.Field(
+    title = "vCon uuid"
+    )
+
+  enc: typing.Optional[str] = pydantic.Field(
+    title = "encryption algoritym",
+    description = "defined in RFC 7516 section 4.1.2",
+    )
+
+
+class VconEncryptedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """
+  vCon in encrypted form (JWE RFC 7516)
+  """
+
+  unprotected: JweUnprotectedObject = pydantic.Field(
+    title = "JWS Signature Object",
+    description = "defined in RFC 7515 section 7.2.1",
+    default = []
+    )
+
+  recipients: typing.List[typing.Dict[str,typing.Any]] = pydantic.Field(
+    title = "recipients list of objects",
+    description = "defined in RFC 7516 section 7.2.1",
+    default = []
+    )
+
+  iv: str = pydantic.Field(
+    title = "initialization vector",
+    description = "defined in RFC 7516 section 7.2.1",
+    )
+
+  ciphertext: str = pydantic.Field(
+    title = "ciphertext of encrypted vCon",
+    description = "defined in RFC 7516 section 4.1.12",
+    )
+
+  tag: str = pydantic.Field(
+    title = "authentication tag",
+    description = "defined in RFC 7516 section 7.2.1",
+    )
+
+
 class VconProcessorInitOptions(pydantic.BaseModel):
   """
   Base class to options passed to initalize a **VconProcessor**
@@ -378,7 +432,7 @@ class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
 
 class VconProcessorOutput(pydantic.BaseModel, extra=pydantic.Extra.allow):
   """ Serializable Output results from a VconProcessor """
-  vcons: typing.List[typing.Union[VconUnsignedObject, VconSignedObject]] = pydantic.Field(
+  vcons: typing.List[typing.Union[VconUnsignedObject, VconSignedObject, VconEncryptedObject]] = pydantic.Field(
       title = "array of **Vcon** objects",
       default = []
     )
