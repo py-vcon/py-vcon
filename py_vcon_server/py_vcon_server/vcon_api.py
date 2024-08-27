@@ -20,7 +20,8 @@ def init(restapi):
   @restapi.get("/vcon/{vcon_uuid}",
     response_model = typing.Union[
         py_vcon_server.processor.VconUnsignedObject,
-        py_vcon_server.processor.VconSignedObject
+        py_vcon_server.processor.VconSignedObject,
+        py_vcon_server.processor.VconEncryptedObject
       ],
     responses = py_vcon_server.restful_api.ERROR_RESPONSES,
     tags = [ py_vcon_server.restful_api.VCON_TAG ])
@@ -57,7 +58,8 @@ def init(restapi):
     tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def post_vcon(inbound_vcon: typing.Union[
       py_vcon_server.processor.VconUnsignedObject,
-      py_vcon_server.processor.VconSignedObject
+      py_vcon_server.processor.VconSignedObject,
+      py_vcon_server.processor.VconEncryptedObject
     ]):
     """
     Store the given vCon in VconStorage, replace if it exists for the given UUID
@@ -257,7 +259,8 @@ def init(restapi):
       name: str,
       vCon: typing.Union[
           py_vcon_server.processor.VconUnsignedObject,
-          py_vcon_server.processor.VconSignedObject
+          py_vcon_server.processor.VconSignedObject,
+          py_vcon_server.processor.VconEncryptedObject
         ],
       save_vcons: bool = False,
       return_results: bool = True
@@ -275,8 +278,10 @@ def init(restapi):
 
       **name** (str) - name of the pipeline defined in the pipeline DB
 
-      **vCon** (py_vcon_server.processor.VconSignedObject or 
-        py_vcon_server.processor.VconSignedObject) - vCon from body, assumes vCon/UUID does NOT exist in storage
+      **vCon** (py_vcon_server.processor.VconUnsignedObject or 
+        py_vcon_server.processor.VconSignedObject or
+        py_vcon_server.processor.VconEncryptObject) - 
+          vCon from body, assumes vCon/UUID does NOT exist in storage
 
       **save_vcons** (bool) - save/update the vCon(s) to the vCon Storage after pipeline
           processing.  Ignores/overides the **PipelineOptions.save_vcons**
