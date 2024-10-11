@@ -2063,7 +2063,7 @@ class Vcon():
     """
 
     if(self._state != VconStates.ENCRYPTED):
-      raise InvalidVconState("Vcon is not encerypted")
+      raise InvalidVconState("Vcon is not encrypted")
 
     if(len(self._jwe_dict) < 2):
       raise InvalidVconState("Vcon JWE does not seem valid: {}".format(self._jws_dict))
