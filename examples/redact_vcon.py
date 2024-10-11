@@ -1,18 +1,18 @@
-import vcon.filter_plugins
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 import typing
-import pydantic
-import os
-import json
+import tempfile
 import csv
 from datetime import datetime
+import pydantic
 import pandas as pd
 import tensorflow as tf
-import dataprofiler
-from dataprofiler import Data, Profiler, DataLabeler
+import vcon.filter_plugins
+#import dataprofiler
+from dataprofiler import Data, DataLabeler
 from dataprofiler.data_readers.csv_data import CSVData
 
+logger = vcon.build_logger(__name__)
 
-DIALOG_DATA_CSV     = "examples/redact_input.csv"
 DIALOG_DATA_FIELDS  = ['parties', 'start', 'duration', 'text']
 
 # Properties for the Analysis object with redacted data
@@ -23,22 +23,21 @@ ANALYSIS_SCHEMA     = 'data_labeler_schema'
 # Register plugin
 registration_options: typing.Dict[str, typing.Any] = {}
 vcon.filter_plugins.FilterPluginRegistry.register(
-  "redact",
+  "redact_pii",
   "examples.redact_vcon",
-  "Redact",
+  "RedactPii",
   "Adds analysis object to vcon with PII labels and redacted dialog",
   registration_options
   )
 
 
-class RedactInitOptions(vcon.filter_plugins.FilterPluginInitOptions):
+class RedactPiiInitOptions(vcon.filter_plugins.FilterPluginInitOptions):
   # nothing to initialize here
-  print('RedactInitOptions invoked')
-  
+  pass
 
-class RedactOptions(vcon.filter_plugins.FilterPluginOptions):
+class RedactPiiOptions(vcon.filter_plugins.FilterPluginOptions):
   """
-  Options for redacting PII data in the recording **dialog** objects.  
+  Options for redacting PII data in the text or transcriptions for **dialog** objects.  
   The resulting dialogs(s) are added to **analysis** objects in this **Vcon**
   """
   input_dialogs: typing.Union[str,typing.List[int]] = pydantic.Field(
@@ -55,32 +54,31 @@ using the default FilterPlugin transcribe type.
     )
 
 
-class Redact(vcon.filter_plugins.FilterPlugin):
-  init_options_type = RedactInitOptions
-  
+class RedactPii(vcon.filter_plugins.FilterPlugin):
+  init_options_type = RedactPiiInitOptions
+
   def __init__(self, options):
     super().__init__(
       options,
-      RedactOptions)
-    print("Redact plugin created with options: {}".format(options))
+      RedactPiiOptions)
 
   # Function to redact dialog text based on PII labels
   def redact_text_helper(self, dialog, labels):
     redacted_dialog = dialog.text
     index_adjuster = 0
-    for labelInfo in labels:
+    for label_info in labels:
       # start of sensitive data
-      s = labelInfo[0] + index_adjuster
+      s = label_info[0] + index_adjuster
       # end of sensitive data
-      e = labelInfo[1] + index_adjuster
+      e = label_info[1] + index_adjuster
       if e >= len(redacted_dialog):
         e = len(redacted_dialog) - 1
       # redact sensitive data. For example, 
       # text "my email is test@mail.com and number is 617 555 1234" 
       # becomes "my email is {{EMAIL}} and number is {{PHONE}}"
-      redacted_dialog = redacted_dialog[:s] + "{{" + labelInfo[2] + "}}" + redacted_dialog[e:]
+      redacted_dialog = redacted_dialog[:s] + "{{" + label_info[2] + "}}" + redacted_dialog[e:]
       # adjust the index for the next iteration as the original text has changed
-      diff =e - s - len(labelInfo[2]) - 4
+      diff =e - s - len(label_info[2]) - 4
       if diff < 0:
         diff = diff * -1
       index_adjuster = index_adjuster + diff
@@ -90,13 +88,13 @@ class Redact(vcon.filter_plugins.FilterPlugin):
   async def filter(
     self,
     in_vcon: vcon.Vcon,
-    options: RedactOptions
+    options: RedactPiiOptions
     ) -> vcon.Vcon:
 
-    print(datetime.now(), 'Redact filter is invoked')
+    logger.debug('Redact filter is invoked')
     out_vcon = in_vcon
     if(in_vcon.dialog is None):
-      print('Return as there are no dialogs..')
+      logger.info('Return as there are no dialogs..')
       return(out_vcon)
 
     dialog_indices = self.slice_indices(
@@ -107,10 +105,10 @@ class Redact(vcon.filter_plugins.FilterPlugin):
 
     # no dialogs
     if(len(dialog_indices) == 0):
-      print('Return as there are no dialog indices..')
+      logger.warning('Return as there are no dialog indices..')
       return(out_vcon)
 
-    print(datetime.now(), 'Get dialog text')
+    logger.debug('Get dialog text')
     # iterate through the vcon
     for dialog_index in dialog_indices:
       dialog_texts = await in_vcon.get_dialog_text(
@@ -118,43 +116,43 @@ class Redact(vcon.filter_plugins.FilterPlugin):
         True, # find text from transcript analysis if dialog is a recording and transcript exists
         False # do not transcribe this recording dialog if transcript does not exist
       )
-      
+
       # no text, no analysis
       if(len(dialog_texts) == 0):
-        print(datetime.now(), 'There are no dialog text at index ', dialog_index)
+        logger.info('There are no dialog text at index ', dialog_index)
         continue
 
-      print(datetime.now(), 'creating csv')
+      logger.info('creating csv')
       csv_has_header = False
-      with open(DIALOG_DATA_CSV, "w") as dialogCSV:
-        writer = csv.DictWriter(dialogCSV, fieldnames=DIALOG_DATA_FIELDS)
+      with tempfile.NamedTemporaryFile(suffix = "csv", mode = "w") as dialog_csv:
+        writer = csv.DictWriter(dialog_csv, fieldnames=DIALOG_DATA_FIELDS)
         # write header (just once)
-        if csv_has_header == False:
+        if(not csv_has_header):
           writer.writeheader()
           csv_has_header = True
         # write data rows
         writer.writerows(dialog_texts)
 
-      # Label the data using CapitalOne libraries
-      # structured labeler doesnt work as it considers entire dialog as a string
-      # and hence is unable to come up with a label for the entire column
-      print(datetime.now(), 'creating data object')
-      options = {'selected_columns': ['text']}
-      data = CSVData(DIALOG_DATA_CSV, options=options)
-      
-      labeler = DataLabeler(labeler_type='unstructured')
-      labeler.set_params(
-        { 'postprocessor' : {'output_format':'ner', 'use_word_level_argmax': True}}
-      )
+        # Label the data using CapitalOne libraries
+        # structured labeler doesnt work as it considers entire dialog as a string
+        # and hence is unable to come up with a label for the entire column
+        logger.debug('creating data object')
+        options = {'selected_columns': ['text']}
+        data = CSVData(dialog_csv.name, options=options)
 
-      print(datetime.now(), 'predicting labels')
-      predictions = labeler.predict(data)
-      
+        labeler = DataLabeler(labeler_type='unstructured')
+        labeler.set_params(
+          { 'postprocessor' : {'output_format':'ner', 'use_word_level_argmax': True}}
+        )
+
+        logger.debug('predicting labels')
+        predictions = labeler.predict(data)
+
       analysis_extras = {
         "product": ANALYSIS_PRODUCT
       }
-    
-      print(datetime.now(), 'redacting dialog text')
+
+      logger.debug('redacting dialog text')
       redacted_texts = []
       for i, dialog in data.data.iterrows():
         redacted_dialog = self.redact_text_helper(dialog, predictions['pred'][i])
@@ -162,7 +160,7 @@ class Redact(vcon.filter_plugins.FilterPlugin):
         if redacted_dialog != dialog.text:
           redacted_texts.append(dialog_texts[i])
 
-      print(datetime.now(), 'adding to aaaaanalysis')
+      logger.debug('adding to aaaaanalysis')
       out_vcon.add_analysis(
         dialog_index,
         ANALYSIS_TYPE,
@@ -172,8 +170,5 @@ class Redact(vcon.filter_plugins.FilterPlugin):
         **analysis_extras
         )
 
-    # cleanup
-    if os.path.exists(DIALOG_DATA_CSV):
-      os.remove(DIALOG_DATA_CSV)
-
     return(out_vcon)
+
