@@ -39,7 +39,8 @@ def load_pem_cert(cert_file : str) -> typing.Tuple[cryptography.x509.Certificate
   Returns:
     Tuple(cert_object, str): cert object and DER string
   """
-  if(cert_file.find(CERT_PARTIAL_PREFIX) >= 0 and
+  if(isinstance(cert_file, str) and
+     cert_file.find(CERT_PARTIAL_PREFIX) >= 0 and
      cert_file.find(CERT_PARTIAL_SUFFIX) >= 0):
     cert_string = cert_file
   else:
@@ -118,7 +119,8 @@ def load_pem_key(key_file: str) -> cryptography.hazmat.primitives.asymmetric.rsa
     Tuple(cert_object, str): cert object and DER string
   """
 
-  if(key_file.find(KEY_PARTIAL_PREFIX) >= 0 and
+  if(isinstance(key_file, str) and
+     key_file.find(KEY_PARTIAL_PREFIX) >= 0 and
      key_file.find(KEY_PARTIAL_SUFFIX) >= 0):
     pem_key_string = key_file
   else:
@@ -277,7 +279,8 @@ def build_encryption_jwk_from_pem_file(cert_pem_file: str) -> dict:
   Returns:
     JWK useful for JWE encryption
   """
-  if(cert_pem_file.find(CERT_PARTIAL_PREFIX) >= 0 and
+  if(isinstance(cert_pem_file, str) and
+     cert_pem_file.find(CERT_PARTIAL_PREFIX) >= 0 and
      cert_pem_file.find(CERT_PARTIAL_SUFFIX) >= 0):
     pem_string = cert_pem_file
   else:
