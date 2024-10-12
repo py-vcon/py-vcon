@@ -244,8 +244,9 @@ def doc_plugin(plugin_class: typing.Type[vcon.filter_plugins.FilterPlugin],
         module_name = option_arg_type.__module__
       arg_type = option_arg_type.__name__
       if(not issubclass(option_arg_type, expected_options_base_class)):
-        raise Exception("argument: {} in method: {} of FilterPlugin: {} in module: {} does not derived from: {}".format(
+        raise Exception("argument: {} (type: {}) in method: {} of FilterPlugin: {} in module: {} does not derived from: {}".format(
           option_arg_name,
+          option_arg_type,
           name,
           plugin_class,
           plugin_class.__module__,
