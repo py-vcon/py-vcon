@@ -14,6 +14,7 @@
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPlugin](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugin)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
    - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
+   - [vcon.filter_plugins.impl.redact_pii.RedactPii](#vconfilter_pluginsimplredact_piiredactpii)
    - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPlugin](#vconfilter_pluginsimplsign_filter_pluginsignfilterplugin)
    - [vcon.filter_plugins.impl.verify_filter_plugin.VerifyFilterPlugin](#vconfilter_pluginsimplverify_filter_pluginverifyfilterplugin)
    - [vcon.filter_plugins.impl.whisper.Whisper](#vconfilter_pluginsimplwhisperwhisper)
@@ -24,6 +25,7 @@
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugininitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
+   - [vcon.filter_plugins.impl.redact_pii.RedactPiiInitOptions](#vconfilter_pluginsimplredact_piiredactpiiinitoptions)
    - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginInitOptions](#vconfilter_pluginsimplsign_filter_pluginsignfilterplugininitoptions)
    - [vcon.filter_plugins.impl.verify_filter_plugin.VerifyFilterPluginInitOptions](#vconfilter_pluginsimplverify_filter_pluginverifyfilterplugininitoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
@@ -34,6 +36,7 @@
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
+   - [vcon.filter_plugins.impl.redact_pii.RedactPiiOptions](#vconfilter_pluginsimplredact_piiredactpiioptions)
    - [vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginOptions](#vconfilter_pluginsimplsign_filter_pluginsignfilterpluginoptions)
    - [vcon.filter_plugins.impl.verify_filter_plugin.VerifyFilterPluginOptions](#vconfilter_pluginsimplverify_filter_pluginverifyfilterpluginoptions)
    - [vcon.filter_plugins.impl.whisper.WhisperOptions](#vconfilter_pluginsimplwhisperwhisperoptions)
@@ -355,6 +358,51 @@ Returns:
 Close down OpenAI client if created. 
 
 
+## vcon.filter_plugins.impl.redact_pii.RedactPii
+None
+
+**Methods**:
+
+### RedactPii.\_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.redact_pii.RedactPiiInitOptions)
+
+Parameters:
+  init_options (RedactPiiInitOptions) - the initialization options for the PII redaction plugin using the CaptialOne dataprofiler.
+
+
+**init_options** - [vcon.filter_plugins.impl.redact_pii.RedactPiiInitOptions](#vconfilter_pluginsimplredact_piiredactpiiinitoptions)
+
+### RedactPii.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.redact_pii.RedactPiiOptions) -> vcon.Vcon
+
+
+Redact PII in the transcripts for the indicated dialogs using the
+CaptialOne dataprofiler. 
+
+Note: this does not guarentee that all PII is redacted.  Other data
+is sometimes mistaken as PII data.  PII data could be missed and
+not redacted.
+
+Parameters:
+  options (RedactPiiOptions)
+
+Returns:
+  The input vCon with the generated, redacted transcript(s) in the
+  added.  DOES NOT remove the original, non-redacted transcripts.
+
+
+**options** - [vcon.filter_plugins.impl.redact_pii.RedactPiiOptions](#vconfilter_pluginsimplredact_piiredactpiioptions)
+
+### RedactPii.\_\_del__
+\_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
 ## vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPlugin
 
   **FilterPlugin** for JWS signing of vCon
@@ -609,6 +657,14 @@ You can get one at: https://platform.openai.com/account/api-keys
 example: sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu
 
 default: None
+
+## vcon.filter_plugins.impl.redact_pii.RedactPiiInitOptions
+ - RedactPiiInitOptions
+
+base class for **FilterPlugin** initialization options 
+
+#### Fields:
+None
 
 ## vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginInitOptions
  - JWS signing of vCon **FilterPlugin** intialization object
@@ -1021,6 +1077,28 @@ on the new **analysis** object in the **Vcon**.
 example:
 
 default: "summary"
+
+## vcon.filter_plugins.impl.redact_pii.RedactPiiOptions
+ - RedactPiiOptions
+
+Options for redacting PII data in the text or transcriptions for **dialog** objects.  
+The resulting dialogs(s) are added to **analysis** objects in this **Vcon**
+
+#### Fields:
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** text **dialog** objects
+
+Indicates which text **dialog** and recording **dialog** object's associated
+transcript **analysis** objects are to be input.  Recording **dialog**
+objects that do not have transcript **analysis** objects, are transcribed
+using the default FilterPlugin transcribe type.
+**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.
+
+
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
+default: 
 
 ## vcon.filter_plugins.impl.sign_filter_plugin.SignFilterPluginOptions
  - Sign filter method options
