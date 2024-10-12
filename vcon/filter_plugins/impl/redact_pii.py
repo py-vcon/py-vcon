@@ -47,9 +47,16 @@ using the default FilterPlugin transcribe type.
 class RedactPii(vcon.filter_plugins.FilterPlugin):
   init_options_type = RedactPiiInitOptions
 
-  def __init__(self, options):
+  def __init__(
+      self,
+      init_options: RedactPiiInitOptions
+    ):
+    """
+    Parameters:
+      init_options (RedactPiiInitOptions) - the initialization options for the PII redaction plugin using the CaptialOne dataprofiler.
+    """
     super().__init__(
-      options,
+      init_options,
       RedactPiiOptions)
 
   # Function to redact dialog text based on PII labels
@@ -76,11 +83,25 @@ class RedactPii(vcon.filter_plugins.FilterPlugin):
     return(redacted_dialog)
 
   async def filter(
-    self,
-    in_vcon: vcon.Vcon,
-    options: RedactPiiOptions
+      self,
+      in_vcon: vcon.Vcon,
+      options: RedactPiiOptions
     ) -> vcon.Vcon:
+    """
+    Redact PII in the transcripts for the indicated dialogs using the
+    CaptialOne dataprofiler. 
 
+    Note: this does not guarentee that all PII is redacted.  Other data
+    is sometimes mistaken as PII data.  PII data could be missed and
+    not redacted.
+
+    Parameters:
+      options (RedactPiiOptions)
+
+    Returns:
+      The input vCon with the generated, redacted transcript(s) in the
+      added.  DOES NOT remove the original, non-redacted transcripts.
+    """
     logger.debug('Redact filter is invoked')
     out_vcon = in_vcon
     if(in_vcon.dialog is None):
