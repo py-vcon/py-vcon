@@ -122,6 +122,7 @@ class RedactPii(vcon.filter_plugins.FilterPlugin):
     logger.debug('Get dialog text')
     # iterate through the vcon
     for dialog_index in dialog_indices:
+
       dialog_texts = await in_vcon.get_dialog_text(
         dialog_index,
         True, # find text from transcript analysis if dialog is a recording and transcript exists
@@ -135,13 +136,14 @@ class RedactPii(vcon.filter_plugins.FilterPlugin):
 
       logger.info('creating csv')
       csv_has_header = False
-      with tempfile.NamedTemporaryFile(suffix = "csv", mode = "w") as dialog_csv:
+      with tempfile.NamedTemporaryFile(suffix = ".csv", mode = "w") as dialog_csv:
         writer = csv.DictWriter(dialog_csv, fieldnames=DIALOG_DATA_FIELDS)
         # write header (just once)
         if(not csv_has_header):
           writer.writeheader()
           csv_has_header = True
         # write data rows
+        # logger.debug("writing dialog text: {}".format(dialog_texts))
         writer.writerows(dialog_texts)
 
         # Label the data using CapitalOne libraries
@@ -150,6 +152,11 @@ class RedactPii(vcon.filter_plugins.FilterPlugin):
         logger.debug('creating data object')
         options = {'selected_columns': ['text']}
         data = CSVData(dialog_csv.name, options=options)
+        dialog_csv.flush()
+
+        # with open(dialog_csv.name, "r") as csv_reader:
+        #   csv_text = csv_reader.read()
+        #   logger.debug("csv: {}".format(csv_text))
 
         labeler = DataLabeler(labeler_type='unstructured')
         labeler.set_params(
@@ -167,9 +174,10 @@ class RedactPii(vcon.filter_plugins.FilterPlugin):
       redacted_texts = []
       for i, dialog in data.data.iterrows():
         redacted_dialog = self.redact_text_helper(dialog, predictions['pred'][i])
-        dialog_texts[i]['redacted'] = redacted_dialog
-        if redacted_dialog != dialog.text:
-          redacted_texts.append(dialog_texts[i])
+        dialog_texts[i]['text'] = redacted_dialog
+        #if redacted_dialog != dialog.text:
+        # Copy chunks containing no redacted as well
+        redacted_texts.append(dialog_texts[i])
 
       logger.debug('adding to aaaaanalysis')
       out_vcon.add_analysis(
