@@ -12,6 +12,7 @@
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPlugin](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugin)
    - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPlugin](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugin)
+   - [vcon.filter_plugins.impl.jq_redaction.JqRedaction](#vconfilter_pluginsimpljq_redactionjqredaction)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
    - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
    - [vcon.filter_plugins.impl.redact_pii.RedactPii](#vconfilter_pluginsimplredact_piiredactpii)
@@ -23,6 +24,7 @@
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginInitOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugininitoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugininitoptions)
+   - [vcon.filter_plugins.impl.jq_redaction.JqRedactionInitOptions](#vconfilter_pluginsimpljq_redactionjqredactioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
    - [vcon.filter_plugins.impl.redact_pii.RedactPiiInitOptions](#vconfilter_pluginsimplredact_piiredactpiiinitoptions)
@@ -34,6 +36,7 @@
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterpluginoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
+   - [vcon.filter_plugins.impl.jq_redaction.JqRedactionOptions](#vconfilter_pluginsimpljq_redactionjqredactionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
    - [vcon.filter_plugins.impl.redact_pii.RedactPiiOptions](#vconfilter_pluginsimplredact_piiredactpiioptions)
@@ -248,6 +251,50 @@ Returns:
 **options** - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
 
 ### EncryptFilterPlugin.\_\_del__
+\_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
+## vcon.filter_plugins.impl.jq_redaction.JqRedaction
+
+  Create a redacted vCon referencing the input vCon and use the
+  JQ query to define what is deleted, kept or modified from the original
+  vCon to construct the redacted vCon.
+  
+
+**Methods**:
+
+### JqRedaction.\_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.jq_redaction.JqRedactionInitOptions)
+
+Parameters:
+  init_options (JqRedactionInitOptions) - the initialization options for the redaction of vCon in plugin
+
+
+**init_options** - [vcon.filter_plugins.impl.jq_redaction.JqRedactionInitOptions](#vconfilter_pluginsimpljq_redactionjqredactioninitoptions)
+
+### JqRedaction.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.jq_redaction.JqRedactionOptions) -> vcon.Vcon
+
+
+redact the in_vcon using the JQ query to construct the output
+redacted vCon.  Set the redacted Object in the output redacted vCon.
+
+Parameters:
+  options (JqRedactionOptions)
+
+Returns:
+  the redacted vCon referencing the in_vcon
+
+
+**options** - [vcon.filter_plugins.impl.jq_redaction.JqRedactionOptions](#vconfilter_pluginsimpljq_redactionjqredactionoptions)
+
+### JqRedaction.\_\_del__
 \_\_del__(self)
 
 
@@ -614,6 +661,14 @@ example:
 
 default: None
 
+## vcon.filter_plugins.impl.jq_redaction.JqRedactionInitOptions
+ - Initialization options for JQ redaction filter_plugin
+
+base class for **FilterPlugin** initialization options 
+
+#### Fields:
+None
+
 ## vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions
  - OpenAI/ChatGPT Chat Completion **FilterPlugin** intialization object
 
@@ -827,6 +882,43 @@ PEM format public key/cert to use for encrypting the vCon
 
     Override the default PEM format public key/cert for encrypting.
 
+
+example:
+
+default: None
+
+## vcon.filter_plugins.impl.jq_redaction.JqRedactionOptions
+ - JQ redaction filter_plugin options
+
+Options defining how a redaction will be performed using a JQ query.
+The query can add, delete, modify the original vCon to construct a
+redacted vCon.  The resulting JQ query must form a valid vCon in
+either the unsigned, signed or encrypted forms.
+
+#### Fields:
+
+##### jq_redaction_query (str)
+JQ query defining the redaction
+string containing the JQ query to apply to the input vCon
+        to construct the output vCon.  The query can add, delete, modifiy the
+        contents of the input vcon to define the contents of the output vCon.  The
+        input vCon remains unchanged.
+
+example:
+
+default: None
+
+##### redaction_type_label (str)
+redaction type label to be set in the output vCon's redaction object
+None
+
+example:
+
+default: None
+
+##### uuid_domain (typing.Union[str, NoneType])
+domain string to use when generating a new UUID for the redacted vCon
+None
 
 example:
 
