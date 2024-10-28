@@ -28,7 +28,7 @@ transformers
 whisper
 
 # stable-ts dependencies:
-numpy
+numpy < 1.25
 torch >= 2.1
 stable-ts > 2
 
