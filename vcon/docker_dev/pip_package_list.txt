@@ -1,6 +1,7 @@
 # runtime dependencies:
 # Deepgram 3+ uses match statement which does not run on python < 3.10
 deepgram-sdk < 3
+cbor2
 cryptography >= 37
 hsslms
 jose
@@ -27,7 +28,12 @@ transformers
 whisper
 
 # stable-ts dependencies:
-numpy
+numpy < 1.25
 torch >= 2.1
 stable-ts > 2
 
+# redaction dependencies
+pandas
+tensorflow
+scikit-learn
+dataprofiler

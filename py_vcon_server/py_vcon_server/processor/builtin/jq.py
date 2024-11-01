@@ -5,6 +5,8 @@ import pydantic
 import pyjq
 import py_vcon_server.processor
 
+logger = py_vcon_server.logging_utils.init_logger(__name__)
+
 class JQInitOptions(py_vcon_server.processor.VconProcessorInitOptions):
   pass
 
@@ -54,7 +56,10 @@ class JQProcessor(py_vcon_server.processor.VconProcessor):
       }
     # Add dict form of vCons
     for mVcon in processor_input._vcons:
-      dict_to_query["vcons"].append(await mVcon.get_vcon(py_vcon_server.processor.VconTypes.DICT))
+      # Need to use the object form so that we can get verified or locally signed dict form
+      a_vcon = await mVcon.get_vcon(py_vcon_server.processor.VconTypes.OBJECT)
+      logger.debug("jq processor adding vcon state={}".format(a_vcon._state))
+      dict_to_query["vcons"].append(a_vcon.dumpd(signed = False, deepcopy = False))
 
     for parameter_name in formatted_options.jq_queries.keys():
 

@@ -792,8 +792,16 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
       if(not args.recfile[0].exists()):
         raise Exception("Recording file: {} does not exist".format(args.recfile[0]))
 
-      sox_info = sox.file_info.info(str(args.recfile[0]))
-      duration = sox_info["duration"]
+      try:
+        recording_meta = ffmpeg.probe(args.recfile[0])
+        # tweak the date to make it RFC3339
+        #start = recording_meta["streams"][0]['tags']["creation_time"].replace("Z", "+00:00")
+        duration = float(recording_meta["streams"][0]['duration'])
+      except Exception as e:
+        print("could not get duration of {} using ffmpeg, trying sox\n{}".format(args.recfile[0], e), file = sys.stderr)
+        sox_info = sox.file_info.info(str(args.recfile[0]))
+        duration = sox_info["duration"]
+
       mimetype = vcon.Vcon.get_mime_type(args.recfile[0])
 
       with open(args.recfile[0], 'rb') as file_handle:

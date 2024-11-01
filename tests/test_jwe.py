@@ -148,6 +148,7 @@ def test_x5c_encrypt(two_party_tel_vcon : vcon.Vcon) -> None:
 
   assert(plaintext == plaintext_decrypted)
 
+
 def test_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   try:
     two_party_tel_vcon.encrypt(DIVISION_CERT)
@@ -186,6 +187,53 @@ def test_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
 
   assert(reconstituted_vcon.parties[0]['tel'] == call_data['source'])
   assert(reconstituted_vcon.parties[1]['tel'] == call_data['destination'])
+
+
+def test_pem_strings_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
+  division_cert_string = vcon.security.load_string_from_file(DIVISION_CERT)
+  division_private_key_string = vcon.security.load_string_from_file(DIVISION_PRIVATE_KEY)
+  group_private_key_string = vcon.security.load_string_from_file(GROUP_PRIVATE_KEY)
+  group_cert_string = vcon.security.load_string_from_file(GROUP_CERT)
+  ca_cert_string = vcon.security.load_string_from_file(CA_CERT)
+
+  try:
+    two_party_tel_vcon.encrypt(division_cert_string)
+    raise Exception("Should have thrown an exception as this vcon was not yet signed")
+
+  except vcon.InvalidVconState as not_signed_error:
+    if(not_signed_error.args[0].find("should") != -1):
+      raise not_signed_error
+
+  two_party_tel_vcon.sign(group_private_key_string, [group_cert_string, division_cert_string, ca_cert_string])
+
+  two_party_tel_vcon.encrypt(division_cert_string)
+
+  encrypted_serialized_vcon = two_party_tel_vcon.dumps()
+  #print(encrypted_serialized_vcon)
+
+  assert(two_party_tel_vcon._state == vcon.VconStates.ENCRYPTED)
+
+  reconstituted_vcon = vcon.Vcon()
+  reconstituted_vcon.loads(encrypted_serialized_vcon)
+  assert(reconstituted_vcon._state == vcon.VconStates.ENCRYPTED)
+
+  try:
+    reconstituted_vcon.verify([ca_cert_string])
+    raise Exception("Should have thrown an exception as this vcon is still encrypted")
+
+  except vcon.InvalidVconState as encrypted_not_signed_error:
+    if(encrypted_not_signed_error.args[0].find("should") != -1):
+      raise encrypted_not_signed_error
+
+  reconstituted_vcon.decrypt(division_private_key_string, division_cert_string)
+  assert(reconstituted_vcon._state == vcon.VconStates.UNVERIFIED)
+
+  reconstituted_vcon.verify([ca_cert_string])
+  assert(reconstituted_vcon._state == vcon.VconStates.VERIFIED)
+
+  assert(reconstituted_vcon.parties[0]['tel'] == call_data['source'])
+  assert(reconstituted_vcon.parties[1]['tel'] == call_data['destination'])
+
 
 def test_encrypt_decrypt_serialization(two_party_tel_vcon : vcon.Vcon) -> None:
 

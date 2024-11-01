@@ -302,6 +302,8 @@ def test_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
 
   try:
     duuid = deserialized_signed_vcon.uuid
+    assert(len(duuid) > 10)
+    party_count = len(deserialized_signed_vcon.parties)
     raise Exception("Should be an exception thrown here as vCon is signed, but not verified")
 
   except vcon.UnverifiedVcon as e:
@@ -323,3 +325,87 @@ def test_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(deserialized_signed_vcon.parties[0]['tel'] == call_data['source'])
   assert(deserialized_signed_vcon.parties[1]['tel'] == call_data['destination'])
   assert(uuid == deserialized_signed_vcon.uuid)
+
+
+def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
+  group_private_key_string = vcon.security.load_string_from_file(GROUP_PRIVATE_KEY)
+  group_cert_string = vcon.security.load_string_from_file(GROUP_CERT)
+  division_cert_string = vcon.security.load_string_from_file(DIVISION_CERT)
+  ca_cert_string = vcon.security.load_string_from_file(CA_CERT)
+
+  try:
+    two_party_tel_vcon.sign(group_private_key_string, [group_cert_string, division_cert_string, ca_cert_string])
+    raise Exception("Expected exception as sign was attempted with UUID not set.")
+
+  except vcon.InvalidVconState as e:
+    pass
+
+  two_party_tel_vcon.set_uuid("vcon.dev")
+  uuid = two_party_tel_vcon.uuid
+  assert(uuid == vcon.Vcon.get_dict_uuid(two_party_tel_vcon.dumpd()))
+  # Now this should work as we have set a UUID
+  two_party_tel_vcon.sign(group_private_key_string, [group_cert_string, division_cert_string, ca_cert_string])
+
+  # Should still be valid to read UUID
+  assert(uuid == two_party_tel_vcon.uuid)
+  vcon_dict = two_party_tel_vcon.dumpd()
+  print("signed vcon dict keys: {}".format(vcon_dict.keys()))
+  print("header[0]: {}".format(vcon_dict["signatures"][0]["header"].keys()))
+  assert(uuid == vcon.Vcon.get_dict_uuid(vcon_dict))
+  # To test both ways the uuid can be set in a JWS, remove it from header
+  del vcon_dict["signatures"][0]["header"]["uuid"]
+  assert("uuid" not in vcon_dict["signatures"][0]["header"])
+  assert(uuid == vcon.Vcon.get_dict_uuid(vcon_dict))
+
+  try:
+    two_party_tel_vcon.sign(group_private_key_string, [group_cert_string, division_cert_string, ca_cert_string])
+    raise Exception("Should have thrown an exception as this vcon was already signed")
+
+  except vcon.InvalidVconState as already_signed_error:
+    if(already_signed_error.args[0].find("should") != -1):
+      raise already_signed_error
+
+  try:
+    two_party_tel_vcon.verify([ca_cert_string])
+    raise Exception("Should have thrown an exception as this vcon was signed locally")
+
+  except vcon.InvalidVconState as locally_signed_error:
+    # Expected to get here because vCon was signed locally
+    # Its already verified
+    if(locally_signed_error.args[0].find("should") != -1):
+      raise locally_signed_error
+
+  vcon_json = two_party_tel_vcon.dumps()
+  #print("Signed vcon: {}".format(vcon_json))
+
+  deserialized_signed_vcon = vcon.Vcon()
+  deserialized_signed_vcon.loads(vcon_json)
+  assert(uuid == vcon.Vcon.get_dict_uuid(deserialized_signed_vcon.dumpd()))
+
+  try:
+    duuid = deserialized_signed_vcon.uuid
+    assert(len(duuid) > 10)
+    party_count = len(deserialized_signed_vcon.parties)
+    raise Exception("Should be an exception thrown here as vCon is signed, but not verified")
+
+  except vcon.UnverifiedVcon as e:
+    pass
+
+  vcon_json2 = deserialized_signed_vcon.dumps()
+  assert(vcon_json == vcon_json2)
+
+  try:
+    party_count = len(deserialized_signed_vcon.parties)
+    raise Exception("Should not get here.  Vcon is signed, but not yet verified.  Cannot access data.")
+
+  except vcon.UnverifiedVcon as unverified_error:
+    # Should get here
+    pass
+
+  deserialized_signed_vcon.verify([ca_cert_string])
+  assert(len(deserialized_signed_vcon.parties) == 2)
+  assert(deserialized_signed_vcon.parties[0]['tel'] == call_data['source'])
+  assert(deserialized_signed_vcon.parties[1]['tel'] == call_data['destination'])
+  assert(uuid == deserialized_signed_vcon.uuid)
+  assert(uuid == vcon.Vcon.get_dict_uuid(deserialized_signed_vcon.dumpd()))
+

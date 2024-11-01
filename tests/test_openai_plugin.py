@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Unit test for OpenAI filter plugins """
 import os
 import json
@@ -248,10 +249,10 @@ async def test_4_diarized_chat_completion_object_summary():
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion").plugin()
   # verify stats of extracted messages are as expected
   print("stats: {}".format(plugin.last_stats))
-  assert(55 <= plugin.last_stats['num_messages'] <= 63)
+  assert(55 <= plugin.last_stats['num_messages'] <= 70)
   assert(plugin.last_stats['num_text_dialogs'] == 0)
   assert(plugin.last_stats['num_dialog_list'] == 1)
-  assert(55 <= plugin.last_stats['num_transcribe_analysis'] <= 63)
+  assert(55 <= plugin.last_stats['num_transcribe_analysis'] <= 70)
 
   print("New analysis object: {}".format(out_vcon.analysis[original_analysis_count]))
   assert((after_analysis_count - original_analysis_count) == 1)

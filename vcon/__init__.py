@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """
 Module for creating and modifying vCon conversation containers.
 see https:/vcon.dev
@@ -13,6 +14,7 @@ import copy
 import logging
 import logging.config
 import enum
+import cbor2
 import time
 import hashlib
 import inspect
@@ -73,6 +75,14 @@ for finder, module_name, is_package in pkgutil.iter_modules(vcon.filter_plugins.
   logger.info("plugin registration: {}".format(module_name))
   importlib.import_module(module_name)
 
+
+class ExperimentalWarning(Warning):
+  """
+  Warning for methods which modify or construct vCons with experimental or non-vCon standards
+  complient forms or parameters.  Note: these may be depricated.
+  """
+
+
 def deprecated(reason : str):
   """
   Decorator for marking and emmiting warnings on deprecated methods and classes
@@ -97,6 +107,34 @@ def deprecated(reason : str):
     return new_func
 
   return decorator
+
+
+def experimental(reason : str):
+  """
+  Decorator for marking and emmiting warnings on experimental or non-vCon standard following methods and classes.
+  Note: these may be depricated.
+  """
+
+  def decorator(func):
+    if inspect.isclass(func):
+      msg = "Call to experimental class {{}} ({}).".format(reason)
+    else:
+      msg = "Call to experimental function {{}} ({}).".format(reason)
+
+    @functools.wraps(func)
+    def new_func(*args, **kwargs):
+      warnings.simplefilter('always', ExperimentalWarning)
+      warnings.warn(
+        msg.format(func.__name__),
+        category = ExperimentalWarning,
+        stacklevel=2)
+      warnings.simplefilter('default', ExperimentalWarning)
+      return func(*args, **kwargs)
+
+    return new_func
+
+  return decorator
+
 
 class VconStates(enum.Enum):
   """ Vcon states WRT signing and verification """
@@ -175,6 +213,12 @@ def tag_operation(func):
   return(func)
 
 
+def tag_redacted(func):
+  """ decorator to tag with redaction category """
+  func._tag = "redacted"
+  return(func)
+
+
 class VconAttribute:
   """ descriptor base class for attributes in vcon """
   def __init__(self, doc : typing.Union[str, None] = None):
@@ -208,6 +252,31 @@ class VconString(VconAttribute):
   def __init__(self, doc : typing.Union[str, None] = None):
     super().__init__(doc = doc)
     self._type_name = "String"
+
+
+class VconUuid(VconAttribute):
+  """ descriptor for UUID attribute in vcon """
+  def __init__(self, doc : typing.Union[str, None] = None):
+    super().__init__(doc = doc)
+    self._type_name = "UUID"
+
+
+  def __get__(self, instance_object, class_type = None):
+
+    # UNSIGNED, SIGNED or VERIFIED
+    if(instance_object._state in [VconStates.UNSIGNED, VconStates.SIGNED, VconStates.VERIFIED]):
+      return(Vcon.get_dict_uuid(instance_object._vcon_dict))
+
+    # DECRIPTED or UNVERIFIED
+    if(instance_object._state in [VconStates.UNVERIFIED, VconStates.DECRYPTED]):
+      return(Vcon.get_dict_uuid(instance_object._jws_dict))
+
+    # ENCRYPTED
+    if(instance_object._state in [VconStates.ENCRYPTED]):
+      return(Vcon.get_dict_uuid(instance_object._jwe_dict))
+
+    raise Exception("Unexpected state: {}".format(instance_object._state ))
+
 
 class VconDict(VconAttribute):
   """ descriptor for Lists of dicts in vcon """
@@ -270,6 +339,8 @@ class Vcon():
   # Some commonly used MIME types for convenience
   MIMETYPE_TEXT_PLAIN = "text/plain"
   MIMETYPE_JSON = "application/json"
+  MIMETYPE_VCON = "application/vcon"
+  MIMETYPE_VCON_JSON = "application/vcon+json"
   MIMETYPE_IMAGE_PNG = "image/png"
   MIMETYPE_AUDIO_WAV = "audio/x-wav"
   MIMETYPE_AUDIO_MP3 = "audio/x-mp3"
@@ -313,7 +384,7 @@ class Vcon():
   PARTIES_OBJECT_STRING_PARAMETERS = ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone", "role", "extension"]
 
   vcon = VconString(doc = "vCon version string attribute")
-  uuid = VconString(doc = "vCon UUID string attribute")
+  uuid = VconUuid(doc = "vCon UUID string attribute")
   created_at = VconString(doc = "vCon creation date string attribute")
   subject = VconString(doc = "vCon subject string attribute")
 
@@ -1334,7 +1405,7 @@ class Vcon():
       indent: typing.Union[int, None] = None
     ) -> str:
     """
-    Dump the vCon as a JSON string.
+    Dump the vCon as a JSON format string.
 
     Parameters:  
     **signed** (Boolean): If the vCon is signed locally or verfied,  
@@ -1345,6 +1416,79 @@ class Vcon():
              String containing JSON representation of the vCon.
     """
     return(json.dumps(self.dumpd(signed, False), indent = indent, default=lambda o: o.__dict__, **dumps_options))
+
+
+  class VconBase64Bytes():
+    """
+    Class to handle encoding and conversion of base64url strings to/from bytes for JSON and CBOR
+    """
+    def __init__(self, encoded_base64url):
+      self._base64url = encoded_base64url
+
+    def base64url(self) -> str:
+      return(self._base64url)
+
+    def bytes(self) -> bytes:
+      return(jose.utils.base64url_decode(bytes(self._base64url, 'utf-8')))
+
+    @staticmethod
+    def isBase64Object(dict_object: dict) -> bool:
+      if({"encoding", "body"} <= dict_object.keys()):
+        if(dict_object["encoding"] == "base64url"):
+          return(True)
+      return(False)
+
+    @staticmethod
+    def objectizeBase64Object(dict_object: dict) -> None:
+      dict_object["encoding"] = "binary"
+      dict_object["body"] = Vcon.VconBase64Bytes(dict_object["body"])
+
+
+  @staticmethod
+  def vcon_object_cbor_encoder(cbor_encoder, value):
+    if(isinstance(value, Vcon.VconBase64Bytes)):
+       cbor_encoder.encode(cbor2.CBORTag(21, value.bytes()))
+    else:
+      raise(Exception("Unsupported type: {} for CBOR encoding"))
+
+
+  @experimental("CBOR format is non-standard for vCon")
+  @tag_serialize
+  def dumpc(
+      self
+    ) -> bytes:
+    """
+    Dump the vCon as CBOR format bytes.
+
+    Parameters:
+
+    Returns:  
+             String containing JSON representation of the vCon.
+    """
+
+    # TODO: would be better not to deep copy the dict
+    vcon_dict = self.dumpd(False, True) # deep copy as we modify the copy and do not want this to be permient
+
+    # Iterate body parameters in redacted and ammended
+    for reference in ["redacted", "ammended"]:
+      # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
+      if(reference in vcon_dict and
+          Vcon.VconBase64Bytes.isBase64Object(vcon_dict["redacted"])
+        ):
+        Vcon.VconBase64Bytes.objectizeBase64Object(vcon_dict["redacted"])
+
+    # Iterate body parameters in objects in group, parties, dialog, attachments and analysis arrays
+    for object_array_name in ["group", "dialog", "attachemnts", "analysis"]:
+      object_array = vcon_dict.get(object_array_name, None)
+      if(object_array):
+        for reference_object in object_array:
+          # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
+          if(reference_object is not None and
+              Vcon.VconBase64Bytes.isBase64Object(reference_object)
+            ):
+            Vcon.VconBase64Bytes.objectizeBase64Object(reference_object)
+
+    return(cbor2.dumps(vcon_dict, default = Vcon.vcon_object_cbor_encoder))
 
 
   @tag_serialize
@@ -1474,7 +1618,7 @@ class Vcon():
     Decision as to what json form to be deserialized is:
     1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
     2) JWS vCon must have a payload and signatures
-    3) JWE vCon must have a cyphertext and recipients
+    3) JWE vCon must have a ciphertext and recipients
 
     Parameters:  
       **vcon_dict** (dict): dict containing JSON representation of a vCon
@@ -1498,7 +1642,7 @@ class Vcon():
     Decision as to what json form to be deserialized is:
     1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
     2) JWS vCon must have a payload and signatures
-    3) JWE vCon must have a cyphertext and recipients
+    3) JWE vCon must have a ciphertext and recipients
 
     Parameters:  
       **vcon_json** (str): string containing JSON representation of a vCon
@@ -1530,7 +1674,7 @@ class Vcon():
       self._jws_dict = vcon_dict
 
     # encrypted vCon (JWE)
-    elif(("cyphertext" in vcon_dict) and
+    elif(("ciphertext" in vcon_dict) and
       ("recipients" in vcon_dict)
       ):
       self._vcon_dict = {}
@@ -1559,7 +1703,113 @@ class Vcon():
       raise InvalidVconJson("Not recognized as a unsigned , signed or encrypted form of JSON vCon." +
         "  Unsigned vcon must have vcon version and at least one of: parties, dialog, analyisis or attachment object arrays." +
         "  Signed vcon must have payload and signatures fields." +
-        "  Encrypted vcon must have cyphertext and recipients fields."
+        "  Encrypted vcon must have ciphertext and recipients fields."
+        )
+
+
+  @experimental("CBOR format is non-standard for vCon")
+  @tag_serialize
+  def loadc(self, vcon_cbor : bytes) -> None:
+    """
+    Load the vCon from a CBOR bytes array.
+    Assumes that this vCon is an empty vCon as it is not cleared.
+
+    Decision as to what json form to be deserialized is:
+    1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+    2) JWS vCon must have a payload and signatures
+    3) JWE vCon must have a ciphertext and recipients
+
+    Parameters:  
+      **vcon_json** (str): string containing JSON representation of a vCon
+
+    Returns: none
+    """
+
+    self._attempting_modify()
+
+    #TODO: Should check unsafe stuff is not loaded
+
+    # TODO should use self._attempting_modify() ???
+    if(self._state != VconStates.UNSIGNED):
+      raise InvalidVconState("Cannot load Vcon unless current state is UNSIGNED.  Current state: {}".format(self._state))
+
+    vcon_dict = cbor2.loads(vcon_cbor)
+
+    # TODO: iterate object and replace CBORTag 21 with base64url encoded string and set encoding to "base64url"
+
+    # we need to check the format as to whether it is signed or
+    # not and deconstruct the loaded object.
+    # load differently based upon the contents of the JSON
+
+    # Signed vCon (JWS)
+    if(("payload" in vcon_dict) and
+      ("signatures" in vcon_dict)
+      ):
+      self._vcon_dict = {}
+
+      self._state = VconStates.UNVERIFIED
+      self._jws_dict = vcon_dict
+
+    # encrypted vCon (JWE)
+    elif(("ciphertext" in vcon_dict) and
+      ("recipients" in vcon_dict)
+      ):
+      self._vcon_dict = {}
+
+      self._state = VconStates.ENCRYPTED
+      self._jwe_dict = vcon_dict
+
+    # Unsigned vCon has to have vcon version and
+    elif((self.VCON_VERSION in vcon_dict) and (
+      # one of the following arrays
+      ('parties' in vcon_dict) or
+      ('dialog' in vcon_dict) or
+      ('analysis' in vcon_dict) or
+      ('attachments' in vcon_dict)
+      )):
+
+      # Check for CBOR tags that need to be replaced
+      # This is not easily done with hooks int the CBOR parser as we need to change the body and the encoding parameters.
+
+      # Iterate body parameters in redacted and ammended
+      for reference in ["redacted", "ammended"]:
+        # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
+        if(reference in vcon_dict and
+           "body" in vcon_dict[reference] and
+           isinstance(vcon_dict[reference]["body"], cbor2.CBORTag)):
+          raise Exception("unimplemented CBORTag for: {}".format(reference))
+
+      for object_array_name in ["group", "dialog", "attachemnts", "analysis"]:
+        object_array = vcon_dict.get(object_array_name, None)
+        if(object_array):
+          for reference_object in object_array:
+            # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
+            if(reference_object is not None and
+               "body" in reference_object and
+               isinstance(reference_object["body"], cbor2.CBORTag)
+              ):
+              if(reference_object["body"].tag != 21):
+                raise Exception("CBOR tag: {} not support in: {}".format(
+                    reference_object["body"].tag,
+                    object_array_name
+                  ))
+
+              reference_object["body"] = jose.utils.base64url_encode(reference_object["body"].value).decode('utf-8')
+              reference_object["encoding"] = "base64url"
+
+      # validate version
+      version_string = vcon_dict.get(self.VCON_VERSION, "not set")
+      if(version_string != "0.0.1"):
+        raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
+
+      self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+
+    # Unknown
+    else:
+      raise InvalidVconJson("Not recognized as a unsigned , signed or encrypted form of JSON vCon." +
+        "  Unsigned vcon must have vcon version and at least one of: parties, dialog, analyisis or attachment object arrays." +
+        "  Signed vcon must have payload and signatures fields." +
+        "  Encrypted vcon must have ciphertext and recipients fields."
         )
 
 
@@ -1605,13 +1855,13 @@ class Vcon():
     self.loads(vcon_json)
 
   @tag_signing
-  def sign(self, private_key_pem_file_name : str, cert_chain_pem_file_names : typing.List[str]) -> None:
+  def sign(self, private_key_pem_file: str, cert_chain_pem_files : typing.List[str]) -> None:
     """
     Sign the vcon using the given private key from the give certificate chain.
 
     Parameters:  
-    **private_key_pem_file_name** (str): the private key to use for signing the vcon.  
-    **cert_chain_pem_file_names** (List[str]): file names for the pem format certicate chain for the
+    **private_key_pem_file** (str): file name or string containing PEM format private key to use for signing the vcon.  
+    **cert_chain_pem_files** (List[str]): file names or PEM strings, for the pem format certicate chain for the
         private key to use for signing.  The cert/public key corresponding to the private key should be the
         first cert.  THe certificate authority root should be the last cert.
 
@@ -1627,13 +1877,16 @@ class Vcon():
     if(self.uuid is None or len(self.uuid) < 1):
       raise InvalidVconState("vCon has no UUID set.  Use set_uuid method before signing.")
 
-    header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file_name, cert_chain_pem_file_names)
+    header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, cert_chain_pem_files)
 
     # dot separated JWS token.  First part is the payload, second part is the signature (both base64url encoded)
     jws_token = jose.jws.sign(self._vcon_dict, signing_jwk, headers=header, algorithm=signing_jwk["alg"])
     #print(jws_token.split('.'))
     protected_header, payload, signature = jws_token.split('.')
     #print("decoded header: {}".format(jose.utils.base64url_decode(bytes(protected_header, 'utf-8'))))
+
+    # For convenience add the uuid to the header
+    header[Vcon.UUID] = self.uuid
 
     jws_serialization = {}
     jws_serialization['payload'] = payload
@@ -1649,12 +1902,12 @@ class Vcon():
 
 
   @tag_signing
-  def verify(self, ca_cert_pem_file_names : typing.List[str]) -> None:
+  def verify(self, ca_cert_pem_files : typing.List[str]) -> None:
     """
     Verify the signed vCon and its certificate chain which should be issued by one of the given CAs
 
     Parameters:  
-      **ca_cert_pem_file_names** (List[str]): list of Certificate Authority certificate PEM file names
+      **ca_cert_pem_files** (List[str]): file name or PEM string list containing Certificate Authority certificates 
         to verify the vCon's certificate chain.
 
     Returns: none
@@ -1682,9 +1935,11 @@ class Vcon():
 
     # Load an array of CA certficate objects to use to verify acceptable cert chains
     ca_cert_object_list = []
-    for ca in ca_cert_pem_file_names:
+    for ca in ca_cert_pem_files:
       ca_cert_object_list.append(vcon.security.load_pem_cert(ca)[0])
 
+    # TODO: what does it mean if ca_cert_pem_files is empty?  Should we verify and
+    # assume that the cert chain is trusted?
     last_exception = Exception("Internal error in Vcon.verify this exception should never be thrown")
     chain_count = 0
     for signature in self._jws_dict['signatures']:
@@ -1753,14 +2008,14 @@ class Vcon():
 
 
   @tag_encrypting
-  def encrypt(self, cert_pem_file_name : str) -> None:
+  def encrypt(self, cert_pem_file: str) -> None:
     """
     encrypt a Signed vcon using the given public key from the give certificate.
 
     vcon must be signed first.
 
     Parameters:  
-    **cert_pem_file_name** (str): the public key/cert to use for encrypting the vcon.
+    **cert_pem_file** (str): file name or PEM string for the public key/cert to use for encrypting the vcon.
 
     Returns: none
     """
@@ -1775,39 +2030,47 @@ class Vcon():
     #encryption = "A256GCM"
     encryption = "A256CBC-HS512"
 
-    encryption_key = vcon.security.build_encryption_jwk_from_pem_file(cert_pem_file_name)
+    encryption_key = vcon.security.build_encryption_jwk_from_pem_file(cert_pem_file)
 
     plaintext = json.dumps(self._jws_dict, **dumps_options)
 
     jwe_compact_token = jose.jwe.encrypt(plaintext, encryption_key, encryption, encryption_key['alg']).decode('utf-8')
     jwe_complete_serialization = vcon.security.jwe_compact_token_to_complete_serialization(jwe_compact_token, enc = encryption, x5c = [])
+
+    # Add unprotected stuff
+    jwe_complete_serialization["unprotected"] = {}
+    # Add UUID to unprotected for easy reference
+    jwe_complete_serialization["unprotected"]["uuid"] = self.uuid
+    jwe_complete_serialization["unprotected"]["cty"] = Vcon.MIMETYPE_VCON_JSON
+    jwe_complete_serialization["unprotected"]["enc"] = "A256CBC-HS512"
+
     self._jwe_dict = jwe_complete_serialization
     self._state = VconStates.ENCRYPTED
 
 
   @tag_encrypting
-  def decrypt(self, private_key_pem_file_name : str, cert_pem_file_name : str) -> None:
+  def decrypt(self, private_key_pem_file: str, cert_pem_file: str) -> None:
     """
     Decrypt a vCon using private and public key file.
 
     vCon must be in encrypted state and will be in signed state after decryption.
 
     Parameters:  
-    **private_key_pem_file_name** (str): the private key to use for decrypting the vcon.  
-    **cert_pem_file_name** (str): the public key/cert to use for decrypting the vcon.
+    **private_key_pem_file** (str): file name or PEM string for the private key to use for decrypting the vcon.  
+    **cert_pem_file** (str): file name or PEM string for the public key/cert to use for decrypting the vcon.
 
     Returns: none
     """
 
     if(self._state != VconStates.ENCRYPTED):
-      raise InvalidVconState("Vcon is not encerypted")
+      raise InvalidVconState("Vcon is not encrypted")
 
     if(len(self._jwe_dict) < 2):
       raise InvalidVconState("Vcon JWE does not seem valid: {}".format(self._jws_dict))
 
     jwe_compact_token_reconstructed = vcon.security.jwe_complete_serialization_to_compact_token(self._jwe_dict)
 
-    (header, signing_key) = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file_name, [cert_pem_file_name])
+    (header, signing_key) = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, [cert_pem_file])
     #signing_key['alg'] = encryption_key['alg']
 
     plaintext_decrypted = jose.jwe.decrypt(jwe_compact_token_reconstructed, signing_key).decode('utf-8')
@@ -1914,9 +2177,19 @@ class Vcon():
     Returns:  
       the filter modified Vcon
     """
-    self._attempting_modify()
 
-    plugin = vcon.filter_plugins.FilterPluginRegistry.get(filter_name, True)
+    plugin_reg = vcon.filter_plugins.FilterPluginRegistry.get(filter_name, True)
+
+    plugin = plugin_reg.plugin()
+    if(plugin is None):
+      message = "plugin: {} not loaded as module: {} was not found".format(plugin_reg.name, plugin_reg._module_name)
+      raise vcon.filter_plugins.FilterPluginModuleNotFound(message)
+
+    plugin.check_valid_state(self)
+
+    # Force defaulting and typing for plugin specific options
+    if(isinstance(options, dict)):
+      options = plugin.options_type(**options)
 
     return(await plugin.filter(self, options))
 
@@ -1946,6 +2219,66 @@ class Vcon():
     self._vcon_dict[Vcon.UUID] = uuid
 
     return(uuid)
+
+
+  @tag_meta
+  @staticmethod
+  def get_dict_uuid(vcon_dict: dict) -> str:
+    """
+    Get the vCon UUID from the given dict.
+
+    The dict may be the unsigned, signed (JWS) or encrypted (JWE) forms.
+    """
+
+    if(not isinstance(vcon_dict, dict)):
+      raise Exception("get_dict_uuid expected dict, got: {} {}".format(type(vcon_dict), vcon_dict))
+
+    # signed (JWS) form of vCon
+    if({"payload", "signatures"} <= vcon_dict.keys() and
+       len(vcon_dict["signatures"]) > 0 and
+        "header" in vcon_dict["signatures"][0]
+      ):
+      uuid = vcon_dict["signatures"][0]["header"].get("uuid", None)
+      if(uuid is None):
+        # decode the payload and parse JSON to get UUID
+        vcon_json_string = jose.utils.base64url_decode(bytes(vcon_dict["payload"], 'utf-8'))
+        payload_vcon_dict = json.loads(vcon_json_string)
+        uuid = payload_vcon_dict.get("uuid", None)
+
+    # encrypted (JWE) form of vCon
+    elif({"protected", "ciphertext"} <= vcon_dict.keys()):
+      if("unprotected" in vcon_dict.keys()):
+        uuid = vcon_dict["unprotected"].get("uuid", None)
+      else:
+        uuid = None
+
+    # Unsigned form
+    else:
+      uuid = vcon_dict.get("uuid", None)
+
+    return(uuid)
+
+
+  @tag_redacted
+  def set_redacted(self, uuid: str, redacted_type: str) -> None:
+    """
+    Set/replace the parameters of the Redacted Object for reference by UUID
+
+    Parameters:  
+      **uuid** - the UUID of the less redacted form of this vCon
+      **redacted_type** - the reason or content that was redacted from the referenced vCon
+
+    Returns:  None
+    """
+
+    self._attempting_modify()
+
+    new_redacted = {}
+    new_redacted["type"] = redacted_type
+    new_redacted["uuid"] = uuid
+
+    self._vcon_dict[Vcon.REDACTED] = new_redacted
+
 
   @staticmethod
   def attribute_exists(name : str) -> bool:

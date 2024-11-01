@@ -219,6 +219,19 @@ class FilterPlugin():
     raise FilterPluginNotImplemented("{}.filter not implemented".format(type(self)))
 
 
+  def check_valid_state(
+      self,
+      filter_vcon: Vcon
+    ) -> None:
+    """
+    Check to see that the vCon is in a valid state for the filter plugin to operate on.
+
+    By default, this validates that the vcon is unsigned and is writeable.
+    """
+
+    filter_vcon._attempting_modify()
+
+
   def __del__(self):
     """
     Teardown/uninitialization method for the plugin
