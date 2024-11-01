@@ -1,14 +1,13 @@
 # Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Unit tests for signing processor """
-import json
 import pytest
 import pytest_asyncio
 from common_setup import make_inline_audio_vcon, make_2_party_tel_vcon, UUID
+import cryptography.x509
+import fastapi.testclient
 import vcon
 import py_vcon_server
-import cryptography.x509
 from py_vcon_server.settings import VCON_STORAGE_URL
-import fastapi.testclient
 
 
 CA_CERT = "../certs/fake_ca_root.crt"
