@@ -111,10 +111,16 @@ class MultifariousVcon():
   async def get_vcon(self,
     vcon_type: VconTypes
     ) -> typing.Union[str, dict, vcon.Vcon, None]:
-
+    """
+    Get, retrieve or construct the vCon in the form requested.
+    Object and dict forms are deepcopied.
+    update_vcon must be used to make changes otherwise the different forms can get out of sync,
+    """
     # First check if we have it in the form we want
     got_vcon = self._vcon_forms.get(vcon_type, None)
     if(got_vcon is not None):
+      if(vcon_type in (VconTypes.DICT, VconTypes.OBJECT)):
+        got_vcon = copy.deepcopy(got_vcon)
       return(got_vcon)
 
     # Clean out any Nones
@@ -137,7 +143,7 @@ class MultifariousVcon():
         self._vcon_forms[VconTypes.OBJECT] = vcon_object
 
       if(vcon_type == VconTypes.OBJECT):
-        return(vcon_object)
+        return(copy.deepcopy(vcon_object))
 
     if(vcon_type == VconTypes.UUID):
       uuid = None
@@ -181,7 +187,7 @@ class MultifariousVcon():
       if(vcon_object is not None):
         self._vcon_forms[VconTypes.OBJECT] = vcon_object
 
-      return(vcon_object)
+      return(copy.deepcopy(vcon_object))
 
     if(vcon_type == VconTypes.DICT):
       vcon_dict = None
@@ -191,7 +197,7 @@ class MultifariousVcon():
       elif(VconTypes.JSON in forms):
         vcon_dict = None
         vcon_object = None
-        vcon_json = self._vcon_forms[VconTypes.JSON]
+        vcon_json = copy.deepcopy(self._vcon_forms[VconTypes.JSON])
         if(vcon_json is not None):
           vcon_object = vcon.Vcon()
           vcon_object.loads(vcon_json)
@@ -215,7 +221,7 @@ class MultifariousVcon():
 
       elif(VconTypes.DICT in forms):
         vcon_object = None
-        vcon_dict = self._vcon_forms[VconTypes.DICT]
+        vcon_dict = copy.deepcopy(self._vcon_forms[VconTypes.DICT])
         if(vcon_dict is not None):
           vcon_object = vcon.Vcon()
           vcon_object.loadd(vcon_dict)
