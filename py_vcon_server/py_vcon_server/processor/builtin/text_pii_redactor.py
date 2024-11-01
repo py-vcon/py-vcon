@@ -56,13 +56,17 @@ class TextPiiRedactor(py_vcon_server.processor.VconProcessor):
     generate a redacted vCon referencing the original vCon.
     """
 
-    formatted_options = processor_input.format_parameters_to_options(options)
+    formatted_options_dict = processor_input.format_parameters_to_options(options)
+    if(isinstance(formatted_options_dict, dict)):
+      formatted_options = TextPiiRedactorOptions(**formatted_options_dict)
+    else:
+      formatted_options = formatted_options_dict
 
     unredacted = await processor_input.get_vcon(formatted_options.input_vcon_index)
 
     # Add a redacted transcript to the temporary unredacted vCon
     # Note: the modified unredacted vCon is not marked for update unless processor_input.update_vcon is invoked
-    unredacted.pii_redact(formatted_options)
+    await unredacted.redact_pii(formatted_options)
 
     if(formatted_options.jq_redaction_query in (None, "")):
       raise Exception("redaction query options.jq_redaction_query is not set")
