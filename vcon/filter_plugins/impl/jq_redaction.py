@@ -97,6 +97,8 @@ class JqRedaction(vcon.filter_plugins.FilterPlugin):
     out_vcon.loadd(query_result)
     # cannot use same UUID
     if(redacted_uuid in (None, in_vcon.uuid)):
+      if(options.uuid_domain in (None, "")):
+        raise Exception("JqRedaction options.uuid_domain MUST be set")
       out_vcon.set_uuid(options.uuid_domain, True)
 
     # Set the redacted object and reference the original, less redacted vCon
