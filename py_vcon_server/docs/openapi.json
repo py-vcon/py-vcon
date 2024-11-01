@@ -1779,6 +1779,99 @@
         }
       }
     },
+    "/process/{vcon_uuid}/text_pii_redactor": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "create a redacted vCon with the text PII redacted from the given input vCon",
+        "description": "the PII in the input vCon is redacted using the **pii_redact** filter_plugin.  By default, the redacted transcript is not saved and the input vCon is unmodified.  A new redacted vCon is created, referencing the input, unredacted vCon.  By default the unredacted vCon is copied to the redacted vCon with the text, audio and video media in the dialogs removed.  The parts removed, is defined by a JQ query in the **jq_redaction_query** parameter.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__text_pii_redactor_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextPiiRedactorOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process/{vcon_uuid}/verify": {
       "post": {
         "tags": [
@@ -2302,7 +2395,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1724787709.018983
+            "example": 1730481139.6885188
           },
           "server": {
             "title": "server key",
@@ -2815,12 +2908,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1724787709.0162258
+            "example": 1730481139.6856017
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 2244
+            "example": 37702
           }
         }
       },
@@ -2856,13 +2949,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 2244
+            "example": 37702
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1724787709.0169265
+            "example": 1730481139.686397
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -2885,7 +2978,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1724787709.0169632
+            "example": 1730481139.6864405
           }
         }
       },
@@ -2951,6 +3044,75 @@
           }
         },
         "description": "processor options class for **processor** method of VconProcessor wrapper for SignFilterPlugin **FilterPlugin**"
+      },
+      "TextPiiRedactorOptions": {
+        "title": "JQ redaction filter_plugin options",
+        "required": [
+          "jq_redaction_query",
+          "redaction_type_label"
+        ],
+        "type": "object",
+        "properties": {
+          "input_dialogs": {
+            "title": "input **Vcon** text **dialog** objects",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "description": "\nIndicates which text **dialog** and recording **dialog** object's associated\ntranscript **analysis** objects are to be input.  Recording **dialog**\nobjects that do not have transcript **analysis** objects, are transcribed\nusing the default FilterPlugin transcribe type.\n**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.\n",
+            "default": "",
+            "examples": [
+              "",
+              "0:",
+              "0:-2",
+              "2:5",
+              "0:6:2",
+              [],
+              [
+                1,
+                4,
+                5,
+                9
+              ]
+            ]
+          },
+          "jq_redaction_query": {
+            "title": "JQ query defining the redaction",
+            "type": "string",
+            "description": "string containing the JQ query to apply to the input vCon\n        to construct the output vCon.  The query can add, delete, modifiy the\n        contents of the input vcon to define the contents of the output vCon.  The\n        input vCon remains unchanged."
+          },
+          "redaction_type_label": {
+            "title": "redaction type label to be set in the output vCon's redaction object",
+            "type": "string"
+          },
+          "uuid_domain": {
+            "title": "domain string to use when generating a new UUID for the redacted vCon",
+            "type": "string"
+          },
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
       },
       "ValidationError": {
         "title": "ValidationError",
@@ -3033,9 +3195,6 @@
       },
       "VconPartiesObject": {
         "title": "VconPartiesObject",
-        "required": [
-          "tel"
-        ],
         "type": "object",
         "properties": {
           "tel": {
@@ -3165,12 +3324,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-08-27T19:41:49.002+00:00",
+            "example": "2024-11-01T17:12:19.671+00:00",
             "examples": [
-              1724787709,
-              1724787709.002319,
+              1730481139,
+              1730481139.6715572,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-08-27T19:41:49.002+00:00",
+              "2024-11-01T17:12:19.671+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
