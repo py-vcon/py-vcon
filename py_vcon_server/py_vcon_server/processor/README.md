@@ -17,6 +17,7 @@
    * [py_vcon_server.processor.builtin.send_email.SendEmail](#py_vcon_serverprocessorbuiltinsend_emailsendemail)
    * [py_vcon_server.processor.builtin.set_parameters.SetParameters](#py_vcon_serverprocessorbuiltinset_parameterssetparameters)
    * [py_vcon_server.processor.builtin.sign.Sign](#py_vcon_serverprocessorbuiltinsignsign)
+   * [py_vcon_server.processor.builtin.text_pii_redactor.TextPiiRedactor](#py_vcon_serverprocessorbuiltintext_pii_redactortextpiiredactor)
    * [py_vcon_server.processor.builtin.verify.Verify](#py_vcon_serverprocessorbuiltinverifyverify)
    * [py_vcon_server.processor.builtin.whisper.Whisper](#py_vcon_serverprocessorbuiltinwhisperwhisper)
 
@@ -30,6 +31,7 @@
    * [py_vcon_server.processor.builtin.send_email.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinsend_emailvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.set_parameters.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinset_parametersvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.sign.SignFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinsignsignfilterplugininitoptions)
+   * [py_vcon_server.processor.builtin.text_pii_redactor.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltintext_pii_redactorvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.verify.VerifyFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinverifyverifyfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.whisper.WhisperInitOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperinitoptions)
 
@@ -43,6 +45,7 @@
    * [py_vcon_server.processor.builtin.send_email.SendEmailOptions](#py_vcon_serverprocessorbuiltinsend_emailsendemailoptions)
    * [py_vcon_server.processor.builtin.set_parameters.SetParametersOptions](#py_vcon_serverprocessorbuiltinset_parameterssetparametersoptions)
    * [py_vcon_server.processor.builtin.sign.SignFilterPluginOptions](#py_vcon_serverprocessorbuiltinsignsignfilterpluginoptions)
+   * [py_vcon_server.processor.builtin.text_pii_redactor.TextPiiRedactorOptions](#py_vcon_serverprocessorbuiltintext_pii_redactortextpiiredactoroptions)
    * [py_vcon_server.processor.builtin.verify.VerifyFilterPluginOptions](#py_vcon_serverprocessorbuiltinverifyverifyfilterpluginoptions)
    * [py_vcon_server.processor.builtin.whisper.WhisperOptions](#py_vcon_serverprocessorbuiltinwhisperwhisperoptions)
 
@@ -284,6 +287,24 @@ Methods:
 **__init__**(self, init_options: VconProcessorInitOptions)
 
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
+## py_vcon_server.processor.builtin.text_pii_redactor.TextPiiRedactor
+
+ - **Name:** text_pii_redactor
+ - **Version:** 0.0.1
+ - **Summary:** create a redacted vCon with the text PII redacted from the given input vCon
+
+the PII in the input vCon is redacted using the **pii_redact** filter_plugin.  By default, the redacted transcript is not saved and the input vCon is unmodified.  A new redacted vCon is created, referencing the input, unredacted vCon.  By default the unredacted vCon is copied to the redacted vCon with the text, audio and video media in the dialogs removed.  The parts removed, is defined by a JQ query in the **jq_redaction_query** parameter.
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.text_pii_redactor.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltintext_pii_redactorvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.text_pii_redactor.TextPiiRedactorOptions](#py_vcon_serverprocessorbuiltintext_pii_redactortextpiiredactoroptions)
+
+Methods:
+
+
+**__init__**(self, init_options: TextPiiRedactorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: TextPiiRedactorOptions)
 
 
 ## py_vcon_server.processor.builtin.verify.Verify
@@ -1014,6 +1035,72 @@ and used for verification of the signed vCon.
 example:
 
 default: []
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formated strings build from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example:
+
+default: {}
+
+
+## py_vcon_server.processor.builtin.text_pii_redactor.TextPiiRedactorOptions
+
+ - **Summary:** JQ redaction filter_plugin options
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** text **dialog** objects
+
+Indicates which text **dialog** and recording **dialog** object's associated
+transcript **analysis** objects are to be input.  Recording **dialog**
+objects that do not have transcript **analysis** objects, are transcribed
+using the default FilterPlugin transcribe type.
+**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.
+
+
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
+default: 
+
+##### jq_redaction_query (str)
+JQ query defining the redaction
+string containing the JQ query to apply to the input vCon
+        to construct the output vCon.  The query can add, delete, modifiy the
+        contents of the input vcon to define the contents of the output vCon.  The
+        input vCon remains unchanged.
+
+example:
+
+default: None
+
+##### redaction_type_label (str)
+redaction type label to be set in the output vCon's redaction object
+None
+
+example:
+
+default: None
+
+##### uuid_domain (typing.Union[str, NoneType])
+domain string to use when generating a new UUID for the redacted vCon
+None
+
+example:
+
+default: None
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
