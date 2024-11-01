@@ -270,7 +270,8 @@ class MultifariousVcon():
 
 
 class VconPartiesObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
-  tel: str = pydantic.Field(
+  # TODO: figure out how to make pydantic not add: tel: None
+  tel: typing.Optional[str] = pydantic.Field(
     title = "tel URI",
     description = "a telephone number",
     example = "+1 123 456 7890"
