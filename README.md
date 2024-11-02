@@ -9,9 +9,10 @@
 ![python_vcon PyPI Version](https://img.shields.io/pypi/v/py_vcon_server.svg)
 [![vcon server unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-server-test.yml/badge.svg?branch=main)](https://github.com/py-vcon/py-vcon/actions)
 
-![Python 3.6](https://img.shields.io/badge/python-3.8-blue.svg)
-![Python 3.6](https://img.shields.io/badge/python-3.9-blue.svg)
-![Python 3.6](https://img.shields.io/badge/python-3.10-blue.svg)
+![Python 3.8](https://img.shields.io/badge/python-3.8-blue.svg)
+![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)
+![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
 
 ## Introduction
 
