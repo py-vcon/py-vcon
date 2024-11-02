@@ -435,10 +435,10 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(len(pipe_def.processors) == 2)
     assert(pipe_def.processors[0].processor_name == "deepgram")
     # Expecting: format_options and input_vcon_index in dict
-    assert(len(pipe_def.processors[0].processor_options.dict()) == 2)
+    assert(len(pipe_def.processors[0].processor_options.dict(exclude_none=True)) == 2)
     assert(pipe_def.processors[0].processor_options.input_vcon_index == 0)
     assert(pipe_def.processors[1].processor_name == "openai_chat_completion")
-    assert(len(pipe_def.processors[1].processor_options.dict()) == 2)
+    assert(len(pipe_def.processors[1].processor_options.dict(exclude_none=True)) == 2)
     assert(pipe_def.processors[1].processor_options.input_vcon_index == 0)
 
 
