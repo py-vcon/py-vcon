@@ -51,7 +51,7 @@ class DeepgramOptions(
 
 class Deepgram(vcon.filter_plugins.FilterPlugin):
   """
-  **FilterPlugin** to for transcription using **Deepgram** 
+  **FilterPlugin** for transcription using **Deepgram**
   """
   init_options_type = DeepgramInitOptions
 
@@ -167,7 +167,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     # TODO add some of these to DeepgramOptions
     transcribe_options = {
       'language': 'en',
-      'model': 'nova',
+      'model': 'nova-2-meeting',  # should make this an option: nova-2, nova-2-phonecall, nova-2-meeting, nova-2-medical
       'punctuate': 'true',
       'smart_format': 'true',
       'diarize': 'true'

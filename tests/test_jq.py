@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Unit test for Vcon.jq method """
 from tests.common_utils import call_data , empty_vcon, two_party_tel_vcon
 

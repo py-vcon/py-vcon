@@ -62,6 +62,6 @@ class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
     return([])
 
 
-# Register an accessor for the Whisper transcription format
+# Register an accessor for the Deepgram transcription format
 vcon.accessors.transcript_accessors[("deepgram", "transcription", "deepgram_prerecorded")] = DeepgramTranscriptAccessor
 

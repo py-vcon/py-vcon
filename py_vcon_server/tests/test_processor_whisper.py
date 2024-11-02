@@ -1,14 +1,13 @@
 # Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Unit tests for Whisper VconProcessor """
 
-import asyncio
 import pytest
 import pytest_asyncio
+from common_setup import make_inline_audio_vcon, make_2_party_tel_vcon
 import py_vcon_server.processor
 from py_vcon_server.settings import VCON_STORAGE_URL
 #import py_vcon_server.processor.whisper_base
 import vcon
-from common_setup import make_inline_audio_vcon, make_2_party_tel_vcon
 
 
 VCON_STORAGE = None

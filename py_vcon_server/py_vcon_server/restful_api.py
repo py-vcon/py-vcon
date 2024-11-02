@@ -1,5 +1,6 @@
 # Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Common setup and components for the RESTful APIs """
+import traceback
 import pydantic
 import fastapi
 from py_vcon_server import __version__
@@ -45,9 +46,23 @@ class ProcessingTimeout(fastapi.responses.JSONResponse):
 
 class InternalErrorResponse(fastapi.responses.JSONResponse):
   """ Helper class to handle 500 internal server error case """
-  def __init__(self, exception: Exception):
-    super().__init__(status_code = 500,
-      content = {"detail": str(exception)})
+
+  def __init__(
+      self, 
+      exception: Exception
+    ):
+    super().__init__(
+        status_code = 500,
+        content = {
+            "detail": "Exception: {} {} {}".format(exception.__class__.__name__, exception.__cause__, exception.__context__),
+            "exception": "{}".format(exception),
+            "exception_args": "{}".format(exception.args),
+            #"exception_dir": "{}".format(dir(exception)),
+            "exception_module": "{}".format(exception.__module__),
+            "exception_class": "{}".format(exception.__class__.__name__),
+            "exception_stack": "{}".format(traceback.format_exception(None, exception, exception.__traceback__))
+          }
+      )
 
 
 def log_exception(exception: Exception):

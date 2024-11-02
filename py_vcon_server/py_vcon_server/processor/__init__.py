@@ -104,17 +104,23 @@ class MultifariousVcon():
         self._vcon_forms[VconTypes.UUID] = new_vcon.uuid
 
       elif(vcon_type == VconTypes.DICT):
-        self._vcon_forms[VconTypes.UUID] = new_vcon["uuid"]
+        self._vcon_forms[VconTypes.UUID] = vcon.Vcon.get_dict_uuid(new_vcon)
 
       # String JSON, don't parse to get UUID, wait until we need to
 
   async def get_vcon(self,
     vcon_type: VconTypes
     ) -> typing.Union[str, dict, vcon.Vcon, None]:
-
+    """
+    Get, retrieve or construct the vCon in the form requested.
+    Object and dict forms are deepcopied.
+    update_vcon must be used to make changes otherwise the different forms can get out of sync,
+    """
     # First check if we have it in the form we want
     got_vcon = self._vcon_forms.get(vcon_type, None)
     if(got_vcon is not None):
+      if(vcon_type in (VconTypes.DICT, VconTypes.OBJECT)):
+        got_vcon = copy.deepcopy(got_vcon)
       return(got_vcon)
 
     # Clean out any Nones
@@ -137,7 +143,7 @@ class MultifariousVcon():
         self._vcon_forms[VconTypes.OBJECT] = vcon_object
 
       if(vcon_type == VconTypes.OBJECT):
-        return(vcon_object)
+        return(copy.deepcopy(vcon_object))
 
     if(vcon_type == VconTypes.UUID):
       uuid = None
@@ -145,7 +151,7 @@ class MultifariousVcon():
         uuid = self._vcon_forms[VconTypes.OBJECT].uuid
 
       elif(VconTypes.DICT in forms):
-        uuid = self._vcon_forms[VconTypes.DICT]["uuid"]
+        uuid = vcon.Vcon.get_dict_uuid(self._vcon_forms[VconTypes.DICT])
 
       elif(VconTypes.JSON in forms):
         # Have to parse the JSON string, build a Vcon
@@ -181,7 +187,7 @@ class MultifariousVcon():
       if(vcon_object is not None):
         self._vcon_forms[VconTypes.OBJECT] = vcon_object
 
-      return(vcon_object)
+      return(copy.deepcopy(vcon_object))
 
     if(vcon_type == VconTypes.DICT):
       vcon_dict = None
@@ -191,7 +197,7 @@ class MultifariousVcon():
       elif(VconTypes.JSON in forms):
         vcon_dict = None
         vcon_object = None
-        vcon_json = self._vcon_forms[VconTypes.JSON]
+        vcon_json = copy.deepcopy(self._vcon_forms[VconTypes.JSON])
         if(vcon_json is not None):
           vcon_object = vcon.Vcon()
           vcon_object.loads(vcon_json)
@@ -215,7 +221,7 @@ class MultifariousVcon():
 
       elif(VconTypes.DICT in forms):
         vcon_object = None
-        vcon_dict = self._vcon_forms[VconTypes.DICT]
+        vcon_dict = copy.deepcopy(self._vcon_forms[VconTypes.DICT])
         if(vcon_dict is not None):
           vcon_object = vcon.Vcon()
           vcon_object.loadd(vcon_dict)
@@ -264,7 +270,8 @@ class MultifariousVcon():
 
 
 class VconPartiesObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
-  tel: str = pydantic.Field(
+  # TODO: figure out how to make pydantic not add: tel: None
+  tel: typing.Optional[str] = pydantic.Field(
     title = "tel URI",
     description = "a telephone number",
     example = "+1 123 456 7890"
@@ -281,7 +288,7 @@ date_examples = [ int(time.time()),
 
 # TODO: use the following to avoid getting arrays or parameters set to None???
 # bar.dict(exclude_unset=True)
-class VconObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class VconUnsignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
   vcon: str = pydantic.Field(
     title = "vCon format version",
     #description = "vCon format version,
@@ -303,6 +310,109 @@ class VconObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
   dialog: typing.Optional[typing.Union[typing.List[dict], None]] = None
   analysis: typing.Optional[typing.Union[typing.List[dict], None]] = None
   attachments: typing.Optional[typing.Union[typing.List[dict], None]] = None
+
+
+class JwsHeader(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  alg: str = pydantic.Field(
+    title = "JWS algorithm",
+    description = "defined in RFC 7515 section 4.1.1"
+    )
+
+  x5c: typing.Optional[typing.List[str]] = pydantic.Field(
+    title = "JWS certificate chain",
+    description = "certifcate chain in the form of an array of string defined in RFC 7515 section 4.1.6"
+    )
+
+  x5u: typing.Optional[typing.List[str]] = pydantic.Field(
+    title = "JWS certificate chain URLs",
+    description = "certifcate chain in the form of an array of HTTPS URLs defined in RFC 7515 section 4.1.6"
+    )
+
+
+class JwsSignature(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  header: JwsHeader = pydantic.Field(
+    title = "JWS Header Object",
+    description = "defined in RFC 7515 section 7.2.1"
+    )
+
+  protected: str = pydantic.Field(
+    title = "JWS protected",
+    description = "defined in RFC 7515 section 7.2.1"
+    )
+
+  signature: str = pydantic.Field(
+    title = "JWS signature",
+    description = "defined in RFC 7515 section 7.2.1"
+    )
+
+
+class VconSignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """
+  vCon in signed form (JWS RFC 7515)
+  """
+  payload: str = pydantic.Field(
+    title = "vCon payload in unsigned form",
+    description = "Base64Url Encoded string containing the unsigned form of the JSON vCon."
+    )
+
+  signatures: typing.List[JwsSignature] = pydantic.Field(
+    title = "JWS Signature Object",
+    description = "defined in RFC 7515 section 7.2.1",
+    default = []
+    )
+
+
+class JweUnprotectedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """
+  JWE Unprotected Object part of JWE RFC 7516
+  Defined in RFC 7516 section 7.2.1
+  """
+  cty: typing.Optional[str] = pydantic.Field(
+    title = "mimetype of the decrypted ciphertext",
+    description = "defined in RFC 7516 section 4.1.12",
+    )
+
+  uuid: typing.Optional[str] = pydantic.Field(
+    title = "vCon uuid"
+    )
+
+  enc: typing.Optional[str] = pydantic.Field(
+    title = "encryption algoritym",
+    description = "defined in RFC 7516 section 4.1.2",
+    )
+
+
+class VconEncryptedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+  """
+  vCon in encrypted form (JWE RFC 7516)
+  """
+
+  unprotected: JweUnprotectedObject = pydantic.Field(
+    title = "JWS Signature Object",
+    description = "defined in RFC 7515 section 7.2.1",
+    default = []
+    )
+
+  recipients: typing.List[typing.Dict[str,typing.Any]] = pydantic.Field(
+    title = "recipients list of objects",
+    description = "defined in RFC 7516 section 7.2.1",
+    default = []
+    )
+
+  iv: str = pydantic.Field(
+    title = "initialization vector",
+    description = "defined in RFC 7516 section 7.2.1",
+    )
+
+  ciphertext: str = pydantic.Field(
+    title = "ciphertext of encrypted vCon",
+    description = "defined in RFC 7516 section 4.1.12",
+    )
+
+  tag: str = pydantic.Field(
+    title = "authentication tag",
+    description = "defined in RFC 7516 section 7.2.1",
+    )
 
 
 class VconProcessorInitOptions(pydantic.BaseModel):
@@ -329,7 +439,7 @@ class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
 
 class VconProcessorOutput(pydantic.BaseModel, extra=pydantic.Extra.allow):
   """ Serializable Output results from a VconProcessor """
-  vcons: typing.List[VconObject] = pydantic.Field(
+  vcons: typing.List[typing.Union[VconUnsignedObject, VconSignedObject, VconEncryptedObject]] = pydantic.Field(
       title = "array of **Vcon** objects",
       default = []
     )
@@ -1000,19 +1110,18 @@ class FilterPluginProcessor(VconProcessor):
     """
 
     formatted_options = processor_input.format_parameters_to_options(options)
+    # force pydantic typing and defaults
+    if(isinstance(formatted_options, dict)):
+      formatted_options = (self.processor_options_class())(**formatted_options)
+
     index = formatted_options.input_vcon_index
     in_vcon: vcon.Vcon = await processor_input.get_vcon(index)
     if(in_vcon is None):
       raise Exception("Vcon not found for index: {}".format(index))
 
-    if(in_vcon.dialog is not None):
-      num_dialog = len(in_vcon.dialog)
-    else:
-      num_dialog = None
-    logger.debug("{} filter_plugin on Vcon UUID: {} dialog count: {}".format(
+    logger.debug("{} filter_plugin on Vcon UUID: {}".format(
       self.plugin_name,
-      in_vcon.uuid,
-      num_dialog
+      in_vcon.uuid
       ))
 
     out_vcon = await in_vcon.filter(self.plugin_name, formatted_options)
