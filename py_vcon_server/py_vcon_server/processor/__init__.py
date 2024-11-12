@@ -272,9 +272,52 @@ class MultifariousVcon():
 class VconPartiesObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
   # TODO: figure out how to make pydantic not add: tel: None
   tel: typing.Optional[str] = pydantic.Field(
-    title = "tel URI",
-    description = "a telephone number",
-    example = "+1 123 456 7890"
+      title = "tel uri",
+      description = "a telephone number",
+      example = "+1 123 456 7890"
+    )
+
+  mailto: typing.Optional[str] = pydantic.Field(
+      title = "mailto uri",
+      description = "a email address",
+      example = "alice@example.com"
+    )
+
+  stir: typing.Optional[str] = pydantic.Field(
+      title = "stir token",
+      description = "stir token for the party in the call"
+    )
+
+  name: typing.Optional[str] = pydantic.Field(
+      title = "full name",
+      description = "party's first and last name",
+      example = "Alice Jone"
+    )
+
+  validation:  typing.Optional[str] = pydantic.Field(
+      title = "identity validation method",
+      description = "the description or token label of the method by which the party's identity was verified"
+    )
+
+  gmlpos: typing.Optional[str] = pydantic.Field(
+      title = "geolocation",
+      description = "the geolocation of the party"
+    )
+
+  uuid: typing.Optional[str] = pydantic.Field(
+      title = "party uuid",
+      description = "a unique identifier for the party"
+    )
+
+  role: typing.Optional[str] = pydantic.Field(
+      title = "role",
+      description = "role the party took in the conversation.  Not limited to these examples",
+      examples = ["agent", "customer", "supervisor", "sme", "thirdparty"]
+    )
+
+  contact_list: typing.Optional[str] = pydantic.Field(
+      title = "contact list",
+      description = "name or identifier for the contact list from which this party was retrived"
     )
 
 
@@ -650,7 +693,7 @@ class VconProcessorIO():
       return(options)
 
     elif(isinstance(options, VconProcessorOptions)):
-      options_dict = options.dict()
+      options_dict = options.dict(exclude_none=True)
       self.format_parameters_to_options_dict(options_dict)
       # Reconstruct to get pydantic to do type coersion/conversions and validations
       return(options.__class__(**options_dict))

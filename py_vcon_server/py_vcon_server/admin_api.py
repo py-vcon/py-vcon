@@ -641,7 +641,7 @@ def init(restapi):
             proc_opt.processor_name)
 
           # Validate the processor options
-          processor_inst.processor_options_class()(**proc_opt.processor_options.dict())
+          processor_inst.processor_options_class()(**proc_opt.processor_options.dict(exclude_none=True))
 
         # catch processor not found
         except py_vcon_server.processor.VconProcessorNotRegistered as e:
@@ -692,7 +692,7 @@ def init(restapi):
 
     logger.debug("Returning pipeline: {}".format(name))
 
-    return(fastapi.responses.JSONResponse(content = pipe_def.dict()))
+    return(fastapi.responses.JSONResponse(content = pipe_def.dict(exclude_none=True)))
 
 
   @restapi.delete("/pipeline/{name}",

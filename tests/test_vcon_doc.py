@@ -49,7 +49,7 @@ expected_tags = [
     'operation',
     'signing'
     'encrypting',
-    "redacted",
+    "vcon_references",
   ]
 
 tag_titles = {
@@ -62,7 +62,7 @@ tag_titles = {
     'operation': "perform operations on Vcon's",
     'signing': "sign or verify a signed Vcon",
     'encrypting': "encrypt or decript a Vcon`",
-    'redacted': "reference the unredacted version of a vCon"
+    'vcon_references': "reference other vCons from a vCon"
   }
 
 def test_vcon_doc():
@@ -132,5 +132,4 @@ def test_vcon_doc():
 
   #print(readme_text)
   # TODO: generate signatures and docs for methods
-
 
