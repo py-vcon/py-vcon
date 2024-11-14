@@ -356,19 +356,51 @@ class PipelineRunner():
       processor_name = processor_config.processor_name
       processor = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(processor_name)
       processor_options = processor_config.processor_options
+
+      logger.debug("ProcessorIO parameters: {}".format(next_proc_input._parameters))
       # Recaste options to proper type
       # This becomes important when the options has multiple inheretance to get the
       # correct type (e.g. FilterPluginOptions).
-      processor_type_options = processor.processor_options_class()(** processor_options.dict())
-      vcon_index = processor_type_options.input_vcon_index
-      logger.debug("Starting pipeline {} processor: {} on vCon: {} (index: {})".format(
+      formatted_options = processor_input.format_parameters_to_options(processor_options.dict())
+      processor_type_options = processor.processor_options_class()(** formatted_options)
+      if(processor_type_options.should_process is None):
+        raise Exception("pipeline {} processor: {} options should_process not set".format(
           self._pipeline_name,
-          processor_name,
-          await next_proc_input.get_vcon(vcon_index, py_vcon_server.processor.VconTypes.UUID),
-          vcon_index
+          processor_name
         ))
-      next_proc_input = await processor.process(next_proc_input, processor_type_options)
 
+      if(next_proc_input.num_vcons() > 0):
+        logger.debug("before processor: {} in pipeline: {} vcon[0] modified: {}".format(
+            processor_name,
+            self._pipeline_name,
+            next_proc_input.is_vcon_modified(0)
+          ))
+      if(processor_type_options.should_process):
+        vcon_index = processor_type_options.input_vcon_index
+        logger.debug("Starting pipeline {} processor: {} on vCon: {} (index: {})".format(
+            self._pipeline_name,
+            processor_name,
+            await next_proc_input.get_vcon(vcon_index, py_vcon_server.processor.VconTypes.UUID),
+            vcon_index
+          ))
+        next_proc_input = await processor.process(next_proc_input, processor_type_options)
+
+      else:
+        logger.debug("Skipping pipeline {} processor: {} on vCon: {} (index: {})".format(
+            self._pipeline_name,
+            processor_name,
+            await next_proc_input.get_vcon(vcon_index, py_vcon_server.processor.VconTypes.UUID),
+            vcon_index
+          ))
+
+    if(next_proc_input.num_vcons() > 0 and
+        len(self._pipeline.processors) > 0
+      ):
+      logger.debug("after processor: {} for pipeline: {} vcon[0] modified: {}".format(
+          processor_name,
+          self._pipeline_name,
+          next_proc_input.is_vcon_modified(0)
+        ))
     return(next_proc_input)
 
 
