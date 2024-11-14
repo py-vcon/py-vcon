@@ -2237,8 +2237,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -2294,8 +2300,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -2321,8 +2333,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -2395,7 +2413,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1730481139.6885188
+            "example": 1731627737.5419
           },
           "server": {
             "title": "server key",
@@ -2415,8 +2433,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -2430,7 +2454,12 @@
             "additionalProperties": {
               "type": "string"
             },
-            "default": {}
+            "default": {},
+            "example": {
+              "party_count": ".parties | length",
+              "first_dialog_type": ".vcons[0].dialog[0].type",
+              "party0_has_email_address": ".vcons[0].parties[0].email | length > 0"
+            }
           }
         },
         "description": "Base class options for **VconProcessor.processor** method "
@@ -2656,8 +2685,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -2797,8 +2832,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -2908,12 +2949,12 @@
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1730481139.6856017
+            "example": 1731627737.5395198
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 37702
+            "example": 78980
           }
         }
       },
@@ -2949,13 +2990,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 37702
+            "example": 78980
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1730481139.686397
+            "example": 1731627737.5401764
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -2978,7 +3019,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1730481139.6864405
+            "example": 1731627737.5402112
           }
         }
       },
@@ -2992,8 +3033,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -3033,8 +3080,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -3102,8 +3155,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -3215,8 +3274,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -3324,12 +3389,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-11-01T17:12:19.671+00:00",
+            "example": "2024-11-14T23:42:17.526+00:00",
             "examples": [
-              1730481139,
-              1730481139.6715572,
+              1731627737,
+              1731627737.526954,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-11-01T17:12:19.671+00:00",
+              "2024-11-14T23:42:17.526+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -3382,8 +3447,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
@@ -3452,8 +3523,14 @@
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
+          "should_process": {
+            "title": "if True run processor",
+            "type": "boolean",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "type": "object",
             "additionalProperties": {
               "type": "string"
