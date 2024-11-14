@@ -186,6 +186,48 @@ PIPE_DEF2_DICT = {
     ]
 }
 
+PIPE_CONDITIONAL_DICT = {
+  "pipeline_options": {
+      "timeout": 10.0
+    },
+  "processors": [
+      {
+        "processor_name": "jq",
+        "processor_options": {
+          "jq_queries": {
+              "has_dialogs": ".vcons[0].dialog[0].url | length > 0",
+              "party0_has_email_address": ".vcons[0].parties[0].email | length > 0"
+            }
+          }
+        },
+      {
+        "processor_name": "whisper_base",
+        "processor_options": {
+            "format_options": {
+                "should_process": "{has_dialogs}"
+              }
+          }
+        },
+      {
+        "processor_name": "send_email",
+        "processor_options": {
+            "format_options": {
+                "should_process": "{party0_has_email_address}"
+              },
+            "smtp_host": "foo"
+          }
+        },
+      {
+        "processor_name": "set_parameters",
+        "processor_options": {
+            "parameters": {
+                "party0_has_email_address": "nobody@example.com"
+              }
+          }
+        }
+    ]
+}
+
 @pytest.mark.asyncio
 async def test_pipeline_db():
 
@@ -434,12 +476,14 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(pipe_def.pipeline_options.timeout == TIMEOUT)
     assert(len(pipe_def.processors) == 2)
     assert(pipe_def.processors[0].processor_name == "deepgram")
-    # Expecting: format_options and input_vcon_index in dict
-    assert(len(pipe_def.processors[0].processor_options.dict()) == 2)
+    # Expecting: format_options, should_process and input_vcon_index in dict
+    assert(len(pipe_def.processors[0].processor_options.dict()) == 3)
     assert(pipe_def.processors[0].processor_options.input_vcon_index == 0)
+    assert(pipe_def.processors[0].processor_options.should_process == True)
     assert(pipe_def.processors[1].processor_name == "openai_chat_completion")
-    assert(len(pipe_def.processors[1].processor_options.dict()) == 2)
+    assert(len(pipe_def.processors[1].processor_options.dict()) == 3)
     assert(pipe_def.processors[1].processor_options.input_vcon_index == 0)
+    assert(pipe_def.processors[1].processor_options.should_process == True)
 
 
     # run again with longer timeout, should succeed this time
@@ -475,8 +519,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     # run with vCon in body, should succeed
     post_response = client.post(
       "/pipeline/{}/run".format(
-          pipe2_name,
-          UUID
+          pipe2_name
         ),
         json = make_inline_audio_vcon.dumpd(),
         params = {
@@ -586,4 +629,62 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(isinstance(pipe_list, list))
     assert(not pipe_name in pipe_list)
     assert(not bad_pipe_name in pipe_list)
+
+
+@pytest.mark.asyncio
+async def test_pipeline_conditional(make_inline_audio_vcon: vcon.Vcon):
+  pipe_name = "unit_test_pipe1"
+
+  generic_options = py_vcon_server.processor.VconProcessorOptions(
+      ** (PIPE_CONDITIONAL_DICT["processors"][1]["processor_options"])
+    )
+  io_object = py_vcon_server.processor.VconProcessorIO(None)
+  io_object.set_parameter("has_dialogs", "false")
+  formatted_options = io_object.format_parameters_to_options(generic_options)
+  assert(formatted_options.should_process is False)
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = PIPE_CONDITIONAL_DICT,
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    if(set_response.status_code != 204):
+      print("put: /pipeline/{} returned: {} {}".format(
+          pipe_name,
+          set_response.status_code,
+          resp_content
+        ))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
+    # run with vCon in body, should succeed
+    post_response = client.post(
+      "/pipeline/{}/run".format(
+          pipe_name
+        ),
+        json = make_inline_audio_vcon.dumpd(),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(post_response.status_code == 200)
+    assert(len(pipeline_out_dict["vcons"]) == 1)
+    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+    # As we pass the vCon into the RESDful API it is considered new/modified
+    # WRT the vCon DB
+    assert(pipeline_out_dict["vcons_modified"][0])
+    unmodified_vcon = vcon.Vcon()
+    unmodified_vcon.loadd(pipeline_out_dict["vcons"][0])
+    print("pipeline output keys: {}".format(pipeline_out_dict.keys()))
+    assert(len(unmodified_vcon.dialog) == 1)
+    assert(len(unmodified_vcon.analysis) == 0)
+    assert(len(pipeline_out_dict["parameters"]) == 2)
 
