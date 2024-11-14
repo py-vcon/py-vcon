@@ -176,20 +176,29 @@ def init(restapi):
         path = request.url.path
         processor_name_from_path = os.path.basename(path)
 
-        logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
-          processor_name, path, type(options), options, processor_name_from_path))
-
-        processor_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
-        await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
-
         # Get the processor form the registry
         processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
           processor_name_from_path)
 
+        processor_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
+        await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
+
+        # format_options for dynamic options
+        formatted_options_dict = processor_input.format_parameters_to_options(options.dict())
+        processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
+
+        logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
+            processor_name,
+            path,
+            type(processor_type_options),
+            processor_type_options,
+            processor_name_from_path
+          ))
+
         # Run the processor
         processor_output = await processor_inst.process(
           processor_input,
-          options)
+          processor_type_options)
 
         if(commit_changes):
           # Save changed Vcons
