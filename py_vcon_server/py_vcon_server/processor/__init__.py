@@ -51,6 +51,10 @@ class InvalidVconProcessorClass(Exception):
   """ Attempt to use invalide class as a VconProcessor """
 
 
+class ParameterNotFound(Exception):
+  """ parameter not found in ProcessorIO parameters """
+
+
 class VconTypes(enum.Enum):
   """ Enum for the various forms that a Vcon can exist in """
   UNKNOWN = 0
@@ -425,15 +429,31 @@ class VconProcessorInitOptions(pydantic.BaseModel):
 class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
   """ Base class options for **VconProcessor.processor** method """
   input_vcon_index: int = pydantic.Field(
-    title = "VconProcessorIO input vCon index",
-    description = "Index to which vCon in the VconProcessorIO is to be used for input",
-    default = 0
+      title = "VconProcessorIO input vCon index",
+      description = "Index to which vCon in the VconProcessorIO is to be used for input",
+      default = 0
+    )
+
+  should_process: bool = pydantic.Field(
+      title = "if True run processor",
+      description = "Conditional parameter indicating whether to run this processor"
+        " on the PriocessorIO or to skip this processor and pass input as output."
+        "  It is often useful to use a parameter from the ProcessorIO as the conditional"
+        " value of this option parameter via the **format_parameters** option.",
+      default = True
     )
 
   format_options: typing.Dict[str, str] = pydantic.Field(
-    title = "set VconProcessorOptions fields with formated strings build from parameters",
-    description = "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
-    default = {}
+      title = "set VconProcessorOptions fields with formatted strings built from parameters",
+      description = "dict of strings keys and values where key is the name of a"
+        " VconProcessorOptions field, to be set with the formated value string"
+        " with the VconProcessorIO parameters dict as input.  For example"
+        " {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: '"
+        " concatindated with the value returned from VconProcessorIO."
+        "get_parameters('bar').  This occurs before the given VconProcessor"
+        " performs it's process method and does not perminimently modify the"
+        " VconProcessorOptions fields",
+      default = {}
     )
   #rename_output: dict[str, str]
 
@@ -635,12 +655,25 @@ class VconProcessorIO():
     for name in formats.keys():
       # Do not recurse
       if(name != "format_options"):
-        options[name] = formats[name].format(**self._parameters)
+        try:
+          new_value = formats[name].format(**self._parameters)
+        except KeyError as key_not_found:
+          raise ParameterNotFound("key in: {} not found in ProcessorIO parameters: {} when formatting: {}".format(
+              formats[name],
+              list(self._parameters.keys()),
+              name
+             )) from key_not_found
+        logger.debug('setting "{}" to "{}" type: {}'.format(
+            name,
+            new_value,
+            type(new_value)
+          ))
+        options[name] = new_value
 
 
   def format_parameters_to_options(
       self,
-      options: VconProcessorOptions
+      options: typing.Union[VconProcessorOptions, typing.Dict[str, typing.Any]]
     ) -> VconProcessorOptions:
     """
     Format/apply parameters to string values in options
