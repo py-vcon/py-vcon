@@ -14,6 +14,11 @@ class JQInitOptions(py_vcon_server.processor.VconProcessorInitOptions):
 class JQOptions(py_vcon_server.processor.VconProcessorOptions):
   jq_queries: typing.Dict[str, str] = pydantic.Field(
       title = "dict of JQ queries to perform on VconProcessorIO input.",
+      example = {
+          "party_count": ".parties | length",
+          "first_dialog_type": ".vcons[0].dialog[0].type",
+          "party0_has_email_address": ".vcons[0].parties[0].email | length > 0"
+        },
       default = {}
     )
 
@@ -44,8 +49,6 @@ class JQProcessor(py_vcon_server.processor.VconProcessor):
     Set the VconProcessorIO parameters (keys in jq_queries field) to the result of the query(s) (query defined in string value of jq_queries dict).  Does not modify the vCons.
     """
 
-    formatted_options = processor_input.format_parameters_to_options(options)
-
     # TODO: may want to package this up as a VconProcessorIO method
 
     # Create the dict into which the queries are to be done.
@@ -61,10 +64,16 @@ class JQProcessor(py_vcon_server.processor.VconProcessor):
       logger.debug("jq processor adding vcon state={}".format(a_vcon._state))
       dict_to_query["vcons"].append(a_vcon.dumpd(signed = False, deepcopy = False))
 
-    for parameter_name in formatted_options.jq_queries.keys():
+    if(len(options.jq_queries.keys()) < 1):
+      logger.warning("jq processor option 'jq_queries' is empty")
 
-       query_result = pyjq.all(formatted_options.jq_queries[parameter_name],
+    for parameter_name in options.jq_queries.keys():
+       query_result = pyjq.all(options.jq_queries[parameter_name],
          dict_to_query)[0]
+       logger.debug("setting parameter: {} to {}".format(
+           parameter_name,
+           query_result
+         ))
        processor_input.set_parameter(parameter_name, query_result)
 
     return(processor_input)
