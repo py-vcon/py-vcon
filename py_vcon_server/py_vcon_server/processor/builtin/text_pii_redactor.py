@@ -56,11 +56,10 @@ class TextPiiRedactor(py_vcon_server.processor.VconProcessor):
     generate a redacted vCon referencing the original vCon.
     """
 
-    formatted_options_dict = processor_input.format_parameters_to_options(options)
-    if(isinstance(formatted_options_dict, dict)):
-      formatted_options = TextPiiRedactorOptions(**formatted_options_dict)
+    if(isinstance(options, dict)):
+      formatted_options = TextPiiRedactorOptions(**options)
     else:
-      formatted_options = formatted_options_dict
+      formatted_options = options
 
     unredacted = await processor_input.get_vcon(formatted_options.input_vcon_index)
 
