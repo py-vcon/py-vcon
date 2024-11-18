@@ -21,6 +21,7 @@ PIPELINE_NAME_PREFIX = "pipeline:"
 
 PIPELINE_DB = None
 VCON_STORAGE = None
+JOB_QUEUE = None
 
 
 class PipelineNotFound(Exception):
@@ -503,6 +504,13 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       VCON_STORAGE = None
       await vs.shutdown()
 
+    global JOB_QUEUE
+    if(JOB_QUEUE):
+      logger.debug("shutting down PipelineJobHandler in done JobQueue")
+      jq = JOB_QUEUE
+      JOB_QUEUE = None
+      await jq.shutdown()
+
 
   async def get_job(self) -> typing.Union[typing.Dict[str, typing.Any], None]:
     """ Get the definition of the next job to run. Called in the context of the scheduler/dispatcher process. """
@@ -716,6 +724,23 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         ))
       # Save changed Vcons
       await VCON_STORAGE.commit(pipeline_output)
+
+      # Initialize JOB_QUEUE if not already done
+      global JOB_QUEUE
+      if(JOB_QUEUE is None and
+          pipeline_output.get_queue_job_count() > 0
+        ):
+        logger.info("instantiating JobQueue in PipelineJobHandler.do_job")
+        VCON_STORAGE = py_vcon_server.queue.JobQueue.instantiate(
+            py_vcon_server.settings.JOB_QUEUE_URL
+          )
+
+      # Commit jobs to be queued.
+      # This is done here as opposed to in the queue processor as we
+      # have not yet implemented vCon locking.  It may often be expected that
+      # modification to vCon(s) in a pipeline have been committed at the time
+      # the pipeline queues a job for the vCon.
+      await pipeline_output.commit_queue_jobs(JOB_QUEUE)
 
     return(job_definition)
 
