@@ -12,6 +12,8 @@ import pydantic
 #from py_vcon_server.db import VconStorage
 import py_vcon_server.logging_utils
 import vcon
+if typing.TYPE_CHECKING:
+  import py_vcon_server.queue
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
@@ -483,6 +485,7 @@ class VconProcessorIO():
     self._vcon_locks: typing.List[str] = []
     self._vcon_update: typing.List[bool] = []
     self._parameters: typing.Dict[str, typing.Any] = {}
+    self._jobs_to_queue: typing.List[typing.Dict[str, any]] = []
     self._vcon_storage = vcon_storage
 
 
@@ -705,6 +708,66 @@ class VconProcessorIO():
       )
 
     return(response_output)
+
+  def add_vcon_uuid_job(
+      self,
+      queue_name: str,
+      vcon_uuids: typing.List[str],
+      from_queue: typing.Union[str, None],
+
+    ) -> None:
+    """
+    Add a queue job to this **VconProcessorIO** to be queued when the processor(s) have all been processed.
+    Note: jobs do NOT get commit to the database.  They are only added to this **VconProcessorIO** object.
+    """
+
+    if(len(vcon_uuid) < 0):
+      raise Exception("no vCon UUIDs provided")
+
+    job = {}
+    job["to_queue"] = queue_name
+    job["vcon_uuids"] = vcon_uuids
+    if(from_queue and len(from_queue) > 0):
+      job["from_queue"] = from_queue
+
+    self._jobs_to_queue.append(job)
+
+
+  def get_queue_job_count(self) -> int:
+    """
+    Returns: (int) number of queue jobs attached to this VconProcessorIO.
+    """
+    return(len(self._jobs_to_queue))
+
+
+  async def commit_queue_jobs(
+      self,
+      job_queue: py_vcon_server.queue.JobQueue
+    ) -> int:
+    """
+    Queue the jobs in the VconProcessorIO's list of jobs to queue
+
+    Returns: (int) number of jobs queue
+    """
+
+    jobs_queued = 0
+
+    for job in self._jobs_to_queue:
+      queue_name = job.get("to_queue", None)
+      if(job["type"] != "vcon_uuid"):
+        raise Exception("invalid job type in VconProcessorIO: {}".format(job))
+      if(queue_name and len(queue_name)):
+         job_queue.push_vcon_uuid_queue_job(
+            queue_name,
+            job.get("vcon_uuids", []),
+            job.get("from_queue", None)
+          )
+         jobs_queued += 1
+
+      else:
+        raise Exception("invalid job to queue in VconProcessorIO: {}".format(job))
+
+    return(jobs_queued)
 
 
 class VconProcessor():
