@@ -14,6 +14,7 @@
    * [py_vcon_server.processor.builtin.encrypt.Encrypt](#py_vcon_serverprocessorbuiltinencryptencrypt)
    * [py_vcon_server.processor.builtin.jq.JQProcessor](#py_vcon_serverprocessorbuiltinjqjqprocessor)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
+   * [py_vcon_server.processor.builtin.queue_job.QueueJob](#py_vcon_serverprocessorbuiltinqueue_jobqueuejob)
    * [py_vcon_server.processor.builtin.send_email.SendEmail](#py_vcon_serverprocessorbuiltinsend_emailsendemail)
    * [py_vcon_server.processor.builtin.set_parameters.SetParameters](#py_vcon_serverprocessorbuiltinset_parameterssetparameters)
    * [py_vcon_server.processor.builtin.sign.Sign](#py_vcon_serverprocessorbuiltinsignsign)
@@ -28,6 +29,7 @@
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
+   * [py_vcon_server.processor.builtin.queue_job.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinqueue_jobvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.send_email.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinsend_emailvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.set_parameters.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinset_parametersvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.sign.SignFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinsignsignfilterplugininitoptions)
@@ -42,6 +44,7 @@
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
+   * [py_vcon_server.processor.builtin.queue_job.QueueJobOptions](#py_vcon_serverprocessorbuiltinqueue_jobqueuejoboptions)
    * [py_vcon_server.processor.builtin.send_email.SendEmailOptions](#py_vcon_serverprocessorbuiltinsend_emailsendemailoptions)
    * [py_vcon_server.processor.builtin.set_parameters.SetParametersOptions](#py_vcon_serverprocessorbuiltinset_parameterssetparametersoptions)
    * [py_vcon_server.processor.builtin.sign.SignFilterPluginOptions](#py_vcon_serverprocessorbuiltinsignsignfilterpluginoptions)
@@ -231,6 +234,24 @@ Methods:
 **__init__**(self, init_options: VconProcessorInitOptions)
 
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
+## py_vcon_server.processor.builtin.queue_job.QueueJob
+
+ - **Name:** queue_job
+ - **Version:** 0.0.1
+ - **Summary:** Processor to add a job to a **JobeQueue**
+
+A vCon_uuid Job is added to the named queue, using the UUID from the vCon at the **input_vcon_index** in the input options.
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.queue_job.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinqueue_jobvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.queue_job.QueueJobOptions](#py_vcon_serverprocessorbuiltinqueue_jobqueuejoboptions)
+
+Methods:
+
+
+**__init__**(self, init_options: QueueJobInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: QueueJobOptions)
 
 
 ## py_vcon_server.processor.builtin.send_email.SendEmail
@@ -481,7 +502,7 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.send_email.VerifyFilterPluginInitOptions
+## py_vcon_server.processor.builtin.queue_job.VerifyFilterPluginInitOptions
 
  - **Summary:** JWS verification of vCon **FilterPlugin** intialization object
 
@@ -503,7 +524,7 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.set_parameters.WhisperInitOptions
+## py_vcon_server.processor.builtin.send_email.WhisperInitOptions
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
@@ -899,6 +920,55 @@ dict of strings keys and values where key is the name of a VconProcessorOptions 
 example:
 
 default: {}
+
+
+## py_vcon_server.processor.builtin.queue_job.QueueJobOptions
+
+ - **Summary:** QueueJobOptions
+
+Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example:
+
+default: {}
+
+##### queue_name (str)
+Job queue name
+name of the queue to put the job in
+
+example:
+
+default: ""
+
+##### from_queue (typing.Union[str, NoneType])
+From queue name
+name of the queue in which this processor is run.  This may be used for diagnostic purpose to track what pipeline the job came from.  This string does not effect the functionality.
+
+example:
+
+default: None
 
 
 ## py_vcon_server.processor.builtin.send_email.SendEmailOptions
