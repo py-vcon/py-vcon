@@ -6,13 +6,14 @@ from common_setup import make_inline_audio_vcon, make_2_party_tel_vcon, UUID
 import vcon
 import py_vcon_server
 from py_vcon_server.settings import VCON_STORAGE_URL
+import fastapi.testclient
 
 
 VCON_STORAGE = None
 JOB_QUEUE = None
 
 TO_QUEUE_NAME = "proc_test_queue"
-FROM_QUEUE_NAME = "pipe_test_queue"
+FROM_QUEUE_NAME = "py_vcon_unit_test_queue"
 
 # invoke only once for all the unit test in this module
 @pytest_asyncio.fixture(autouse=True)
@@ -79,4 +80,62 @@ async def test_queue_job_processor(make_2_party_tel_vcon : vcon.Vcon) -> None:
   assert(len(job_list[0]["vcon_uuid"]) == 1)
   assert(job_list[0]["vcon_uuid"][0] == in_vcon.uuid)
   assert(job_list[0]["queue"] == FROM_QUEUE_NAME)
+
+
+@pytest.mark.asyncio
+async def test_sign_processor_api(make_2_party_tel_vcon : vcon.Vcon) -> None:
+  in_vcon = make_2_party_tel_vcon
+  assert(isinstance(in_vcon, vcon.Vcon))
+
+  queue_options = {
+      "queue_name": TO_QUEUE_NAME,
+      "from_queue": FROM_QUEUE_NAME
+    }
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    # clear the queue of residual jobs if it exists.
+    delete_response = client.delete(
+        "/queue/{}".format(TO_QUEUE_NAME),
+        headers={"accept": "application/json"},
+      )
+    assert(delete_response.status_code in [200, 404])
+
+    # Create the queue (empty)
+    post_response = client.post(
+      "/queue/{}".format(TO_QUEUE_NAME),
+      headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 204)
+
+    # Put the vCon in the DB
+    set_response = client.post("/vcon", json = in_vcon.dumpd())
+    assert(set_response.status_code == 204)
+
+    parameters = {
+        "commit_changes": False,
+        "return_whole_vcon": True
+      }
+
+    post_response = client.post("/process/{}/queue_job".format(UUID),
+        params = parameters,
+        json = queue_options
+      )
+    print("UUID: {}".format(UUID))
+    assert(post_response.status_code == 200)
+    processor_out_dict = post_response.json()
+    assert(len(processor_out_dict["vcons"]) == 1)
+    assert(not processor_out_dict["vcons_modified"][0])
+
+    # Get the jobs in the queue and verify the new job is in it.
+    get_response = client.get(
+      "/queue/{}".format(TO_QUEUE_NAME),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    job_list = get_response.json()
+    assert(isinstance(job_list, list))
+    assert(len(job_list) == 1)
+    assert(len(job_list[0]["vcon_uuid"]) == 1)
+    assert(job_list[0]["vcon_uuid"][0] == in_vcon.uuid)
+    assert(job_list[0]["queue"] == FROM_QUEUE_NAME)
 
