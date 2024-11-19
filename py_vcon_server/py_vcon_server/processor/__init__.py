@@ -709,7 +709,7 @@ class VconProcessorIO():
 
     return(response_output)
 
-  def add_vcon_uuid_job(
+  def add_vcon_uuid_queue_job(
       self,
       queue_name: str,
       vcon_uuids: typing.List[str],
@@ -721,15 +721,17 @@ class VconProcessorIO():
     Note: jobs do NOT get commit to the database.  They are only added to this **VconProcessorIO** object.
     """
 
-    if(len(vcon_uuid) < 0):
+    if(len(vcon_uuids) < 0):
       raise Exception("no vCon UUIDs provided")
 
-    job = {}
+    job: typing.Dict[str, typing.Any] = {}
+    job["job_type"] = "vcon_uuid"
     job["to_queue"] = queue_name
     job["vcon_uuids"] = vcon_uuids
     if(from_queue and len(from_queue) > 0):
       job["from_queue"] = from_queue
 
+    logger.debug("Adding job: {} to VconProcessorIO queue list".format(job))
     self._jobs_to_queue.append(job)
 
 
@@ -754,10 +756,10 @@ class VconProcessorIO():
 
     for job in self._jobs_to_queue:
       queue_name = job.get("to_queue", None)
-      if(job["type"] != "vcon_uuid"):
+      if(job["job_type"] != "vcon_uuid"):
         raise Exception("invalid job type in VconProcessorIO: {}".format(job))
       if(queue_name and len(queue_name)):
-         job_queue.push_vcon_uuid_queue_job(
+         await job_queue.push_vcon_uuid_queue_job(
             queue_name,
             job.get("vcon_uuids", []),
             job.get("from_queue", None)
