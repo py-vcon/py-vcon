@@ -139,3 +139,146 @@ async def test_sign_processor_api(make_2_party_tel_vcon : vcon.Vcon) -> None:
     assert(job_list[0]["vcon_uuid"][0] == in_vcon.uuid)
     assert(job_list[0]["queue"] == FROM_QUEUE_NAME)
 
+
+PIPE_QUEUE_JOBS_DICT = {
+  "pipeline_options": {
+      "timeout": 10.0
+    },
+  "processors": [
+      {
+        "processor_name": "jq",
+        "processor_options": {
+          "jq_queries": {
+              "has_dialogs": ".vcons[0].dialog[0].body | length > 0",
+              "party0_has_tel": ".vcons[0].parties[0].tel | length > 0"
+            }
+          }
+        },
+      {
+        "processor_name": "queue_job",
+        "processor_options": {
+            "format_options": {
+                "should_process": "{has_dialogs}"
+              },
+            "queue_name": TO_QUEUE_NAME + "1",
+            "from_queue": FROM_QUEUE_NAME
+          }
+        },
+      {
+        "processor_name": "queue_job",
+        "processor_options": {
+            "format_options": {
+                "should_process": "{party0_has_tel}"
+              },
+            "queue_name": TO_QUEUE_NAME + "2",
+            "from_queue": FROM_QUEUE_NAME
+          }
+        },
+      {
+        "processor_name": "set_parameters",
+        "processor_options": {
+            "parameters": {
+                "party0_has_email_address": "nobody@example.com"
+              }
+          }
+        }
+    ]
+}
+
+
+@pytest.mark.asyncio
+async def test_pipeline_queue_job(make_inline_audio_vcon: vcon.Vcon):
+  in_vcon = make_inline_audio_vcon
+  pipe_name = "unit_test_pipe1"
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    set_response = client.put(
+        "/pipeline/{}".format(
+          pipe_name
+        ),
+        json = PIPE_QUEUE_JOBS_DICT,
+        params = { "validate_processor_options": True}
+      )
+    resp_content = set_response.content
+    if(set_response.status_code != 204):
+      print("put: /pipeline/{} returned: {} {}".format(
+          pipe_name,
+          set_response.status_code,
+          resp_content
+        ))
+    assert(set_response.status_code == 204)
+    assert(len(resp_content) == 0)
+
+    # delete the queues so that we know they are empty
+    delete_response = client.delete(
+        "/queue/{}".format(TO_QUEUE_NAME + "1"),
+        headers={"accept": "application/json"},
+      )
+    assert(delete_response.status_code in [200, 404])
+
+    delete_response = client.delete(
+        "/queue/{}".format(TO_QUEUE_NAME + "2"),
+        headers={"accept": "application/json"},
+      )
+    assert(delete_response.status_code in [200, 404])
+
+    # Create the queues (empty)
+    post_response = client.post(
+      "/queue/{}".format(TO_QUEUE_NAME + "1"),
+      headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 204)
+    post_response = client.post(
+      "/queue/{}".format(TO_QUEUE_NAME + "2"),
+      headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 204)
+
+    # Put the vCon in the DB
+    set_response = client.post("/vcon", json = in_vcon.dumpd())
+    assert(set_response.status_code == 204)
+
+    # Run the pipeline on the vCon
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe_name,
+          in_vcon.uuid
+        ),
+        json = make_inline_audio_vcon.dumpd(),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(post_response.status_code == 200)
+    assert(len(pipeline_out_dict["vcons"]) == 1)
+    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+    assert(not pipeline_out_dict["vcons_modified"][0])
+
+    # Check the contents of the queues
+    get_response = client.get(
+      "/queue/{}".format(TO_QUEUE_NAME + "1"),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    job_list = get_response.json()
+    assert(isinstance(job_list, list))
+    assert(len(job_list) == 1)
+    assert(len(job_list[0]["vcon_uuid"]) == 1)
+    assert(job_list[0]["vcon_uuid"][0] == in_vcon.uuid)
+    assert(job_list[0]["queue"] == FROM_QUEUE_NAME)
+    get_response = client.get(
+      "/queue/{}".format(TO_QUEUE_NAME + "2"),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    job_list = get_response.json()
+    assert(isinstance(job_list, list))
+    assert(len(job_list) == 1)
+    assert(len(job_list[0]["vcon_uuid"]) == 1)
+    assert(job_list[0]["vcon_uuid"][0] == in_vcon.uuid)
+    assert(job_list[0]["queue"] == FROM_QUEUE_NAME)
+
