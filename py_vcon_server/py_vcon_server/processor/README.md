@@ -884,6 +884,14 @@ examples: ['.', '.choices[0].text']
 
 default: ".choices[0].message.content"
 
+##### json_response (bool)
+provide response in JSON format
+If False (default) response will be in a readable text format.  If True, the response from ChatGPT will be in a JSON formatted document.  If a JSON response is desired, your prompt should specify the format of the JSON content or parameters.
+
+example:
+
+default: False
+
 ##### analysis_type (str)
 the **Vcon analysis** object type
 
