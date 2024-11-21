@@ -10,7 +10,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "paths": {
     "/server/info": {
@@ -2506,7 +2506,7 @@
             "title": "job start time",
             "type": "number",
             "description": "epoch seconds time at which this in progress job started",
-            "example": 1732044349.2417262
+            "example": 1732152396.6975715
           },
           "server": {
             "title": "server key",
@@ -2765,6 +2765,12 @@
               ".",
               ".choices[0].text"
             ]
+          },
+          "json_response": {
+            "title": "provide response in JSON format",
+            "type": "boolean",
+            "description": "If False (default) response will be in a readable text format.  If True, the response from ChatGPT will be in a JSON formatted document.  If a JSON response is desired, your prompt should specify the format of the JSON content or parameters.",
+            "default": false
           },
           "analysis_type": {
             "title": "the **Vcon analysis** object type",
@@ -3069,24 +3075,24 @@
             "title": "server version",
             "type": "string",
             "description": "Python package py_vcon_server version number",
-            "default": "0.2.0"
+            "default": "0.3.0"
           },
           "vcon": {
             "title": "vcon version",
             "type": "string",
             "description": "Python package **py_vcon** version number",
-            "default": "0.3.2"
+            "default": "0.4.0"
           },
           "start_time": {
             "title": "server start time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1732044349.239129
+            "example": 1732152396.6949644
           },
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 97296
+            "example": 108470
           }
         }
       },
@@ -3122,13 +3128,13 @@
           "pid": {
             "title": "server process id",
             "type": "integer",
-            "example": 97296
+            "example": 108470
           },
           "start_time": {
             "title": "server start up time",
             "type": "number",
             "description": "epoch seconds time at which this server started",
-            "example": 1732044349.2398705
+            "example": 1732152396.6956646
           },
           "num_workers": {
             "title": "number of server worker processes",
@@ -3151,7 +3157,7 @@
             "title": "heartbeat time stamp",
             "type": "number",
             "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1732044349.2399085
+            "example": 1732152396.6957023
           }
         }
       },
@@ -3521,12 +3527,12 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-11-19T19:25:49.225+00:00",
+            "example": "2024-11-21T01:26:36.682+00:00",
             "examples": [
-              1732044349,
-              1732044349.2259328,
+              1732152396,
+              1732152396.682592,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-11-19T19:25:49.225+00:00",
+              "2024-11-21T01:26:36.682+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
