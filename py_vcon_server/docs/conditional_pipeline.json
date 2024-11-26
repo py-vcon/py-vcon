@@ -7,14 +7,14 @@
   },
   "processors": [
     {
-      "processor_name": "openai_chat_completions ",
+      "processor_name": "openai_chat_completion",
       "processor_options": {
           "model": "gpt-4-1106-preview",
           "prompt": "Respond with a JSON format document containing an integer score and a list of bulleted criteria.   Scoring on a scale of 1 to 10, how well did the call agent perform their job?",
           "max_tokens": 200,
           "jq_result": ".choices[0].message.content | .[8:] | .[:-4] | fromjson",
           "json_response": true,
-          "analysis_type": "agent score",
+          "analysis_type": "agent score"
         }
       },
     {
@@ -27,16 +27,14 @@
         }
       },
     {
-      "processor_name": "queue_job ",
+      "processor_name": "queue_job",
       "processor_options": {
           "format_options": {
               "should_process": "{bad_agent_score}"
             },
           "queue_name": "bad_agent_call_job_queue"
         }
-      },
+      }
     ]
   }
-
-
 
