@@ -201,7 +201,7 @@ class PipelineDb():
     if(isinstance(pipeline, dict)):
       args = [ name, json.dumps(pipeline) ]
     else:
-      args = [ name, json.dumps(pipeline.dict()) ]
+      args = [ name, json.dumps(pipeline.dict(exclude_none=True)) ]
 
     result = await self._do_lua_set_pipeline(keys = keys, args = args)
     if(result != "OK"):
@@ -319,7 +319,7 @@ class PipelineRunner():
     Returns:
       The output VconProcessorIO from the last VconProcessor in the Pipeline
     """
-    logger.debug("PipelineDef: {}".format(self._pipeline.dict()))
+    logger.debug("PipelineDef: {}".format(self._pipeline.dict(exclude_none=True)))
     timeout = self._pipeline.pipeline_options.timeout
     run_future = self._do_processes(
         processor_input
@@ -605,7 +605,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       logger.debug("got job from queue: {} job: {}".format(queue_name, job))
 
       # Add pipeline def to job
-      job["pipeline"] = pipe_def.dict()
+      job["pipeline"] = pipe_def.dict(exclude_none=True)
 
       # Get locks if pipeline needs them
       if(pipe_def.pipeline_options.save_vcons):

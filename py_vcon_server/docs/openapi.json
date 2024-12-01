@@ -2151,6 +2151,285 @@
         }
       }
     },
+    "/process/{vcon_uuid}/impls_min_init": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "ImplementsMinimalInitOnly",
+        "description": "Attempt to hide abstract class",
+        "operationId": "run_vcon_processor_process__vcon_uuid__impls_min_init_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VconProcessorOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/add_party": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Add party to Vcon",
+        "description": "adds a new party with the Vcon Party Object parameters provided in the **AddPartyOptions**",
+        "operationId": "run_vcon_processor_process__vcon_uuid__add_party_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPartyOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/test_add_party": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Add party to Vcon",
+        "description": "adds a new party with the Vcon Party Object parameters provided in the **AddPartyOptions**",
+        "operationId": "run_vcon_processor_process__vcon_uuid__test_add_party_post",
+        "parameters": [
+          {
+            "required": true,
+            "schema": {
+              "title": "Vcon Uuid",
+              "type": "string"
+            },
+            "name": "vcon_uuid",
+            "in": "path"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Commit Changes",
+              "type": "boolean",
+              "default": false
+            },
+            "name": "commit_changes",
+            "in": "query"
+          },
+          {
+            "required": false,
+            "schema": {
+              "title": "Return Whole Vcon",
+              "type": "boolean",
+              "default": true
+            },
+            "name": "return_whole_vcon",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPartyOptions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/pipeline/{name}/run": {
       "post": {
         "tags": [
@@ -2310,6 +2589,32 @@
   },
   "components": {
     "schemas": {
+      "AddPartyOptions": {
+        "title": "AddPartyOptions",
+        "type": "object",
+        "properties": {
+          "input_vcon_index": {
+            "title": "VconProcessorIO input vCon index",
+            "type": "integer",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "format_options": {
+            "title": "set VconProcessorOptions fields with formated strings build from parameters",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          },
+          "tel": {
+            "title": "Tel",
+            "type": "string"
+          }
+        },
+        "description": "Base class options for **VconProcessor.processor** method "
+      },
       "DecryptFilterPluginOptions": {
         "title": "decrypt filter method options",
         "type": "object",
@@ -3395,10 +3700,59 @@
         "type": "object",
         "properties": {
           "tel": {
-            "title": "tel URI",
+            "title": "tel uri",
             "type": "string",
             "description": "a telephone number",
             "example": "+1 123 456 7890"
+          },
+          "mailto": {
+            "title": "mailto uri",
+            "type": "string",
+            "description": "a email address",
+            "example": "alice@example.com"
+          },
+          "stir": {
+            "title": "stir token",
+            "type": "string",
+            "description": "stir token for the party in the call"
+          },
+          "name": {
+            "title": "full name",
+            "type": "string",
+            "description": "party's first and last name",
+            "example": "Alice Jone"
+          },
+          "validation": {
+            "title": "identity validation method",
+            "type": "string",
+            "description": "the description or token label of the method by which the party's identity was verified"
+          },
+          "gmlpos": {
+            "title": "geolocation",
+            "type": "string",
+            "description": "the geolocation of the party"
+          },
+          "uuid": {
+            "title": "party uuid",
+            "type": "string",
+            "description": "a unique identifier for the party"
+          },
+          "role": {
+            "title": "role",
+            "type": "string",
+            "description": "role the party took in the conversation.  Not limited to these examples",
+            "examples": [
+              "agent",
+              "customer",
+              "supervisor",
+              "sme",
+              "thirdparty"
+            ]
+          },
+          "contact_list": {
+            "title": "contact list",
+            "type": "string",
+            "description": "name or identifier for the contact list from which this party was retrived"
           }
         }
       },

@@ -9,9 +9,10 @@
 ![python_vcon PyPI Version](https://img.shields.io/pypi/v/py_vcon_server.svg)
 [![vcon server unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-server-test.yml/badge.svg?branch=main)](https://github.com/py-vcon/py-vcon/actions)
 
-![Python 3.6](https://img.shields.io/badge/python-3.8-blue.svg)
-![Python 3.6](https://img.shields.io/badge/python-3.9-blue.svg)
-![Python 3.6](https://img.shields.io/badge/python-3.10-blue.svg)
+![Python 3.8](https://img.shields.io/badge/python-3.8-blue.svg)
+![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)
+![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
 
 ## Introduction
 
@@ -147,7 +148,7 @@ Example code:
 Some of the [Vcon Filter Plugins](#Vcon-filter-plugins) use third party provided functionality that require API keys to use or test the full functionality.
 The current set of API keys are needed for:
 
-  * Deepgram transcription ([Deepgram FilterPlugin](vcon/filter_plugins/README.md#vconfilter_pluginsimpldeepgramdeepgram)): DEEPGRAM__KEY
+  * Deepgram transcription ([Deepgram FilterPlugin](vcon/filter_plugins/README.md#vconfilter_pluginsimpldeepgramdeepgram)): DEEPGRAM_KEY
   <br>You can get a key at: https://platform.openai.com/account/api-keys
 
   * OpenAI Generative AI ([OpenAICompletion](vcon/filter_plugins/README.md#vconfilter_pluginsimplopenaiopenaicompletion) and [OpenAIChatCompletion](vcon/filter_plugins/README.md#vconfilter_pluginsimplopenaiopenaichatcompletion) FilterPlugins): OPENAI_API_KEY
@@ -155,7 +156,7 @@ The current set of API keys are needed for:
 
 The easiest way to use these plugins is to set the keys as an environmental variable.  For example on linux bash shell"
 
-    export DEEPGRAM__KEY="your Deepgram key here"
+    export DEEPGRAM_KEY="your Deepgram key here"
     export OPENAI_API_KEY="your OpenAI key here"
 
 However you can also set these keys using init_options and filter options.

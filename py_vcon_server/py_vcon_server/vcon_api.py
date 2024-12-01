@@ -272,7 +272,7 @@ def init(restapi):
       # Optionally return the pipeline output
       if(return_results):
         pipe_out = await pipeline_output.get_output()
-        return(fastapi.responses.JSONResponse(content = pipe_out.dict()))
+        return(fastapi.responses.JSONResponse(content = pipe_out.dict(exclude_none=True)))
 
 
   pipeline_responses = copy.deepcopy(py_vcon_server.restful_api.ERROR_RESPONSES)
@@ -322,14 +322,14 @@ def init(restapi):
 
     logger.debug("run_pipeline( pipeline: {} vCon with UUID: {} save: {} return: {}".format(
         name,
-        vCon.dict().get("uuid", None),
+        vCon.dict(exclude_none=True).get("uuid", None),
         save_vcons,
         return_results
       ))
 
     try:
       vcon_object = vcon.Vcon()
-      vcon_object.loadd(vCon.dict())
+      vcon_object.loadd(vCon.dict(exclude_none=True))
 
       # TODO: verify the UUID for the given vCon does not exist in storage
 
