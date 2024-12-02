@@ -25,6 +25,7 @@ frozenlist
 future
 greenlet
 humanize
+httpx<0.28
 importlib-metadata
 importlib-resources
 jedi
