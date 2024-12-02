@@ -30,6 +30,7 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
   + [Pipeline Processing](#pipeline-processing)
     + [Simple Pipeline Example](#simple-pipeline-example)
     + [Advanced Pipeline Example](#advanced-pipeline-example)
+    + [Conditional Processing and Job Queuing Pipeline Example](#conditional-processing-and-job-queuing-pipeline-example)
   + [vCon Processor Plugins](#vcon-processor-plugins)
   + [Access Control](#access-control)
   + [Building](#building)
@@ -208,12 +209,39 @@ A more advanced example of a pipeline definition can be found at the following l
 This pipeline is defined to run 6 processors on the vCon input.
 It does the following:
 
-  * run the deepgram transcription processor (line 9)
-  * run the openai_chat_completion processor with default summary prompt (line 16)
-  * run the openai_chat_completion processor with action items prompt (line 21)
-  * run the openai_chat_completion processor with notes prompt (line 29)
-  * run the openai_jq processor with queries on vCon (line 37)
-  * run the send_email processor with parameters message content (line 50)
+  * run the **deepgram** transcription processor (line 9)
+  * run the **openai_chat_completion** processor with default summary prompt (line 16)
+  * run the **openai_chat_completion** processor with action items prompt (line 21)
+  * run the **openai_chat_completion** processor with notes prompt (line 29)
+  * run the **jq** processor with queries on vCon (line 37)
+  * run the **send_email** processor with parameters message content (line 50)
+
+### Conditional Processing and Job Queuing Pipeline Example
+
+An example of a pipeline that uses conditional processing and job queuing to be processed by another pipeline can be found at the following link:
+[conditional processing and job queuing example](docs/conditional_pipeline.json)
+
+Processors can be run conditionally using the **should_process** processor option.
+The value of the **should_process** option can be dynamically set using the value of one of the user defined parameters in the **VconProcessorIO** which is passed through the pipeline flow from processor to processor.
+You can set a parameter using the **set_parameters** processor or you can define a query on the **VconProcessorIO** and set a parameter to the result of the query using the **jq_parameters** processor.
+
+The **queue_job** processor can be used to branch vCon processing from one pipeline to another.
+A pipeline can put jobs in other job queues to be processed by other pipelines.
+
+These two powerful constructs are demonstrated in the [conditional processing and job queuing example](docs/conditional_pipeline.json).
+Note: the example assumes that the input vCon has already been transcribed.
+This example does the following:
+
+  * run the [openai_chat_completion](py_vcon_server/processor/README.md#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion) processor with a prompt to evaluate the performance of the call agent and output the evaluation in a JSON format (lines 10-19)
+  * run the [jq](py_vcon_server/processor/README.md#py_vcon_serverprocessorbuiltinjqjqprocessor) processor with a query into the analysis object/output from the openai_chat_completion processor above to create two new parameters (agent_score with a value of 1-10 and bad_agent_score with values of true or false) in the **VconProcessorIO** (lines 20-28)
+  * run the [queue_job](py_vcon_server/processor/README.md#py_vcon_serverprocessorbuiltinqueue_jobqueuejob) processor using the parameter value of bad_agent_score as the **should_process** option (lines 29-37)
+
+The result of this that the first processor performs an evaluation on the call agents performance using the call transcript as input.
+The value of the bad_agent_score is then used to determine if a job for this vCon should be queued to be run through another pipeline for special processing for calls where the agent did not perform well.
+The processing in the bad_agent_call_job_queue is up to the reader to define, but it could do things like perform some further analysis using the **openai_chat_completion** or send an email notification using the **send_email** processor.
+It should be noted that the prompt for **openai_chat_completion** to analyze agent performance is over simplified.
+One would likely want to add some specific criteria for which the agent is to be evaluated.
+
 
 ## vCon Processor Plugins
 

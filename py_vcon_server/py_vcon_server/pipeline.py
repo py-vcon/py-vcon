@@ -21,6 +21,7 @@ PIPELINE_NAME_PREFIX = "pipeline:"
 
 PIPELINE_DB = None
 VCON_STORAGE = None
+JOB_QUEUE = None
 
 
 class PipelineNotFound(Exception):
@@ -356,19 +357,51 @@ class PipelineRunner():
       processor_name = processor_config.processor_name
       processor = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(processor_name)
       processor_options = processor_config.processor_options
+
+      logger.debug("ProcessorIO parameters: {}".format(next_proc_input._parameters))
       # Recaste options to proper type
       # This becomes important when the options has multiple inheretance to get the
       # correct type (e.g. FilterPluginOptions).
-      processor_type_options = processor.processor_options_class()(** processor_options.dict(exclude_none=True))
-      vcon_index = processor_type_options.input_vcon_index
-      logger.debug("Starting pipeline {} processor: {} on vCon: {} (index: {})".format(
+      formatted_options = processor_input.format_parameters_to_options(processor_options.dict())
+      processor_type_options = processor.processor_options_class()(** formatted_options)
+      if(processor_type_options.should_process is None):
+        raise Exception("pipeline {} processor: {} options should_process not set".format(
           self._pipeline_name,
-          processor_name,
-          await next_proc_input.get_vcon(vcon_index, py_vcon_server.processor.VconTypes.UUID),
-          vcon_index
+          processor_name
         ))
-      next_proc_input = await processor.process(next_proc_input, processor_type_options)
 
+      if(next_proc_input.num_vcons() > 0):
+        logger.debug("before processor: {} in pipeline: {} vcon[0] modified: {}".format(
+            processor_name,
+            self._pipeline_name,
+            next_proc_input.is_vcon_modified(0)
+          ))
+      if(processor_type_options.should_process):
+        vcon_index = processor_type_options.input_vcon_index
+        logger.debug("Starting pipeline {} processor: {} on vCon: {} (index: {})".format(
+            self._pipeline_name,
+            processor_name,
+            await next_proc_input.get_vcon(vcon_index, py_vcon_server.processor.VconTypes.UUID),
+            vcon_index
+          ))
+        next_proc_input = await processor.process(next_proc_input, processor_type_options)
+
+      else:
+        logger.debug("Skipping pipeline {} processor: {} on vCon: {} (index: {})".format(
+            self._pipeline_name,
+            processor_name,
+            await next_proc_input.get_vcon(vcon_index, py_vcon_server.processor.VconTypes.UUID),
+            vcon_index
+          ))
+
+    if(next_proc_input.num_vcons() > 0 and
+        len(self._pipeline.processors) > 0
+      ):
+      logger.debug("after processor: {} for pipeline: {} vcon[0] modified: {}".format(
+          processor_name,
+          self._pipeline_name,
+          next_proc_input.is_vcon_modified(0)
+        ))
     return(next_proc_input)
 
 
@@ -470,6 +503,13 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       vs = VCON_STORAGE
       VCON_STORAGE = None
       await vs.shutdown()
+
+    global JOB_QUEUE
+    if(JOB_QUEUE):
+      logger.debug("shutting down PipelineJobHandler in done JobQueue")
+      jq = JOB_QUEUE
+      JOB_QUEUE = None
+      await jq.shutdown()
 
 
   async def get_job(self) -> typing.Union[typing.Dict[str, typing.Any], None]:
@@ -684,6 +724,23 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         ))
       # Save changed Vcons
       await VCON_STORAGE.commit(pipeline_output)
+
+      # Initialize JOB_QUEUE if not already done
+      global JOB_QUEUE
+      if(JOB_QUEUE is None and
+          pipeline_output.get_queue_job_count() > 0
+        ):
+        logger.info("instantiating JobQueue in PipelineJobHandler.do_job")
+        VCON_STORAGE = py_vcon_server.queue.JobQueue.instantiate(
+            py_vcon_server.settings.JOB_QUEUE_URL
+          )
+
+      # Commit jobs to be queued.
+      # This is done here as opposed to in the queue processor as we
+      # have not yet implemented vCon locking.  It may often be expected that
+      # modification to vCon(s) in a pipeline have been committed at the time
+      # the pipeline queues a job for the vCon.
+      await pipeline_output.commit_queue_jobs(JOB_QUEUE)
 
     return(job_definition)
 

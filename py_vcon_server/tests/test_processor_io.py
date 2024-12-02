@@ -2,6 +2,7 @@
 """ Unit tests for VconProcessorIO """
 
 import asyncio
+import pydantic
 import pytest
 import pytest_asyncio
 import importlib
@@ -158,4 +159,29 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   assert(isinstance(formated_options.input_vcon_index, int))
   assert(formated_options.input_vcon_index == 5)
   assert(formated_options.yyy == "bar bar 5")
+  assert(generic_options.should_process is not None)
+  assert(generic_options.should_process) # should default to True
+
+  if_options = py_vcon_server.processor.VconProcessorOptions(should_process = False)
+  assert(not if_options.should_process)
+  try:
+    if_options = py_vcon_server.processor.VconProcessorOptions(should_process = None)
+    raise Exception("None should not be accepted as a value for should_process")
+  except pydantic.error_wrappers.ValidationError:
+    # expected
+    pass
+  if_options = py_vcon_server.processor.VconProcessorOptions(should_process = len(""))
+  assert(not if_options.should_process)
+  if_options = py_vcon_server.processor.VconProcessorOptions(should_process = "no")
+  assert(not if_options.should_process)
+  if_options = py_vcon_server.processor.VconProcessorOptions(should_process = "true")
+  assert(if_options.should_process)
+  try:
+    if_options = py_vcon_server.processor.VconProcessorOptions(should_process = 4)
+    raise Exception("int greater than 1 should not be accepted as a value for should_process")
+  except pydantic.error_wrappers.ValidationError:
+    # expected
+    pass
+  if_options = py_vcon_server.processor.VconProcessorOptions(should_process = 0)
+  assert(not if_options.should_process)
 

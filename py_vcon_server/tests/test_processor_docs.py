@@ -273,7 +273,7 @@ def collect_options_data(
     elif("example" in field_data and
       field_data["example"] is not None
       ):
-      field_data["example"] = ": " + field_data["example"]
+      field_data["example"] = ": " + "{}".format(field_data["example"])
     else:
       field_data["example"] = ":"
 

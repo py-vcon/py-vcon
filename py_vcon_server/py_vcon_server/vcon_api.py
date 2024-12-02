@@ -176,24 +176,44 @@ def init(restapi):
         path = request.url.path
         processor_name_from_path = os.path.basename(path)
 
-        logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
-          processor_name, path, type(options), options, processor_name_from_path))
-
-        processor_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
-        await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
-
         # Get the processor form the registry
         processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
           processor_name_from_path)
 
+        # TODO: take a real lock on the vCon
+
+        processor_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
+        await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
+
+        # format_options for dynamic options
+        formatted_options_dict = processor_input.format_parameters_to_options(options.dict())
+        processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
+
+        logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
+            processor_name,
+            path,
+            type(processor_type_options),
+            processor_type_options,
+            processor_name_from_path
+          ))
+
         # Run the processor
         processor_output = await processor_inst.process(
           processor_input,
-          options)
+          processor_type_options)
 
         if(commit_changes):
           # Save changed Vcons
           await py_vcon_server.db.VCON_STORAGE.commit(processor_output)
+
+        # TODO: release vCon lock
+
+        # Commit jobs to be queued.
+        # This is done here as opposed to in the queue processor as we
+        # have not yet implemented vCon locking.  It may often be expected that
+        # modification to vCon(s) in a pipeline have been committed at the time
+        # the pipeline queues a job for the vCon.
+        await processor_output.commit_queue_jobs(py_vcon_server.queue.JOB_QUEUE)
 
         # Get serializable output
         # TODO: don't return whole Vcon if not return_whole_vcon
@@ -241,6 +261,13 @@ def init(restapi):
       # TODO: release the vCon lock if taken
       if(lock_key is not None):
         pass
+
+      # Commit jobs to be queued.
+      # This is done here as opposed to in the queue processor as we
+      # have not yet implemented vCon locking.  It may often be expected that
+      # modification to vCon(s) in a pipeline have been committed at the time
+      # the pipeline queues a job for the vCon.
+      await pipeline_output.commit_queue_jobs(py_vcon_server.queue.JOB_QUEUE)
 
       # Optionally return the pipeline output
       if(return_results):

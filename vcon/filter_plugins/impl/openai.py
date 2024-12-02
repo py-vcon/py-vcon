@@ -201,6 +201,15 @@ https://jqlang.github.io/jq/manual/
    examples = [".", ".choices[0].text" ]
     )
 
+  json_response: bool = pydantic.Field(
+      title = "provide response in JSON format",
+      description = "If False (default) response will be in a readable text format."
+        "  If True, the response from ChatGPT will be in a JSON formatted document."
+        "  If a JSON response is desired, your prompt should specify the format of"
+        " the JSON content or parameters.",
+      default = False
+    )
+
   analysis_type: str = pydantic.Field(
     title = "the **Vcon analysis** object type",
     description = """
@@ -279,12 +288,17 @@ class OpenAIClient():
         )
 
     else:
+      additional_args = {}
+      if(options.json_response):
+        additional_args["response_format"] = {"type": "json_object"}
+
       # chat_completion_result is openai.types.chat.chat_completion.ChatCompletion
       chat_completion_object = await self.client.chat.completions.create(
           model = options.model,
           messages = messages,
           max_tokens = options.max_tokens,
-          temperature = options.temperature
+          temperature = options.temperature,
+          **additional_args
         )
       chat_completion_result  = chat_completion_object.dict()
 

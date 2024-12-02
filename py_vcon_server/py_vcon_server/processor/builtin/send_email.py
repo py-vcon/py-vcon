@@ -105,55 +105,53 @@ class SendEmail(py_vcon_server.processor.VconProcessor):
     Set the VconProcessorIO parameters from the input options parameters.  Does not modify the vCons.
     """
 
-    formatted_options = processor_input.format_parameters_to_options(options)
-
     email_message = email.message.EmailMessage()
-    email_message.set_content(formatted_options.text_body)
-    if(len(formatted_options.from_address)):
-      email_message["From"] = formatted_options.from_address
-    if(len(formatted_options.subject)):
-      email_message["Subject"] = formatted_options.subject
-    if(len(formatted_options.to)):
-      email_message["To"] = ",".join(formatted_options.to)
-    if(len(formatted_options.cc)):
-      email_message["Cc"] = ",".join(formatted_options.cc)
-    if(len(formatted_options.bcc)):
-      email_message["Bcc"] = ",".join(formatted_options.bcc)
+    email_message.set_content(options.text_body)
+    if(len(options.from_address)):
+      email_message["From"] = options.from_address
+    if(len(options.subject)):
+      email_message["Subject"] = options.subject
+    if(len(options.to)):
+      email_message["To"] = ",".join(options.to)
+    if(len(options.cc)):
+      email_message["Cc"] = ",".join(options.cc)
+    if(len(options.bcc)):
+      email_message["Bcc"] = ",".join(options.bcc)
     # TODO add support for attachements and multipart MIME
 
-    if(len(formatted_options.smtp_user) or
-       len(formatted_options.smtp_password) or
-       formatted_options.use_tls):
+    if(len(options.smtp_user) or
+       len(options.smtp_password) or
+       options.use_tls):
       use_tls = True
     else:
       use_tls = False
 
-    if(formatted_options.smtp_host is not None and
-       len(formatted_options.smtp_host)):
-      host = formatted_options.smtp_host
+    if(options.smtp_host is not None and
+       len(options.smtp_host)):
+      host = options.smtp_host
     else:
       host = None
 
-    if(formatted_options.smtp_port > 0):
-      port = formatted_options.smtp_port
+    if(options.smtp_port > 0):
+      port = options.smtp_port
     else:
       port = None
 
-    if(formatted_options.smtp_user is not None and
-       len(formatted_options.smtp_user)):
-      smtp_user = formatted_options.smtp_user
+    if(options.smtp_user is not None and
+       len(options.smtp_user)):
+      smtp_user = options.smtp_user
     else:
       smtp_user = None
 
-    if(formatted_options.smtp_password is not None and
-       len(formatted_options.smtp_password)):
-      password = formatted_options.smtp_password
+    if(options.smtp_password is not None and
+       len(options.smtp_password)):
+      password = options.smtp_password
     else:
       password = None
 
-    if(formatted_options.client_hostname is not None and
-       len(formatted_options.client_hostname)):
-      local_hostname = formatted_options.client_hostname
+    if(options.client_hostname is not None and
+       len(options.client_hostname)):
+      local_hostname = options.client_hostname
     else:
       local_hostname = None
 

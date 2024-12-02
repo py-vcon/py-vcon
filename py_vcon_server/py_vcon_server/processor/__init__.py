@@ -12,6 +12,8 @@ import pydantic
 #from py_vcon_server.db import VconStorage
 import py_vcon_server.logging_utils
 import vcon
+if typing.TYPE_CHECKING:
+  import py_vcon_server.queue
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
@@ -49,6 +51,10 @@ class VconProcessorNotInstantiated(Exception):
 
 class InvalidVconProcessorClass(Exception):
   """ Attempt to use invalide class as a VconProcessor """
+
+
+class ParameterNotFound(Exception):
+  """ parameter not found in ProcessorIO parameters """
 
 
 class VconTypes(enum.Enum):
@@ -468,15 +474,31 @@ class VconProcessorInitOptions(pydantic.BaseModel):
 class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
   """ Base class options for **VconProcessor.processor** method """
   input_vcon_index: int = pydantic.Field(
-    title = "VconProcessorIO input vCon index",
-    description = "Index to which vCon in the VconProcessorIO is to be used for input",
-    default = 0
+      title = "VconProcessorIO input vCon index",
+      description = "Index to which vCon in the VconProcessorIO is to be used for input",
+      default = 0
+    )
+
+  should_process: bool = pydantic.Field(
+      title = "if True run processor",
+      description = "Conditional parameter indicating whether to run this processor"
+        " on the PriocessorIO or to skip this processor and pass input as output."
+        "  It is often useful to use a parameter from the ProcessorIO as the conditional"
+        " value of this option parameter via the **format_parameters** option.",
+      default = True
     )
 
   format_options: typing.Dict[str, str] = pydantic.Field(
-    title = "set VconProcessorOptions fields with formated strings build from parameters",
-    description = "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
-    default = {}
+      title = "set VconProcessorOptions fields with formatted strings built from parameters",
+      description = "dict of strings keys and values where key is the name of a"
+        " VconProcessorOptions field, to be set with the formated value string"
+        " with the VconProcessorIO parameters dict as input.  For example"
+        " {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: '"
+        " concatindated with the value returned from VconProcessorIO."
+        "get_parameters('bar').  This occurs before the given VconProcessor"
+        " performs it's process method and does not perminimently modify the"
+        " VconProcessorOptions fields",
+      default = {}
     )
   #rename_output: dict[str, str]
 
@@ -506,6 +528,7 @@ class VconProcessorIO():
     self._vcon_locks: typing.List[str] = []
     self._vcon_update: typing.List[bool] = []
     self._parameters: typing.Dict[str, typing.Any] = {}
+    self._jobs_to_queue: typing.List[typing.Dict[str, any]] = []
     self._vcon_storage = vcon_storage
 
 
@@ -678,12 +701,25 @@ class VconProcessorIO():
     for name in formats.keys():
       # Do not recurse
       if(name != "format_options"):
-        options[name] = formats[name].format(**self._parameters)
+        try:
+          new_value = formats[name].format(**self._parameters)
+        except KeyError as key_not_found:
+          raise ParameterNotFound("key in: {} not found in ProcessorIO parameters: {} when formatting: {}".format(
+              formats[name],
+              list(self._parameters.keys()),
+              name
+             )) from key_not_found
+        logger.debug('setting "{}" to "{}" type: {}'.format(
+            name,
+            new_value,
+            type(new_value)
+          ))
+        options[name] = new_value
 
 
   def format_parameters_to_options(
       self,
-      options: VconProcessorOptions
+      options: typing.Union[VconProcessorOptions, typing.Dict[str, typing.Any]]
     ) -> VconProcessorOptions:
     """
     Format/apply parameters to string values in options
@@ -715,6 +751,68 @@ class VconProcessorIO():
       )
 
     return(response_output)
+
+  def add_vcon_uuid_queue_job(
+      self,
+      queue_name: str,
+      vcon_uuids: typing.List[str],
+      from_queue: typing.Union[str, None],
+
+    ) -> None:
+    """
+    Add a queue job to this **VconProcessorIO** to be queued when the processor(s) have all been processed.
+    Note: jobs do NOT get commit to the database.  They are only added to this **VconProcessorIO** object.
+    """
+
+    if(len(vcon_uuids) < 0):
+      raise Exception("no vCon UUIDs provided")
+
+    job: typing.Dict[str, typing.Any] = {}
+    job["job_type"] = "vcon_uuid"
+    job["to_queue"] = queue_name
+    job["vcon_uuids"] = vcon_uuids
+    if(from_queue and len(from_queue) > 0):
+      job["from_queue"] = from_queue
+
+    logger.debug("Adding job: {} to VconProcessorIO queue list".format(job))
+    self._jobs_to_queue.append(job)
+
+
+  def get_queue_job_count(self) -> int:
+    """
+    Returns: (int) number of queue jobs attached to this VconProcessorIO.
+    """
+    return(len(self._jobs_to_queue))
+
+
+  async def commit_queue_jobs(
+      self,
+      job_queue: py_vcon_server.queue.JobQueue
+    ) -> int:
+    """
+    Queue the jobs in the VconProcessorIO's list of jobs to queue
+
+    Returns: (int) number of jobs queue
+    """
+
+    jobs_queued = 0
+
+    for job in self._jobs_to_queue:
+      queue_name = job.get("to_queue", None)
+      if(job["job_type"] != "vcon_uuid"):
+        raise Exception("invalid job type in VconProcessorIO: {}".format(job))
+      if(queue_name and len(queue_name)):
+         await job_queue.push_vcon_uuid_queue_job(
+            queue_name,
+            job.get("vcon_uuids", []),
+            job.get("from_queue", None)
+          )
+         jobs_queued += 1
+
+      else:
+        raise Exception("invalid job to queue in VconProcessorIO: {}".format(job))
+
+    return(jobs_queued)
 
 
 class VconProcessor():
