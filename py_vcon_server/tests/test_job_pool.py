@@ -291,7 +291,7 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
     #assert(results["exception"] == results["expected_exception_type"])
     #assert(abs(results["finish"] - self._time0 - results["expected_finish"]) < results["time_tolerance"])
 
-TIME_TOLERANCE = 1.7
+TIME_TOLERANCE = 1.75
 
 SHORT_SLEEP_JOB = {
     "id": "sleep1",

@@ -213,9 +213,9 @@ def tag_operation(func):
   return(func)
 
 
-def tag_redacted(func):
-  """ decorator to tag with redaction category """
-  func._tag = "redacted"
+def tag_vcon_references(func):
+  """ decorator to tag with vCon references category """
+  func._tag = "vcon_references"
   return(func)
 
 
@@ -2259,7 +2259,7 @@ class Vcon():
     return(uuid)
 
 
-  @tag_redacted
+  @tag_vcon_references
   def set_redacted(self, uuid: str, redacted_type: str) -> None:
     """
     Set/replace the parameters of the Redacted Object for reference by UUID
@@ -2278,6 +2278,50 @@ class Vcon():
     new_redacted["uuid"] = uuid
 
     self._vcon_dict[Vcon.REDACTED] = new_redacted
+
+
+  @tag_vcon_references
+  def set_appended(self, uuid: str) -> None:
+    """
+    Set/replace the parameters of the Appended Object for reference by UUID
+
+    Parameters:  
+      **uuid** - the UUID of the vCon that this vCon appends content to
+
+    Returns:  None
+    """
+
+    self._attempting_modify()
+
+    new_appended = {}
+    new_appended["uuid"] = uuid
+
+    self._vcon_dict[Vcon.APPENDED] = new_appended
+
+
+  @tag_vcon_references
+  def add_group_object(self, uuid: str) -> int:
+    """
+    Append a new Group Object to the group list.
+    The Group Object references a vCon by UUID.
+    The group list references vCons which are sub-conversations, part of a larger conversation,
+    defined in this vCon which containes the group list.
+
+    Parameters:  
+      **uuid** - the UUID of the vCon that this vCon appends content to
+
+    Returns:  None
+    """
+
+    self._attempting_modify()
+
+    new_child = {}
+    new_child["uuid"] = uuid
+
+    group_len = len(self._vcon_dict[Vcon.GROUP])
+    self._vcon_dict[Vcon.GROUP].append(new_child)
+
+    return(group_len)
 
 
   @staticmethod

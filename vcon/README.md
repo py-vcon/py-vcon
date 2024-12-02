@@ -29,6 +29,10 @@ The following categories of methods are implemented on the Vcon class.
    * [get_dialog_body](#get_dialog_body)
    * [get_dialog_external_recording](#get_dialog_external_recording)
    * [get_dialog_text](#get_dialog_text)
+ * Methods to reference other vCons from a vCon
+   * [add_group_object](#add_group_object)
+   * [set_appended](#set_appended)
+   * [set_redacted](#set_redacted)
  * Methods to access or modify Vcon Party objects
    * [add_party](#add_party)
    * [find_parties_by_parameter](#find_parties_by_parameter)
@@ -54,8 +58,6 @@ The following categories of methods are implemented on the Vcon class.
    * [set_created_at](#set_created_at)
    * [set_subject](#set_subject)
    * [set_uuid](#set_uuid)
- * Methods to reference the unredacted version of a vCon
-   * [set_redacted](#set_redacted)
  * Methods to sign or verify a signed Vcon
    * [sign](#sign)
    * [verify](#verify)
@@ -332,6 +334,56 @@ Returns:
     * "duration" (int) - optional duration over which the text was typed or spoken
 
   Text dialogs will return a single dict, recording dialogs may return one or more dicts.
+
+
+
+
+## Methods to reference other vCons from a vCon
+
+
+### add_group_object
+
+**add_group_object**(self, uuid: 'str') -> 'int'
+
+
+Append a new Group Object to the group list.
+The Group Object references a vCon by UUID.
+The group list references vCons which are sub-conversations, part of a larger conversation,
+defined in this vCon which containes the group list.
+
+Parameters:  
+  **uuid** - the UUID of the vCon that this vCon appends content to
+
+Returns:  None
+
+
+
+### set_appended
+
+**set_appended**(self, uuid: 'str') -> 'None'
+
+
+Set/replace the parameters of the Appended Object for reference by UUID
+
+Parameters:  
+  **uuid** - the UUID of the vCon that this vCon appends content to
+
+Returns:  None
+
+
+
+### set_redacted
+
+**set_redacted**(self, uuid: 'str', redacted_type: 'str') -> 'None'
+
+
+Set/replace the parameters of the Redacted Object for reference by UUID
+
+Parameters:  
+  **uuid** - the UUID of the less redacted form of this vCon
+  **redacted_type** - the reason or content that was redacted from the referenced vCon
+
+Returns:  None
 
 
 
@@ -706,25 +758,6 @@ Returns:
   UUID version 8 string
   (vCon uuid parameter is also set)
 
-
-
-
-
-## Methods to reference the unredacted version of a vCon
-
-
-### set_redacted
-
-**set_redacted**(self, uuid: 'str', redacted_type: 'str') -> 'None'
-
-
-Set/replace the parameters of the Redacted Object for reference by UUID
-
-Parameters:  
-  **uuid** - the UUID of the less redacted form of this vCon
-  **redacted_type** - the reason or content that was redacted from the referenced vCon
-
-Returns:  None
 
 
 

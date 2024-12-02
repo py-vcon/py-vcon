@@ -49,7 +49,7 @@ async def test_send_email(make_inline_audio_vcon, smtpd):
       text_body = "hello vCon world"
     )
 
-  print("using email proc options: {}".format(email_proc_options.dict()))
+  print("using email proc options: {}".format(email_proc_options.dict(exclude_none=True)))
   proc_output = await email_proc_inst.process(proc_input, email_proc_options)
 
   print("faux SMTP host: {} port: {}".format(smtpd.hostname, smtpd.port))
