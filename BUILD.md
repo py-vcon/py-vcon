@@ -29,7 +29,8 @@ This creates sub-directory dist containing (x.x.x in the names below represents 
   * python_vcon-x.x.x-py3-none-any.whl
   * python_vcon-x.x.x.tar.gz
 
-Test your package files on a clean VM or Docker container following [these instructions](README.MD#testing-the-vcon-package) after installing the vCon package:
+Test your package files on a clean VM or Docker container following [these instructions](README.md#testing-the-vcon-package) after installing the vCon package:
+
     pip3 install dist/python_vcon-<x.x.x..tar.gz
 
 Push the package install files up to the pypi repo.
