@@ -169,12 +169,14 @@ Instructions for building the Vcon package for pypi can be found [here](BUILD.md
 A suite of pytest unit tests exist for the Vcon package in: [tests](tests).
 If you do not run the unit tests in this directory in a clone of the repo, you will need to copy the following directories from the repo in order to run the unit tests:
 
+    mkdir  <your_test_directory>
     cp -r tests examples certs <your_test_directory>
     mkdir <your_test_directory>/py_vcon_server
     cp -r py_vcon_server/tests <your_test_directory>/py_vcon_server
 
 These can be run using the following command in the current directory:
 
+    cd  <your_test_directory>
     export OPENAI_API_KEY="your_openai_api_key_here"
     export DEEPGRAM_KEY="your_deepgram_key_here"
     pytest -v -rP tests
