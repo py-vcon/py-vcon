@@ -10,6 +10,7 @@ Create a clean clone of the branch that you want to build as any files in your d
 
     git clone https://github.com/py-vcon/py-vcon.git
     git checkout [xxxxx_commit_SHA]
+    cd py-vcon/py_vcon_server
 
 Update the package __version__ number in vcon/vcon/__init__.py
 
@@ -21,10 +22,14 @@ In the py_vcon_server directory (root containing setup.py and py_vcon_server sub
 
     python3 -m build
 
-This creates sub-directory dist containing (x.x in the names below represents the version number):
+This creates sub-directory dist containing (x.x.x in the names below represents the version number):
 
-  * py_vcon_server-x.x-py3-none-any.whl
-  * py-vcon-server-x.x.tar.gz
+  * py_vcon_server-x.x.x-py3-none-any.whl
+  * py_vcon_server-x.x.x.tar.gz
+
+Test your package files on a clean VM or Docker container following [these instructions](README.md#testing-the-vcon-server) after installing the py_vcon_server package (replacing x.x.x with the build version number):
+
+    pip3 install dist/py_vcon_server-x.x.x.tar.gz
 
 Push the package install files up to the pypi repo.
 
