@@ -273,12 +273,12 @@ It can be generated like the following command line:
     #!/usr/bin/sh
     export DEEPGRAM_KEY=ccccccccccccc
     export OPENAI_API_KEY=bbbbbbbbbbbbb
-    export HOSTNAME=http://0.0.0.0:8000
+    export REST_URL=http://0.0.0.0:8000
     export VCON_STORAGE_URL=redis://<redis_host_ip>:6379
     export PYTHONPATH=.
     EOF
 
-The unit tests for the server can be run using the following command in this directory:
+The unit tests for the server can be run using the following command in this directory (py-vcon/py_vcon_server):
 
     source testenv
     pytest -v -rP tests
