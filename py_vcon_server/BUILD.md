@@ -27,7 +27,9 @@ This creates sub-directory dist containing (x.x.x in the names below represents 
   * py_vcon_server-x.x.x-py3-none-any.whl
   * py_vcon_server-x.x.x.tar.gz
 
-Test your package files on a clean VM or Docker container following [these instructions](README.md#testing-the-vcon-server) after installing the py_vcon_server package (replacing x.x.x with the build version number):
+Test your package files on a clean VM or Docker container.
+First follow the test file setup instructions for the[ python_vcon pagage testing](README.md#testing-the-vcon-package).
+Then following [these instructions](README.md#testing-the-vcon-server) for test the server after installing the py_vcon_server package (replacing x.x.x with the build version number):
 
     pip3 install dist/py_vcon_server-x.x.x.tar.gz
 
