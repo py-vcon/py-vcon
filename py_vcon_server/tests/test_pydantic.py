@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
 """ Unit tests to test some of the pydantic models """
 import py_vcon_server
 
