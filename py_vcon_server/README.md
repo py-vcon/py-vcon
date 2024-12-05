@@ -9,9 +9,10 @@
 ![python_vcon PyPI Version](https://img.shields.io/pypi/v/py_vcon_server.svg)
 [![vcon server unit tests](https://github.com/py-vcon/py-vcon/actions/workflows/python-server-test.yml/badge.svg?branch=main)](https://github.com/py-vcon/py-vcon/actions)
 
-![Python 3.6](https://img.shields.io/badge/python-3.8-blue.svg)
-![Python 3.6](https://img.shields.io/badge/python-3.9-blue.svg)
-![Python 3.6](https://img.shields.io/badge/python-3.10-blue.svg)
+![Python 3.8](https://img.shields.io/badge/python-3.8-blue.svg)
+![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)
+![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)
+![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)
 
 
 The following is an overview of the Python vCon Server, architecture, components, configuration and use.
@@ -273,12 +274,12 @@ It can be generated like the following command line:
     #!/usr/bin/sh
     export DEEPGRAM_KEY=ccccccccccccc
     export OPENAI_API_KEY=bbbbbbbbbbbbb
-    export REST_URL=http://0.0.0.0:8000
+    export HOSTNAME=http://0.0.0.0:8000
     export VCON_STORAGE_URL=redis://<redis_host_ip>:6379
     export PYTHONPATH=.
     EOF
 
-The unit tests for the server can be run using the following command in this directory (py-vcon/py_vcon_server):
+The unit tests for the server can be run using the following command in this directory:
 
     source testenv
     pytest -v -rP tests
