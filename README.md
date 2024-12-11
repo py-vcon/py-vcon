@@ -69,6 +69,7 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
 
  * Read the [IETF vCon Container Internet Draft (standard work in process)](https://datatracker.ietf.org/doc/html/draft-ietf-vcon-vcon-container)
  * Participate in the [IETF vCon Working Group](https://datatracker.ietf.org/group/vcon/about/)
+ * See the [Fall 2024 VON presentation by Dan Petrie: covering a quick overview of vCon, update on IETF status and introduction to py-vcon packages](http://sipez.com/Dan_Petrie_vCon_workshop_Fall_VON_2024.mp4)
  * See the [vCon presentation at the SIP Forum AI Summit](https://register.gotowebinar.com/register/408072084535831130)
  * Read the [IETF Contact Center Requirements draft proposal](https://datatracker.ietf.org/doc/draft-rosenberg-vcon-cc-usecases/)
  * Read the [white paper](https://docs.google.com/document/d/1TV8j29knVoOJcZvMHVFDaan0OVfraH_-nrS5gW4-DEA/edit?usp=sharing)
