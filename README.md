@@ -174,6 +174,7 @@ If you do not run the unit tests in this directory in a clone of the repo, you w
     cp -r tests examples certs <your_test_directory>
     mkdir <your_test_directory>/py_vcon_server
     cp -r py_vcon_server/tests <your_test_directory>/py_vcon_server
+    cp -r py_vcon_server/test_processors <your_test_directory>/py_vcon_server
 
 These can be run using the following command in the current directory:
 
