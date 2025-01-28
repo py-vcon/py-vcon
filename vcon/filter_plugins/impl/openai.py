@@ -602,13 +602,13 @@ class OpenAIChatCompletion(OpenAICompletion):
       for text_index, text_dict in enumerate(this_dialog_texts):
         try:
           party_label = self.get_party_label(in_vcon, text_dict["parties"], True)
-        except AttributeError as e:
+        except (AttributeError, KeyError) as e:
           logger.exception(e)
           logger.warning("vcon: {} get_dialog_text dialog_index: {} text[{}]: missing parties: {}".format(
             in_vcon.uuid,
             dialog_index,
             text_index,
-            text_dict["parties"]
+            text_dict.get("parties", None)
             ))
           party_label = "unknown"
 
