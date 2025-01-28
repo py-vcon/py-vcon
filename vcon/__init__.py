@@ -512,6 +512,7 @@ class Vcon():
     if(self._state != VconStates.UNSIGNED):
       raise InvalidVconState("Cannot modify Vcon unless current state is UNSIGNED.  Current state: {}".format(self._state))
 
+
   def __add_new_party(self, index : int) -> int:
     """
     check if a new party needs to be added to the list
@@ -537,6 +538,33 @@ class Vcon():
           index, len(self._vcon_dict[Vcon.PARTIES])))
 
     return(party)
+
+
+  def __add_new_dialog(self, index : int) -> int:
+    """
+    check if a new dialog needs to be added to the list
+
+    Parameters:
+    index (int): -1 indicates adding a new dialog, positive numbers
+          throw AttributeError if the dialog with that index does not already exist
+
+    Returns:
+      dialog index in the list
+    """
+    self._attempting_modify()
+
+    dialog = index
+    if(dialog == -1):
+      self._vcon_dict[Vcon.DIALOG].append({})
+      dialog = len(self._vcon_dict[Vcon.DIALOG]) - 1
+
+    else:
+      if(not len(self._vcon_dict[Vcon.DIALOG]) > index):
+        raise AttributeError(
+          "index: {} > then dialog List length: {}.  Use index of -1 to add one to the end.".format(
+          index, len(self._vcon_dict[Vcon.DIALOG])))
+
+    return(dialog)
 
 
   def get_conversation_time(self) -> typing.Tuple[str, float]:
@@ -784,6 +812,11 @@ class Vcon():
 
     dialog_index = self.add_dialog_inline_text(email_body, date, 0, party_indices, content_type, file_name)
 
+    # get and save the message-id header as that helps us avoid duplicating
+    # a message and gives us a key to refer back to the SMTP message.
+    message_id = email_message.get("message-id")
+    self.set_dialog_parameter("message_id", message_id)
+
     return(dialog_index)
 
 
@@ -911,7 +944,11 @@ class Vcon():
     if(dialog["type"] == "text"):
       #logger.debug("get_dialog_text mime type:{}".format(dialog["mimetype"]))
       text_dict = {}
-      text_dict["party"] = dialog["parties"][0]
+      if("parties" in dialog):
+        if(isinstance(dialog["parties"], list)):
+          text_dict["party"] = dialog["parties"][0]
+        elif(isinstance(dialog["parties"], int)):
+          text_dict["party"] = dialog["parties"]
       text_dict["start"] = dialog["start"]
       text_dict["duration"] = dialog["duration"]
 
@@ -1176,6 +1213,37 @@ class Vcon():
     self.verify_dialog_external_recording(dialog_index, body)
 
     return(body)
+
+
+  @tag_dialog
+  def set_dialog_parameter(self,
+    parameter_name : str,
+    parameter_value : str,
+    dialog_index : int = -1
+    ) -> int:
+    """
+    Set the named parameter for the given dialog index.  If the index is not provided,
+    add a new dialog to the vCon Dialog Object array.
+
+    Parameters:
+      **parameter_name** (String) - name of the Dialog Object parameter to be set.
+      **parameter_value** (String) - new value to set for the named parameter
+      **dialog_index** (int) - index of dialog to set tel url on
+                  (-1 indicates a new dialog should be added)
+
+    Returns:
+    int: if success, positive int index of party in list
+    """
+
+    self._attempting_modify()
+
+    dialog_index = self.__add_new_dialog(dialog_index)
+
+    # TODO parameter specific validation
+    self._vcon_dict[Vcon.DIALOG][dialog_index][parameter_name] = parameter_value
+
+    return(dialog_index)
+
 
   @tag_signing
   def verify_dialog_external_recording(self, dialog_index : int, body : bytes) -> None:
