@@ -15,7 +15,7 @@ class JQOptions(py_vcon_server.processor.VconProcessorOptions):
   jq_queries: typing.Dict[str, str] = pydantic.Field(
       title = "dict of JQ queries to perform on VconProcessorIO input.",
       example = {
-          "party_count": ".parties | length",
+          "party_count": ".vcons[0].parties | length",
           "first_dialog_type": ".vcons[0].dialog[0].type",
           "party0_has_email_address": ".vcons[0].parties[0].email | length > 0"
         },
@@ -68,6 +68,10 @@ class JQProcessor(py_vcon_server.processor.VconProcessor):
       logger.warning("jq processor option 'jq_queries' is empty")
 
     for parameter_name in options.jq_queries.keys():
+       logger.debug("parameter: \"{}\" defined by jq query: '{}'".format(
+           parameter_name,
+           options.jq_queries[parameter_name]
+         ))
        query_result = pyjq.all(options.jq_queries[parameter_name],
          dict_to_query)[0]
        logger.debug("setting parameter: {} to {}".format(
