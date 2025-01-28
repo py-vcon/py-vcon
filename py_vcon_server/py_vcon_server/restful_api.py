@@ -58,7 +58,7 @@ class InternalErrorResponse(fastapi.responses.JSONResponse):
             "exception": "{}".format(exception),
             "exception_args": "{}".format(exception.args),
             #"exception_dir": "{}".format(dir(exception)),
-            "exception_module": "{}".format(exception.__module__),
+            "exception_module": "{}".format(getattr(exception, "__module__", None)),
             "exception_class": "{}".format(exception.__class__.__name__),
             "exception_stack": "{}".format(traceback.format_exception(None, exception, exception.__traceback__))
           }
