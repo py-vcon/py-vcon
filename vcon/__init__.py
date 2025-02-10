@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """
 Module for creating and modifying vCon conversation containers.
 see https:/vcon.dev
@@ -815,7 +815,7 @@ class Vcon():
     # get and save the message-id header as that helps us avoid duplicating
     # a message and gives us a key to refer back to the SMTP message.
     message_id = email_message.get("message-id")
-    self.set_dialog_parameter("message_id", message_id)
+    self.set_dialog_parameter("message_id", message_id, dialog_index)
 
     return(dialog_index)
 
