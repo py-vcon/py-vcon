@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ FilterPlugin for jq query based redaction of vCon """
 import typing
 import pyjq
@@ -10,8 +10,11 @@ class JqRedactionInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
   title = "Initialization options for JQ redaction filter_plugin"
   ):
-  pass
-
+  """
+  JqRedactionInitOptions is a FilterPluginInitOptions with no added fields.
+  A FilterPluginInitOptions is passed to the JqRedaction filter_plugin when
+  it is first initialized.
+  """
 
 class JqRedactionOptions(
   vcon.filter_plugins.FilterPluginOptions,
