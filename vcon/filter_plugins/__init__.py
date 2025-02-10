@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Vcon module providing frameword for filter plugins which take a Von in and provide a Vcon output """
 from __future__ import annotations
 import importlib
@@ -11,6 +11,7 @@ import operator
 import logging
 import pydantic
 import pythonjsonlogger.jsonlogger
+import vcon.pydantic_utils
 
 
 # This package is dependent upon the vcon package only for typing purposes.
@@ -60,7 +61,7 @@ class FilterPluginAlreadyRegistered(Exception):
   """ Thrown when plugin already exists in the FilterPluginRegistry """
 
 
-class FilterPluginInitOptions(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class FilterPluginInitOptions(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   """ base class for **FilterPlugin** initialization options """
 
   def __init_subclass__(cls, field_defaults = {}, **kwargs):
@@ -75,7 +76,7 @@ class FilterPluginInitOptions(pydantic.BaseModel, extra=pydantic.Extra.allow):
       cls.__fields__[field_name].default = new_default
 
 
-class FilterPluginOptions(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class FilterPluginOptions(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   """ base class for **FilterPlugin.filter** method options """
 
   def __init_subclass__(cls, field_defaults = {}, **kwargs):
@@ -87,7 +88,7 @@ class FilterPluginOptions(pydantic.BaseModel, extra=pydantic.Extra.allow):
     """
     super().__init_subclass__(**kwargs)
     for field_name, new_default in field_defaults.items():
-      cls.__fields__[field_name].default = new_default
+      vcon.pydantic_utils.set_field_default(cls, field_name, new_default)
 
 
 class TranscribeOptions(FilterPluginOptions):
