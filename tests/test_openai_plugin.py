@@ -1,10 +1,11 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit test for OpenAI filter plugins """
 import os
 import json
 import pydantic
 import vcon
 import vcon.filter_plugins.impl.openai
+import vcon.pydantic_utils
 import pytest
 
 
@@ -21,7 +22,7 @@ def test_1_options():
     init_options = vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions(**init_options_dict)
     raise Exception("Expected exception due to missing openai_api_key")
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     # expected
     pass
 
