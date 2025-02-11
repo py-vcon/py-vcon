@@ -1,6 +1,5 @@
 # Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import pydantic
-import pydantic_core
 
 pydantic_major, pydantic_minor, pydantic_release = pydantic.__version__.split(".")
 
@@ -22,7 +21,16 @@ if(pydantic_major == '1'):
     return(pydantic_type.schema())
 
 
+  def get_fields_set(model):
+    return(model.__fields_set__)
+
+
+  def get_dict(model, exclude_none=True):
+    return(model.dict(exclude_none = exclude_none))
+
+
 elif(pydantic_major == '2'):
+  import pydantic_core
   import pydantic.fields
   ValidationErrorType = pydantic_core._pydantic_core.ValidationError
   FieldInfo = pydantic.fields.FieldInfo
@@ -40,6 +48,15 @@ elif(pydantic_major == '2'):
 
   def get_model_schema(pydantic_type):
     return(pydantic_type.model_json_schema())
+
+
+  def get_fields_set(model):
+    return(model.model_fields_set)
+
+
+  def get_dict(model, exclude_none=True):
+    return(model.model_dump(exclude_none = exclude_none))
+
 
 else:
   raise Exception("unsupported major version of pydantic: {} ({})".format(pydantic_major, pydantic.__version__))
