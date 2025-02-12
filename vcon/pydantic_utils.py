@@ -5,6 +5,8 @@ pydantic_major, pydantic_minor, pydantic_release = pydantic.__version__.split(".
 
 if(pydantic_major == '1'):
   ValidationErrorType = pydantic.error_wrappers.ValidationError
+  IntParseError = "type_error.integer"
+  FloatParseError = "type_error.float"
   FieldInfo = pydantic.fields.ModelField
   ALLOW = pydantic.Extra.allow
   SET_ALLOW = {'extra': ALLOW}
@@ -33,6 +35,8 @@ elif(pydantic_major == '2'):
   import pydantic_core
   import pydantic.fields
   ValidationErrorType = pydantic_core._pydantic_core.ValidationError
+  IntParseError = "int_parsing"
+  FloatParseError = "float_parsing"
   FieldInfo = pydantic.fields.FieldInfo
   ALLOW = 'allow'
   SET_ALLOW = {'extra': ALLOW}
