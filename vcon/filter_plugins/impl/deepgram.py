@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ FilterPlugin for Deepgram transcription """
 import typing
 import json
@@ -30,7 +30,7 @@ It is required to use this **FilterPlugin**.
 
 You can get one at: https://console.deepgram.com/signup?jump=keys
 """,
-    example = "123456789e96a1da774e57abcdefghijklmnop",
+    examples = ["123456789e96a1da774e57abcdefghijklmnop"],
     default = ""
     )
 
