@@ -407,7 +407,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(len(make_inline_audio_vcon.dialog) == 1)
     assert(len(make_inline_audio_vcon.analysis) == 0)
     inline_audio_vcon_dict = make_inline_audio_vcon.dumpd()
-    test_parsed_model = py_vcon_server.processor.VconUnsignedObject.model_validate(inline_audio_vcon_dict)
+    test_parsed_model = vcon.pydantic_utils.validate_construct(py_vcon_server.processor.VconUnsignedObject, inline_audio_vcon_dict)
     set_response = client.post("/vcon", json = inline_audio_vcon_dict)
     assert(set_response.status_code == 204)
     assert(make_inline_audio_vcon.uuid == UUID)
@@ -664,7 +664,7 @@ async def test_pipeline_conditional(make_inline_audio_vcon: vcon.Vcon):
     assert(set_response.status_code == 204)
     assert(len(resp_content) == 0)
     # check the model
-    py_vcon_server.processor.VconUnsignedObject.model_validate(make_inline_audio_vcon.dumpd())
+    vcon.pydantic_utils.validate_construct(py_vcon_server.processor.VconUnsignedObject, make_inline_audio_vcon.dumpd())
 
     # run with vCon in body, should succeed
     post_response = client.post(
