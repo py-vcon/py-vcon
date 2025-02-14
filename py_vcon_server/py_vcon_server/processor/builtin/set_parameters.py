@@ -1,13 +1,23 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 
 import typing
 import pydantic
 import py_vcon_server.processor
 
 class SetParametersInitOptions(py_vcon_server.processor.VconProcessorInitOptions):
-  pass
+  """
+  SetParametersInitOptions is passed to the set_parameters processor when it is initialized.
+  SetParametersInitOptions extends VconProcessorInitOptions, but does not add any new fields.
+  """
 
 class SetParametersOptions(py_vcon_server.processor.VconProcessorOptions):
+  """
+  SetParametersOptions is passed to the set_parameters processor and is used
+  to set one or more parameter values from the given dict of parameters.  The
+  input parameters as well as those set or overwritten by the set_parameters
+  processor are passed on via the VconProcessorIO to the subsquent processors
+  in the pipeline.
+  """
   parameters: typing.Dict[str, typing.Any] = pydantic.Field(
       title = "dict of parameters to set in the output from VconProcessor",
       default = {}
