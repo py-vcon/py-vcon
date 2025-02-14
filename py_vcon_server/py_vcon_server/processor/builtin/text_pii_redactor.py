@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 
 import typing
 import pydantic
@@ -13,14 +13,22 @@ class TextPiiRedactorInitOptions(py_vcon_server.processor.VconProcessorInitOptio
       vcon.filter_plugins.impl.jq_redaction.JqRedactionInitOptions,
       vcon.filter_plugins.impl.redact_pii.RedactPiiInitOptions
     ):
-  pass
+  """
+  TextPiiRedactorInitOptions is passed to the test_pii_redactor processor when it is initialized.
+  TextPiiRedactorInitOptions extends VconProcessorInitOptions, but does not add any new fields.
+  """
 
 
 class TextPiiRedactorOptions(py_vcon_server.processor.VconProcessorOptions,
       vcon.filter_plugins.impl.jq_redaction.JqRedactionOptions,
       vcon.filter_plugins.impl.redact_pii.RedactPiiOptions
     ):
-  pass
+  """
+  TextPiiRedactorOptions provides the filter_plugin PII redaction options which
+  defines how the transcript(s) is redacted for PII as well
+  as the filter_plugin jq query options which defines which parameters are
+  redacted from the original vCon.
+  """
   # TODO: set the default JQ query to redact audio, video and unredacted text
 
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Implementation of the Vcon API entry points """
 
 import os
@@ -12,6 +12,7 @@ import py_vcon_server.processor
 import py_vcon_server.logging_utils
 import vcon
 import vcon.utils
+import vcon.pydantic_utils
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
@@ -65,7 +66,7 @@ def init(restapi):
     Store the given vCon in VconStorage, replace if it exists for the given UUID
     """
     try:
-      vcon_dict = inbound_vcon.dict(exclude_none = True)
+      vcon_dict = vcon.pydantic_utils.get_dict(inbound_vcon, exclude_none = True)
 
       vcon_uuid = vcon_dict.get("uuid", None)
       logger.debug("setting vcon UUID: {}".format(vcon_uuid))
@@ -186,7 +187,7 @@ def init(restapi):
         await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
 
         # format_options for dynamic options
-        formatted_options_dict = processor_input.format_parameters_to_options(options.dict())
+        formatted_options_dict = processor_input.format_parameters_to_options(vcon.pydantic_utils.get_dict(options))
         processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
 
         logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
@@ -227,7 +228,7 @@ def init(restapi):
         py_vcon_server.restful_api.log_exception(e)
         return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
-      return(fastapi.responses.JSONResponse(content = response_output.dict(exclude_none = True)))
+      return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(response_output, exclude_none = True)))
 
   async def do_run_pipeline(
       vCon: typing.Union[vcon.Vcon, str],
@@ -272,7 +273,7 @@ def init(restapi):
       # Optionally return the pipeline output
       if(return_results):
         pipe_out = await pipeline_output.get_output()
-        return(fastapi.responses.JSONResponse(content = pipe_out.dict(exclude_none=True)))
+        return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(pipe_out, exclude_none=True)))
 
 
   pipeline_responses = copy.deepcopy(py_vcon_server.restful_api.ERROR_RESPONSES)
@@ -322,14 +323,14 @@ def init(restapi):
 
     logger.debug("run_pipeline( pipeline: {} vCon with UUID: {} save: {} return: {}".format(
         name,
-        vCon.dict(exclude_none=True).get("uuid", None),
+        vcon.pydantic_utils.get_dict(vCon, exclude_none=True).get("uuid", None),
         save_vcons,
         return_results
       ))
 
     try:
       vcon_object = vcon.Vcon()
-      vcon_object.loadd(vCon.dict(exclude_none=True))
+      vcon_object.loadd(vcon.pydantic_utils.get_dict(vCon, exclude_none=True))
 
       # TODO: verify the UUID for the given vCon does not exist in storage
 

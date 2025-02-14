@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 
 import typing
 import email.message
@@ -9,9 +9,16 @@ import py_vcon_server.processor
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 class SendEmailInitOptions(py_vcon_server.processor.VconProcessorInitOptions):
-  pass
+  """
+  SendEmailInitOptions is passed to the send_email processor when it is initialized.
+  SendEmailInitOptions extends VconProcessorInitOptions, but does not add any new fields.
+  """
 
 class SendEmailOptions(py_vcon_server.processor.VconProcessorOptions):
+  """
+  SendEmailOptions provides the SMTP headers and message data required to send
+  an SMTP email message.  SendEmailOptions is passed to the send_email processor.
+  """
   smtp_host: str = pydantic.Field(
       title = "SMTP server host to connect to, to send email messages",
       description = "Should be set if authentication is required.  If unset or emtpy string, the server name in the To address is used",
