@@ -1,10 +1,11 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit tests for text_pii_redactor processor """
 import pydantic
 import pytest
 import pytest_asyncio
 import fastapi.testclient
 import vcon
+import vcon.pydantic_utils
 import py_vcon_server
 from py_vcon_server.settings import VCON_STORAGE_URL
 from common_setup import UUID
@@ -45,7 +46,7 @@ async def test_text_pii_redactor_processor() -> None:
   try:
     proc_output = await text_redact_proc_inst.process(proc_input, text_redact_options)
     raise Exception("Should have rasied excepiotn as options parameters jq_redaction_query and redaction_type_label not set")
-  except pydantic.error_wrappers.ValidationError as option_error:
+  except vcon.pydantic_utils.ValidationErrorType as option_error:
     # expected
     pass
 
