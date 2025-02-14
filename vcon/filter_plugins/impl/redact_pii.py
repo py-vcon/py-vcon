@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import typing
 import tempfile
 import csv
@@ -22,8 +22,13 @@ ANALYSIS_PRODUCT    = 'dataprofiler'
 ANALYSIS_SCHEMA     = 'data_labeler_schema'
 
 class RedactPiiInitOptions(vcon.filter_plugins.FilterPluginInitOptions):
+  """
+  A RedactPiiInitOptions is derived from FilterPluginInitOptions
+  with no added fields.  A RedactPiiInitOptions is passed to the
+  RedactPii plugin when it is initialized.
+  """
   # nothing to initialize here
-  pass
+
 
 class RedactPiiOptions(vcon.filter_plugins.FilterPluginOptions):
   """

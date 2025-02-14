@@ -24,10 +24,14 @@ In the vcon directory (root containing setup.py and vcon sub-directory):
 
     python3 -m build
 
-This creates sub-directory dist containing (x.x in the names below represents the version number):
+This creates sub-directory dist containing (x.x.x in the names below represents the build version number):
 
-  * py_vcon-x.x-py3-none-any.whl
-  * py-vcon-x.x.tar.gz
+  * python_vcon-x.x.x-py3-none-any.whl
+  * python_vcon-x.x.x.tar.gz
+
+Test your package files on a clean VM or Docker container following [these instructions](README.md#testing-the-vcon-package) after installing the vCon package (replacing x.x.x with the build version number):
+
+    pip3 install dist/python_vcon-x.x.x.tar.gz
 
 Push the package install files up to the pypi repo.
 

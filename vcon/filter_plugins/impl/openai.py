@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ OpenAI FilterPlugin implentation """
 import typing
 import datetime
@@ -37,7 +37,7 @@ It is required to use this **FilterPlugin**.
 
 You can get one at: https://platform.openai.com/account/api-keys
 """,
-    example = "sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu"
+    examples = ["sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu"]
     )
 
 
@@ -489,8 +489,11 @@ class OpenAIChatCompletionInitOptions(
   field_defaults = chat_completions_init_options_defaults,
   title = "OpenAI/ChatGPT Chat Completion **FilterPlugin** intialization object"
   ):
-  pass
-
+  """
+  A OpenAIChatCompletionInitOptions is derived from OpenAICompletionInitOptions
+  with no added fields.  An OpenAIChatCompletionInitOptions is passed to the
+  OpenAIChatCompletion plugin when it is initialized.
+  """
 
 chat_completion_options_defaults = {
   "jq_result": ".choices[0].message.content",
@@ -505,7 +508,11 @@ class OpenAIChatCompletionOptions(
   field_defaults = chat_completion_options_defaults,
   title = "OpenAI Chat Completion filter method options"
   ):
-  pass
+  """
+  Options for OpenAIChatCompletion.  Does not add any fields to the
+  OpenAICompletionOptions from which OpenAIChatCompletionOptions is
+  derived.
+  """
 
 
 class OpenAIChatCompletion(OpenAICompletion):
@@ -602,13 +609,13 @@ class OpenAIChatCompletion(OpenAICompletion):
       for text_index, text_dict in enumerate(this_dialog_texts):
         try:
           party_label = self.get_party_label(in_vcon, text_dict["parties"], True)
-        except AttributeError as e:
+        except (AttributeError, KeyError) as e:
           logger.exception(e)
           logger.warning("vcon: {} get_dialog_text dialog_index: {} text[{}]: missing parties: {}".format(
             in_vcon.uuid,
             dialog_index,
             text_index,
-            text_dict["parties"]
+            text_dict.get("parties", None)
             ))
           party_label = "unknown"
 
