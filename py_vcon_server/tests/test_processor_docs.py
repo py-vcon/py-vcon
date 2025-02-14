@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 
 """ Generate doc/README.md for processor plugins """
 import os
@@ -7,6 +7,7 @@ import typing
 import inspect
 import pydantic
 import importlib
+import vcon.pydantic_utils
 import py_vcon_server.processor
 
 
@@ -223,7 +224,7 @@ def collect_options_data(
 
   assert(issubclass(options_type, pydantic.BaseModel))
   print("options {} dir: {}".format(options_type.__name__, dir(options_type)))
-  schema = options_type.schema()
+  schema = vcon.pydantic_utils.get_model_schema(options_type)
   class_data = {}
   # TODO fix module name (always "abc")
   class_data["class_path"] = processor_type.__module__ + "." + options_type.__name__
@@ -232,17 +233,19 @@ def collect_options_data(
   class_data["class_fields"] = "TBD"
 
   field_data_text = ""
-  for _, field in options_type.__fields__.items():
-    assert(isinstance(field, pydantic.fields.ModelField))
+  for _, field in vcon.pydantic_utils.get_field_items(options_type):
+    assert(isinstance(field, vcon.pydantic_utils.FieldInfo))
     field_data: typing.Dict[str, str] = {}
     for attribute in PYDANTIC_FIELD_ATTRIBUTES:
       if(hasattr(field, attribute)):
         value = getattr(field, attribute)
-      elif(hasattr(field.field_info, attribute)):
+      elif(hasattr(field, "field_info") and
+        hasattr(field.field_info, attribute)):
         value = getattr(field.field_info, attribute)
       else:
         value = None
-      if(value is None):
+      if(value is None and
+        hasattr(field, "field_info")):
         value = field.field_info.extra.get(attribute, None)
       #if(value is not None):
       field_data[attribute] = value
