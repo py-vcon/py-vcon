@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 
 import typing
 import pydantic
@@ -6,10 +6,17 @@ import py_vcon_server.processor
 
 
 class QueueJobInitOptions(py_vcon_server.processor.VconProcessorInitOptions):
-  pass
-
+  """
+  QueueJobInitOptions is passed to the queue_job processor when it is initialized.
+  QueueJobInitOptions extends VconProcessorInitOptions, but does not add any new fields.
+  """
 
 class QueueJobOptions(py_vcon_server.processor.VconProcessorOptions):
+  """
+  QueueJobOptions is passed to the jqueue_job processor when processing the given VconProcessorIO.
+  QueueJobOptions indicates where the job is to be queued and optionally labels the queued job
+  with the queue from which it came.
+  """
   queue_name: str = pydantic.Field(
       title = "Job queue name",
       description = "name of the queue to put the job in",
