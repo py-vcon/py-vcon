@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit tests for VconProcessorIO """
 
 import asyncio
@@ -10,6 +10,7 @@ import copy
 import py_vcon_server.processor
 from common_setup import UUID, make_2_party_tel_vcon
 import vcon
+import vcon.pydantic_utils
 from py_vcon_server.settings import VCON_STORAGE_URL
 
 # Stuff to test:
@@ -167,7 +168,7 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   try:
     if_options = py_vcon_server.processor.VconProcessorOptions(should_process = None)
     raise Exception("None should not be accepted as a value for should_process")
-  except pydantic.error_wrappers.ValidationError:
+  except vcon.pydantic_utils.ValidationErrorType:
     # expected
     pass
   if_options = py_vcon_server.processor.VconProcessorOptions(should_process = len(""))
@@ -179,7 +180,7 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   try:
     if_options = py_vcon_server.processor.VconProcessorOptions(should_process = 4)
     raise Exception("int greater than 1 should not be accepted as a value for should_process")
-  except pydantic.error_wrappers.ValidationError:
+  except vcon.pydantic_utils.ValidationErrorType:
     # expected
     pass
   if_options = py_vcon_server.processor.VconProcessorOptions(should_process = 0)
