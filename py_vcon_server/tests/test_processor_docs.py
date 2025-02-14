@@ -229,7 +229,10 @@ def collect_options_data(
   # TODO fix module name (always "abc")
   class_data["class_path"] = processor_type.__module__ + "." + options_type.__name__
   class_data["class_title"] = schema.get("title", "")
-  class_data["class_description"] = schema.get("description", "<no class doc>")
+  class_data["class_description"] = schema.get("description", None)
+  if(class_data["class_description"] is None):
+    print("ERROR: class model: {} does not have class documentation".format(class_data["class_path"]))
+  assert(class_data["class_description"] is not None)
   class_data["class_fields"] = "TBD"
 
   field_data_text = ""
@@ -268,6 +271,10 @@ def collect_options_data(
       field_data.get("default", None) is not None):
       # put quotes around default if this is type str
       field_data["default"] = '"{}"'.format(field_data["default"])
+
+    # Clean up pydanticism on default
+    if(field_data["default"]  == "\"PydanticUndefined\""):
+      field_data["default"]  = "None"
 
     # Tweak examples
     if("examples" in field_data and
