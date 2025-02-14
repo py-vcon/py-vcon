@@ -9,10 +9,19 @@ import py_vcon_server.processor
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 class JQInitOptions(py_vcon_server.processor.VconProcessorInitOptions):
-  pass
+  """
+  JQInitOptions is passed to the jq processor when it is initialized.
+  JQInitOptions extends VconProcessorInitOptions, but does not add any
+  new fields.  
+  """
 
 
 class JQOptions(py_vcon_server.processor.VconProcessorOptions):
+  """
+  JOptions is passed to the jq processor when processing the VconProcessorIO.
+  JQOptions adds the jq_queries to VconProcessorOptions which defines the
+  set of querries to perform on the VconProcessorIO.
+  """
   jq_queries: typing.Dict[str, str] = pydantic.Field(
       title = "dict of JQ queries to perform on VconProcessorIO input.",
       examples = [{
