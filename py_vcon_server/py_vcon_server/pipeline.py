@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Vcon Pipeline processor objects and methods """
 import os
 import typing
@@ -7,6 +7,7 @@ import asyncio
 import json
 import pydantic
 import redis
+import vcon.pydantic_utils
 import py_vcon_server.processor
 import py_vcon_server.job_worker_pool
 import py_vcon_server.logging_utils
@@ -54,7 +55,8 @@ class PipelineOptions(pydantic.BaseModel):
   """
 
   save_vcons: typing.Union[bool, None] = pydantic.Field(
-      title = "save/update vCon(s) after pipeline processing"
+      title = "save/update vCon(s) after pipeline processing",
+      default = True
     )
 
   timeout: typing.Union[float, int, None] = pydantic.Field(
@@ -71,14 +73,16 @@ class PipelineOptions(pydantic.BaseModel):
       title = "queue for failed pipeline jobs",
       description = """If any of the processors in the pipeline or dependant DB access fail,
  the job is added to the failure_queue if set.
-"""
+""",
+      default = ""
     )
 
   success_queue: typing.Union[str, None] = pydantic.Field(
       title = "queue for successfully run pipeline jobs",
       description = """If all of the processors in the pipeline succeed in running,
  the job is added to the success_queue if set.
-"""
+""",
+      default = ""
     )
 
 
@@ -201,7 +205,7 @@ class PipelineDb():
     if(isinstance(pipeline, dict)):
       args = [ name, json.dumps(pipeline) ]
     else:
-      args = [ name, json.dumps(pipeline.dict(exclude_none=True)) ]
+      args = [ name, json.dumps(vcon.pydantic_utils.get_dict(pipeline, exclude_none=True)) ]
 
     result = await self._do_lua_set_pipeline(keys = keys, args = args)
     if(result != "OK"):
@@ -319,7 +323,7 @@ class PipelineRunner():
     Returns:
       The output VconProcessorIO from the last VconProcessor in the Pipeline
     """
-    logger.debug("PipelineDef: {}".format(self._pipeline.dict(exclude_none=True)))
+    logger.debug("PipelineDef: {}".format(vcon.pydantic_utils.get_dict(self._pipeline, exclude_none=True)))
     timeout = self._pipeline.pipeline_options.timeout
     run_future = self._do_processes(
         processor_input
@@ -362,7 +366,7 @@ class PipelineRunner():
       # Recaste options to proper type
       # This becomes important when the options has multiple inheretance to get the
       # correct type (e.g. FilterPluginOptions).
-      formatted_options = processor_input.format_parameters_to_options(processor_options.dict())
+      formatted_options = processor_input.format_parameters_to_options(vcon.pydantic_utils.get_dict(processor_options))
       processor_type_options = processor.processor_options_class()(** formatted_options)
       if(processor_type_options.should_process is None):
         raise Exception("pipeline {} processor: {} options should_process not set".format(
@@ -605,7 +609,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       logger.debug("got job from queue: {} job: {}".format(queue_name, job))
 
       # Add pipeline def to job
-      job["pipeline"] = pipe_def.dict(exclude_none=True)
+      job["pipeline"] = vcon.pydantic_utils.get_dict(pipe_def, exclude_none=True)
 
       # Get locks if pipeline needs them
       if(pipe_def.pipeline_options.save_vcons):
