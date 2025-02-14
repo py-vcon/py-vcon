@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 
 import asyncio
 import pytest
@@ -7,6 +7,7 @@ import smtpdfix # provides fixture smtpd, does not need to imported, but
 # makes more obvious error when the fixture is not installed.
 import fastapi.testclient
 import vcon
+import vcon.pydantic_utils
 import py_vcon_server
 from py_vcon_server.settings import VCON_STORAGE_URL
 from common_setup import make_inline_audio_vcon, make_2_party_tel_vcon, UUID
@@ -49,7 +50,7 @@ async def test_send_email(make_inline_audio_vcon, smtpd):
       text_body = "hello vCon world"
     )
 
-  print("using email proc options: {}".format(email_proc_options.dict(exclude_none=True)))
+  print("using email proc options: {}".format(vcon.pydantic_utils.get_dict(email_proc_options, exclude_none=True)))
   proc_output = await email_proc_inst.process(proc_input, email_proc_options)
 
   print("faux SMTP host: {} port: {}".format(smtpd.hostname, smtpd.port))
