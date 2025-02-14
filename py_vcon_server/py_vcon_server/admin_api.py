@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import typing
 import time
 import os
@@ -11,6 +11,7 @@ import py_vcon_server.pipeline
 import py_vcon_server.restful_api
 from . import __version__
 import vcon
+import vcon.pydantic_utils
 
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
@@ -30,15 +31,15 @@ class ServerInfo(pydantic.BaseModel):
     start_time: float = pydantic.Field(
       title = "server start time",
       description = "epoch seconds time at which this server started",
-      example = time.time()
+      examples = [time.time()]
       )
     pid: int = pydantic.Field(
       title = "server process id",
-      example = os.getpid()
+      examples = [os.getpid()]
       )
 
 
-class ServerState(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class ServerState(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
     host: str = pydantic.Field(
       title = "server host",
       description = "the server's host as configured in the REST_URL",
@@ -47,31 +48,30 @@ class ServerState(pydantic.BaseModel, extra=pydantic.Extra.allow):
     port: int = pydantic.Field(
       title = "server port",
       description = "the server's port as configured in the REST_URL",
-      example = 8000
+      examples = [8000]
       )
     pid: int = pydantic.Field(
       title = "server process id",
-      example = os.getpid()
+      examples = [os.getpid()]
       )
     start_time: float = pydantic.Field(
       title = "server start up time",
       description = "epoch seconds time at which this server started",
-      example = time.time()
+      examples = [time.time()]
       )
     num_workers: pydantic.StrictInt = pydantic.Field(
       title = "number of server worker processes",
       description = "the number of pipeline worker processes configured in NUM_WORKERS for this server",
-      example = 4
+      examples = [4]
       )
     state: str = pydantic.Field(
       title = "server state",
       examples = ["starting_up", "running", "shutting_down", "unknown"],
-      example = "running"
       )
     last_heartbeat: float = pydantic.Field(
       title = "heartbeat time stamp",
       description = "epoch seconds time for the last heartbeat on this server",
-      example = time.time()
+      examples = [time.time()]
       )
 
 
@@ -83,7 +83,7 @@ class QueueProperties(pydantic.BaseModel):
       )
 
 
-class QueueJob(pydantic.BaseModel): # may need to add extra=pydantic.Extra.allow
+class QueueJob(pydantic.BaseModel): # may need to add **vcon.pydantic_utils.SET_ALLOW
     job_type: str = pydantic.Field(
       description = "queue job type (currently only \"vcon_uuid\" allowed)",
       default = "vcon_uuid"
@@ -91,7 +91,7 @@ class QueueJob(pydantic.BaseModel): # may need to add extra=pydantic.Extra.allow
     vcon_uuid: typing.List[str] = pydantic.Field(
       title = "vCon UUIDs",
       description = "array of vCon UUIDs (currently must be exactly 1)",
-      example = ["0185656d-fake-UUID-84fd-5b4de1ef42b4"],
+      examples = [["0185656d-fake-UUID-84fd-5b4de1ef42b4"]],
       default = []
       )
 
@@ -100,7 +100,7 @@ class InProgressJob(pydantic.BaseModel):
     jobid: int = pydantic.Field(
       title = "job id",
       description = "unique (across all pipeline servers) integer job id for this in progress job",
-      example = 3456
+      examples = [3456]
       )
     queue: str = pydantic.Field(
       title = "job queue name",
@@ -112,14 +112,14 @@ class InProgressJob(pydantic.BaseModel):
     start: float = pydantic.Field(
       title = "job start time",
       description = "epoch seconds time at which this in progress job started",
-      example = time.time()
+      examples = [time.time()]
       )
     server: str = pydantic.Field(
       title = "server key",
       description = "the server key to the pipeline server upon which this in progress job is running."
       + "<br> server_keys are of the format host:port:pid:start_time"
       + "<br> to iterate server keys see entry point get /servers.",
-      example = "localhost:8000:765:1692125691.2032259"
+      examples = ["localhost:8000:765:1692125691.2032259"]
       )
 
 
@@ -641,7 +641,7 @@ def init(restapi):
             proc_opt.processor_name)
 
           # Validate the processor options
-          processor_inst.processor_options_class()(**proc_opt.processor_options.dict(exclude_none=True))
+          processor_inst.processor_options_class()(**(vcon.pydantic_utils.get_dict(proc_opt.processor_options, exclude_none=True)))
 
         # catch processor not found
         except py_vcon_server.processor.VconProcessorNotRegistered as e:
@@ -692,7 +692,7 @@ def init(restapi):
 
     logger.debug("Returning pipeline: {}".format(name))
 
-    return(fastapi.responses.JSONResponse(content = pipe_def.dict(exclude_none=True)))
+    return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(pipe_def, exclude_none=True)))
 
 
   @restapi.delete("/pipeline/{name}",
