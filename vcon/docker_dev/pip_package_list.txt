@@ -6,7 +6,7 @@ cryptography >= 37
 hsslms
 jose
 openai
-pydantic < 2
+pydantic
 pyjq
 python-jose
 python-dateutil
