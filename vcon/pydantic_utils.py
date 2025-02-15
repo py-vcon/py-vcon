@@ -31,6 +31,10 @@ if(pydantic_major == '1'):
     return(model.dict(exclude_none = exclude_none))
 
 
+  def validate_construct(model_type, data_dict: dict):
+    return(model_type.parse_obj(data_dict))
+
+
 elif(pydantic_major == '2'):
   import pydantic_core
   import pydantic.fields
@@ -60,6 +64,10 @@ elif(pydantic_major == '2'):
 
   def get_dict(model, exclude_none=True):
     return(model.model_dump(exclude_none = exclude_none))
+
+
+  def validate_construct(model_type, data_dict: dict):
+    return(model_type.model_validate(data_dict))
 
 
 else:

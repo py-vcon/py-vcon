@@ -69,6 +69,7 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
 
  * Read the [IETF vCon Container Internet Draft (standard work in process)](https://datatracker.ietf.org/doc/html/draft-ietf-vcon-vcon-container)
  * Participate in the [IETF vCon Working Group](https://datatracker.ietf.org/group/vcon/about/)
+ * See the [Fall 2024 VON presentation by Dan Petrie: covering a quick overview of vCon, update on IETF status and introduction to py-vcon packages](http://sipez.com/Dan_Petrie_vCon_workshop_Fall_VON_2024.mp4)
  * See the [vCon presentation at the SIP Forum AI Summit](https://register.gotowebinar.com/register/408072084535831130)
  * Read the [IETF Contact Center Requirements draft proposal](https://datatracker.ietf.org/doc/draft-rosenberg-vcon-cc-usecases/)
  * Read the [white paper](https://docs.google.com/document/d/1TV8j29knVoOJcZvMHVFDaan0OVfraH_-nrS5gW4-DEA/edit?usp=sharing)
@@ -169,12 +170,15 @@ Instructions for building the Vcon package for pypi can be found [here](BUILD.md
 A suite of pytest unit tests exist for the Vcon package in: [tests](tests).
 If you do not run the unit tests in this directory in a clone of the repo, you will need to copy the following directories from the repo in order to run the unit tests:
 
+    mkdir  <your_test_directory>
     cp -r tests examples certs <your_test_directory>
     mkdir <your_test_directory>/py_vcon_server
     cp -r py_vcon_server/tests <your_test_directory>/py_vcon_server
+    cp -r py_vcon_server/test_processors <your_test_directory>/py_vcon_server
 
 These can be run using the following command in the current directory:
 
+    cd  <your_test_directory>
     export OPENAI_API_KEY="your_openai_api_key_here"
     export DEEPGRAM_KEY="your_deepgram_key_here"
     pytest -v -rP tests

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit tests for Pipeline and related data objects """
 import pydantic
 import pytest
@@ -6,6 +6,7 @@ import pytest_asyncio
 import copy
 import fastapi.testclient
 import vcon
+import vcon.pydantic_utils
 import py_vcon_server.pipeline
 from py_vcon_server.settings import PIPELINE_DB_URL
 from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
@@ -52,8 +53,8 @@ def test_pipeline_objects():
   assert(proc1.processor_options.input_vcon_index == 0)
   assert(proc1.processor_options.a == 3)
   assert(proc1.processor_options.b == "abc")
-  assert("b" in proc1.processor_options.__fields_set__)
-  assert("c" not in proc1.processor_options.__fields_set__)
+  assert("b" in vcon.pydantic_utils.get_fields_set(proc1.processor_options))
+  assert("c" not in vcon.pydantic_utils.get_fields_set(proc1.processor_options))
 
   processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
       "whisper_base"
@@ -73,17 +74,17 @@ def test_pipeline_objects():
         timeout = "ddd"
       )
     raise Exception("Should raise validation error for timeout not an int")
-  except pydantic.error_wrappers.ValidationError as ve:
+  except vcon.pydantic_utils.ValidationErrorType as ve:
     # Expected
     #print("ve dir: {}".format(dir(ve)))
     errors_dict = ve.errors()
     #print("error: {}".format(errors_dict[0]))
     assert(errors_dict[0]["loc"][0] == "timeout")
-    assert(errors_dict[0]["type"] == "type_error.integer"
-      or errors_dict[0]["type"] == "type_error.float")
+    assert(errors_dict[0]["type"] == vcon.pydantic_utils.IntParseError
+      or errors_dict[0]["type"] == vcon.pydantic_utils.FloatParseError)
     assert(errors_dict[1]["loc"][0] == "timeout")
-    assert(errors_dict[1]["type"] == "type_error.integer"
-      or errors_dict[1]["type"] == "type_error.float")
+    assert(errors_dict[1]["type"] == vcon.pydantic_utils.IntParseError
+      or errors_dict[1]["type"] == vcon.pydantic_utils.FloatParseError)
     print("validation error: {}".format(errors_dict[0]["msg"]))
 
   pipe1_def = py_vcon_server.pipeline.PipelineDefinition(
@@ -101,18 +102,18 @@ def test_pipeline_objects():
         processors = [ proc1, proc2 ]
       )
     raise Exception("Should raise validation error for timeout not an int")
-  except pydantic.error_wrappers.ValidationError as ve:
+  except vcon.pydantic_utils.ValidationErrorType as ve:
     # Expected
     #print("ve dir: {}".format(dir(ve)))
     errors_dict = ve.errors()
     #print("error: {}".format(errors_dict[0]))
     assert(errors_dict[0]["loc"][0] == "pipeline_options")
     assert(errors_dict[0]["loc"][1] == "timeout")
-    assert(errors_dict[0]["type"] == "type_error.integer"
-      or errors_dict[0]["type"] == "type_error.float")
+    assert(errors_dict[0]["type"] == vcon.pydantic_utils.IntParseError
+      or errors_dict[0]["type"] == vcon.pydantic_utils.FloatParseError)
     assert(errors_dict[1]["loc"][1] == "timeout")
-    assert(errors_dict[1]["type"] == "type_error.integer"
-      or errors_dict[1]["type"] == "type_error.float")
+    assert(errors_dict[1]["type"] == vcon.pydantic_utils.IntParseError
+      or errors_dict[1]["type"] == vcon.pydantic_utils.FloatParseError)
     print("validation error: {}".format(errors_dict[0]["msg"]))
 
   pipe_def_dict = {
@@ -405,7 +406,9 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     # put the vcon in Storage in a known state
     assert(len(make_inline_audio_vcon.dialog) == 1)
     assert(len(make_inline_audio_vcon.analysis) == 0)
-    set_response = client.post("/vcon", json = make_inline_audio_vcon.dumpd())
+    inline_audio_vcon_dict = make_inline_audio_vcon.dumpd()
+    test_parsed_model = vcon.pydantic_utils.validate_construct(py_vcon_server.processor.VconUnsignedObject, inline_audio_vcon_dict)
+    set_response = client.post("/vcon", json = inline_audio_vcon_dict)
     assert(set_response.status_code == 204)
     assert(make_inline_audio_vcon.uuid == UUID)
 
@@ -477,11 +480,11 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(len(pipe_def.processors) == 2)
     assert(pipe_def.processors[0].processor_name == "deepgram")
     # Expecting: format_options, should_process and input_vcon_index in dict
-    assert(len(pipe_def.processors[0].processor_options.dict(exclude_none=True)) == 3)
+    assert(len(vcon.pydantic_utils.get_dict(pipe_def.processors[0].processor_options, exclude_none=True)) == 3)
     assert(pipe_def.processors[0].processor_options.input_vcon_index == 0)
     assert(pipe_def.processors[0].processor_options.should_process == True)
     assert(pipe_def.processors[1].processor_name == "openai_chat_completion")
-    assert(len(pipe_def.processors[1].processor_options.dict(exclude_none=True)) == 3)
+    assert(len(vcon.pydantic_utils.get_dict(pipe_def.processors[1].processor_options, exclude_none=True)) == 3)
     assert(pipe_def.processors[1].processor_options.input_vcon_index == 0)
     assert(pipe_def.processors[1].processor_options.should_process == True)
 
@@ -660,6 +663,8 @@ async def test_pipeline_conditional(make_inline_audio_vcon: vcon.Vcon):
         ))
     assert(set_response.status_code == 204)
     assert(len(resp_content) == 0)
+    # check the model
+    vcon.pydantic_utils.validate_construct(py_vcon_server.processor.VconUnsignedObject, make_inline_audio_vcon.dumpd())
 
     # run with vCon in body, should succeed
     post_response = client.post(

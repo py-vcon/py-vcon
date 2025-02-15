@@ -92,7 +92,7 @@ setuptools.setup(
       # These are needed for unit tests:
       # ("tests", ["tests/hello.wav", "tests/hello.m4a"]),
     ],
-  python_requires=">=3.7",
+  python_requires=">=3.8",
   tests_require=['pytest', 'pytest-asyncio', 'pytest-dependency', "pytest_httpserver"],
   install_requires = REQUIRES,
   #scripts=['vcon/bin/vcon'],

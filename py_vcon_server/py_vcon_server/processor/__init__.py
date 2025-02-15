@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Abstract VconProcessor and registry """
 
 import enum
@@ -12,6 +12,7 @@ import pydantic
 #from py_vcon_server.db import VconStorage
 import py_vcon_server.logging_utils
 import vcon
+import vcon.pydantic_utils
 if typing.TYPE_CHECKING:
   import py_vcon_server.queue
 
@@ -275,55 +276,64 @@ class MultifariousVcon():
     return(vcon_type)
 
 
-class VconPartiesObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class VconPartiesObject(pydantic.BaseModel,**vcon.pydantic_utils.SET_ALLOW):
   # TODO: figure out how to make pydantic not add: tel: None
   tel: typing.Optional[str] = pydantic.Field(
       title = "tel uri",
       description = "a telephone number",
-      example = "+1 123 456 7890"
+      examples = ["+1 123 456 7890"],
+      default = None
     )
 
   mailto: typing.Optional[str] = pydantic.Field(
       title = "mailto uri",
       description = "a email address",
-      example = "alice@example.com"
+      examples = ["alice@example.com"],
+      default = None
     )
 
   stir: typing.Optional[str] = pydantic.Field(
       title = "stir token",
-      description = "stir token for the party in the call"
+      description = "stir token for the party in the call",
+      default = None
     )
 
   name: typing.Optional[str] = pydantic.Field(
       title = "full name",
       description = "party's first and last name",
-      example = "Alice Jone"
+      examples = ["Alice Jone"],
+      default = None
     )
 
   validation:  typing.Optional[str] = pydantic.Field(
       title = "identity validation method",
-      description = "the description or token label of the method by which the party's identity was verified"
+      description = "the description or token label of the method by which the party's identity was verified",
+      default = None
     )
 
   gmlpos: typing.Optional[str] = pydantic.Field(
       title = "geolocation",
-      description = "the geolocation of the party"
+      description = "the geolocation of the party",
+      default = None
     )
 
   uuid: typing.Optional[str] = pydantic.Field(
       title = "party uuid",
-      description = "a unique identifier for the party"
+      description = "a unique identifier for the party",
+      default = None
     )
 
   role: typing.Optional[str] = pydantic.Field(
       title = "role",
       description = "role the party took in the conversation.  Not limited to these examples",
-      examples = ["agent", "customer", "supervisor", "sme", "thirdparty"]
+      examples = ["agent", "customer", "supervisor", "sme", "thirdparty"],
+      default = None
     )
 
   contact_list: typing.Optional[str] = pydantic.Field(
       title = "contact list",
-      description = "name or identifier for the contact list from which this party was retrived"
+      description = "name or identifier for the contact list from which this party was retrived",
+      default = None
     )
 
 
@@ -337,7 +347,7 @@ date_examples = [ int(time.time()),
 
 # TODO: use the following to avoid getting arrays or parameters set to None???
 # bar.dict(exclude_unset=True)
-class VconUnsignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class VconUnsignedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   vcon: str = pydantic.Field(
     title = "vCon format version",
     #description = "vCon format version,
@@ -348,7 +358,6 @@ class VconUnsignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
     title = "vCon format version",
     #description = "vCon format version,
     default_factory=lambda: vcon.utils.cannonize_date(time.time()),
-    example = date_examples[3],
     examples = date_examples
     )
   # subject: str = None
@@ -361,7 +370,7 @@ class VconUnsignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
   attachments: typing.Optional[typing.Union[typing.List[dict], None]] = None
 
 
-class JwsHeader(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class JwsHeader(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   alg: str = pydantic.Field(
     title = "JWS algorithm",
     description = "defined in RFC 7515 section 4.1.1"
@@ -369,16 +378,18 @@ class JwsHeader(pydantic.BaseModel, extra=pydantic.Extra.allow):
 
   x5c: typing.Optional[typing.List[str]] = pydantic.Field(
     title = "JWS certificate chain",
-    description = "certifcate chain in the form of an array of string defined in RFC 7515 section 4.1.6"
+    description = "certifcate chain in the form of an array of string defined in RFC 7515 section 4.1.6",
+    default = None
     )
 
   x5u: typing.Optional[typing.List[str]] = pydantic.Field(
     title = "JWS certificate chain URLs",
-    description = "certifcate chain in the form of an array of HTTPS URLs defined in RFC 7515 section 4.1.6"
+    description = "certifcate chain in the form of an array of HTTPS URLs defined in RFC 7515 section 4.1.6",
+    default = None
     )
 
 
-class JwsSignature(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class JwsSignature(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   header: JwsHeader = pydantic.Field(
     title = "JWS Header Object",
     description = "defined in RFC 7515 section 7.2.1"
@@ -395,7 +406,7 @@ class JwsSignature(pydantic.BaseModel, extra=pydantic.Extra.allow):
     )
 
 
-class VconSignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class VconSignedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   """
   vCon in signed form (JWS RFC 7515)
   """
@@ -411,7 +422,7 @@ class VconSignedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
     )
 
 
-class JweUnprotectedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class JweUnprotectedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   """
   JWE Unprotected Object part of JWE RFC 7516
   Defined in RFC 7516 section 7.2.1
@@ -431,7 +442,7 @@ class JweUnprotectedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
     )
 
 
-class VconEncryptedObject(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class VconEncryptedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   """
   vCon in encrypted form (JWE RFC 7516)
   """
@@ -471,7 +482,7 @@ class VconProcessorInitOptions(pydantic.BaseModel):
   """
 
 
-class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
+class VconProcessorOptions(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   """ Base class options for **VconProcessor.processor** method """
   input_vcon_index: int = pydantic.Field(
       title = "VconProcessorIO input vCon index",
@@ -502,7 +513,7 @@ class VconProcessorOptions(pydantic.BaseModel, extra = pydantic.Extra.allow):
     )
   #rename_output: dict[str, str]
 
-class VconProcessorOutput(pydantic.BaseModel, extra=pydantic.Extra.allow):
+class VconProcessorOutput(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   """ Serializable Output results from a VconProcessor """
   vcons: typing.List[typing.Union[VconUnsignedObject, VconSignedObject, VconEncryptedObject]] = pydantic.Field(
       title = "array of **Vcon** objects",
@@ -729,7 +740,7 @@ class VconProcessorIO():
       return(options)
 
     elif(isinstance(options, VconProcessorOptions)):
-      options_dict = options.dict(exclude_none=True)
+      options_dict = vcon.pydantic_utils.get_dict(options, exclude_none=True)
       self.format_parameters_to_options_dict(options_dict)
       # Reconstruct to get pydantic to do type coersion/conversions and validations
       return(options.__class__(**options_dict))

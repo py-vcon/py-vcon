@@ -78,7 +78,7 @@ Read in the signed vCon from the file named **signed.vcon** and output the verif
 
 Note: piping the output to the [jq command](https://jqlang.github.io/jq/manual/) can be useful for extracting specific parameters or creating a pretty print formated JSON output.  For example, the follwing will pretty print the vcon output:
 
-    vcon -n | jw '.'
+    vcon -n | jq '.'
 
 Output:
 
@@ -90,6 +90,11 @@ Output:
       "attachments": [],
       "uuid": "01838260-d37e-87b3-973a-91e26eb8001b"
     }
+
+As a vCon can be quite large, it is sometimes useful to see an abreviated pretty print out of the vCon.
+The following jq command will pretty print a JSON or vCon document, truncating all the values greater than 40 characters:
+
+    jq '.. |= (if type == "string" and length > 40 then .[0:40] + "..." else . end)' <vcon_file_name>
 
 To obtain the value of the uuid parameter from the output vCon:
 
