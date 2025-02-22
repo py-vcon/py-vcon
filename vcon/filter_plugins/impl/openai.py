@@ -390,13 +390,13 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
     if(isinstance(new_analysis_body, str)):
       encoding = "none"
       schema = "text"
-      addition_analysis_parameters["mimetype"] = vcon.Vcon.MIMETYPE_TEXT_PLAIN
+      addition_analysis_parameters["mediatype"] = vcon.Vcon.MEDIATYPE_TEXT_PLAIN
     else:
       encoding = "json"
       schema = "completion_object"
       if(options.jq_result != "."):
         schema += " ?jq=" + options.jq_result
-      addition_analysis_parameters["mimetype"] = vcon.Vcon.MIMETYPE_JSON
+      addition_analysis_parameters["mediatype"] = vcon.Vcon.MEDIATYPE_JSON
 
     out_vcon.add_analysis(
       dialog_index,
@@ -725,13 +725,13 @@ class OpenAIChatCompletion(OpenAICompletion):
     if(isinstance(new_analysis_body, str)):
       encoding = "none"
       schema = "text"
-      addition_analysis_parameters["mimetype"] = vcon.Vcon.MIMETYPE_TEXT_PLAIN
+      addition_analysis_parameters["mediatype"] = vcon.Vcon.MEDIATYPE_TEXT_PLAIN
     else:
       encoding = "json"
       schema = "chat_completion_object"
       if(options.jq_result != "."):
         schema += " ?jq=" + options.jq_result
-      addition_analysis_parameters["mimetype"] = vcon.Vcon.MIMETYPE_JSON
+      addition_analysis_parameters["mediatype"] = vcon.Vcon.MEDIATYPE_JSON
 
     if(len(dialog_indices) == 1):
       analysis_dialogs = dialog_indices[0]
