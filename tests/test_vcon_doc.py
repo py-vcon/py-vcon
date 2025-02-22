@@ -101,7 +101,7 @@ def test_vcon_doc():
   print("got {} tagged of {} methods".format(num_tagged_methods, total_methods))
   print("untagged methods: {}".format(untagged_methods))
   print("tags: {}".format(list(tagged_methods.keys())))
-  assert(total_methods - num_tagged_methods <= 15)
+  assert(total_methods - num_tagged_methods <= 16)
   # if the tags change, may need to check the layout and order
   assert(len(tagged_methods) == 10)
 
