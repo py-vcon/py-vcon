@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Deepgram transcription plugin unit test """
 
 import os
@@ -92,7 +92,7 @@ async def test_deepgram_transcribe_external_dialog():
     0, # duration TODO
     [0,1],
     url,
-    vcon.Vcon.MIMETYPE_AUDIO_WAV,
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV,
     os.path.basename(file_path))
 
   assert(dialog_index == 0)
