@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """
 unit tests for the vcon command line script
 """
@@ -45,7 +46,7 @@ async def test_vcon_new(capsys):
     raise e
 
   assert(len(new_vcon.uuid) == 36)
-  assert(new_vcon.vcon == "0.0.1")
+  assert(new_vcon.vcon == "0.0.2")
 
 
 @pytest.mark.asyncio
@@ -139,11 +140,12 @@ async def test_ext_recording(capsys):
   assert(out_vcon.dialog[0]["parties"][0] == 0)
   assert(out_vcon.dialog[0]["parties"][1] == 1)
   assert(out_vcon.dialog[0]["url"] == WAVE_FILE_URL)
-  assert(out_vcon.dialog[0]["mimetype"] == "audio/x-wav")
+  assert(out_vcon.dialog[0].get("mimetype", None) is None)
+  assert(out_vcon.dialog[0]["mediatype"] == "audio/x-wav")
   assert(out_vcon.dialog[0]["filename"] == WAVE_FILE_NAME)
   assert(out_vcon.dialog[0]["signature"] == "MfZG-8n8eU5pbMWN9c_SyTyN6l1zwGWNg43h2n-K1q__XVgdxz1X2H3Wbg4I9VZImQKCRqgYHxJjrdIXDAXO8w")
   assert(out_vcon.dialog[0]["alg"] == "SHA-512")
-  assert(out_vcon.vcon == "0.0.1")
+  assert(out_vcon.vcon == "0.0.2")
   assert(out_vcon.uuid == "0183878b-dacf-8e27-973a-91e26eb8001b")
 
   assert(out_vcon.dialog[0].get("body") is None )
@@ -179,9 +181,10 @@ async def test_int_recording(capsys):
   assert(len(out_vcon.parties) == 2)
   assert(out_vcon.dialog[0]["parties"][0] == 0)
   assert(out_vcon.dialog[0]["parties"][1] == 1)
-  assert(out_vcon.dialog[0]["mimetype"] == "audio/x-wav")
+  assert(out_vcon.dialog[0].get("mimetype", None) is None)
+  assert(out_vcon.dialog[0]["mediatype"] == "audio/x-wav")
   assert(out_vcon.dialog[0]["filename"] == WAVE_FILE_NAME)
-  assert(out_vcon.vcon == "0.0.1")
+  assert(out_vcon.vcon == "0.0.2")
   assert(out_vcon.uuid == "0183878b-dacf-8e27-973a-91e26eb8001b")
 # File is base64url encodes so size will be 4/3 larger
   assert(len(out_vcon.dialog[0]["body"]) == WAVE_FILE_SIZE / 3 * 4)
@@ -225,7 +228,8 @@ Regards,Bob
   assert(len(out_vcon.dialog) == 1)
   assert(out_vcon.dialog[0]["type"] == "text")
   assert(out_vcon.dialog[0]["parties"] == [0, 1])
-  assert(out_vcon.dialog[0]["mimetype"][:len(vcon.Vcon.MIMETYPE_MULTIPART)] == vcon.Vcon.MIMETYPE_MULTIPART)
+  assert(out_vcon.dialog[0].get("mimetype", None) is None)
+  assert(out_vcon.dialog[0]["mediatype"][:len(vcon.Vcon.MEDIATYPE_MULTIPART)] == vcon.Vcon.MEDIATYPE_MULTIPART)
   assert(out_vcon.dialog[0]["start"] == "2022-09-23T21:44:25.000+00:00")
   assert(out_vcon.dialog[0]["duration"] == 0)
   assert(len(out_vcon.dialog[0]["body"]) == 2048)
@@ -233,7 +237,7 @@ Regards,Bob
     out_vcon.dialog[0]["encoding"].lower() == "none")
   # TODO: fix:
   #assert(len(out_vcon.attachments) == 1)
-  #assert(out_vcon.attachments[0]["mimetype"] == vcon.Vcon.MIMETYPE_IMAGE_PNG)
+  #assert(out_vcon.attachments[0]["mediatype"] == vcon.Vcon.MEDIATYPE_IMAGE_PNG)
   # TODO: fix:
   # fix:
   #assert(out_vcon.attachments[0]["encoding"] is "base64")
@@ -265,7 +269,8 @@ async def test_in_meet(capsys):
   assert(out_vcon.dialog[0]["start"] == "2023-09-07T00:27:00.000+00:00")
   assert(out_vcon.dialog[0]["duration"] == 74.791667 )
   assert(out_vcon.dialog[0]["encoding"] == "base64url")
-  assert(out_vcon.dialog[0]["mimetype"] == vcon.Vcon.MIMETYPE_VIDEO_MP4)
+  assert(out_vcon.dialog[0].get("mimetype", None) is None)
+  assert(out_vcon.dialog[0]["mediatype"] == vcon.Vcon.MEDIATYPE_VIDEO_MP4)
   assert(out_vcon.dialog[0]["filename"] == os.path.basename(GOOGLE_MEET_RECORDING))
   assert("parties" not in out_vcon.dialog[0])
   assert(out_vcon.dialog[1]["type"] == "text")
@@ -273,21 +278,24 @@ async def test_in_meet(capsys):
   assert(out_vcon.dialog[1]["start"] == "2023-09-07T00:27:21.199+00:00")
   assert(out_vcon.dialog[1]["duration"] == 3 )
   assert(out_vcon.dialog[1]["encoding"] == "none")
-  assert(out_vcon.dialog[1]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[1].get("mimetype", None) is None)
+  assert(out_vcon.dialog[1]["mediatype"] == vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[1]["body"] == "test message 1")
   assert(out_vcon.dialog[2]["type"] == "text")
   assert(out_vcon.dialog[2]["parties"] == 0)
   assert(out_vcon.dialog[2]["start"] == "2023-09-07T00:27:39.362+00:00")
   assert(out_vcon.dialog[2]["duration"] == 3 )
   assert(out_vcon.dialog[2]["encoding"] == "none")
-  assert(out_vcon.dialog[2]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[2].get("mimetype", None) is None)
+  assert(out_vcon.dialog[2]["mediatype"] == vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[2]["body"] == "https://docs.google.com/document/d/1RN6xuZaqz6bpltbc-t-jRMdQ8AyoMsVoskybU/edit")
   assert(out_vcon.dialog[3]["type"] == "text")
   assert(out_vcon.dialog[3]["parties"] == 0)
   assert(out_vcon.dialog[3]["start"] == "2023-09-07T00:27:57.735+00:00")
   assert(out_vcon.dialog[3]["duration"] == 3 )
   assert(out_vcon.dialog[3]["encoding"] == "none")
-  assert(out_vcon.dialog[3]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[3].get("mimetype", None) is None)
+  assert(out_vcon.dialog[3]["mediatype"] == vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[3]["body"] == "test message 2")
 
 
@@ -315,7 +323,8 @@ async def test_zoom(capsys):
   assert(out_vcon.dialog[0]["start"] == "2023-09-19T02:37:55.000+00:00")
   assert(out_vcon.dialog[0]["duration"] == 294.56 )
   assert(out_vcon.dialog[0]["encoding"] == "base64url")
-  assert(out_vcon.dialog[0]["mimetype"] == vcon.Vcon.MIMETYPE_VIDEO_MP4)
+  assert(out_vcon.dialog[0].get("mimetype", None) is None)
+  assert(out_vcon.dialog[0]["mediatype"] == vcon.Vcon.MEDIATYPE_VIDEO_MP4)
   assert(out_vcon.dialog[0]["filename"] == "video1635030520.mp4")
   #assert(out_vcon.dialog[0]["parties"] == -1)
   assert(out_vcon.dialog[1]["type"] == "text")
@@ -323,21 +332,24 @@ async def test_zoom(capsys):
   assert(out_vcon.dialog[1]["start"] == "2023-09-19T02:35:18.000+00:00")
   assert(out_vcon.dialog[1]["duration"] == 0 )
   assert(out_vcon.dialog[1]["encoding"] == "none")
-  assert(out_vcon.dialog[1]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[1].get("mimetype", None) is None)
+  assert(out_vcon.dialog[1]["mediatype"] == vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[1]["body"] == "What is your fvorite color?")
   assert(out_vcon.dialog[2]["type"] == "text")
   assert(out_vcon.dialog[2]["parties"] == 1)
   assert(out_vcon.dialog[2]["start"] == "2023-09-19T02:35:32.000+00:00")
   assert(out_vcon.dialog[2]["duration"] == 0 )
   assert(out_vcon.dialog[2]["encoding"] == "none")
-  assert(out_vcon.dialog[2]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[2].get("mimetype", None) is None)
+  assert(out_vcon.dialog[2]["mediatype"] == vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[2]["body"] == "I don’t have one!  I like them all.")
   assert(out_vcon.dialog[3]["type"] == "text")
   assert(out_vcon.dialog[3]["parties"] == 1)
   assert(out_vcon.dialog[3]["start"] == "2023-09-19T02:36:06.000+00:00")
   assert(out_vcon.dialog[3]["duration"] == 0 )
   assert(out_vcon.dialog[3]["encoding"] == "none")
-  assert(out_vcon.dialog[3]["mimetype"] == vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(out_vcon.dialog[3].get("mimetype", None) is None)
+  assert(out_vcon.dialog[3]["mediatype"] == vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[3]["body"] == "What is your favorite drink to make and to imbibe?")
   assert(out_vcon.dialog[4]["parties"] == 0)
   assert(out_vcon.dialog[4]["start"] == "2023-09-19T02:36:33.000+00:00")
@@ -366,7 +378,7 @@ async def test_get(two_party_tel_vcon, capsys, httpserver: pytest_httpserver.HTT
   # Hack UUID for testing
   two_party_tel_vcon._vcon_dict[vcon.Vcon.UUID] = uuid
 
-  headers = {"accept": vcon.Vcon.MIMETYPE_JSON}
+  headers = {"accept": vcon.Vcon.MEDIATYPE_JSON}
   httpserver.expect_request(
       "/vcon/{}".format(uuid),
       method = "GET",
@@ -392,7 +404,7 @@ async def test_get(two_party_tel_vcon, capsys, httpserver: pytest_httpserver.HTT
   got_vcon = vcon.Vcon()
   got_vcon.loads(out_vcon_json)
 
-  #assert(httpretty.latest_requests()[0].headers["accept"] == vcon.Vcon.MIMETYPE_JSON)
+  #assert(httpretty.latest_requests()[0].headers["accept"] == vcon.Vcon.MEDIATYPE_JSON)
   assert(len(got_vcon.parties) == 2)
   assert(got_vcon.parties[0]['tel'] == call_data['source'])
   assert(got_vcon.parties[1]['tel'] == call_data['destination'])
@@ -415,7 +427,7 @@ async def test_post(two_party_tel_vcon, capsys, httpserver: pytest_httpserver.HT
   # Hack UUID for testing
   two_party_tel_vcon._vcon_dict[vcon.Vcon.UUID] = uuid
 
-  headers = {"Content-Type": vcon.Vcon.MIMETYPE_JSON}
+  headers = {"Content-Type": vcon.Vcon.MEDIATYPE_JSON}
   vcon_dict_copy = two_party_tel_vcon.dumpd().copy()
   # force request body not to match
   # vcon_dict_copy["a"] = 2
@@ -451,7 +463,7 @@ async def test_post(two_party_tel_vcon, capsys, httpserver: pytest_httpserver.HT
 
   # posted_vcon = vcon.Vcon()
   # The following should all be tested by httpserver
-  # assert(httpretty.latest_requests()[0].headers["Content-Type"] == vcon.Vcon.MIMETYPE_JSON)
+  # assert(httpretty.latest_requests()[0].headers["Content-Type"] == vcon.Vcon.MEDIATYPE_JSON)
   #print("type: " + str(type(httpretty.latest_requests()[0].body)))
   #print(httpretty.latest_requests()[0].body)
   # posted_vcon.loads(httpretty.latest_requests()[0].body)
