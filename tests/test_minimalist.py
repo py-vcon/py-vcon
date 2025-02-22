@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ unit tests for mimimum elements of vCon """
 
 import json
@@ -95,7 +96,7 @@ def test_dumps(two_party_tel_vcon : vcon.Vcon) -> None:
 
   vcon_dict = json.loads(vcon_json)
 
-  assert(vcon_dict[vcon.Vcon.VCON_VERSION] == "0.0.1")
+  assert(vcon_dict[vcon.Vcon.VCON_VERSION] == "0.0.2")
   assert_dict_array_size(vcon_dict, VCON_PARTIES, 2)
   assert(vcon_dict['parties'][0]['tel'] == call_data['source'])
   assert(vcon_dict['parties'][1]['tel'] == call_data['destination'])
@@ -120,19 +121,19 @@ def test_add_inline_recording(two_party_tel_vcon : vcon.Vcon, empty_vcon : vcon.
   fake_recording_file = os.urandom(random_size)
   assert(len(fake_recording_file) == random_size)
   assert_vcon_array_size(vCon, VCON_DIALOG, 0)
-  # TODO: create some common mime type constants for convenience
-  mime_type = "audio/x-wav"
+  media_type = vcon.Vcon.MEDIATYPE_AUDIO_WAV
   file_name = "fake.wav"
   duration = 77.4
   file_length = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
-    duration, [0, 1], mime_type, file_name)
+    duration, [0, 1], media_type, file_name)
 
   assert(file_length == len(fake_recording_file))
   assert_vcon_array_size(vCon, VCON_DIALOG, 1)
   assert(vCon._vcon_dict[VCON_DIALOG][0]["type"] == "recording")
   assert(vCon._vcon_dict[VCON_DIALOG][0]["start"] == call_data['rfc3339'])
   assert(vCon._vcon_dict[VCON_DIALOG][0]["duration"] == duration)
-  assert(vCon._vcon_dict[VCON_DIALOG][0]["mimetype"] == mime_type)
+  assert(vCon._vcon_dict[VCON_DIALOG][0].get("mimetype", None) is None)
+  assert(vCon._vcon_dict[VCON_DIALOG][0]["mediatype"] == media_type)
   assert(vCon._vcon_dict[VCON_DIALOG][0]["filename"] == file_name)
   assert(vCon._vcon_dict[VCON_DIALOG][0].get("originator", None) == None)
   assert(vCon._vcon_dict[VCON_DIALOG][0][VCON_PARTIES][0] == 0)
@@ -175,19 +176,19 @@ def test_add_inline_recording_w_originator(two_party_tel_vcon : vcon.Vcon, empty
   fake_recording_file = os.urandom(random_size)
   assert(len(fake_recording_file) == random_size)
   assert_vcon_array_size(vCon, VCON_DIALOG, 0)
-  # TODO: create some common mime type constants for convenience
-  mime_type = "audio/x-wav"
+  media_type = vcon.Vcon.MEDIATYPE_AUDIO_WAV
   file_name = "fake.wav"
   duration = 77.4
   file_length = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
-    duration, [0, 1], mime_type, file_name, originator=1)
+    duration, [0, 1], media_type, file_name, originator=1)
 
   assert(file_length == len(fake_recording_file))
   assert_vcon_array_size(vCon, VCON_DIALOG, 1)
   assert(vCon._vcon_dict[VCON_DIALOG][0]["type"] == "recording")
   assert(vCon._vcon_dict[VCON_DIALOG][0]["start"] == call_data['rfc3339'])
   assert(vCon._vcon_dict[VCON_DIALOG][0]["duration"] == duration)
-  assert(vCon._vcon_dict[VCON_DIALOG][0]["mimetype"] == mime_type)
+  assert(vCon._vcon_dict[VCON_DIALOG][0].get("mimetype", None) is None)
+  assert(vCon._vcon_dict[VCON_DIALOG][0]["mediatype"] == media_type)
   assert(vCon._vcon_dict[VCON_DIALOG][0]["filename"] == file_name)
   assert(vCon._vcon_dict[VCON_DIALOG][0].get("originator", None) == 1)
   assert(vCon._vcon_dict[VCON_DIALOG][0][VCON_PARTIES][0] == 0)
@@ -246,7 +247,7 @@ def test_attachments(two_party_tel_vcon: vcon.Vcon):
       body_bytes,
       now,
       0,
-      vcon.Vcon.MIMETYPE_TEXT_PLAIN,
+      vcon.Vcon.MEDIATYPE_TEXT_PLAIN,
       os.path.basename(file_name)
       )
 
@@ -254,8 +255,9 @@ def test_attachments(two_party_tel_vcon: vcon.Vcon):
   assert(len(two_party_tel_vcon.attachments) == 1)
   assert(two_party_tel_vcon.attachments[0]["encoding"] == "none")
   assert(two_party_tel_vcon.attachments[0]["party"] == 0)
-  assert(two_party_tel_vcon.attachments[0]["mimetype"] ==
-    vcon.Vcon.MIMETYPE_TEXT_PLAIN)
+  assert(two_party_tel_vcon.attachments[0].get("mimetype", None) is None)
+  assert(two_party_tel_vcon.attachments[0]["mediatype"] ==
+    vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(two_party_tel_vcon.attachments[0]["filename"] ==
     os.path.basename(file_name))
   assert(two_party_tel_vcon.attachments[0]["start"] ==
