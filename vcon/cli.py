@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """
 Module for vcon command line interface script functions.  Pulled out of vcon CLI
 script file so that it coould more easily be tested with pytest.
@@ -222,7 +222,7 @@ def do_in_zoom(
           start,
           duration,
           -1, # TODO: can we get parties?
-          vcon.Vcon.MIMETYPE_VIDEO_MP4,
+          vcon.Vcon.MEDIATYPE_VIDEO_MP4,
           filebase
           )
 
@@ -238,7 +238,7 @@ def do_in_zoom(
           body_bytes,
           start,
           -1,
-          vcon.Vcon.get_mime_type(filebase),
+          vcon.Vcon.get_media_type(filebase),
           filebase
           )
 
@@ -264,7 +264,7 @@ def do_in_zoom(
           msg_time,
           0,
           sender_indices[0],
-          vcon.Vcon.MIMETYPE_TEXT_PLAIN
+          vcon.Vcon.MEDIATYPE_TEXT_PLAIN
           )
 
   return(in_vcon)
@@ -324,7 +324,7 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
       file = sys.stderr
       )
     sys.exit(7)
-  #print(magic.from_file(args.meetrec, mime = True))
+  #print(magic.from_file(args.meetrec, media = True))
   with open(args.meetrec[0], "rb") as rec_file_handle:
     image_data = rec_file_handle.read(8)
     if(len(image_data) < 8):
@@ -396,7 +396,7 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
       meeting_date,
       duration,
       parties,
-      vcon.Vcon.MIMETYPE_VIDEO_MP4,
+      vcon.Vcon.MEDIATYPE_VIDEO_MP4,
       os.path.basename(str(args.meetrec[0]))
       )
 
@@ -424,7 +424,7 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
           timestamp,
           duration,
           sender_indices[0],
-          vcon.Vcon.MIMETYPE_TEXT_PLAIN
+          vcon.Vcon.MEDIATYPE_TEXT_PLAIN
           )
 
   return(in_vcon)
@@ -802,7 +802,7 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
         sox_info = sox.file_info.info(str(args.recfile[0]))
         duration = sox_info["duration"]
 
-      mimetype = vcon.Vcon.get_mime_type(args.recfile[0])
+      mediatype = vcon.Vcon.get_media_type(args.recfile[0])
 
       with open(args.recfile[0], 'rb') as file_handle:
         body = file_handle.read()
@@ -811,11 +811,11 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
 
       if(args.add_command == "in-recording"):
         in_vcon.add_dialog_inline_recording(body, args.start[0], duration, parties_object,
-          mimetype, str(args.recfile[0]))
+          mediatype, str(args.recfile[0]))
 
       elif(args.add_command == "ex-recording"):
         in_vcon.add_dialog_external_recording(body, args.start[0], duration, parties_object,
-          args.url[0], mimetype, str(args.recfile[0]))
+          args.url[0], mediatype, str(args.recfile[0]))
 
     elif(args.add_command == "in-email"):
       in_vcon = do_in_email(args, in_vcon)
