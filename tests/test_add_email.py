@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit tests for adding email message dialog """
 import os
 import vcon
@@ -37,7 +38,8 @@ async def test_add_email_multipart():
   assert(len(out_vcon.dialog) == 1)
   assert(out_vcon.dialog[0]["type"] == "text")
   assert(out_vcon.dialog[0]["parties"] == [0, 1])
-  assert(out_vcon.dialog[0]["mimetype"][:len(vcon.Vcon.MIMETYPE_MULTIPART)] == vcon.Vcon.MIMETYPE_MULTIPART)
+  assert(out_vcon.dialog[0].get("mimetype", None) is None)
+  assert(out_vcon.dialog[0]["mediatype"][:len(vcon.Vcon.MEDIATYPE_MULTIPART)] == vcon.Vcon.MEDIATYPE_MULTIPART)
   assert(out_vcon.dialog[0]["start"] == "2022-09-23T21:44:25.000+00:00")
   assert(out_vcon.dialog[0]["duration"] == 0)
   assert(len(out_vcon.dialog[0]["body"]) == 2048)
@@ -45,7 +47,7 @@ async def test_add_email_multipart():
     out_vcon.dialog[0]["encoding"].lower() == "none")
   # TODO: fix:
   #assert(len(out_vcon.attachments) == 1)
-  #assert(out_vcon.attachments[0]["mimetype"] == vcon.Vcon.MIMETYPE_IMAGE_PNG)
+  #assert(out_vcon.attachments[0]["mediatype"] == vcon.Vcon.MEDIATYPE_IMAGE_PNG)
   # TODO: fix:
   # fix:
   #assert(out_vcon.attachments[0]["encoding"] is "base64")
