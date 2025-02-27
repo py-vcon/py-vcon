@@ -428,7 +428,7 @@ class JweUnprotectedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   Defined in RFC 7516 section 7.2.1
   """
   cty: typing.Optional[str] = pydantic.Field(
-    title = "mimetype of the decrypted ciphertext",
+    title = "content/media type of the decrypted ciphertext",
     description = "defined in RFC 7516 section 4.1.12",
     )
 
