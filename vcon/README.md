@@ -110,7 +110,7 @@ Return: none
 
 ### add_attachment_inline
 
-**add_attachment_inline**(self, body: 'bytes', sent_time: 'typing.Union[str, int, float, datetime.datetime]', party: 'int', mime_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None) -> 'int'
+**add_attachment_inline**(self, body: 'bytes', sent_time: 'typing.Union[str, int, float, datetime.datetime]', party: 'int', media_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None) -> 'int'
 
 
 Add an attachment object for the given file body
@@ -121,7 +121,7 @@ Parameters:
            string containing RFC 2822 or RFC3339 date time stamp or int/float
            containing epoch time (since 1970) in seconds.  
 **party** (int): party index of the sender  
-**mime_type** (str): mime type of the recording  
+**media_type** (str): media type of the recording  
 **file_name** (str): file name of the recording (optional)
 
 Returns:  
@@ -135,7 +135,7 @@ Returns:
 
 ### add_dialog_external_recording
 
-**add_dialog_external_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', external_url: 'str', mime_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None, sign_type: 'typing.Union[str, None]' = 'SHA-512', originator: 'typing.Union[int, None]' = None) -> 'int'
+**add_dialog_external_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', external_url: 'str', media_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None, sign_type: 'typing.Union[str, None]' = 'SHA-512', originator: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a recording of a portion of the conversation, as a reference via the given
@@ -152,7 +152,7 @@ Parameters:
 **parties** (int, List[int], List[List[int]]): party indices speaking in each
            channel of the recording.  
 **external_url** (string): https URL where the body is stored securely  
-**mime_type** (str): mime type of the recording (optional)  
+**media_type** (str): media type of the recording (optional)  
 **file_name** (str): file name of the recording (optional)  
 **sign_type** (str): signature type to create for external signature
                  default= "SHA-512" use SHA 512 bit hash (RFC6234)
@@ -189,7 +189,7 @@ Returns:
 
 ### add_dialog_inline_recording
 
-**add_dialog_inline_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', mime_type: 'str', file_name: 'typing.Union[str, None]' = None, originator: 'typing.Union[int, None]' = None) -> 'int'
+**add_dialog_inline_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None, originator: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a recording of a portion of the conversation, inline (base64 encoded) to the dialog.
@@ -203,7 +203,7 @@ Parameters:
 **duration** (int or float): duration of the recording in seconds  
 **parties** (int, List[int], List[List[int]]): party indices speaking in each
            channel of the recording.  
-**mime_type** (str): mime type of the recording  
+**media_type** (str): media type of the recording  
 **file_name** (str): file name of the recording (optional)  
 **originator** (int): by default the originator of the dialog is the first party listed in the parites array.
            However , in some cases, it is difficult to arrange the recording channels with the originator
@@ -218,7 +218,7 @@ Returns:
 
 ### add_dialog_inline_text
 
-**add_dialog_inline_text**(self, body: 'str', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', party: 'typing.Union[int, list[int]]', mime_type: 'str', file_name: 'typing.Union[str, None]' = None) -> 'int'
+**add_dialog_inline_text**(self, body: 'str', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', party: 'typing.Union[int, list[int]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None) -> 'int'
 
 
 Add a dialog segment for a text chat or email thread.
@@ -232,7 +232,7 @@ Parameters:
   **duration** (int or float) - duration in time the sender completed typing in seconds.
            Should be zero if unknown.
   **party** (int) - index into parties object array as to which party sent the text communication.  
-  **mime_type** (str) - mime type of the body (usually MIMETYPE_TEXT_PLAIN or MIMETYPE_MULTIPART)  
+  **media_type** (str) - media type of the body (usually MEDIATYPE_TEXT_PLAIN or MEDIATYPE_MULTIPART)  
   **file_name** (str) - file name of the body if applicable (optional)
 
 Returns:  
