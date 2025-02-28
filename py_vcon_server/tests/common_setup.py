@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Common test data and tools for conserver unit tests """
 
 import os
@@ -39,7 +39,7 @@ def make_inline_audio_vcon(make_2_party_tel_vcon: vcon.Vcon) -> vcon.Vcon:
   datetime.datetime.utcnow(),
   0, # duration TODO
   [0,1],
-  vcon.Vcon.MIMETYPE_AUDIO_WAV,
+  vcon.Vcon.MEDIATYPE_AUDIO_WAV,
   os.path.basename(file_path))
 
   save_as = "tests/hello.vcon"
