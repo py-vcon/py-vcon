@@ -1163,8 +1163,7 @@ class Vcon():
 
       elif(sign_type == "SHA-512"):
         sig_hash = vcon.security.sha_512_hash(body)
-        new_dialog['signature'] = sig_hash
-        new_dialog['alg'] = "SHA-512"
+        new_dialog["content_hash"] = vcon.security.build_content_hash_token(sign_type, sig_hash)
 
       else:
         raise AttributeError("Unsupported signature type: {}.  Please use \"SHA-512\" or \"LM-OTS\"".format(sign_type))
@@ -1266,26 +1265,23 @@ class Vcon():
     if(dialog['type'] != "recording"):
       raise AttributeError("dialog[{}] is of type: {} not recording".format(dialog_index, dialog['type']))
 
-    if(len(dialog['signature']) < 1 ):
-      raise AttributeError("dialog[{}] signature: {} not set.  Must be for LMOTS_SHA256_N32_W8".format(dialog_index, dialog['signature']))
+    if("content_hash" not in dialog):
+      logger.warning("No content_hash in dialog: {}".format(dialog.keys()))
+    if(len(dialog['content_hash']) < 1 ):
+      raise AttributeError("dialog[{}] content_hash: {} not set.  Must be for LMOTS_SHA256_N32_W8".format(dialog_index, dialog['signature']))
 
-    if(dialog['alg'] == 'LMOTS_SHA256_N32_W8'):
-      if(len(dialog['key']) < 1 ):
-        raise AttributeError("dialog[{}] key: {} not set.  Must be for LMOTS_SHA256_N32_W8".format(dialog_index, dialog['key']))
+    # TODO support array of content_hash tokens
+    alg, hash_string = vcon.security.split_content_hash_token(dialog["content_hash"])
 
-      vcon.security.verify_lm_one_time_signature(body,
-        dialog['signature'],
-        dialog['key'])
-
-    elif(dialog['alg'] == 'SHA-512'):
+    if(alg == 'sha512'):
       sig_hash = vcon.security.sha_512_hash(body)
-      if( dialog['signature'] != sig_hash):
-        print("dialog[\"signature\"]: {} hash: {} size: {}".format(dialog['signature'], sig_hash, len(body)))
+      if( hash_string != sig_hash):
+        print("dialog[\"signature\"]: {} hash: {} size: {}".format(hash_string, sig_hash, len(body)))
         print("dialog: {}".format(json.dumps(dialog, indent=2)))
         raise InvalidVconHash("SHA-512 hash in signature does not match the given body for dialog[{}]".format(dialog_index))
 
     else:
-      raise AttributeError("dialog[{}] alg: {} not supported.  Must be SHA-512 or LMOTS_SHA256_N32_W8".format(dialog_index, dialog['alg']))
+      raise AttributeError("dialog[{}] alg: {} not supported.  Must be SHA-512".format(dialog_index, alg))
 
 
   @tag_analysis
@@ -2158,6 +2154,7 @@ class Vcon():
     (header, signing_key) = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, [cert_pem_file])
     #signing_key['alg'] = encryption_key['alg']
 
+    logger.debug("JWE size: {} key size: {}".format(len(jwe_compact_token_reconstructed), len(signing_key)))
     plaintext_decrypted = jose.jwe.decrypt(jwe_compact_token_reconstructed, signing_key).decode('utf-8')
     # let loads figure out if this is an encrypted JWS vCon or just a vCon
     current_state = self._state
@@ -2550,6 +2547,14 @@ class Vcon():
         else:
           raise AttributeError("dialog[{}] alg: {} not supported.  Must be SHA-512 or LMOTS_SHA256_N32_W8".format(index, dialog['alg']))
 
+        # Convert to content_hash
+        if("signature" in dialog):
+          hash_string = dialog["signature"]
+          alg = dialog["alg"]
+          dialog["content_hash"] = vcon.security.build_content_hash_token(alg, hash_string)
+          del dialog["alg"]
+          del dialog["signature"]
+
       # Change mimetype to mediatype
       if("mimetype" in dialog):
         dialog["mediatype"] = dialog["mimetype"]
@@ -2588,6 +2593,14 @@ class Vcon():
           else:
             raise Exception("body type: {} in analysis[{}] not recognized".format(type(analysis['body']), index))
 
+      # Convert to content_hash
+      if("alg" in analysis and "signature" in analysis):
+        hash_string = analysis["signature"]
+        alg = analysis["alg"]
+        analysis["content_hash"] = vcon.security.build_content_hash_token(alg, hash_string)
+        del analysis["alg"]
+        del analysis["signature"]
+
       # Change mimetype to mediatype
       if("mimetype" in analysis):
         analysis["mediatype"] = analysis["mimetype"]
@@ -2599,6 +2612,14 @@ class Vcon():
       if("mimetype" in attachment):
         attachment["mediatype"] = attachment["mimetype"]
         del attachment["mimetype"]
+
+      # Convert to content_hash
+      if("alg" in attachment and "signature" in attachment):
+        hash_string = attachment["signature"]
+        alg = attachment["alg"]
+        attachment["content_hash"] = vcon.security.build_content_hash_token(alg, hash_string)
+        del attachment["alg"]
+        del attachment["signature"]
 
     # Now converted to 0.0.2
     old_vcon["vcon"] = "0.0.2"
