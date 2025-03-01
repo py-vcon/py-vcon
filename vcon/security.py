@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 
 import os
 import typing
@@ -28,6 +29,16 @@ def load_string_from_file(file_name : str):
     file_contents_string = file_handle.read()
 
   return(file_contents_string)
+
+
+def build_content_hash_token(alg: str, base64_hash: str) -> str:
+  formatted_alg = alg.replace("-", "").lower()
+  return("{}-{}".format(formatted_alg, base64_hash))
+
+
+def split_content_hash_token(content_hash: str) -> typing.Tuple[str, str]:
+  alg, hash_string = content_hash.split("-", 1)
+  return(alg, hash_string)
 
 
 def load_pem_cert(cert_file : str) -> typing.Tuple[cryptography.x509.Certificate, str]:
