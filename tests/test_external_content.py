@@ -114,6 +114,7 @@ async def test_get_external_recording(two_party_tel_vcon : vcon.Vcon) -> None:
     # We expect this to occur
     pass
 
+@pytest.mark.skip(reason="llm_ots no longer supported")
 def test_external_recording_lm_ots(two_party_tel_vcon : vcon.Vcon) -> None:
   data_size = 4096
   data = os.urandom(data_size)
@@ -219,7 +220,7 @@ def test_external_recording_sha_512(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(new_vcon.dialog[0].get('mimetype', None) is None)
   assert(new_vcon.dialog[0]['mediatype'] == "audio/x-wav")
   assert(new_vcon.dialog[0]['filename'] == file_name)
-  assert(new_vcon.dialog[0]['alg'] == 'SHA-512')
+  assert(new_vcon.dialog[0]['content_hash'][0:7] == 'sha512-')
   assert(new_vcon.dialog[0]['originator'] == 1)
   assert("body" not in new_vcon.dialog[0])
   assert("key" not in new_vcon.dialog[0])
