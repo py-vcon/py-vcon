@@ -143,8 +143,11 @@ async def test_ext_recording(capsys):
   assert(out_vcon.dialog[0].get("mimetype", None) is None)
   assert(out_vcon.dialog[0]["mediatype"] == "audio/x-wav")
   assert(out_vcon.dialog[0]["filename"] == WAVE_FILE_NAME)
-  assert(out_vcon.dialog[0]["signature"] == "MfZG-8n8eU5pbMWN9c_SyTyN6l1zwGWNg43h2n-K1q__XVgdxz1X2H3Wbg4I9VZImQKCRqgYHxJjrdIXDAXO8w")
-  assert(out_vcon.dialog[0]["alg"] == "SHA-512")
+  alg, hash_string = vcon.security.split_content_hash_token(out_vcon.dialog[0]["content_hash"])
+  assert(alg == "sha512")
+  assert(hash_string == "MfZG-8n8eU5pbMWN9c_SyTyN6l1zwGWNg43h2n-K1q__XVgdxz1X2H3Wbg4I9VZImQKCRqgYHxJjrdIXDAXO8w")
+  assert("alg" not in out_vcon.dialog[0])
+  assert("signature" not in out_vcon.dialog[0])
   assert(out_vcon.vcon == "0.0.2")
   assert(out_vcon.uuid == "0183878b-dacf-8e27-973a-91e26eb8001b")
 
