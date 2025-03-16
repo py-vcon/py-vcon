@@ -96,7 +96,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     url = "https://api.deepgram.com/v1/listen"
     headers = {
       "accept": "application/json",
-      "content-type": recording_data["mimetype"],
+      "content-type": recording_data["mediatype"],
       "Authorization": "Token " + self._init_options.deepgram_key
       }
     requests_options = {
@@ -190,7 +190,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
 
           recording_data = {
             "buffer": recording_bytes,
-            "mimetype": dialog["mimetype"]
+            "mediatype": dialog["mediatype"]
             }
 
           transcript_dict = self.request_transcribe(

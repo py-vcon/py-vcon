@@ -1,11 +1,12 @@
 {
-  "openapi": "3.0.2",
+  "openapi": "3.1.0",
   "info": {
     "title": "Python vCon Server",
+    "summary": "vCon pipeline processor server cluster and storage API",
     "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
     "contact": {
       "name": "Commercial support available from SIPez",
-      "url": "http://www.sipez.com"
+      "url": "http://www.sipez.com/"
     },
     "license": {
       "name": "MIT License"
@@ -49,11 +50,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Server Queues Names Server Queues Get",
-                  "type": "object",
                   "additionalProperties": {
                     "$ref": "#/components/schemas/QueueProperties"
-                  }
+                  },
+                  "type": "object",
+                  "title": "Response Get Server Queues Names Server Queues Get"
                 }
               }
             }
@@ -71,24 +72,24 @@
         "operationId": "set_server_queue_properties_server_queue__name__post",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QueueProperties"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "204": {
@@ -115,13 +116,13 @@
         "operationId": "delete_server_queue_server_queue__name__delete",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
           }
         ],
         "responses": {
@@ -155,11 +156,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Server States Servers Get",
-                  "type": "object",
                   "additionalProperties": {
                     "$ref": "#/components/schemas/ServerState"
-                  }
+                  },
+                  "type": "object",
+                  "title": "Response Get Server States Servers Get"
                 }
               }
             }
@@ -177,13 +178,13 @@
         "operationId": "delete_server_state_servers__server_key__delete",
         "parameters": [
           {
+            "name": "server_key",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Server Key",
-              "type": "string"
-            },
-            "name": "server_key",
-            "in": "path"
+              "type": "string",
+              "title": "Server Key"
+            }
           }
         ],
         "responses": {
@@ -217,11 +218,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Job Queue Names Queues Get",
-                  "type": "array",
                   "items": {
                     "type": "string"
-                  }
+                  },
+                  "type": "array",
+                  "title": "Response Get Job Queue Names Queues Get"
                 }
               }
             }
@@ -239,13 +240,13 @@
         "operationId": "get_queued_jobs_queue__name__get",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
           }
         ],
         "responses": {
@@ -254,34 +255,34 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Queued Jobs Queue  Name  Get",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/QueueJob"
-                  }
+                  },
+                  "title": "Response Get Queued Jobs Queue  Name  Get"
                 }
               }
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -305,24 +306,24 @@
         "operationId": "add_queue_job_queue__name__put",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QueueJob"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -330,8 +331,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Add Queue Job Queue  Name  Put",
-                  "type": "integer"
+                  "type": "integer",
+                  "title": "Response Add Queue Job Queue  Name  Put"
                 }
               }
             }
@@ -357,13 +358,13 @@
         "operationId": "create_new_job_queue_queue__name__post",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
           }
         ],
         "responses": {
@@ -391,13 +392,13 @@
         "operationId": "delete_job_queue_queue__name__delete",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
           }
         ],
         "responses": {
@@ -406,34 +407,34 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Delete Job Queue Queue  Name  Delete",
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/QueueJob"
-                  }
+                  },
+                  "title": "Response Delete Job Queue Queue  Name  Delete"
                 }
               }
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -462,11 +463,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get In Progress Jobs In Progress Get",
-                  "type": "object",
                   "additionalProperties": {
                     "$ref": "#/components/schemas/InProgressJob"
-                  }
+                  },
+                  "type": "object",
+                  "title": "Response Get In Progress Jobs In Progress Get"
                 }
               }
             }
@@ -484,13 +485,13 @@
         "operationId": "requeue_in_progress_job_in_progress__job_id__put",
         "parameters": [
           {
+            "name": "job_id",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Job Id",
-              "type": "integer"
-            },
-            "name": "job_id",
-            "in": "path"
+              "type": "integer",
+              "title": "Job Id"
+            }
           }
         ],
         "responses": {
@@ -518,13 +519,13 @@
         "operationId": "remove_in_progress_job_in_progress__job_id__delete",
         "parameters": [
           {
+            "name": "job_id",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Job Id",
-              "type": "integer"
-            },
-            "name": "job_id",
-            "in": "path"
+              "type": "integer",
+              "title": "Job Id"
+            }
           }
         ],
         "responses": {
@@ -545,34 +546,47 @@
       }
     },
     "/pipeline/{name}": {
-      "get": {
+      "put": {
         "tags": [
           "Admin: Pipelines"
         ],
-        "summary": "Get Pipeline",
-        "description": "Get the definition of the named pipeline from the DB.\n\n Parameters:\n   **name**: str - name of the pipeline to retrieve\n\nReturns:\n   PipelineDefinition for named pipeline",
-        "operationId": "get_pipeline_pipeline__name__get",
+        "summary": "Update Pipeline",
+        "description": "Add new or replace existing pipeline with the named pipeline definition.\n\nVconProcessorOptions: bool - validate the ProcessorOptions in the pipeline.\n  The default and recommendation is to validate.  However if the named \n  processor is not installed on this machine, validation will fail.\n\nReturns: None",
+        "operationId": "update_pipeline_pipeline__name__put",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "validate_processor_options",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Validate Processor Options"
+            }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PipelineDefinition"
-                }
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PipelineDefinition-Input"
               }
             }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -586,47 +600,34 @@
           }
         }
       },
-      "put": {
+      "get": {
         "tags": [
           "Admin: Pipelines"
         ],
-        "summary": "Update Pipeline",
-        "description": "Add new or replace existing pipeline with the named pipeline definition.\n\nVconProcessorOptions: bool - validate the ProcessorOptions in the pipeline.\n  The default and recommendation is to validate.  However if the named \n  processor is not installed on this machine, validation will fail.\n\nReturns: None",
-        "operationId": "update_pipeline_pipeline__name__put",
+        "summary": "Get Pipeline",
+        "description": "Get the definition of the named pipeline from the DB.\n\n Parameters:\n   **name**: str - name of the pipeline to retrieve\n\nReturns:\n   PipelineDefinition for named pipeline",
+        "operationId": "get_pipeline_pipeline__name__get",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
-          },
-          {
-            "required": false,
-            "schema": {
-              "title": "Validate Processor Options",
-              "type": "boolean",
-              "default": true
-            },
-            "name": "validate_processor_options",
-            "in": "query"
+              "type": "string",
+              "title": "Name"
+            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PipelineDefinition"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PipelineDefinition-Output"
+                }
               }
             }
-          },
-          "required": true
-        },
-        "responses": {
-          "204": {
-            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -649,13 +650,13 @@
         "operationId": "delete_pipeline_pipeline__name__delete",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
           }
         ],
         "responses": {
@@ -689,11 +690,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Pipeline Names Pipelines Get",
-                  "type": "array",
                   "items": {
                     "type": "string"
-                  }
+                  },
+                  "type": "array",
+                  "title": "Response Get Pipeline Names Pipelines Get"
                 }
               }
             }
@@ -711,13 +712,13 @@
         "operationId": "get_vcon_vcon__vcon_uuid__get",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           }
         ],
         "responses": {
@@ -726,41 +727,41 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Vcon Vcon  Vcon Uuid  Get",
                   "anyOf": [
                     {
                       "$ref": "#/components/schemas/VconUnsignedObject"
                     },
                     {
-                      "$ref": "#/components/schemas/VconSignedObject"
+                      "$ref": "#/components/schemas/VconSignedObject-Output"
                     },
                     {
                       "$ref": "#/components/schemas/VconEncryptedObject"
                     }
-                  ]
+                  ],
+                  "title": "Response Get Vcon Vcon  Vcon Uuid  Get"
                 }
               }
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -783,13 +784,13 @@
         "operationId": "delete_vcon_vcon__vcon_uuid__delete",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           }
         ],
         "responses": {
@@ -797,24 +798,24 @@
             "description": "Successful Response"
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -841,18 +842,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "title": "Inbound Vcon",
                 "anyOf": [
                   {
                     "$ref": "#/components/schemas/VconUnsignedObject"
                   },
                   {
-                    "$ref": "#/components/schemas/VconSignedObject"
+                    "$ref": "#/components/schemas/VconSignedObject-Input"
                   },
                   {
                     "$ref": "#/components/schemas/VconEncryptedObject"
                   }
-                ]
+                ],
+                "title": "Inbound Vcon"
               }
             }
           },
@@ -905,22 +906,22 @@
         "operationId": "get_vcon_jq_transform_vcon__vcon_uuid__jq_get",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
+            "name": "jq_transform",
+            "in": "query",
             "required": true,
             "schema": {
-              "title": "Jq Transform",
-              "type": "string"
-            },
-            "name": "jq_transform",
-            "in": "query"
+              "type": "string",
+              "title": "Jq Transform"
+            }
           }
         ],
         "responses": {
@@ -933,24 +934,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -975,22 +976,22 @@
         "operationId": "get_vcon_jsonpath_query_vcon__vcon_uuid__jsonpath_get",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
+            "name": "path_string",
+            "in": "query",
             "required": true,
             "schema": {
-              "title": "Path String",
-              "type": "string"
-            },
-            "name": "path_string",
-            "in": "query"
+              "type": "string",
+              "title": "Path String"
+            }
           }
         ],
         "responses": {
@@ -1003,24 +1004,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1045,44 +1046,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__decrypt_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DecryptFilterPluginOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1096,24 +1097,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1138,44 +1139,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__deepgram_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DeepgramOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1189,24 +1190,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1231,44 +1232,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__encrypt_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EncryptFilterPluginOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1282,24 +1283,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1324,44 +1325,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__jq_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/JQOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1375,24 +1376,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1417,44 +1418,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__openai_chat_completion_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/OpenAiChatCompletionOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1468,24 +1469,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1510,44 +1511,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__queue_job_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QueueJobOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1561,24 +1562,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1603,44 +1604,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__send_email_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SendEmailOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1654,24 +1655,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1696,44 +1697,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__set_parameters_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SetParametersOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1747,24 +1748,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1789,44 +1790,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__sign_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SignFilterPluginOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1840,24 +1841,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1882,44 +1883,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__text_pii_redactor_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TextPiiRedactorOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1933,24 +1934,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -1975,44 +1976,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__verify_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/VerifyFilterPluginOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -2026,24 +2027,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -2068,44 +2069,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__whisper_base_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WhisperOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -2119,24 +2120,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -2161,44 +2162,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__impls_min_init_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/VconProcessorOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -2212,24 +2213,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -2254,44 +2255,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__add_party_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AddPartyOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -2305,24 +2306,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -2347,44 +2348,44 @@
         "operationId": "run_vcon_processor_process__vcon_uuid__test_add_party_post",
         "parameters": [
           {
+            "name": "vcon_uuid",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Vcon Uuid",
-              "type": "string"
-            },
-            "name": "vcon_uuid",
-            "in": "path"
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Commit Changes",
-              "type": "boolean",
-              "default": false
-            },
             "name": "commit_changes",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Whole Vcon",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
             "name": "return_whole_vcon",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AddPartyOptions"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -2398,24 +2399,24 @@
             }
           },
           "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Not Found"
           },
           "500": {
-            "description": "Internal Server Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpErrorResponseBody"
                 }
               }
-            }
+            },
+            "description": "Internal Server Error"
           },
           "422": {
             "description": "Validation Error",
@@ -2440,55 +2441,55 @@
         "operationId": "run_pipeline_pipeline__name__run_post",
         "parameters": [
           {
+            "name": "name",
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Name",
-              "type": "string"
-            },
-            "name": "name",
-            "in": "path"
+              "type": "string",
+              "title": "Name"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Save Vcons",
-              "type": "boolean",
-              "default": false
-            },
             "name": "save_vcons",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Results",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Save Vcons"
+            }
+          },
+          {
             "name": "return_results",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Results"
+            }
           }
         ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "title": "Vcon",
                 "anyOf": [
                   {
                     "$ref": "#/components/schemas/VconUnsignedObject"
                   },
                   {
-                    "$ref": "#/components/schemas/VconSignedObject"
+                    "$ref": "#/components/schemas/VconSignedObject-Input"
                   },
                   {
                     "$ref": "#/components/schemas/VconEncryptedObject"
                   }
-                ]
+                ],
+                "title": "Vcon"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -2496,7 +2497,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/VconProcessorOutput"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Run Pipeline Pipeline  Name  Run Post"
                 }
               }
             }
@@ -2524,42 +2533,42 @@
         "operationId": "run_pipeline_uuid_pipeline__name__run__uuid__post",
         "parameters": [
           {
-            "required": true,
-            "schema": {
-              "title": "Name",
-              "type": "string"
-            },
             "name": "name",
-            "in": "path"
-          },
-          {
+            "in": "path",
             "required": true,
             "schema": {
-              "title": "Uuid",
-              "type": "string"
-            },
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
             "name": "uuid",
-            "in": "path"
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Uuid"
+            }
           },
           {
-            "required": false,
-            "schema": {
-              "title": "Save Vcons",
-              "type": "boolean",
-              "default": false
-            },
             "name": "save_vcons",
-            "in": "query"
-          },
-          {
+            "in": "query",
             "required": false,
             "schema": {
-              "title": "Return Results",
               "type": "boolean",
-              "default": true
-            },
+              "default": false,
+              "title": "Save Vcons"
+            }
+          },
+          {
             "name": "return_results",
-            "in": "query"
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Results"
+            }
           }
         ],
         "responses": {
@@ -2568,7 +2577,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/VconProcessorOutput"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Run Pipeline Uuid Pipeline  Name  Run  Uuid  Post"
                 }
               }
             }
@@ -2590,91 +2607,117 @@
   "components": {
     "schemas": {
       "AddPartyOptions": {
-        "title": "AddPartyOptions",
-        "type": "object",
         "properties": {
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
-            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
-            "default": 0
-          },
-          "format_options": {
-            "title": "set VconProcessorOptions fields with formated strings build from parameters",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
-            "default": {}
-          },
-          "tel": {
-            "title": "Tel",
-            "type": "string"
-          }
-        },
-        "description": "Base class options for **VconProcessor.processor** method "
-      },
-      "DecryptFilterPluginOptions": {
-        "title": "decrypt filter method options",
-        "type": "object",
-        "properties": {
-          "private_pem_key": {
-            "title": "PEM format private key to use for decrypting the vCon",
-            "type": "string",
-            "description": "\n    Override the default PEM format private key for encrypting.\n"
-          },
-          "public_pem_key": {
-            "title": "PEM format public key/cert to use for encrypting the vCon",
-            "type": "string",
-            "description": "\n    Override the default PEM format public key/cert for encrypting.\n"
-          },
-          "input_vcon_index": {
             "title": "VconProcessorIO input vCon index",
-            "type": "integer",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
-          }
-        },
-        "description": "processor options class for **processor** method of VconProcessor wrapper for DecryptFilterPlugin **FilterPlugin**"
-      },
-      "DeepgramOptions": {
-        "title": "Deepgram transcription filter method options",
-        "type": "object",
-        "properties": {
-          "language": {
-            "title": "transcription language",
-            "type": "string",
-            "default": "en"
           },
-          "input_dialogs": {
-            "title": "input **Vcon** recording **dialog** objects",
+          "tel": {
             "anyOf": [
               {
                 "type": "string"
               },
               {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+                "type": "null"
               }
             ],
+            "title": "Tel"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "AddPartyOptions"
+      },
+      "DecryptFilterPluginOptions": {
+        "properties": {
+          "private_pem_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "PEM format private key to use for decrypting the vCon",
+            "description": "\n    Override the default PEM format private key for encrypting.\n"
+          },
+          "public_pem_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "PEM format public key/cert to use for encrypting the vCon",
+            "description": "\n    Override the default PEM format public key/cert for encrypting.\n"
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "decrypt filter method options",
+        "description": "processor options class for **processor** method of VconProcessor wrapper for DecryptFilterPlugin **FilterPlugin**"
+      },
+      "DeepgramOptions": {
+        "properties": {
+          "language": {
+            "type": "string",
+            "title": "transcription language",
+            "default": "en"
+          },
+          "input_dialogs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "input **Vcon** recording **dialog** objects",
             "description": "\nIndicates which recording **dialog** objects in the given **Vcon** are\nto be transcribed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n",
             "default": "",
             "examples": [
@@ -2693,91 +2736,137 @@
             ]
           },
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           }
         },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Deepgram transcription filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for Deepgram **FilterPlugin**"
       },
       "EncryptFilterPluginOptions": {
-        "title": "encrypt filter method options",
-        "type": "object",
         "properties": {
           "public_pem_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "PEM format public key/cert to use for encrypting the vCon",
-            "type": "string",
             "description": "\n    Override the default PEM format public key/cert for encrypting.\n"
           },
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           }
         },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "encrypt filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for EncryptFilterPlugin **FilterPlugin**"
       },
       "HTTPValidationError": {
-        "title": "HTTPValidationError",
-        "type": "object",
         "properties": {
           "detail": {
-            "title": "Detail",
-            "type": "array",
             "items": {
               "$ref": "#/components/schemas/ValidationError"
-            }
+            },
+            "type": "array",
+            "title": "Detail"
           }
-        }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
       },
       "HttpErrorResponseBody": {
-        "title": "HttpErrorResponseBody",
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
         "required": [
           "detail"
         ],
-        "type": "object",
-        "properties": {
-          "detail": {
-            "title": "Detail",
-            "type": "string"
-          }
-        },
+        "title": "HttpErrorResponseBody",
         "description": "Error return type object for APIs "
       },
       "InProgressJob": {
-        "title": "InProgressJob",
+        "properties": {
+          "jobid": {
+            "type": "integer",
+            "title": "job id",
+            "description": "unique (across all pipeline servers) integer job id for this in progress job",
+            "examples": [
+              3456
+            ]
+          },
+          "queue": {
+            "type": "string",
+            "title": "job queue name",
+            "description": "the job queue name from which this in progress job was popped"
+          },
+          "job": {
+            "$ref": "#/components/schemas/QueueJob",
+            "description": "the queue job that was popped by the pipeline server and initiated this in progress job"
+          },
+          "start": {
+            "type": "number",
+            "title": "job start time",
+            "description": "epoch seconds time at which this in progress job started",
+            "examples": [
+              1740263900.882451
+            ]
+          },
+          "server": {
+            "type": "string",
+            "title": "server key",
+            "description": "the server key to the pipeline server upon which this in progress job is running.<br> server_keys are of the format host:port:pid:start_time<br> to iterate server keys see entry point get /servers.",
+            "examples": [
+              "localhost:8000:765:1692125691.2032259"
+            ]
+          }
+        },
+        "type": "object",
         "required": [
           "jobid",
           "queue",
@@ -2785,181 +2874,187 @@
           "start",
           "server"
         ],
-        "type": "object",
-        "properties": {
-          "jobid": {
-            "title": "job id",
-            "type": "integer",
-            "description": "unique (across all pipeline servers) integer job id for this in progress job",
-            "example": 3456
-          },
-          "queue": {
-            "title": "job queue name",
-            "type": "string",
-            "description": "the job queue name from which this in progress job was popped"
-          },
-          "job": {
-            "title": "Job",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/QueueJob"
-              }
-            ],
-            "description": "the queue job that was popped by the pipeline server and initiated this in progress job"
-          },
-          "start": {
-            "title": "job start time",
-            "type": "number",
-            "description": "epoch seconds time at which this in progress job started",
-            "example": 1732152396.6975715
-          },
-          "server": {
-            "title": "server key",
-            "type": "string",
-            "description": "the server key to the pipeline server upon which this in progress job is running.<br> server_keys are of the format host:port:pid:start_time<br> to iterate server keys see entry point get /servers.",
-            "example": "localhost:8000:765:1692125691.2032259"
-          }
-        }
+        "title": "InProgressJob"
       },
       "JQOptions": {
-        "title": "JQOptions",
-        "type": "object",
         "properties": {
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           },
           "jq_queries": {
-            "title": "dict of JQ queries to perform on VconProcessorIO input.",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "dict of JQ queries to perform on VconProcessorIO input.",
             "default": {},
-            "example": {
-              "party_count": ".parties | length",
-              "first_dialog_type": ".vcons[0].dialog[0].type",
-              "party0_has_email_address": ".vcons[0].parties[0].email | length > 0"
-            }
+            "examples": [
+              {
+                "first_dialog_type": ".vcons[0].dialog[0].type",
+                "party0_has_email_address": ".vcons[0].parties[0].email | length > 0",
+                "party_count": ".parties | length"
+              }
+            ]
           }
         },
-        "description": "Base class options for **VconProcessor.processor** method "
+        "additionalProperties": true,
+        "type": "object",
+        "title": "JQOptions",
+        "description": "JOptions is passed to the jq processor when processing the VconProcessorIO.\nJQOptions adds the jq_queries to VconProcessorOptions which defines the\nset of querries to perform on the VconProcessorIO."
       },
       "JweUnprotectedObject": {
-        "title": "JweUnprotectedObject",
-        "type": "object",
         "properties": {
           "cty": {
-            "title": "mimetype of the decrypted ciphertext",
-            "type": "string",
-            "description": "defined in RFC 7516 section 4.1.12"
-          },
-          "uuid": {
-            "title": "vCon uuid",
-            "type": "string"
-          },
-          "enc": {
-            "title": "encryption algoritym",
-            "type": "string",
-            "description": "defined in RFC 7516 section 4.1.2"
-          }
-        },
-        "description": "JWE Unprotected Object part of JWE RFC 7516\nDefined in RFC 7516 section 7.2.1"
-      },
-      "JwsHeader": {
-        "title": "JwsHeader",
-        "required": [
-          "alg"
-        ],
-        "type": "object",
-        "properties": {
-          "alg": {
-            "title": "JWS algorithm",
-            "type": "string",
-            "description": "defined in RFC 7515 section 4.1.1"
-          },
-          "x5c": {
-            "title": "JWS certificate chain",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "certifcate chain in the form of an array of string defined in RFC 7515 section 4.1.6"
-          },
-          "x5u": {
-            "title": "JWS certificate chain URLs",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "certifcate chain in the form of an array of HTTPS URLs defined in RFC 7515 section 4.1.6"
-          }
-        }
-      },
-      "JwsSignature": {
-        "title": "JwsSignature",
-        "required": [
-          "header",
-          "protected",
-          "signature"
-        ],
-        "type": "object",
-        "properties": {
-          "header": {
-            "title": "JWS Header Object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JwsHeader"
-              }
-            ],
-            "description": "defined in RFC 7515 section 7.2.1"
-          },
-          "protected": {
-            "title": "JWS protected",
-            "type": "string",
-            "description": "defined in RFC 7515 section 7.2.1"
-          },
-          "signature": {
-            "title": "JWS signature",
-            "type": "string",
-            "description": "defined in RFC 7515 section 7.2.1"
-          }
-        }
-      },
-      "OpenAiChatCompletionOptions": {
-        "title": "OpenAI Chat Completion filter method options",
-        "type": "object",
-        "properties": {
-          "input_dialogs": {
-            "title": "input **Vcon** text **dialog** objects",
             "anyOf": [
               {
                 "type": "string"
               },
               {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+                "type": "null"
               }
             ],
+            "title": "content/media type of the decrypted ciphertext",
+            "description": "defined in RFC 7516 section 4.1.12"
+          },
+          "uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "vCon uuid"
+          },
+          "enc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "encryption algoritym",
+            "description": "defined in RFC 7516 section 4.1.2"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "cty",
+          "uuid",
+          "enc"
+        ],
+        "title": "JweUnprotectedObject",
+        "description": "JWE Unprotected Object part of JWE RFC 7516\nDefined in RFC 7516 section 7.2.1"
+      },
+      "JwsHeader": {
+        "properties": {
+          "alg": {
+            "type": "string",
+            "title": "JWS algorithm",
+            "description": "defined in RFC 7515 section 4.1.1"
+          },
+          "x5c": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "JWS certificate chain",
+            "description": "certifcate chain in the form of an array of string defined in RFC 7515 section 4.1.6"
+          },
+          "x5u": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "JWS certificate chain URLs",
+            "description": "certifcate chain in the form of an array of HTTPS URLs defined in RFC 7515 section 4.1.6"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "alg"
+        ],
+        "title": "JwsHeader"
+      },
+      "JwsSignature": {
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/JwsHeader",
+            "title": "JWS Header Object",
+            "description": "defined in RFC 7515 section 7.2.1"
+          },
+          "protected": {
+            "type": "string",
+            "title": "JWS protected",
+            "description": "defined in RFC 7515 section 7.2.1"
+          },
+          "signature": {
+            "type": "string",
+            "title": "JWS signature",
+            "description": "defined in RFC 7515 section 7.2.1"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "header",
+          "protected",
+          "signature"
+        ],
+        "title": "JwsSignature"
+      },
+      "OpenAiChatCompletionOptions": {
+        "properties": {
+          "input_dialogs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "input **Vcon** text **dialog** objects",
             "description": "\nIndicates which text **dialog** and recording **dialog** object's associated\ntranscript **analysis** objects are to be input.  Recording **dialog**\nobjects that do not have transcript **analysis** objects, are transcribed\nusing the default FilterPlugin transcribe type.\n\n * **\"\"** (empty str or None) - all **dialogs** are fed into **OpenAI** model to complete the response to the **prompt**.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are fed into **OpenAI** model to complete the response to the **prompt** \n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are fed into **OpenAI** model to complete the response to the **prompt** \n * **[]** (empty list[int]) - none of the **dialog** objects are fed to the the model.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are fed to the the model.\n\n**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.\n",
             "default": "",
             "examples": [
@@ -2978,8 +3073,8 @@
             ]
           },
           "model": {
-            "title": "**OpenAI** model name to use for generative AI",
             "type": "string",
+            "title": "**OpenAI** model name to use for generative AI",
             "description": "\nThe named model is used to feed the transcription/text and then ask it the\ngiven prompt.\nOpenAI has numerous trained models, the latest of which may not be listed here\nin examples.\n\nYou can get the current list of of available models for\nyour license/API key using the following:\n\n    import openai\n    openai.api_key = \"your key here\"\n    openai.Model.list()\n",
             "default": "gpt-4-1106-preview",
             "examples": [
@@ -3044,26 +3139,26 @@
             ]
           },
           "prompt": {
-            "title": "the prompt or question to ask about the transcription/text",
             "type": "string",
+            "title": "the prompt or question to ask about the transcription/text",
             "description": "\nThe **OpenAI** model is given text from the dialog and\ngiven this prompt to instruct it what generative AI text\nthat you would like from it.\n",
             "default": "Summarize the transcript in these messages."
           },
           "max_tokens": {
-            "title": "maximum number of tokens of output",
             "type": "integer",
+            "title": "maximum number of tokens of output",
             "description": "\nThe **max_tokens** limits the size of the output generative AI text.\nA token is approximately a syllable.  On average a word is 1.33 tokens.\n",
             "default": 100
           },
           "temperature": {
-            "title": "**OpenAI** sampling temperature",
             "type": "number",
+            "title": "**OpenAI** sampling temperature",
             "description": "\nlower number is more deterministic, higher is more random.\n\nvalues should range from 0.0 to 2.0\n",
             "default": 0.0
           },
           "jq_result": {
-            "title": "**jq** query of result",
             "type": "string",
+            "title": "**jq** query of result",
             "description": "\nThe **OpenAI** completion outputs a JSON \n[Completion Object](https://platform.openai.com/docs/api-reference/completions/object)\n\nThe **jq_results** string contains a **jq**  filter/query string that\nis applied to the output to determine what is saved in the\ncreated **Vcon** **analysis** object.\n\n* **\".\"** - results in a query that returns the entire JSON object.\n* **\".choices[0].text\"** - results in a query which contains only the text portion of the completion output\n\nFor more information on creating **jq filters** see:\nhttps://jqlang.github.io/jq/manual/\n\n",
             "default": ".choices[0].message.content",
             "examples": [
@@ -3072,337 +3167,459 @@
             ]
           },
           "json_response": {
-            "title": "provide response in JSON format",
             "type": "boolean",
+            "title": "provide response in JSON format",
             "description": "If False (default) response will be in a readable text format.  If True, the response from ChatGPT will be in a JSON formatted document.  If a JSON response is desired, your prompt should specify the format of the JSON content or parameters.",
             "default": false
           },
           "analysis_type": {
-            "title": "the **Vcon analysis** object type",
             "type": "string",
+            "title": "the **Vcon analysis** object type",
             "description": "\nThe results of the completion are saved in a new **analysis**\nobject which is added to the input **Vcon**.\n**analysis_type** is the **analysis** type token that is set\non the new **analysis** object in the **Vcon**.\n",
             "default": "summary"
           },
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           }
         },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "OpenAI Chat Completion filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for OpenAIChatCompletion **FilterPlugin**"
       },
-      "PipelineDefinition": {
-        "title": "PipelineDefinition",
+      "PipelineDefinition-Input": {
+        "properties": {
+          "pipeline_options": {
+            "$ref": "#/components/schemas/PipelineOptions",
+            "title": "pipeline execution options"
+          },
+          "processors": {
+            "items": {
+              "$ref": "#/components/schemas/PipelineProcessor"
+            },
+            "type": "array",
+            "title": "list of **VconProcessorConfig**",
+            "description": "The sequential set of **VconProcessorConfig** for the list of **VconProcessor**s that get run for this **Pipeline**"
+          }
+        },
+        "type": "object",
         "required": [
           "pipeline_options",
           "processors"
         ],
-        "type": "object",
+        "title": "PipelineDefinition",
+        "description": "Definition of the serialized representation of a VconPipeline "
+      },
+      "PipelineDefinition-Output": {
         "properties": {
           "pipeline_options": {
-            "title": "pipeline execution options",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/PipelineOptions"
-              }
-            ]
+            "$ref": "#/components/schemas/PipelineOptions",
+            "title": "pipeline execution options"
           },
           "processors": {
-            "title": "list of **VconProcessorConfig**",
-            "type": "array",
             "items": {
               "$ref": "#/components/schemas/PipelineProcessor"
             },
+            "type": "array",
+            "title": "list of **VconProcessorConfig**",
             "description": "The sequential set of **VconProcessorConfig** for the list of **VconProcessor**s that get run for this **Pipeline**"
           }
         },
+        "type": "object",
+        "required": [
+          "pipeline_options",
+          "processors"
+        ],
+        "title": "PipelineDefinition",
         "description": "Definition of the serialized representation of a VconPipeline "
       },
       "PipelineOptions": {
-        "title": "PipelineOptions",
-        "type": "object",
         "properties": {
           "save_vcons": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "save/update vCon(s) after pipeline processing",
-            "type": "boolean"
+            "default": true
           },
           "timeout": {
-            "title": "processor timeout",
             "anyOf": [
               {
                 "type": "number"
               },
               {
                 "type": "integer"
+              },
+              {
+                "type": "null"
               }
             ],
+            "title": "processor timeout",
             "description": "maximum timeout for any processor in the pipeline.\n  If any one of the processors in the pipeline takes more than this number\n of seconds, the processor will be cancled, remaining processors will be\n skipped and the pipeline will be considered failed for the given job/vCon.\n"
           },
           "failure_queue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "queue for failed pipeline jobs",
-            "type": "string",
-            "description": "If any of the processors in the pipeline or dependant DB access fail,\n the job is added to the failure_queue if set.\n"
+            "description": "If any of the processors in the pipeline or dependant DB access fail,\n the job is added to the failure_queue if set.\n",
+            "default": ""
           },
           "success_queue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "queue for successfully run pipeline jobs",
-            "type": "string",
-            "description": "If all of the processors in the pipeline succeed in running,\n the job is added to the success_queue if set.\n"
+            "description": "If all of the processors in the pipeline succeed in running,\n the job is added to the success_queue if set.\n",
+            "default": ""
           }
         },
+        "type": "object",
+        "title": "PipelineOptions",
         "description": "Options the effect the handling of Vcon Pipeline processing."
       },
       "PipelineProcessor": {
-        "title": "PipelineProcessor",
+        "properties": {
+          "processor_name": {
+            "type": "string",
+            "title": "VconProcessor name"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/VconProcessorOptions",
+            "title": "VconProcessor options"
+          }
+        },
+        "type": "object",
         "required": [
           "processor_name",
           "processor_options"
         ],
-        "type": "object",
-        "properties": {
-          "processor_name": {
-            "title": "VconProcessor name",
-            "type": "string"
-          },
-          "processor_options": {
-            "title": "VconProcessor options",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/VconProcessorOptions"
-              }
-            ]
-          }
-        },
+        "title": "PipelineProcessor",
         "description": "Configuration for a VconProcessor in a Pipeline"
       },
       "QueueJob": {
-        "title": "QueueJob",
-        "type": "object",
         "properties": {
           "job_type": {
-            "title": "Job Type",
             "type": "string",
+            "title": "Job Type",
             "description": "queue job type (currently only \"vcon_uuid\" allowed)",
             "default": "vcon_uuid"
           },
           "vcon_uuid": {
-            "title": "vCon UUIDs",
-            "type": "array",
             "items": {
               "type": "string"
             },
+            "type": "array",
+            "title": "vCon UUIDs",
             "description": "array of vCon UUIDs (currently must be exactly 1)",
             "default": [],
-            "example": [
-              "0185656d-fake-UUID-84fd-5b4de1ef42b4"
+            "examples": [
+              [
+                "0185656d-fake-UUID-84fd-5b4de1ef42b4"
+              ]
             ]
           }
-        }
+        },
+        "type": "object",
+        "title": "QueueJob"
       },
       "QueueJobOptions": {
-        "title": "QueueJobOptions",
-        "type": "object",
         "properties": {
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           },
           "queue_name": {
-            "title": "Job queue name",
             "type": "string",
+            "title": "Job queue name",
             "description": "name of the queue to put the job in",
             "default": ""
           },
           "from_queue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "From queue name",
-            "type": "string",
             "description": "name of the queue in which this processor is run.  This may be used for diagnostic purpose to track what pipeline the job came from.  This string does not effect the functionality."
           }
         },
-        "description": "Base class options for **VconProcessor.processor** method "
+        "additionalProperties": true,
+        "type": "object",
+        "title": "QueueJobOptions",
+        "description": "QueueJobOptions is passed to the jqueue_job processor when processing the given VconProcessorIO.\nQueueJobOptions indicates where the job is to be queued and optionally labels the queued job\nwith the queue from which it came."
       },
       "QueueProperties": {
-        "title": "QueueProperties",
-        "type": "object",
         "properties": {
           "weight": {
-            "title": "server's queue weight",
             "type": "integer",
+            "title": "server's queue weight",
             "description": "number of times that the pipeline server should pop a job from this queue before iterating to the server's next queue.",
             "default": 1
           }
-        }
+        },
+        "type": "object",
+        "title": "QueueProperties"
       },
       "SendEmailOptions": {
-        "title": "SendEmailOptions",
-        "type": "object",
         "properties": {
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           },
           "smtp_host": {
-            "title": "SMTP server host to connect to, to send email messages",
             "type": "string",
+            "title": "SMTP server host to connect to, to send email messages",
             "description": "Should be set if authentication is required.  If unset or emtpy string, the server name in the To address is used",
             "default": ""
           },
           "smtp_port": {
-            "title": "SMTP server port to connect to, to send email messages",
             "type": "integer",
+            "title": "SMTP server port to connect to, to send email messages",
             "description": "Should be set if authentication is required.",
             "default": 0
           },
           "smtp_user": {
-            "title": "authentication user ID to used to login to SMTP server",
             "type": "string",
+            "title": "authentication user ID to used to login to SMTP server",
             "default": ""
           },
           "smtp_password": {
-            "title": "authentication password to used to login to SMTP server",
             "type": "string",
+            "title": "authentication password to used to login to SMTP server",
             "default": ""
           },
           "use_tls": {
-            "title": "connect to SMTP server using TLS",
             "type": "boolean",
+            "title": "connect to SMTP server using TLS",
             "default": false
           },
           "from_address": {
-            "title": "email address for sender",
             "type": "string",
+            "title": "email address for sender",
             "description": "string containing From address to send message from.  Address must be of the form: 'user@host' or 'First Last \\<user@host\\>'",
             "default": ""
           },
           "to": {
-            "title": "list of To email addresses",
-            "type": "array",
             "items": {
               "type": "string"
             },
+            "type": "array",
+            "title": "list of To email addresses",
             "description": "list of strings containing To address(es) to send message to.  Address must be of the form: 'user@host' or 'First Last \\<user@host\\>'",
             "default": []
           },
           "cc": {
-            "title": "list of Cc email addresses",
-            "type": "array",
             "items": {
               "type": "string"
             },
+            "type": "array",
+            "title": "list of Cc email addresses",
             "description": "list of strings containing Cc address(es) to copy/send message to.  Address must be of the form: 'user@host' or 'First Last \\<user@host\\>'",
             "default": []
           },
           "bcc": {
-            "title": "list of Bcc email addresses",
-            "type": "array",
             "items": {
               "type": "string"
             },
+            "type": "array",
+            "title": "list of Bcc email addresses",
             "description": "list of strings containing Bcc address(es) to blind copy/send message to.  Address must be of the form: 'user@host' or 'First Last \\<user@host\\>'",
             "default": []
           },
           "subject": {
-            "title": "subject field for the email message to be sent",
             "type": "string",
+            "title": "subject field for the email message to be sent",
             "default": ""
           },
           "text_body": {
-            "title": "main text body of the email message to be sent",
             "type": "string",
+            "title": "main text body of the email message to be sent",
             "default": ""
           },
           "client_hostname": {
-            "title": "FQHN provided for SMTP client when connecting to SMTP server.",
             "type": "string",
+            "title": "FQHN provided for SMTP client when connecting to SMTP server.",
             "default": ""
           }
         },
-        "description": "Base class options for **VconProcessor.processor** method "
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SendEmailOptions",
+        "description": "SendEmailOptions provides the SMTP headers and message data required to send\nan SMTP email message.  SendEmailOptions is passed to the send_email processor."
       },
       "ServerInfo": {
-        "title": "ServerInfo",
-        "required": [
-          "start_time",
-          "pid"
-        ],
-        "type": "object",
         "properties": {
           "py_vcon_server": {
-            "title": "server version",
             "type": "string",
+            "title": "server version",
             "description": "Python package py_vcon_server version number",
             "default": "0.3.0"
           },
           "vcon": {
-            "title": "vcon version",
             "type": "string",
+            "title": "vcon version",
             "description": "Python package **py_vcon** version number",
             "default": "0.4.0"
           },
           "start_time": {
-            "title": "server start time",
             "type": "number",
+            "title": "server start time",
             "description": "epoch seconds time at which this server started",
-            "example": 1732152396.6949644
+            "examples": [
+              1740263900.8776097
+            ]
           },
           "pid": {
-            "title": "server process id",
             "type": "integer",
-            "example": 108470
+            "title": "server process id",
+            "examples": [
+              203232
+            ]
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "start_time",
+          "pid"
+        ],
+        "title": "ServerInfo"
       },
       "ServerState": {
-        "title": "ServerState",
+        "properties": {
+          "host": {
+            "type": "string",
+            "title": "server host",
+            "description": "the server's host as configured in the REST_URL",
+            "examples": [
+              "locahost",
+              "192.168.0.23",
+              "example.com"
+            ]
+          },
+          "port": {
+            "type": "integer",
+            "title": "server port",
+            "description": "the server's port as configured in the REST_URL",
+            "examples": [
+              8000
+            ]
+          },
+          "pid": {
+            "type": "integer",
+            "title": "server process id",
+            "examples": [
+              203232
+            ]
+          },
+          "start_time": {
+            "type": "number",
+            "title": "server start up time",
+            "description": "epoch seconds time at which this server started",
+            "examples": [
+              1740263900.8788784
+            ]
+          },
+          "num_workers": {
+            "type": "integer",
+            "title": "number of server worker processes",
+            "description": "the number of pipeline worker processes configured in NUM_WORKERS for this server",
+            "examples": [
+              4
+            ]
+          },
+          "state": {
+            "type": "string",
+            "title": "server state",
+            "examples": [
+              "starting_up",
+              "running",
+              "shutting_down",
+              "unknown"
+            ]
+          },
+          "last_heartbeat": {
+            "type": "number",
+            "title": "heartbeat time stamp",
+            "description": "epoch seconds time for the last heartbeat on this server",
+            "examples": [
+              1740263900.8789923
+            ]
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
         "required": [
           "host",
           "port",
@@ -3412,156 +3629,107 @@
           "state",
           "last_heartbeat"
         ],
-        "type": "object",
-        "properties": {
-          "host": {
-            "title": "server host",
-            "type": "string",
-            "description": "the server's host as configured in the REST_URL",
-            "examples": [
-              "locahost",
-              "192.168.0.23",
-              "example.com"
-            ]
-          },
-          "port": {
-            "title": "server port",
-            "type": "integer",
-            "description": "the server's port as configured in the REST_URL",
-            "example": 8000
-          },
-          "pid": {
-            "title": "server process id",
-            "type": "integer",
-            "example": 108470
-          },
-          "start_time": {
-            "title": "server start up time",
-            "type": "number",
-            "description": "epoch seconds time at which this server started",
-            "example": 1732152396.6956646
-          },
-          "num_workers": {
-            "title": "number of server worker processes",
-            "type": "integer",
-            "description": "the number of pipeline worker processes configured in NUM_WORKERS for this server",
-            "example": 4
-          },
-          "state": {
-            "title": "server state",
-            "type": "string",
-            "example": "running",
-            "examples": [
-              "starting_up",
-              "running",
-              "shutting_down",
-              "unknown"
-            ]
-          },
-          "last_heartbeat": {
-            "title": "heartbeat time stamp",
-            "type": "number",
-            "description": "epoch seconds time for the last heartbeat on this server",
-            "example": 1732152396.6957023
-          }
-        }
+        "title": "ServerState"
       },
       "SetParametersOptions": {
-        "title": "SetParametersOptions",
-        "type": "object",
         "properties": {
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           },
           "parameters": {
-            "title": "dict of parameters to set in the output from VconProcessor",
             "type": "object",
+            "title": "dict of parameters to set in the output from VconProcessor",
             "default": {}
           }
         },
-        "description": "Base class options for **VconProcessor.processor** method "
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SetParametersOptions",
+        "description": "SetParametersOptions is passed to the set_parameters processor and is used\nto set one or more parameter values from the given dict of parameters.  The\ninput parameters as well as those set or overwritten by the set_parameters\nprocessor are passed on via the VconProcessorIO to the subsquent processors\nin the pipeline."
       },
       "SignFilterPluginOptions": {
-        "title": "Sign filter method options",
-        "type": "object",
         "properties": {
           "private_pem_key": {
-            "title": "PEM format private key to use for signing vCon",
-            "type": "string",
-            "description": "\n    Override the default PEM format private key for signing.\n"
-          },
-          "cert_chain_pems": {
-            "title": "PEM certificate chain",
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "\nOverride default PEM format certificate chain to include in the signed (JWS x5c) vCon\nand used for verification of the signed vCon.\n",
-            "default": []
-          },
-          "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
-            "type": "integer",
-            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
-            "default": 0
-          },
-          "should_process": {
-            "title": "if True run processor",
-            "type": "boolean",
-            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
-            "default": true
-          },
-          "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
-            "default": {}
-          }
-        },
-        "description": "processor options class for **processor** method of VconProcessor wrapper for SignFilterPlugin **FilterPlugin**"
-      },
-      "TextPiiRedactorOptions": {
-        "title": "JQ redaction filter_plugin options",
-        "required": [
-          "jq_redaction_query",
-          "redaction_type_label"
-        ],
-        "type": "object",
-        "properties": {
-          "input_dialogs": {
-            "title": "input **Vcon** text **dialog** objects",
             "anyOf": [
               {
                 "type": "string"
               },
               {
-                "type": "array",
-                "items": {
-                  "type": "integer"
-                }
+                "type": "null"
               }
             ],
+            "title": "PEM format private key to use for signing vCon",
+            "description": "\n    Override the default PEM format private key for signing.\n"
+          },
+          "cert_chain_pems": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "PEM certificate chain",
+            "description": "\nOverride default PEM format certificate chain to include in the signed (JWS x5c) vCon\nand used for verification of the signed vCon.\n",
+            "default": []
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Sign filter method options",
+        "description": "processor options class for **processor** method of VconProcessor wrapper for SignFilterPlugin **FilterPlugin**"
+      },
+      "TextPiiRedactorOptions": {
+        "properties": {
+          "input_dialogs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "input **Vcon** text **dialog** objects",
             "description": "\nIndicates which text **dialog** and recording **dialog** object's associated\ntranscript **analysis** objects are to be input.  Recording **dialog**\nobjects that do not have transcript **analysis** objects, are transcribed\nusing the default FilterPlugin transcribe type.\n**dialog** objects in the given sequence or list which are not **text** or **recording** type dialogs are ignored.\n",
             "default": "",
             "examples": [
@@ -3580,54 +3748,59 @@
             ]
           },
           "jq_redaction_query": {
-            "title": "JQ query defining the redaction",
             "type": "string",
+            "title": "JQ query defining the redaction",
             "description": "string containing the JQ query to apply to the input vCon\n        to construct the output vCon.  The query can add, delete, modifiy the\n        contents of the input vcon to define the contents of the output vCon.  The\n        input vCon remains unchanged."
           },
           "redaction_type_label": {
-            "title": "redaction type label to be set in the output vCon's redaction object",
-            "type": "string"
+            "type": "string",
+            "title": "redaction type label to be set in the output vCon's redaction object"
           },
           "uuid_domain": {
-            "title": "domain string to use when generating a new UUID for the redacted vCon",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "domain string to use when generating a new UUID for the redacted vCon"
           },
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           }
         },
-        "description": "Base class options for **VconProcessor.processor** method "
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "jq_redaction_query",
+          "redaction_type_label"
+        ],
+        "title": "JQ redaction filter_plugin options",
+        "description": "TextPiiRedactorOptions provides the filter_plugin PII redaction options which\ndefines how the transcript(s) is redacted for PII as well\nas the filter_plugin jq query options which defines which parameters are\nredacted from the original vCon."
       },
       "ValidationError": {
-        "title": "ValidationError",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "type": "object",
         "properties": {
           "loc": {
-            "title": "Location",
-            "type": "array",
             "items": {
               "anyOf": [
                 {
@@ -3637,109 +3810,175 @@
                   "type": "integer"
                 }
               ]
-            }
+            },
+            "type": "array",
+            "title": "Location"
           },
           "msg": {
-            "title": "Message",
-            "type": "string"
+            "type": "string",
+            "title": "Message"
           },
           "type": {
-            "title": "Error Type",
-            "type": "string"
+            "type": "string",
+            "title": "Error Type"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       },
       "VconEncryptedObject": {
-        "title": "VconEncryptedObject",
+        "properties": {
+          "unprotected": {
+            "$ref": "#/components/schemas/JweUnprotectedObject",
+            "title": "JWS Signature Object",
+            "description": "defined in RFC 7515 section 7.2.1",
+            "default": []
+          },
+          "recipients": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "recipients list of objects",
+            "description": "defined in RFC 7516 section 7.2.1",
+            "default": []
+          },
+          "iv": {
+            "type": "string",
+            "title": "initialization vector",
+            "description": "defined in RFC 7516 section 7.2.1"
+          },
+          "ciphertext": {
+            "type": "string",
+            "title": "ciphertext of encrypted vCon",
+            "description": "defined in RFC 7516 section 4.1.12"
+          },
+          "tag": {
+            "type": "string",
+            "title": "authentication tag",
+            "description": "defined in RFC 7516 section 7.2.1"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
         "required": [
           "iv",
           "ciphertext",
           "tag"
         ],
-        "type": "object",
-        "properties": {
-          "unprotected": {
-            "title": "JWS Signature Object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/JweUnprotectedObject"
-              }
-            ],
-            "description": "defined in RFC 7515 section 7.2.1",
-            "default": []
-          },
-          "recipients": {
-            "title": "recipients list of objects",
-            "type": "array",
-            "items": {
-              "type": "object"
-            },
-            "description": "defined in RFC 7516 section 7.2.1",
-            "default": []
-          },
-          "iv": {
-            "title": "initialization vector",
-            "type": "string",
-            "description": "defined in RFC 7516 section 7.2.1"
-          },
-          "ciphertext": {
-            "title": "ciphertext of encrypted vCon",
-            "type": "string",
-            "description": "defined in RFC 7516 section 4.1.12"
-          },
-          "tag": {
-            "title": "authentication tag",
-            "type": "string",
-            "description": "defined in RFC 7516 section 7.2.1"
-          }
-        },
+        "title": "VconEncryptedObject",
         "description": "vCon in encrypted form (JWE RFC 7516)"
       },
       "VconPartiesObject": {
-        "title": "VconPartiesObject",
-        "type": "object",
         "properties": {
           "tel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "tel uri",
-            "type": "string",
             "description": "a telephone number",
-            "example": "+1 123 456 7890"
+            "examples": [
+              "+1 123 456 7890"
+            ]
           },
           "mailto": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "mailto uri",
-            "type": "string",
             "description": "a email address",
-            "example": "alice@example.com"
+            "examples": [
+              "alice@example.com"
+            ]
           },
           "stir": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "stir token",
-            "type": "string",
             "description": "stir token for the party in the call"
           },
           "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "full name",
-            "type": "string",
             "description": "party's first and last name",
-            "example": "Alice Jone"
+            "examples": [
+              "Alice Jone"
+            ]
           },
           "validation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "identity validation method",
-            "type": "string",
             "description": "the description or token label of the method by which the party's identity was verified"
           },
           "gmlpos": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "geolocation",
-            "type": "string",
             "description": "the geolocation of the party"
           },
           "uuid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "party uuid",
-            "type": "string",
             "description": "a unique identifier for the party"
           },
           "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "role",
-            "type": "string",
             "description": "role the party took in the conversation.  Not limited to these examples",
             "examples": [
               "agent",
@@ -3750,128 +3989,160 @@
             ]
           },
           "contact_list": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "contact list",
-            "type": "string",
             "description": "name or identifier for the contact list from which this party was retrived"
           }
-        }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "VconPartiesObject"
       },
       "VconProcessorOptions": {
-        "title": "VconProcessorOptions",
-        "type": "object",
         "properties": {
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           }
         },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "VconProcessorOptions",
         "description": "Base class options for **VconProcessor.processor** method "
       },
       "VconProcessorOutput": {
-        "title": "VconProcessorOutput",
-        "type": "object",
         "properties": {
           "vcons": {
-            "title": "array of **Vcon** objects",
-            "type": "array",
             "items": {
               "anyOf": [
                 {
                   "$ref": "#/components/schemas/VconUnsignedObject"
                 },
                 {
-                  "$ref": "#/components/schemas/VconSignedObject"
+                  "$ref": "#/components/schemas/VconSignedObject-Output"
                 },
                 {
                   "$ref": "#/components/schemas/VconEncryptedObject"
                 }
               ]
             },
+            "type": "array",
+            "title": "array of **Vcon** objects",
             "default": []
           },
           "vcons_modified": {
-            "title": "boolean indicated if the **Vcon** in the **vcons** array has been modified from the input version",
-            "type": "array",
             "items": {
               "type": "boolean"
             },
+            "type": "array",
+            "title": "boolean indicated if the **Vcon** in the **vcons** array has been modified from the input version",
             "default": []
           },
           "parameters": {
-            "title": "dict of parameters passed as input to and output from VconProcessor",
             "type": "object",
+            "title": "dict of parameters passed as input to and output from VconProcessor",
             "default": {}
           }
         },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "VconProcessorOutput",
         "description": "Serializable Output results from a VconProcessor "
       },
-      "VconSignedObject": {
-        "title": "VconSignedObject",
-        "required": [
-          "payload"
-        ],
-        "type": "object",
+      "VconSignedObject-Input": {
         "properties": {
           "payload": {
-            "title": "vCon payload in unsigned form",
             "type": "string",
+            "title": "vCon payload in unsigned form",
             "description": "Base64Url Encoded string containing the unsigned form of the JSON vCon."
           },
           "signatures": {
-            "title": "JWS Signature Object",
-            "type": "array",
             "items": {
               "$ref": "#/components/schemas/JwsSignature"
             },
+            "type": "array",
+            "title": "JWS Signature Object",
             "description": "defined in RFC 7515 section 7.2.1",
             "default": []
           }
         },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "payload"
+        ],
+        "title": "VconSignedObject",
+        "description": "vCon in signed form (JWS RFC 7515)"
+      },
+      "VconSignedObject-Output": {
+        "properties": {
+          "payload": {
+            "type": "string",
+            "title": "vCon payload in unsigned form",
+            "description": "Base64Url Encoded string containing the unsigned form of the JSON vCon."
+          },
+          "signatures": {
+            "items": {
+              "$ref": "#/components/schemas/JwsSignature"
+            },
+            "type": "array",
+            "title": "JWS Signature Object",
+            "description": "defined in RFC 7515 section 7.2.1",
+            "default": []
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "payload"
+        ],
+        "title": "VconSignedObject",
         "description": "vCon in signed form (JWS RFC 7515)"
       },
       "VconUnsignedObject": {
-        "title": "VconUnsignedObject",
-        "required": [
-          "uuid"
-        ],
-        "type": "object",
         "properties": {
           "vcon": {
-            "title": "vCon format version",
             "type": "string",
-            "default": "0.0.1"
+            "title": "vCon format version",
+            "default": "0.0.2"
           },
           "uuid": {
-            "title": "Uuid",
-            "type": "string"
+            "type": "string",
+            "title": "Uuid"
           },
           "created_at": {
-            "title": "vCon format version",
             "anyOf": [
               {
-                "exclusiveMinimum": 0.0,
-                "type": "integer"
+                "type": "integer",
+                "exclusiveMinimum": 0.0
               },
               {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
+                "type": "number",
+                "exclusiveMinimum": 0.0
               },
               {
                 "type": "string"
@@ -3881,104 +4152,137 @@
                 "format": "date-time"
               }
             ],
-            "example": "2024-11-21T01:26:36.682+00:00",
+            "title": "vCon format version",
             "examples": [
-              1732152396,
-              1732152396.682592,
+              1740263900,
+              1740263900.8458726,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2024-11-21T01:26:36.682+00:00",
+              "2025-02-22T22:38:20.845+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
           "parties": {
-            "title": "Parties",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/VconPartiesObject"
-            }
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/VconPartiesObject"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parties"
           },
           "dialog": {
-            "title": "Dialog",
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dialog"
           },
           "analysis": {
-            "title": "Analysis",
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analysis"
           },
           "attachments": {
-            "title": "Attachments",
-            "type": "array",
-            "items": {
-              "type": "object"
-            }
+            "anyOf": [
+              {
+                "items": {
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachments"
           }
-        }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "uuid"
+        ],
+        "title": "VconUnsignedObject"
       },
       "VerifyFilterPluginOptions": {
-        "title": "verify filter method options",
-        "type": "object",
         "properties": {
           "allowed_ca_cert_pems": {
-            "title": "list of trusted CA PEMs",
-            "type": "array",
             "items": {
               "type": "string"
             },
+            "type": "array",
+            "title": "list of trusted CA PEMs",
             "description": "\nlist of trusted Certificate Authority certificate PEMs to use in filter method.\nIn order to be valid/trusted, one of the certs in the JWS x5c certificate chain\nmust be a trusted CA (i.e. in this list).  Verifcation will fail if\nthis is not the case.\n",
             "default": []
           },
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           }
         },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "verify filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for VerifyFilterPlugin **FilterPlugin**"
       },
       "WhisperOptions": {
-        "title": "WhisperOptions",
-        "type": "object",
         "properties": {
           "language": {
-            "title": "transcription language",
             "type": "string",
+            "title": "transcription language",
             "default": "en"
           },
           "input_dialogs": {
-            "title": "input **Vcon** recording **dialog** objects",
             "anyOf": [
               {
                 "type": "string"
               },
               {
-                "type": "array",
                 "items": {
                   "type": "integer"
-                }
+                },
+                "type": "array"
               }
             ],
+            "title": "input **Vcon** recording **dialog** objects",
             "description": "\nIndicates which recording **dialog** objects in the given **Vcon** are\nto be transcribed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n",
             "default": "",
             "examples": [
@@ -3997,11 +4301,11 @@
             ]
           },
           "output_types": {
-            "title": "transcription output types",
-            "type": "array",
             "items": {
               "type": "string"
             },
+            "type": "array",
+            "title": "transcription output types",
             "description": "\nList of output types to generate.  Current set of value supported are:\n\n  * \"vendor\" - add the Whisper specific JSON format transcript as an analysis object\n  * \"word_srt\" - add a .srt file with timing on a word or small phrase basis as an analysis object\n  * \"word_ass\" - add a .ass file with sentence and highlighted word timeing as an analysis object\n       Not specifing \"output_type\" assumes all of the above will be output, each as a separate analysis object.\n",
             "default": [
               "vendor",
@@ -4010,27 +4314,30 @@
             ]
           },
           "input_vcon_index": {
-            "title": "VconProcessorIO input vCon index",
             "type": "integer",
+            "title": "VconProcessorIO input vCon index",
             "description": "Index to which vCon in the VconProcessorIO is to be used for input",
             "default": 0
           },
           "should_process": {
-            "title": "if True run processor",
             "type": "boolean",
+            "title": "if True run processor",
             "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
             "default": true
           },
           "format_options": {
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "type": "object",
             "additionalProperties": {
               "type": "string"
             },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
             "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
             "default": {}
           }
         },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "WhisperOptions",
         "description": "processor options class for **processor** method of VconProcessor wrapper for Whisper **FilterPlugin**"
       }
     }

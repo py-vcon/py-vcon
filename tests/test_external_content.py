@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """
 Unit tests for external content such as recording, attachments which are stored
 as URLs with a signature for the content stored else where.  Using
@@ -82,7 +83,7 @@ async def test_get_external_recording(two_party_tel_vcon : vcon.Vcon) -> None:
     0, # duration TODO
     [0,1],
     url,
-    vcon.Vcon.MIMETYPE_AUDIO_WAV,
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV,
     os.path.basename(file_path))
 
   assert(dialog_index == 0)
@@ -113,6 +114,7 @@ async def test_get_external_recording(two_party_tel_vcon : vcon.Vcon) -> None:
     # We expect this to occur
     pass
 
+@pytest.mark.skip(reason="llm_ots no longer supported")
 def test_external_recording_lm_ots(two_party_tel_vcon : vcon.Vcon) -> None:
   data_size = 4096
   data = os.urandom(data_size)
@@ -122,14 +124,14 @@ def test_external_recording_lm_ots(two_party_tel_vcon : vcon.Vcon) -> None:
 
   file_name = "my_rec.wav"
 
-  assert(vcon.Vcon.MIMETYPE_AUDIO_WAV == "audio/x-wav")
+  assert(vcon.Vcon.MEDIATYPE_AUDIO_WAV == "audio/x-wav")
 
   two_party_tel_vcon.add_dialog_external_recording(data,
     call_data["rfc2822"],
     call_data["duration"],
     0,
     url,
-    vcon.Vcon.MIMETYPE_AUDIO_WAV,
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV,
     file_name,
     sign_type="LM-OTS")
 
@@ -144,7 +146,8 @@ def test_external_recording_lm_ots(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(new_vcon.dialog[0]['parties'] == 0)
   assert(new_vcon.dialog[0]['start'] == call_data["rfc3339"])
   assert(new_vcon.dialog[0]['duration'] == call_data["duration"])
-  assert(new_vcon.dialog[0]['mimetype'] == "audio/x-wav")
+  assert(new_vcon.dialog[0].get('mimetype', None) is None)
+  assert(new_vcon.dialog[0]['mediatype'] == "audio/x-wav")
   assert(new_vcon.dialog[0]['filename'] == file_name)
   assert(new_vcon.dialog[0]['alg'] == 'LMOTS_SHA256_N32_W8')
   assert(len(new_vcon.dialog[0]['key']) > 1)
@@ -190,14 +193,14 @@ def test_external_recording_sha_512(two_party_tel_vcon : vcon.Vcon) -> None:
 
   file_name = "my_rec.wav"
 
-  assert(vcon.Vcon.MIMETYPE_AUDIO_WAV == "audio/x-wav")
+  assert(vcon.Vcon.MEDIATYPE_AUDIO_WAV == "audio/x-wav")
 
   two_party_tel_vcon.add_dialog_external_recording(data,
     call_data["rfc2822"],
     call_data["duration"],
     0,
     url,
-    vcon.Vcon.MIMETYPE_AUDIO_WAV,
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV,
     file_name,
     originator=1)
 
@@ -214,9 +217,10 @@ def test_external_recording_sha_512(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(new_vcon.dialog[0]['parties'] == 0)
   assert(new_vcon.dialog[0]['start'] == call_data["rfc3339"])
   assert(new_vcon.dialog[0]['duration'] == call_data["duration"])
-  assert(new_vcon.dialog[0]['mimetype'] == "audio/x-wav")
+  assert(new_vcon.dialog[0].get('mimetype', None) is None)
+  assert(new_vcon.dialog[0]['mediatype'] == "audio/x-wav")
   assert(new_vcon.dialog[0]['filename'] == file_name)
-  assert(new_vcon.dialog[0]['alg'] == 'SHA-512')
+  assert(new_vcon.dialog[0]['content_hash'][0:7] == 'sha512-')
   assert(new_vcon.dialog[0]['originator'] == 1)
   assert("body" not in new_vcon.dialog[0])
   assert("key" not in new_vcon.dialog[0])

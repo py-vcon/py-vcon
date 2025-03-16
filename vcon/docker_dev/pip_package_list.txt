@@ -4,11 +4,10 @@ deepgram-sdk < 3
 cbor2
 cryptography >= 37
 hsslms
-jose
 openai
-pydantic < 2
+pydantic
 pyjq
-python-jose
+python-jose < 3.4.0
 python-dateutil
 pytz
 regex

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Whisper transcriptiont FilterPlugin implentation """
 import os
 import sys
@@ -62,10 +62,10 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
   init_options_type = WhisperInitOptions
   supported_options = [ "language" ]
   _supported_media = [
-    vcon.Vcon.MIMETYPE_AUDIO_WAV,
-    vcon.Vcon.MIMETYPE_AUDIO_MP3,
-    vcon.Vcon.MIMETYPE_AUDIO_MP4,
-    vcon.Vcon.MIMETYPE_VIDEO_MP4
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV,
+    vcon.Vcon.MEDIATYPE_AUDIO_MP3,
+    vcon.Vcon.MEDIATYPE_AUDIO_MP4,
+    vcon.Vcon.MEDIATYPE_VIDEO_MP4
     ]
 
   def __init__(
@@ -153,20 +153,20 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
             ("openai", "whisper", "whisper_word_ass")
           ]
           )
-        mime_type = dialog["mimetype"]
+        media_type = dialog["mediatype"]
         logger.debug("found: wtt: {} wws: {} wwa: {}".format(wwt_index, wws_index, wwa_index))
         # if requesting transcript type that does not exist already
         if(((wwt_index is None and "vendor" in output_types) or
           (wws_index is None and "word_srt" in output_types) or
           (wwa_index is None and "word_ass" in output_types)) and
-          mime_type in self._supported_media
+          media_type in self._supported_media
           ):
 
           body_bytes = await in_vcon.get_dialog_body(dialog_index)
           if(body_bytes is not None and len(body_bytes)):
             with tempfile.TemporaryDirectory() as temp_dir:
               transcript = None
-              suffix = vcon.Vcon.get_mime_extension(mime_type)
+              suffix = vcon.Vcon.get_media_extension(media_type)
               with tempfile.NamedTemporaryFile(prefix= temp_dir + os.sep, suffix = suffix) as temp_audio_file:
                 temp_audio_file.write(body_bytes)
                 #rate, samples = scipy.io.wavfile.read(body_io)
@@ -273,7 +273,7 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
             pass # ignore??
 
         else:
-          logger.warning("unsupported media type: {} in dialog[{}], skipped whisper transcription".format(dialog["mimetype"], dialog_index))
+          logger.warning("unsupported media type: {} in dialog[{}], skipped whisper transcription".format(dialog["mediatype"], dialog_index))
 
     return(out_vcon)
 

@@ -336,37 +336,37 @@ class Vcon():
 
   """
 
-  # Some commonly used MIME types for convenience
-  MIMETYPE_TEXT_PLAIN = "text/plain"
-  MIMETYPE_JSON = "application/json"
-  MIMETYPE_VCON = "application/vcon"
-  MIMETYPE_VCON_JSON = "application/vcon+json"
-  MIMETYPE_IMAGE_PNG = "image/png"
-  MIMETYPE_AUDIO_WAV = "audio/x-wav"
-  MIMETYPE_AUDIO_MP3 = "audio/x-mp3"
-  MIMETYPE_AUDIO_MP4 = "audio/x-mp4"
-  MIMETYPE_VIDEO_MP4 = "video/x-mp4"
-  MIMETYPE_VIDEO_OGG = "video/ogg"
-  MIMETYPE_MULTIPART = "multipart/mixed"
+  # Some commonly used media types for convenience
+  MEDIATYPE_TEXT_PLAIN = "text/plain"
+  MEDIATYPE_JSON = "application/json"
+  MEDIATYPE_VCON = "application/vcon"
+  MEDIATYPE_VCON_JSON = "application/vcon+json"
+  MEDIATYPE_IMAGE_PNG = "image/png"
+  MEDIATYPE_AUDIO_WAV = "audio/x-wav"
+  MEDIATYPE_AUDIO_MP3 = "audio/x-mp3"
+  MEDIATYPE_AUDIO_MP4 = "audio/x-mp4"
+  MEDIATYPE_VIDEO_MP4 = "video/x-mp4"
+  MEDIATYPE_VIDEO_OGG = "video/ogg"
+  MEDIATYPE_MULTIPART = "multipart/mixed"
 
   FILE_EXTENSIONS = {
-    ".txt": MIMETYPE_TEXT_PLAIN,
-    ".text": MIMETYPE_TEXT_PLAIN,
-    ".png": MIMETYPE_IMAGE_PNG,
-    ".wav": MIMETYPE_AUDIO_WAV,
-    ".mp3": MIMETYPE_AUDIO_MP3,
-    ".mp4": MIMETYPE_VIDEO_MP4
+    ".txt": MEDIATYPE_TEXT_PLAIN,
+    ".text": MEDIATYPE_TEXT_PLAIN,
+    ".png": MEDIATYPE_IMAGE_PNG,
+    ".wav": MEDIATYPE_AUDIO_WAV,
+    ".mp3": MEDIATYPE_AUDIO_MP3,
+    ".mp4": MEDIATYPE_VIDEO_MP4
   }
 
-  MIME_EXTENSIONS = {
-    MIMETYPE_TEXT_PLAIN: ".txt",
-    MIMETYPE_IMAGE_PNG: ".png",
-    MIMETYPE_AUDIO_WAV: ".wav",
-    MIMETYPE_AUDIO_MP3: ".mp3",
-    MIMETYPE_VIDEO_MP4: ".mp4"
+  MEDIATYPE_EXTENSIONS = {
+    MEDIATYPE_TEXT_PLAIN: ".txt",
+    MEDIATYPE_IMAGE_PNG: ".png",
+    MEDIATYPE_AUDIO_WAV: ".wav",
+    MEDIATYPE_AUDIO_MP3: ".mp3",
+    MEDIATYPE_VIDEO_MP4: ".mp4"
   }
 
-  CURRENT_VCON_VERSION = "0.0.1"
+  CURRENT_VCON_VERSION = "0.0.2"
 
   # Dict keys
   VCON_VERSION = "vcon"
@@ -477,34 +477,34 @@ class Vcon():
     self._vcon_dict[Vcon.REDACTED] = {}
 
 
-  # TODO: use mimetypes package instead
+  # TODO: use mediatypes package instead
   @staticmethod
-  def get_mime_type(file_name):
-    """ derive mimetype from fle extension """
+  def get_media_type(file_name):
+    """ derive mediatype from file extension """
     path = pathlib.PurePath(file_name)
     extension = path.suffix.lower()
 
     #print("extension: {}".format(extension), file=sys.stderr)
 
     if(extension in vcon.Vcon.FILE_EXTENSIONS):
-      mimetype = vcon.Vcon.FILE_EXTENSIONS[extension]
+      mediatype = vcon.Vcon.FILE_EXTENSIONS[extension]
   
     # TODO: add: aac, ogg, 
     else:
-      raise Exception("MIME type not defined for extension: {}".format(extension))
+      raise Exception("Media type not defined for extension: {}".format(extension))
   
-    return(mimetype)
+    return(mediatype)
 
 
-  # TODO: use mimetypes package instead
+  # TODO: use mediatypes package instead
   @staticmethod
-  def get_mime_extension(mime_type):
-    """ get file extension for MIMETYPE """
-    if(mime_type in vcon.Vcon.MIME_EXTENSIONS):
-      extension = vcon.Vcon.MIME_EXTENSIONS[mime_type]
+  def get_media_extension(media_type):
+    """ get file extension for mediatype """
+    if(media_type in vcon.Vcon.MEDIATYPE_EXTENSIONS):
+      extension = vcon.Vcon.MEDIATYPE_EXTENSIONS[media_type]
 
     else:
-      raise Exception("extension not defined for mime type: {}".format(mime_type))
+      raise Exception("extension not defined for media type: {}".format(media_type))
     return(extension)
 
 
@@ -692,7 +692,7 @@ class Vcon():
     start_time : typing.Union[str, int, float, datetime.datetime],
     duration : typing.Union[int, float],
     party : typing.Union[int, list[int]],
-    mime_type : str,
+    media_type : str,
     file_name : typing.Union[str, None] = None) -> int:
     """
     Add a dialog segment for a text chat or email thread.
@@ -706,7 +706,7 @@ class Vcon():
       **duration** (int or float) - duration in time the sender completed typing in seconds.
                Should be zero if unknown.
       **party** (int) - index into parties object array as to which party sent the text communication.  
-      **mime_type** (str) - mime type of the body (usually MIMETYPE_TEXT_PLAIN or MIMETYPE_MULTIPART)  
+      **media_type** (str) - media type of the body (usually MEDIATYPE_TEXT_PLAIN or MEDIATYPE_MULTIPART)  
       **file_name** (str) - file name of the body if applicable (optional)
 
     Returns:  
@@ -720,7 +720,7 @@ class Vcon():
     new_dialog['start'] = vcon.utils.cannonize_date(start_time)
     new_dialog['duration'] = duration
     new_dialog['parties'] = party
-    new_dialog['mimetype'] = mime_type
+    new_dialog['mediatype'] = media_type
     if(file_name is not None and len(file_name) > 0):
       new_dialog['filename'] = file_name
 
@@ -827,7 +827,7 @@ class Vcon():
     start_time : typing.Union[str, int, float, datetime.datetime],
     duration : typing.Union[int, float],
     parties : typing.Union[int, typing.List[int], typing.List[typing.List[int]]],
-    mime_type : str,
+    media_type : str,
     file_name : typing.Union[str, None] = None,
     originator : typing.Union[int, None] = None) -> int:
     """
@@ -842,7 +842,7 @@ class Vcon():
     **duration** (int or float): duration of the recording in seconds  
     **parties** (int, List[int], List[List[int]]): party indices speaking in each
                channel of the recording.  
-    **mime_type** (str): mime type of the recording  
+    **media_type** (str): media type of the recording  
     **file_name** (str): file name of the recording (optional)  
     **originator** (int): by default the originator of the dialog is the first party listed in the parites array.
                However , in some cases, it is difficult to arrange the recording channels with the originator
@@ -871,7 +871,7 @@ class Vcon():
       ):
       new_dialog['parties'] = parties
 
-    new_dialog['mimetype'] = mime_type
+    new_dialog['mediatype'] = media_type
 
     if(file_name is not None and len(file_name) > 0):
       new_dialog['filename'] = file_name
@@ -934,7 +934,7 @@ class Vcon():
       Text dialogs will return a single dict, recording dialogs may return one or more dicts.
     """
 
-    #dialog type    mimetype   action
+    #dialog type    mediatype  action
     #================================
     # text          TEXT_PLAIN return text body
     # text          MULTIPART  find first plain/text in multipart body
@@ -942,7 +942,7 @@ class Vcon():
 
     dialog = self.dialog[dialog_index]
     if(dialog["type"] == "text"):
-      #logger.debug("get_dialog_text mime type:{}".format(dialog["mimetype"]))
+      #logger.debug("get_dialog_text media type:{}".format(dialog["mediatype"]))
       text_dict = {}
       if("parties" in dialog):
         if(isinstance(dialog["parties"], list)):
@@ -952,25 +952,25 @@ class Vcon():
       text_dict["start"] = dialog["start"]
       text_dict["duration"] = dialog["duration"]
 
-      if(dialog["mimetype"].lower() == vcon.Vcon.MIMETYPE_TEXT_PLAIN):
+      if(dialog["mediatype"].lower() == vcon.Vcon.MEDIATYPE_TEXT_PLAIN):
         text_dict["text"] = dialog["body"]
         return([text_dict])
 
-      if(vcon.Vcon.MIMETYPE_MULTIPART in dialog["mimetype"].lower() ):
+      if(vcon.Vcon.MEDIATYPE_MULTIPART in dialog["mediatype"].lower() ):
         # Need the content type with the boundry and body separator
-        email_message = email.message_from_string("Content-Type: " + dialog["mimetype"] + "\r\n\r\n" + dialog["body"])
+        email_message = email.message_from_string("Content-Type: " + dialog["mediatype"] + "\r\n\r\n" + dialog["body"])
 
         if(not email_message.is_multipart()):
           logger.warning("Text body in dialog[{}] incorrectly labeled as multipart".format(dialog_index))
 
         for subpart in email_message.walk():
-          if(subpart.get_content_type() == vcon.Vcon.MIMETYPE_TEXT_PLAIN):
+          if(subpart.get_content_type() == vcon.Vcon.MEDIATYPE_TEXT_PLAIN):
             logger.debug("subpart payload type: {} part is multipart: {}".format(type(subpart.get_payload()), subpart.is_multipart()))
             text_dict["text"] = subpart.get_payload()
             return([text_dict])
 
           # else:
-          #   logger.debug("skipping part mimetype: {}".format(subpart.get_content_type()))
+          #   logger.debug("skipping part mediatype: {}".format(subpart.get_content_type()))
 
     elif(dialog["type"] == "recording"):
       transcript_index = self.find_transcript_for_dialog(dialog_index)
@@ -1100,7 +1100,7 @@ class Vcon():
     duration : typing.Union[int, float],
     parties : typing.Union[int, typing.List[int], typing.List[typing.List[int]]],
     external_url: str,
-    mime_type : typing.Union[str, None] = None,
+    media_type : typing.Union[str, None] = None,
     file_name : typing.Union[str, None] = None,
     sign_type : typing.Union[str, None] = "SHA-512",
     originator : typing.Union[int, None] = None) -> int:
@@ -1119,7 +1119,7 @@ class Vcon():
     **parties** (int, List[int], List[List[int]]): party indices speaking in each
                channel of the recording.  
     **external_url** (string): https URL where the body is stored securely  
-    **mime_type** (str): mime type of the recording (optional)  
+    **media_type** (str): media type of the recording (optional)  
     **file_name** (str): file name of the recording (optional)  
     **sign_type** (str): signature type to create for external signature
                      default= "SHA-512" use SHA 512 bit hash (RFC6234)
@@ -1145,8 +1145,8 @@ class Vcon():
     new_dialog['duration'] = duration
     new_dialog['parties'] = parties
     new_dialog['url'] = external_url
-    if(mime_type is not None):
-      new_dialog['mimetype'] = mime_type
+    if(media_type is not None):
+      new_dialog['mediatype'] = media_type
     if(file_name is not None):
       new_dialog['filename'] = file_name
     if(originator is not None and originator >= 0):
@@ -1163,8 +1163,7 @@ class Vcon():
 
       elif(sign_type == "SHA-512"):
         sig_hash = vcon.security.sha_512_hash(body)
-        new_dialog['signature'] = sig_hash
-        new_dialog['alg'] = "SHA-512"
+        new_dialog["content_hash"] = vcon.security.build_content_hash_token(sign_type, sig_hash)
 
       else:
         raise AttributeError("Unsupported signature type: {}.  Please use \"SHA-512\" or \"LM-OTS\"".format(sign_type))
@@ -1266,26 +1265,23 @@ class Vcon():
     if(dialog['type'] != "recording"):
       raise AttributeError("dialog[{}] is of type: {} not recording".format(dialog_index, dialog['type']))
 
-    if(len(dialog['signature']) < 1 ):
-      raise AttributeError("dialog[{}] signature: {} not set.  Must be for LMOTS_SHA256_N32_W8".format(dialog_index, dialog['signature']))
+    if("content_hash" not in dialog):
+      logger.warning("No content_hash in dialog: {}".format(dialog.keys()))
+    if(len(dialog['content_hash']) < 1 ):
+      raise AttributeError("dialog[{}] content_hash: {} not set.  Must be for LMOTS_SHA256_N32_W8".format(dialog_index, dialog['signature']))
 
-    if(dialog['alg'] == 'LMOTS_SHA256_N32_W8'):
-      if(len(dialog['key']) < 1 ):
-        raise AttributeError("dialog[{}] key: {} not set.  Must be for LMOTS_SHA256_N32_W8".format(dialog_index, dialog['key']))
+    # TODO support array of content_hash tokens
+    alg, hash_string = vcon.security.split_content_hash_token(dialog["content_hash"])
 
-      vcon.security.verify_lm_one_time_signature(body,
-        dialog['signature'],
-        dialog['key'])
-
-    elif(dialog['alg'] == 'SHA-512'):
+    if(alg == 'sha512'):
       sig_hash = vcon.security.sha_512_hash(body)
-      if( dialog['signature'] != sig_hash):
-        print("dialog[\"signature\"]: {} hash: {} size: {}".format(dialog['signature'], sig_hash, len(body)))
+      if( hash_string != sig_hash):
+        print("dialog[\"signature\"]: {} hash: {} size: {}".format(hash_string, sig_hash, len(body)))
         print("dialog: {}".format(json.dumps(dialog, indent=2)))
         raise InvalidVconHash("SHA-512 hash in signature does not match the given body for dialog[{}]".format(dialog_index))
 
     else:
-      raise AttributeError("dialog[{}] alg: {} not supported.  Must be SHA-512 or LMOTS_SHA256_N32_W8".format(dialog_index, dialog['alg']))
+      raise AttributeError("dialog[{}] alg: {} not supported.  Must be SHA-512".format(dialog_index, alg))
 
 
   @tag_analysis
@@ -1382,7 +1378,7 @@ class Vcon():
     body : bytes,
     sent_time : typing.Union[str, int, float, datetime.datetime],
     party : int,
-    mime_type : typing.Union[str, None] = None,
+    media_type : typing.Union[str, None] = None,
     file_name : typing.Union[str, None] = None
     ) -> int:
     """
@@ -1394,7 +1390,7 @@ class Vcon():
                string containing RFC 2822 or RFC3339 date time stamp or int/float
                containing epoch time (since 1970) in seconds.  
     **party** (int): party index of the sender  
-    **mime_type** (str): mime type of the recording  
+    **media_type** (str): media type of the recording  
     **file_name** (str): file name of the recording (optional)
 
     Returns:  
@@ -1406,12 +1402,12 @@ class Vcon():
     new_attachment: typing.Dict[str, typing.Any] = {}
     new_attachment['start'] = vcon.utils.cannonize_date(sent_time)
     new_attachment['party'] = party
-    if(mime_type is not None and
-      mime_type != ""):
-      new_attachment['mimetype'] = mime_type
-      if(mime_type in [
-        vcon.Vcon.MIMETYPE_TEXT_PLAIN,
-        vcon.Vcon.MIMETYPE_JSON
+    if(media_type is not None and
+      media_type != ""):
+      new_attachment['mediatype'] = media_type
+      if(media_type in [
+        vcon.Vcon.MEDIATYPE_TEXT_PLAIN,
+        vcon.Vcon.MEDIATYPE_JSON
         ]):
         encoding = "none"
       else:
@@ -1621,7 +1617,7 @@ class Vcon():
     base_uri: str = "http://{host}:{port}/vcon",
     host: str = "localhost",
     port: int = 8000,
-    # not sure why I cannot use vcon.Vcon.MIMETYPE_JSON here
+    # not sure why I cannot use vcon.Vcon.MEDIATYPE_JSON here
     post_kwargs: typing.Dict[str, typing.Any] = {"timeout": 20}
     ) -> None:
     """
@@ -1636,7 +1632,10 @@ class Vcon():
     Return: none
     """
     if(post_kwargs is None):
-      post_kwargs = {"timeout": 20}
+      post_kwargs = {
+          "timeout": 20,
+          "content-type": vcon.Vcon.MEDIATYPE_JSON
+        }
 
     uri = base_uri.format(
       host = host,
@@ -1645,9 +1644,11 @@ class Vcon():
 
     req = requests.post(uri, json = self.dumpd(), **post_kwargs)
     if(not(200 <= req.status_code < 300)):
-      raise Exception("post of {} resulted in error: {}".format(
+      raise Exception("post of {} resulted in error code: {} text: {} content: {}".format(
         uri,
-        req.status_code
+        req.status_code,
+        req.text,
+        req.content
         ))
 
 
@@ -1761,10 +1762,14 @@ class Vcon():
 
       # validate version
       version_string = vcon_dict.get(self.VCON_VERSION, "not set")
-      if(version_string != "0.0.1"):
+      if(version_string not in ["0.0.1", "0.0.2"]):
         raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
 
-      self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+      if(vcon_dict["vcon"] == "0.0.1"):
+        self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+        vcon_dict = self._vcon_dict
+      if(vcon_dict["vcon"] == "0.0.2"):
+        self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
 
     # Unknown
     else:
@@ -1867,10 +1872,14 @@ class Vcon():
 
       # validate version
       version_string = vcon_dict.get(self.VCON_VERSION, "not set")
-      if(version_string != "0.0.1"):
+      if(version_string not in ["0.0.1", "0.0.2"]):
         raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
 
-      self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+      if(vcon_dict["vcon"] == "0.0.1"):
+        self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+        vcon_dict = self._vcon_dict
+      if(vcon_dict["vcon"] == "0.0.2"):
+        self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
 
     # Unknown
     else:
@@ -1889,7 +1898,7 @@ class Vcon():
     host: str = "localhost",
     port: int = 8000,
     path: str = "/vcon/{uuid}",
-    # not sure why I cannot use vcon.Vcon.MIMETYPE_JSON here
+    # not sure why I cannot use vcon.Vcon.MEDIATYPE_JSON here
     get_kwargs: typing.Dict[str, typing.Any] = {"timeout": 20, "headers": {"accept": "application/json"}}
     ) -> None:
     """
@@ -1906,7 +1915,7 @@ class Vcon():
     Return: none
     """
     if(get_kwargs is None):
-      get_kwargs = {"timeout": 20, "headers": {"accept": vcon.Vcon.MIMETYPE_JSON }}
+      get_kwargs = {"timeout": 20, "headers": {"accept": vcon.Vcon.MEDIATYPE_JSON }}
 
     uri = base_uri.format(
       host = host,
@@ -2053,7 +2062,11 @@ class Vcon():
                 #print("verified payload: {}".format(verified_payload))
                 #print("verified payload type: {}".format(type(verified_payload)))
                 vcon_dict = json.loads(verified_payload.decode('utf-8'))
-                self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+                if(vcon_dict["vcon"] == "0.0.1"):
+                  self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+                  vcon_dict = self._vcon_dict
+                if(vcon_dict["vcon"] == "0.0.2"):
+                  self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
 
                 self._state = VconStates.VERIFIED
 
@@ -2109,7 +2122,7 @@ class Vcon():
     jwe_complete_serialization["unprotected"] = {}
     # Add UUID to unprotected for easy reference
     jwe_complete_serialization["unprotected"]["uuid"] = self.uuid
-    jwe_complete_serialization["unprotected"]["cty"] = Vcon.MIMETYPE_VCON_JSON
+    jwe_complete_serialization["unprotected"]["cty"] = Vcon.MEDIATYPE_VCON_JSON
     jwe_complete_serialization["unprotected"]["enc"] = "A256CBC-HS512"
 
     self._jwe_dict = jwe_complete_serialization
@@ -2141,6 +2154,7 @@ class Vcon():
     (header, signing_key) = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, [cert_pem_file])
     #signing_key['alg'] = encryption_key['alg']
 
+    logger.debug("JWE size: {} key size: {}".format(len(jwe_compact_token_reconstructed), len(signing_key)))
     plaintext_decrypted = jose.jwe.decrypt(jwe_compact_token_reconstructed, signing_key).decode('utf-8')
     # let loads figure out if this is an encrypted JWS vCon or just a vCon
     current_state = self._state
@@ -2492,10 +2506,26 @@ class Vcon():
 
     return(uuid_str)
 
+
+  @staticmethod
+  def migrate_0_0_2_vcon(old_vcon : dict) -> dict:
+    """
+    Migrate/translate an an older deprecated vCon to the current version.
+
+    Parameters:
+      old_vcon old format 0.0.1 vCon
+
+    Returns:
+      the modified old_vcon in the new format
+    """
+
+    return(old_vcon)
+
+
   @staticmethod
   def migrate_0_0_1_vcon(old_vcon : dict) -> dict:
     """
-    Migrate/translate an an older deprecated vCon to the current version.
+    Migrate/translate an an older deprecated vCon to the 0.0.1 version.
 
     Parameters:
       old_vcon old format 0.0.1 vCon
@@ -2516,6 +2546,19 @@ class Vcon():
           pass
         else:
           raise AttributeError("dialog[{}] alg: {} not supported.  Must be SHA-512 or LMOTS_SHA256_N32_W8".format(index, dialog['alg']))
+
+        # Convert to content_hash
+        if("signature" in dialog):
+          hash_string = dialog["signature"]
+          alg = dialog["alg"]
+          dialog["content_hash"] = vcon.security.build_content_hash_token(alg, hash_string)
+          del dialog["alg"]
+          del dialog["signature"]
+
+      # Change mimetype to mediatype
+      if("mimetype" in dialog):
+        dialog["mediatype"] = dialog["mimetype"]
+        del dialog["mimetype"]
 
     # Translate transcriptions to body for consistency with dialog and attachments
     for index, analysis in enumerate(old_vcon.get("analysis", [])):
@@ -2549,6 +2592,37 @@ class Vcon():
 
           else:
             raise Exception("body type: {} in analysis[{}] not recognized".format(type(analysis['body']), index))
+
+      # Convert to content_hash
+      if("alg" in analysis and "signature" in analysis):
+        hash_string = analysis["signature"]
+        alg = analysis["alg"]
+        analysis["content_hash"] = vcon.security.build_content_hash_token(alg, hash_string)
+        del analysis["alg"]
+        del analysis["signature"]
+
+      # Change mimetype to mediatype
+      if("mimetype" in analysis):
+        analysis["mediatype"] = analysis["mimetype"]
+        del analysis["mimetype"]
+
+
+    for index, attachment in enumerate(old_vcon.get("attachment", [])):
+      # Change mimetype to mediatype
+      if("mimetype" in attachment):
+        attachment["mediatype"] = attachment["mimetype"]
+        del attachment["mimetype"]
+
+      # Convert to content_hash
+      if("alg" in attachment and "signature" in attachment):
+        hash_string = attachment["signature"]
+        alg = attachment["alg"]
+        attachment["content_hash"] = vcon.security.build_content_hash_token(alg, hash_string)
+        del attachment["alg"]
+        del attachment["signature"]
+
+    # Now converted to 0.0.2
+    old_vcon["vcon"] = "0.0.2"
 
     return(old_vcon)
 

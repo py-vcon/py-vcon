@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit test for HTTP depdendent Vcon functionality (e.g. get and post) """
 
 #import httpretty
@@ -18,7 +18,7 @@ async def test_vcon_get(two_party_tel_vcon, httpserver: pytest_httpserver.HTTPSe
   # Hack UUID for testing
   two_party_tel_vcon._vcon_dict[vcon.Vcon.UUID] = UUID
 
-  headers = {"accept": vcon.Vcon.MIMETYPE_JSON}
+  headers = {"accept": vcon.Vcon.MEDIATYPE_JSON}
   httpserver.expect_request(
       "/vcon/{}".format(UUID),
       method = "GET",
@@ -41,7 +41,7 @@ async def test_vcon_get(two_party_tel_vcon, httpserver: pytest_httpserver.HTTPSe
     port = httpserver.port
     )
 
-  #assert(httpretty.latest_requests()[0].headers["accept"] == vcon.Vcon.MIMETYPE_JSON)
+  #assert(httpretty.latest_requests()[0].headers["accept"] == vcon.Vcon.MEDIATYPE_JSON)
   assert(len(got_vcon.parties) == 2)
   assert(got_vcon.parties[0]['tel'] == call_data['source'])
   assert(got_vcon.parties[1]['tel'] == call_data['destination'])
@@ -54,7 +54,7 @@ async def test_vcon_post(two_party_tel_vcon, httpserver: pytest_httpserver.HTTPS
   # Hack UUID for testing
   two_party_tel_vcon._vcon_dict[vcon.Vcon.UUID] = UUID
 
-  headers = {"Content-Type": vcon.Vcon.MIMETYPE_JSON}
+  headers = {"Content-Type": vcon.Vcon.MEDIATYPE_JSON}
   vcon_dict_copy = two_party_tel_vcon.dumpd().copy()
   # force request body not to match
   # vcon_dict_copy["a"] = 2
@@ -85,7 +85,7 @@ async def test_vcon_post(two_party_tel_vcon, httpserver: pytest_httpserver.HTTPS
 
   #posted_vcon = vcon.Vcon()
   # httpserver tests all of this:
-  #assert(httpretty.latest_requests()[0].headers["Content-Type"] == vcon.Vcon.MIMETYPE_JSON)
+  #assert(httpretty.latest_requests()[0].headers["Content-Type"] == vcon.Vcon.MEDIATYPE_JSON)
   #print("type: " + str(type(httpretty.latest_requests()[0].body)))
   #print(httpretty.latest_requests()[0].body)
   #posted_vcon.loads(httpretty.latest_requests()[0].body)
