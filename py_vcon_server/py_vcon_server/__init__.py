@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import sys
 import time
 import asyncio
@@ -23,7 +23,7 @@ logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
 nest_asyncio.apply()
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
