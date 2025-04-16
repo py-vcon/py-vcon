@@ -150,10 +150,10 @@ Some of the [Vcon Filter Plugins](#Vcon-filter-plugins) use third party provided
 The current set of API keys are needed for:
 
   * Deepgram transcription ([Deepgram FilterPlugin](vcon/filter_plugins/README.md#vconfilter_pluginsimpldeepgramdeepgram)): DEEPGRAM_KEY
-  <br>You can get a key at: https://platform.openai.com/account/api-keys
+  <br>You can get a key at: https://console.deepgram.com/signup?jump=keys
 
   * OpenAI Generative AI ([OpenAICompletion](vcon/filter_plugins/README.md#vconfilter_pluginsimplopenaiopenaicompletion) and [OpenAIChatCompletion](vcon/filter_plugins/README.md#vconfilter_pluginsimplopenaiopenaichatcompletion) FilterPlugins): OPENAI_API_KEY
-  <br>You can get a key at: https://console.deepgram.com/signup?jump=keys
+  <br>You can get a key at: https://platform.openai.com/account/api-keys
 
 The easiest way to use these plugins is to set the keys as an environmental variable.  For example on linux bash shell"
 
