@@ -1,0 +1,140 @@
+Received: from 10.197.39.201
+ by atlas304.free.mail.bf1.yahoo.com pod-id NONE with HTTPS; Tue, 15 Apr 2025 19:23:11 +0000
+Return-Path: <jeff.pulver@gmail.com>
+X-Originating-Ip: [54.159.250.94]
+Received-SPF: softfail (domain of transitioninggmail.com does not designate 54.159.250.94 as permitted sender)
+Authentication-Results: atlas304.free.mail.bf1.yahoo.com;
+ dkim=pass header.i=@gmail.com header.s=20230601 arc_overridden_status=NOT_OVERRIDDEN;
+ spf=softfail smtp.mailfrom=gmail.com arc_overridden_status=NOT_OVERRIDDEN;
+ dmarc=pass(p=NONE,sp=QUARANTINE) header.from=gmail.com arc_overridden_status=NOT_OVERRIDDEN;
+X-Apparently-To: dgpetrie@yahoo.com; Tue, 15 Apr 2025 19:23:11 +0000
+X-YMailISG: yNdI12wWLDuncEtyqZCPbma7ee6IKJ2DIiLHST_u1gJpFhMy
+ vVyRSUT9LH5zsx.0Q4Of3xpuw6f8NbLv2U084XDPwbatFfidqHMTDVgKMU30
+ jvRH9xl4kbag2OlUD3YP.mDpV4eaC_jiHNoxzp40oVohFU7w197yia08DS8L
+ C6FsycX7idMip.h6evdBduVC_rh5WqBGbIcGvbjZYY5mGznA33qFbc5yMN3H
+ Wdp1W1_4Io0utT_xRT9Whoq0ak_iReHgoyiQ.vsLHfpgEm37FNR0Sv0D4LDc
+ _2qUu3hE6BXTaPOLXfGFkjbHFyUJO4531hzrmDyiltog6vaqF_vIxmJUMO.C
+ 82PYIB_6ei1WoaLzeH.eO.NS3WPjw5Jjf3iFtGQWBycwdWmxV07.OGWgrhrL
+ X.BU.1mYCTejanB_N12FiiEtvnwQSv1_r2g.1ONpsu_6FZGYNKPQtThMtnE.
+ gO9dirL2Y1CVd5pi0IVb0fED0VikRhxx8E3zgLXqTgiw9TPdZ.0W1pLcgHC6
+ _QEIxZ4ipi6lZJfKmjARLN9z6G2.uHDPI8NcIaaoAqUZZt0Gc_WXGL5A7baw
+ G4wEkMAyGaHNwpkyiI9BLWtTVtKo_bKcwj_mUQ5bflNdYwUktfJVfZYCp6pZ
+ i4UxeuMs9NBiYuDQl282r2zbPymlroCya..m07n0gR.j9lWYAAJkzU18sBTd
+ CklwoKsR2pt0O.acr5hi3VEeHRFLCYgrcPjzAMJ_mlgxHSxHGcM1MGBSI0zJ
+ XpIcg1EVXKIEszezQvhwU5mPA4KjYpoSsZMH8i5oT2ZS51d4TCjUUzUL4QYU
+ 4ZLpDaTSvkaArSgjr..ap6Sq53f6XqvgLmxhCMjhLvol2L6onj9ePUl5BT7R
+ 8C5r.QVLldYJZeuHdchMYBsh79h.dCE57w_ihVzGtaDnUP.V2fNmRwZf59G8
+ f0IN6bi5EP.q2jHoHvtT0_btSPZ6E_OvX0Rw9FIp0jHlRgI8IwzbVIJ_t3pA
+ v6DhJGN4MIANRq1JXTSwJb7gKea9SheEUjgDCDe5HfARXY.jjwvmxXyv5Kp2
+ RkX2DFRg_lDKaQXXpNRhdpa5.XHjE7d3BdRcVxvGAdeiniBDv7gIjwUVjIFB
+ k8VJ7Ax7FoL3uViO25BGXiDVxpNqZ0QHWbLE6Xg_AKf.dIH9zFLWfEyx2NNy
+ KNj.rE0r7Fvg3Oj6EKnwUz1zMuC7kNeHC5cblLcDmCafWN._dkyOjeJbsH8y
+ myKwmRqR.PcMJCN2xM8YKYggmSxLNeL2serAaINBGDsa2n2AkuHgp_pLBys6
+ Xwd3RhraUCmhAGZlf56OQa5pZqPN20EKTvWzvxfLwjzJiE831gJYyk4IoG__
+ BaXjX8IM3yUP.dgpt5gN.wailjRQ8TF1rHgWQfgCLdAdXEDWX_PikVwY6IZh
+ BjLrLLR4Fv9t3LqdwDpdVEZ05ahq8IVTUt7nbxhHmIEsCzpLjaaXg2v0KPpB
+Received: from 54.159.250.94 (EHLO mail4.sipez.com)
+ by 10.197.39.201 with SMTP;
+ Tue, 15 Apr 2025 19:23:11 +0000
+Received: by mail4.sipez.com (Postfix)
+	id EAFD359256; Tue, 15 Apr 2025 19:23:10 +0000 (UTC)
+Delivered-To: dpetrie@sipez.com
+Received: from mail-oa1-f46.google.com (mail-oa1-f46.google.com [209.85.160.46])
+	by mail4.sipez.com (Postfix) with ESMTP id D76F03ED00
+	for <dpetrie@sipez.com>; Tue, 15 Apr 2025 19:23:10 +0000 (UTC)
+Received: by mail-oa1-f46.google.com with SMTP id 586e51a60fabf-2cc57330163so3476042fac.2
+        for <dpetrie@sipez.com>; Tue, 15 Apr 2025 12:23:10 -0700 (PDT)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1744744990; x=1745349790; darn=sipez.com;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=M2WLXczU3ubvEuP0EQFS59k1TEkv9dYh8nexn/Pn3Is=;
+        b=MBU8zGJT5AB8GYgbTyZsLU2axW9AwLTUuMRkec4l4Grqj/4NYa7k9gu2U2ssmm2Ygh
+         gWv4vNGu02Mi5J6afZ/5OqkWZ8+k3oom5JaWcZB+POz7hUnFUZ99Dtfz+PmXpb5Dc1o0
+         L6lMYtbyZClE1m432qNWOwYy1aasPM9GmeVA6QNm/H21yzGI5RLZlxpiFen9liP1NiXp
+         RHV08rQJ8vdr8MjLhF8YS3f/CTaElKKG1jqmq6t4r3b++C96XXfFKWwXGlVqetHeW/iy
+         osJe685NhTOSOPTuA/OS555W7kHaaHea2XQKknqMm/wLC+UTF+eYD4ZUbEjiGofQklGT
+         XM+A==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1744744990; x=1745349790;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=M2WLXczU3ubvEuP0EQFS59k1TEkv9dYh8nexn/Pn3Is=;
+        b=pxlODwLKRg+3lI5kVClgpwu6ZE03MZK/oaCetP1iXL33YXy50KiS8eINOi08dRLzJi
+         U7vPQ6vUor4Xb5yU80TOjiGojsI+ljq0ABUuCM49l9l0YZ0ekllngRfbiSwy5Xo8apil
+         Mpa2FsBYD/vMr7r0ijBYE/Tr+HDJXWygbAWnERKNR+vW/IuxZ62p05VM3W65em+Cg013
+         NH8efK07xF3s57rZGDDWCqhEVPJJxE15zAd1NcTU452fb6PEki/dnxBUCSXyHQt8/mRR
+         KjOmSN0Dx3kWS0hBF/xHmnR/cLHw1L81xXwF843GenqvhDSu6WUPAHfm/F87xTUM8wg9
+         +xiQ==
+X-Gm-Message-State: AOJu0YwnCwXNbpOY0wkDaBYt5mTYjCMTa+abMUSZ5SDqo0ZQIwkud/zX
+	4tGd2WCY6of8ZoiZHcRYVAcnBCSvEU8KMO0Ze6Zk/a/oJbS92eCcucKWQSMN2wxLMlxgK41qk/f
+	iHVKb7m9q8jP7CCJlm8fUXz6H+hE/Yg==
+X-Gm-Gg: ASbGncuT5O4DayyF42xUk1YXYGVsrKsXE2Wl+RMJsWiQQNP5zvcAR/2UXP0tWR53K5+
+	t1mDQIaVew/4Zmg9jACcUaos4vmv6jbe7g9APXpCbE+S1JGGFrOgwl59AwHHVSm8o97IMQgHMI2
+	HwWTqYKQx7/qFxv8QNjWn+6Gfm7lUYmw==
+X-Google-Smtp-Source: AGHT+IFejggUVdF4wFlK5XbPGyCXoMQ7EzsQ9oUM87XpaMD7CBtyl1NMUoe/kzfGGN1jVxDL9aAmuozRcB47328Rqlg=
+X-Received: by 2002:a05:6871:3745:b0:2b7:f58d:6dcf with SMTP id
+ 586e51a60fabf-2d4c3ccdd67mr219977fac.18.1744744989735; Tue, 15 Apr 2025
+ 12:23:09 -0700 (PDT)
+MIME-Version: 1.0
+References: <218245021.1836166.1744744675577.ref@mail.yahoo.com> <218245021.1836166.1744744675577@mail.yahoo.com>
+In-Reply-To: <218245021.1836166.1744744675577@mail.yahoo.com>
+From: Jeff Pulver <jeff.pulver@gmail.com>
+Date: Tue, 15 Apr 2025 15:22:58 -0400
+X-Gm-Features: ATxdqUGAdq8CWppZlGgq-zk9VSjROhYNKMNYUR0mLEKiO6rkgjw0cfjmDt1KIic
+Message-ID: <CAF6uZ_GyNtESwjdLp-SSV0mAtL-PYKz3ogTvkna=gwfj3fisTw@mail.gmail.com>
+Subject: Re: vCon Interop test thread
+To: Daniel Petrie <dpetrie@sipez.com>
+Content-Type: multipart/alternative; boundary="00000000000056427b0632d61956"
+Content-Length: 1949
+
+--00000000000056427b0632d61956
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Hi Dan,
+
+This works for me!
+
+Warm regards,
+Jeff
+
+On Tue, Apr 15, 2025 at 3:18=E2=80=AFPM Daniel Petrie <dpetrie@sipez.com> w=
+rote:
+
+> Hi Jeff:
+> I want to create a email thread as one of the assets for the vCon
+> Interop.  If you do not mind, I thought that I would create that with you=
+.
+> If it's ok with you, lets create 4 or 5 messages/responses to this one an=
+d
+> I will download the raw SMTP messages to a github repo for participants t=
+o
+> create an email vCon for this thread.
+>
+> Cheers,
+> Dan
+>
+
+--00000000000056427b0632d61956
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"auto">Hi Dan,</div><div dir=3D"auto"><br></div><div dir=3D"auto=
+">This works for me!</div><div dir=3D"auto"><br></div><div dir=3D"auto">War=
+m regards,</div><div dir=3D"auto">Jeff</div><div><br><div class=3D"gmail_qu=
+ote gmail_quote_container"><div dir=3D"ltr" class=3D"gmail_attr">On Tue, Ap=
+r 15, 2025 at 3:18=E2=80=AFPM Daniel Petrie &lt;<a href=3D"mailto:dpetrie@s=
+ipez.com">dpetrie@sipez.com</a>&gt; wrote:<br></div><blockquote class=3D"gm=
+ail_quote" style=3D"margin:0 0 0 .8ex;border-left:1px #ccc solid;padding-le=
+ft:1ex"><div><div style=3D"font-family:Helvetica Neue,Helvetica,Arial,sans-=
+serif;font-size:16px"><div dir=3D"ltr">Hi Jeff:</div><div dir=3D"ltr">I wan=
+t to create a email thread as one of the assets for the vCon Interop.=C2=A0=
+ If you do not mind, I thought that I would create that with you.=C2=A0 If =
+it&#39;s ok with you, lets create 4 or 5 messages/responses to this one and=
+ I will download the raw SMTP messages to a github repo for participants to=
+ create an email vCon for this thread.</div><div dir=3D"ltr"><br></div><div=
+ dir=3D"ltr">Cheers,</div><div dir=3D"ltr">Dan</div></div></div></blockquot=
+e></div></div>
+
+--00000000000056427b0632d61956--
