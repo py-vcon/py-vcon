@@ -31,9 +31,17 @@ Note: you can use the above URLs to construct vCons with externally referenced v
 
 ## Certificates and keys
 Use the following certifcates and keys when signing, verifying, encrypting and decrypting your vCons:  
-* Use this [Private Key]() to sign or decrypt
+* Use this [Private Key](private.key) to sign or decrypt
 
 Key Chain (public keys/certs.):  
-* Use this [Top level authority]() to verify that the cert below is trusted
-* [Mid level issuer]()
-* Use this [cert]() to verify or encrypt
+* Use this [Top level authority](ca_root.crt) to verify that the cert below is trusted
+* [Mid level cert issuer authority](mid.crt)
+* Use this [cert](cert.crt) to verify or encrypt  
+
+Top Level authority not in the above chain:
+* If you use this [cert](ca2_root.crt) as your trusted top level authority, your validation of the above chain should fail as not a trusted chain.  
+
+Expired cert and key:
+* If you sign with this [expired private key](expired_mid.key)
+* Verifying the JWS with this [expired cert](expired_mid.crt) should fail
+* These were both created from the valid [Top level authority above](ca_root.crt)
