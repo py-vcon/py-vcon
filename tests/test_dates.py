@@ -57,3 +57,5 @@ def test_cannonize_date():
   #print("{} dst: {}".format(cannonized, datetime_val.dst()))
   assert(cannonized == "2022-09-27T18:23:38.938+00:00")
 
+  phone_date = "2025-04-18T18:04:28.658Z"
+  cannon_phone_date = vcon.utils.cannonize_date(phone_date)
