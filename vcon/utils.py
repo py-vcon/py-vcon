@@ -43,6 +43,11 @@ def cannonize_date(date : typing.Union[int, float, str, datetime.datetime]) -> s
       epoch = epoch.replace(tzinfo = datetime.timezone.utc)
       epoch = epoch.astimezone(datetime.timezone.utc)
 
+      date = date.strip()
+      # the SIO parsing does not seem to like Zulu time
+      if(date[-1].lower() == "z"):
+        date = date[:-1] + "-00:00"
+
       epoch_time = (datetime.datetime.fromisoformat(date) - epoch).total_seconds()
       #print("epoch: {}".format(epoch_time))
 
