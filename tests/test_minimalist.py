@@ -264,3 +264,28 @@ def test_attachments(two_party_tel_vcon: vcon.Vcon):
     vcon.utils.cannonize_date(now))
   assert(two_party_tel_vcon.attachments[0]["body"] == body_bytes)
 
+def test_missing_properties():
+  vcon_string = """{
+    "vcon": "0.0.2",
+    "uuid": "01855517-ac4e-8edf-84fd-77776666acbe",
+    "parties": []
+    }"""
+
+  minVcon = vcon.Vcon()
+  minVcon.loads(vcon_string)
+
+  assert(len(minVcon.parties) == 0)
+  minVcon.parties.append({ "set": True})
+  assert(len(minVcon.parties) == 1)
+
+  assert(len(minVcon.group) == 0)
+  try:
+    minVcon.group = [{ "set": True}]
+  except AttributeError as ae:
+    # expected, not allowed to set new array
+    pass
+  assert(len(minVcon.group) == 0)
+
+  minVcon.group.append({ "set": True})
+  assert(len(minVcon.group) == 1)
+  assert(minVcon.dumps() == '{"vcon": "0.0.2", "uuid": "01855517-ac4e-8edf-84fd-77776666acbe", "parties": [{"set": true}], "group": [{"set": true}]}')
