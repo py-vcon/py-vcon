@@ -220,6 +220,6 @@ async def test_whisper_no_dialog():
     whisper = { "language" : "en"}
     )
 
-  assert(in_vcon.dialog is None)
+  assert(len(in_vcon.dialog) == 0)
   out_vcon = await in_vcon.transcribe(options)
-  assert(out_vcon.analysis is None)
+  assert(len(out_vcon.analysis) == 0)

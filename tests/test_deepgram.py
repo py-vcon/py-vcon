@@ -156,6 +156,6 @@ async def test_deepgram_no_dialog():
   options = vcon.filter_plugins.TranscribeOptions(
     )
 
-  assert(in_vcon.dialog is None)
+  assert(len(in_vcon.dialog) == 0)
   out_vcon = await in_vcon.deepgram(options)
-  assert(out_vcon.analysis is None)
+  assert(len(out_vcon.analysis)  == 0)
