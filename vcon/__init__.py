@@ -247,6 +247,7 @@ class VconAttribute:
   def __set__(self, instance_object, value : str) -> None:
     raise AttributeError("not allowed to replace {} {}".format(self.name, self._type_name))
 
+
 class VconString(VconAttribute):
   """ descriptor for String attributes in vcon """
   def __init__(self, doc : typing.Union[str, None] = None):
@@ -291,6 +292,17 @@ class VconDictList(VconAttribute):
   def __init__(self, doc : typing.Union[str, None] = None):
     super().__init__(doc = doc)
     self._type_name = "DictList"
+
+  def __get__(self, instance_object, class_type = None):
+    got_value = super().__get__(instance_object, class_type)
+
+    # Always return a list to avoid having to test for null and empty
+    if(got_value is None):
+      got_value = []
+      instance_object._vcon_dict[self.name] = got_value
+
+    return(got_value)
+
 
 class VconPluginMethodType():
   """ Class defining descriptor used to instantiate methods for the named filter plugins """
@@ -1014,7 +1026,7 @@ class Vcon():
       transcript_accessors = list(vcon.accessors.transcript_accessors.keys())
     logger.debug("accessors: {}".format(transcript_accessors))
 
-    for analysis_index, analysis in enumerate(self.analysis):
+    for analysis_index, analysis in enumerate(self.analysis or []):
       if(analysis["type"] == "transcript" and
         analysis["dialog"] == dialog_index
         ):
