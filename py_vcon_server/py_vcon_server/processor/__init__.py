@@ -1189,6 +1189,20 @@ class VconProcessorRegistry():
 
     return(registration._processor_instance)
 
+# class FilterPluginProcessorMeta(type):
+#     def __new__(cls, name, bases, attrs):
+#         # Create the class
+#         new_class = super().__new__(cls, name, bases, attrs)
+#         
+#         # Execute the desired code once after class definition
+#         logger.debug(f"Processor Class {name} has been defined.")
+#         if hasattr(new_class, 'headline'):
+#             new_class.__init__.__doc__ = new_class.headline
+#         else:
+#           logger.warning(f"Processor class {name} did not define headline.")
+#         
+#         return new_class
+# 
 
 class FilterPluginProcessor(VconProcessor):
   """ Abstract Processor for **Vcon FilterPlugins** """
@@ -1244,7 +1258,7 @@ class FilterPluginProcessor(VconProcessor):
     ):
 
     super().__init__(
-      "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+      self.headline,
       self.headline + self.plugin_description,
       self.plugin_version,
       init_options,
