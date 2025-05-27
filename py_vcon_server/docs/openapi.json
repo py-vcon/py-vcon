@@ -11,7 +11,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.3.0"
+    "version": "0.3.1"
   },
   "paths": {
     "/server/info": {
@@ -1041,7 +1041,7 @@
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "summary": "vCon decryption **VconProcessor**",
         "description": "vCon decryption **VconProcessor**\nThis **VconProcessor** will decrypt the JWE form vCon into the signed/unverified JWS vCon form.",
         "operationId": "run_vcon_processor_process__vcon_uuid__decrypt_post",
         "parameters": [
@@ -1134,7 +1134,7 @@
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "summary": "Deepgram transcription binding for **VconProcessor**",
         "description": "Deepgram transcription binding for **VconProcessor**\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Deepgram** **Vcon** **filter_plug** for transcription is used.",
         "operationId": "run_vcon_processor_process__vcon_uuid__deepgram_post",
         "parameters": [
@@ -1227,7 +1227,7 @@
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "summary": "vCon encryption **VconProcessor**",
         "description": "vCon encryption **VconProcessor**\nThis **VconProcessor** will encrypt the Vcon into its JWE form.",
         "operationId": "run_vcon_processor_process__vcon_uuid__encrypt_post",
         "parameters": [
@@ -1413,7 +1413,7 @@
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "summary": "OpenAi Chat Completion binding for **VconProcessor**",
         "description": "OpenAi Chat Completion binding for **VconProcessor**\n\nThis **VconProcessor** will input the text dialog and transcribed dialog(s) for one or all of the audio dialogs in the input Vcon and add an analysis object containing the generative AI output for the prompt provided in the option.\nThe **openai_chat_completions** **Vcon** **filter_plug** is used.",
         "operationId": "run_vcon_processor_process__vcon_uuid__openai_chat_completion_post",
         "parameters": [
@@ -1785,7 +1785,7 @@
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "summary": "vCon signing **VconProcessor**",
         "description": "vCon signing **VconProcessor**\nThis **VconProcessor** will with sign the Vcon using JWS.",
         "operationId": "run_vcon_processor_process__vcon_uuid__sign_post",
         "parameters": [
@@ -1971,7 +1971,7 @@
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "summary": "vCon verification **VconProcessor**",
         "description": "vCon verification **VconProcessor**\nThis **VconProcessor** will verify the JWS signed Vcon.",
         "operationId": "run_vcon_processor_process__vcon_uuid__verify_post",
         "parameters": [
@@ -2064,7 +2064,7 @@
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "transcribe Vcon dialogs using Vcon Whisper filter_plugin",
+        "summary": "Whisper OpenAI transcription binding for **VconProcessor**  with model size: base",
         "description": "Whisper OpenAI transcription binding for **VconProcessor**  with model size: base\n\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Whisper** **Vcon** **filter_plug** for transcription is used which is built upon the OpenAI Whisper package.",
         "operationId": "run_vcon_processor_process__vcon_uuid__whisper_base_post",
         "parameters": [
@@ -2719,7 +2719,7 @@
             ],
             "title": "input **Vcon** recording **dialog** objects",
             "description": "\nIndicates which recording **dialog** objects in the given **Vcon** are\nto be transcribed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n",
-            "default": "",
+            "default": "0:",
             "examples": [
               "",
               "0:",
@@ -2854,7 +2854,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1740263900.882451
+              1748295891.4958186
             ]
           },
           "server": {
@@ -3382,8 +3382,7 @@
           "queue_name": {
             "type": "string",
             "title": "Job queue name",
-            "description": "name of the queue to put the job in",
-            "default": ""
+            "description": "name of the queue to put the job in"
           },
           "from_queue": {
             "anyOf": [
@@ -3400,8 +3399,11 @@
         },
         "additionalProperties": true,
         "type": "object",
+        "required": [
+          "queue_name"
+        ],
         "title": "QueueJobOptions",
-        "description": "QueueJobOptions is passed to the jqueue_job processor when processing the given VconProcessorIO.\nQueueJobOptions indicates where the job is to be queued and optionally labels the queued job\nwith the queue from which it came."
+        "description": "QueueJobOptions is passed to the queue_job processor when processing the given VconProcessorIO.\nQueueJobOptions indicates where the job is to be queued and optionally labels the queued job\nwith the queue from which it came."
       },
       "QueueProperties": {
         "properties": {
@@ -3525,27 +3527,27 @@
             "type": "string",
             "title": "server version",
             "description": "Python package py_vcon_server version number",
-            "default": "0.3.0"
+            "default": "0.3.1"
           },
           "vcon": {
             "type": "string",
             "title": "vcon version",
             "description": "Python package **py_vcon** version number",
-            "default": "0.4.0"
+            "default": "0.4.1"
           },
           "start_time": {
             "type": "number",
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1740263900.8776097
+              1748295891.4909382
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              203232
+              243895
             ]
           }
         },
@@ -3580,7 +3582,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              203232
+              243895
             ]
           },
           "start_time": {
@@ -3588,7 +3590,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1740263900.8788784
+              1748295891.4923778
             ]
           },
           "num_workers": {
@@ -3614,7 +3616,7 @@
             "title": "heartbeat time stamp",
             "description": "epoch seconds time for the last heartbeat on this server",
             "examples": [
-              1740263900.8789923
+              1748295891.4924948
             ]
           }
         },
@@ -4154,10 +4156,10 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1740263900,
-              1740263900.8458726,
+              1748295891,
+              1748295891.2585359,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2025-02-22T22:38:20.845+00:00",
+              "2025-05-26T21:44:51.258+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -4284,7 +4286,7 @@
             ],
             "title": "input **Vcon** recording **dialog** objects",
             "description": "\nIndicates which recording **dialog** objects in the given **Vcon** are\nto be transcribed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be transcribed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be transcribed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be transcribed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be transcribed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be transcribed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n",
-            "default": "",
+            "default": "0:",
             "examples": [
               "",
               "0:",
