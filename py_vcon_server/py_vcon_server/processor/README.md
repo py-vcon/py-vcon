@@ -139,7 +139,7 @@ Methods:
 
  - **Name:** decrypt
  - **Version:** 0.0.1
- - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+ - **Summary:** vCon decryption **VconProcessor**
 
 vCon decryption **VconProcessor**
 This **VconProcessor** will decrypt the JWE form vCon into the signed/unverified JWS vCon form.
@@ -159,7 +159,7 @@ Methods:
 
  - **Name:** deepgram
  - **Version:** 0.0.1
- - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+ - **Summary:** Deepgram transcription binding for **VconProcessor**
 
 Deepgram transcription binding for **VconProcessor**
 This **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.
@@ -180,7 +180,7 @@ Methods:
 
  - **Name:** encrypt
  - **Version:** 0.0.1
- - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+ - **Summary:** vCon encryption **VconProcessor**
 
 vCon encryption **VconProcessor**
 This **VconProcessor** will encrypt the Vcon into its JWE form.
@@ -218,7 +218,7 @@ Methods:
 
  - **Name:** openai_chat_completion
  - **Version:** 0.0.1
- - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+ - **Summary:** OpenAi Chat Completion binding for **VconProcessor**
 
 OpenAi Chat Completion binding for **VconProcessor**
 
@@ -294,7 +294,7 @@ Methods:
 
  - **Name:** sign
  - **Version:** 0.0.1
- - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+ - **Summary:** vCon signing **VconProcessor**
 
 vCon signing **VconProcessor**
 This **VconProcessor** will with sign the Vcon using JWS.
@@ -332,7 +332,7 @@ Methods:
 
  - **Name:** verify
  - **Version:** 0.0.1
- - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+ - **Summary:** vCon verification **VconProcessor**
 
 vCon verification **VconProcessor**
 This **VconProcessor** will verify the JWS signed Vcon.
@@ -352,7 +352,7 @@ Methods:
 
  - **Name:** whisper_base
  - **Version:** 0.0.1
- - **Summary:** transcribe Vcon dialogs using Vcon Whisper filter_plugin
+ - **Summary:** Whisper OpenAI transcription binding for **VconProcessor**  with model size: base
 
 Whisper OpenAI transcription binding for **VconProcessor**  with model size: base
 
@@ -667,7 +667,7 @@ to be transcribed.
 
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
-default: 
+default: 0:
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
@@ -936,7 +936,7 @@ default: {}
 
  - **Summary:** QueueJobOptions
 
-QueueJobOptions is passed to the jqueue_job processor when processing the given VconProcessorIO.
+QueueJobOptions is passed to the queue_job processor when processing the given VconProcessorIO.
 QueueJobOptions indicates where the job is to be queued and optionally labels the queued job
 with the queue from which it came.
 
@@ -972,7 +972,7 @@ name of the queue to put the job in
 
 example:
 
-default: ""
+default: None
 
 ##### from_queue (typing.Union[str, NoneType])
 From queue name
@@ -1368,7 +1368,7 @@ to be transcribed.
 
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
-default: 
+default: 0:
 
 ##### output_types (typing.List[str])
 transcription output types
