@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+#me Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 
 import typing
 import pydantic
@@ -13,14 +13,13 @@ class QueueJobInitOptions(py_vcon_server.processor.VconProcessorInitOptions):
 
 class QueueJobOptions(py_vcon_server.processor.VconProcessorOptions):
   """
-  QueueJobOptions is passed to the jqueue_job processor when processing the given VconProcessorIO.
+  QueueJobOptions is passed to the queue_job processor when processing the given VconProcessorIO.
   QueueJobOptions indicates where the job is to be queued and optionally labels the queued job
   with the queue from which it came.
   """
   queue_name: str = pydantic.Field(
       title = "Job queue name",
-      description = "name of the queue to put the job in",
-      default = ""
+      description = "name of the queue to put the job in"
     )
 
   from_queue: typing.Union[str, None] = pydantic.Field(
@@ -28,7 +27,7 @@ class QueueJobOptions(py_vcon_server.processor.VconProcessorOptions):
       description = "name of the queue in which this processor is run."
         "  This may be used for diagnostic purpose to track what pipeline the job came from."
         "  This string does not effect the functionality.",
-      default = None
+      default = ""
     )
 
 
