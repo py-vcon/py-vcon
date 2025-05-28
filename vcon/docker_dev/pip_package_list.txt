@@ -7,7 +7,7 @@ hsslms
 openai
 pydantic
 pyjq
-python-jose < 3.4.0
+python-jose
 python-dateutil
 pytz
 regex
