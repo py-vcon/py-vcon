@@ -57,6 +57,7 @@ jobs:
         pip freeze | grep whisper
         pip freeze | grep torch
         pip freeze | grep pydantic
+        pip freeze
         python3 -c "import stable_whisper;print(stable_whisper.__version__)"
 
     - name: Lint catastrophic errors with flake8

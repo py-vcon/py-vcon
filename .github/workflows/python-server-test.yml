@@ -108,6 +108,7 @@ jobs:
           pip install -r vcon/docker_dev/pip_server_requirements.txt
           pip freeze | grep stable
           pip freeze | grep whisper
+          pip freeze
           python3 -c "import stable_whisper;print(stable_whisper.__version__)"
 
       - name: Test py_vcon_server package with pytest
