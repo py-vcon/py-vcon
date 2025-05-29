@@ -99,6 +99,7 @@ jobs:
           apt-cache depends intel-media-va-driver
           echo "Installing apt packages: " $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3.8 | tr "\n" " ")
           sudo apt-get install -y --fix-missing $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3.8 | tr "\n" " ")
+          apt show openssl
           # get latest pip install package list
           python -m pip install --upgrade pip
           #python -m pip install flake8 pytest
