@@ -48,9 +48,8 @@ jobs:
         echo "Installing apt packages: " $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3 | tr "\n" " ")
         sudo apt-get install -y --fix-missing $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3 | tr "\n" " ")
         apt show openssl
-        python3 -c "import ssl;print(ssl.OPENSSL_VERSION)"
-        echo "test openssl rand:"
-        openssl rand -hex 16
+        echo "ssl.OPENSSL_VERSION: "`python3 -c "import ssl;print(ssl.OPENSSL_VERSION)"`
+        echo "test openssl rand: " `openssl rand -hex 16`
         python -m pip install --upgrade pip
         python -m pip install --upgrade pip
         pip install -r vcon/docker_dev/pip_dev_package_list.txt
@@ -62,8 +61,8 @@ jobs:
         pip freeze | grep torch
         pip freeze | grep pydantic
         pip freeze
-        python3 -c "import stable_whisper;print(stable_whisper.__version__)"
-        python3 -c "import cryptography.hazmat.backends.openssl.backend; print(cryptography.hazmat.backends.openssl.backend.openssl_version_text())"
+        echo "stable_whisper: " `python3 -c "import stable_whisper;print(stable_whisper.__version__)"`
+        echo "cryptography openssl backend: " `python3 -c "import cryptography.hazmat.backends.openssl.backend; print(cryptography.hazmat.backends.openssl.backend.openssl_version_text())"`
 
     - name: Lint catastrophic errors with flake8
       run: |
