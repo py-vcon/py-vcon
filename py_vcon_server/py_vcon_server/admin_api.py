@@ -2,7 +2,10 @@
 import typing
 import time
 import os
+import pkg_resources
+import importlib
 import fastapi.responses
+import fastapi.staticfiles
 import pydantic
 import py_vcon_server
 import py_vcon_server.logging_utils
@@ -124,6 +127,31 @@ class InProgressJob(pydantic.BaseModel):
 
 
 def init(restapi):
+
+  # Enable the pipeline editor if we can find the dir
+  editor_dir = None
+  # This did not work, pip ends up installing data in /usr/local/py_vcon_server
+  # but the follow says its in the package install directory:
+  # /usr/local/lib/python3.8/dist-packages/py_vcon_server
+  # try:
+  #   with importlib.resources.path(__name__.split('.')[0], 'index.html') as pipeline_editor_path:
+  #     editor_dir = os.path.dirname(str(pipeline_editor_path))
+  #     logger.debug("py_vcon_server resource.path: {}".format(editor_dir))
+  # except Exception as path_not_found:
+  #   logger.error("could not find resource pipeline_editor")
+  #   logger.exception(path_not_found)
+  #editor_dir = "{}/pipeline_editor".format(py_vcon_server.__path__[0])
+  # For now this is hacked to install in relative directory
+  # by lableling pipeline_editor as a sub-module.
+  editor_dir = "{}/pipeline_editor".format(os.path.dirname(__file__))
+  if(not os.path.isdir(editor_dir)):
+    editor_dir = None
+  if(editor_dir is not None and editor_dir != ""):
+    logger.debug("setting pipeline_editor dir: {}".format(editor_dir))
+    restapi.mount("/pipeline_editor", fastapi.staticfiles.StaticFiles(directory=editor_dir), name="pipeline_editor")
+  else:
+    logger.warning("could not find pipeline_editor.  Not mounting")
+
 
   @restapi.get("/server/info",
     response_model = ServerInfo,
