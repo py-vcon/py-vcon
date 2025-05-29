@@ -49,7 +49,6 @@ jobs:
         sudo apt-get install -y --fix-missing $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3 | tr "\n" " ")
         apt show openssl
         python3 -c "import ssl;print(ssl.OPENSSL_VERSION)"
-        python3 -c "import cryptography.hazmat.backends.openssl.backend; print(cryptography.hazmat.backends.openssl.backend.openssl_version_text())"
         echo "test openssl rand:"
         openssl rand -hex 16
         python -m pip install --upgrade pip
@@ -64,6 +63,7 @@ jobs:
         pip freeze | grep pydantic
         pip freeze
         python3 -c "import stable_whisper;print(stable_whisper.__version__)"
+        python3 -c "import cryptography.hazmat.backends.openssl.backend; print(cryptography.hazmat.backends.openssl.backend.openssl_version_text())"
 
     - name: Lint catastrophic errors with flake8
       run: |
