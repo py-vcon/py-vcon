@@ -484,6 +484,30 @@ class VconProcessorInitOptions(pydantic.BaseModel):
 
 class VconProcessorOptions(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   """ Base class options for **VconProcessor.processor** method """
+  label: str = pydantic.Field(
+      title = "processor documentation label",
+      description = "Short documentaion label for the processor options."
+        " This does not impact the funtionality of this processor."
+       " This is mostly useful in the context of a pipeline definition."
+       " The label can be used to give a better description of what"
+       " the processor will acheve with the given set of options."
+       " It is recommended that this be short and on the order of 30"
+       " characters at most.",
+      default = ""
+    )
+
+  notes: str = pydantic.Field(
+      title = "processor documentation notes",
+      description = "Documentaion notes for the processor options."
+        " This does not impact the funtionality of this processor."
+       " This is mostly useful in the context of a pipeline definition."
+       " The notes can be used to give a detailed description of what"
+       " the processor will acheve, how and why it is configured the"
+       " way that it is with the given set of options."
+       " The notes can be as long as you like.",
+      default = ""
+    )
+
   input_vcon_index: int = pydantic.Field(
       title = "VconProcessorIO input vCon index",
       description = "Index to which vCon in the VconProcessorIO is to be used for input",
