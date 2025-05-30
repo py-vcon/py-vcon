@@ -56,7 +56,7 @@ jobs:
         pip install -r vcon/docker_dev/pip_package_list.txt
         if [[ ${{ matrix.python-version }} =~ ^3.8* ]]; then
           echo "Python 3.8 patching"
-          pip3 uninstall cryptography
+          pip3 uninstall --yes cryptography
           pip3 install cryptography<45.0.0
         else
           echo "no version specific python patching"
