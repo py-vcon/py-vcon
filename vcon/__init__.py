@@ -59,6 +59,15 @@ def build_logger(name : str) -> logging.Logger:
 
 logger = build_logger(__name__)
 
+# TODO: this should be a setting
+# Max payload sizes for JWE and JWS.  Default is now 250000
+if(hasattr(jose.constants, "JWE_SIZE_LIMIT")):
+  jose.constants.JWE_SIZE_LIMIT = 25000000
+  logger.debug("Set JWE_SIZE_LIMIT to: {}".format(jose.constants.JWE_SIZE_LIMIT))
+else:
+  logger.debug("JWE_SIZE_LIMIT not supported")
+
+
 try:
   import simplejson as json
   dumps_options = {"ignore_nan" : True}
