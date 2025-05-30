@@ -11,6 +11,10 @@ import datetime
 import hsslms
 import hashlib
 
+# Max payload sizes for JWE and JWS.  Default is now 250000
+jwe.JWE.max_payload_size = 25000000
+jws.JWS.max_payload_size = 25000000
+
 CERT_PARTIAL_PREFIX = "--BEGIN CERTIFICATE--"
 CERT_PARTIAL_SUFFIX = "--END CERTIFICATE--"
 KEY_PARTIAL_PREFIX = "--BEGIN PRIVATE KEY--"
