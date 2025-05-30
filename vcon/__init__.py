@@ -14,6 +14,7 @@ import copy
 import logging
 import logging.config
 import enum
+import jose.constants
 import cbor2
 import time
 import hashlib
@@ -26,9 +27,6 @@ import pathlib
 import pyjq
 import uuid6
 import requests
-import jose.utils
-import jose.jws
-import jose.jwe
 import pythonjsonlogger.jsonlogger
 import vcon.utils
 import vcon.security
@@ -67,6 +65,10 @@ if(hasattr(jose.constants, "JWE_SIZE_LIMIT")):
 else:
   logger.debug("JWE_SIZE_LIMIT not supported")
 
+# Delay import the rest of jose stuff until we set the size limit
+import jose.utils
+import jose.jws
+import jose.jwe
 
 try:
   import simplejson as json
