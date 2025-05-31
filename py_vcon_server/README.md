@@ -340,13 +340,21 @@ You can find [instructions on getting third party API keys here](../README.md#th
 
 The network interface and port, upon which the vCon server Admin and vCon RESTful APIs, are exposed is configured with the REST_URL environment variable.
 
-We run unit tests on Python 3.8, 3.9 and 3.10.
+We run unit tests on Python 3.8, 3.9, 3.10 and 3.11.
 Other Python platforms are untested.
 
 ### Run py_vcon_server Package
 Install the py_vcon_server package:
 
     pip3 install py_vcon_server
+
+  Note: we are nearing the end of life of Python 3.8 support.  You can still run python-vcon on 3.8 by doing the following:
+
+    pip3 uninstall --yes cryptography
+    pip3 install 'cryptography<45.0.0'
+
+  python-jose version 3.5.x is not supported on Python 3.8.
+  To avoid an undefined RAND_bytes exception, you need to hold back to Cryptograhy version 44.X.X.
 
 If you are running the vCon server directly from the package, setup your environment like the following:
 
