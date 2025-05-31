@@ -54,6 +54,28 @@ class PipelineOptions(pydantic.BaseModel):
   Options the effect the handling of Vcon Pipeline processing.
   """
 
+  label: str = pydantic.Field(
+      title = "pipeline documentation label",
+      description = "Short documentaion label for the pipeline function."
+        " This does not impact the funtionality of this pipeline definition."
+       " The label can be used to give a better description of what the pipeline"
+       " will achieve with the given set of options and configured processors."
+       " It is recommended that this be short and on the order of 40"
+       " characters at most.",
+      default = ""
+    )
+
+  notes: str = pydantic.Field(
+      title = "pipeline documentation notes",
+      description = "Documentaion notes for this pipeline definition."
+        " This does not impact the funtionality of this pipeline."
+       " The notes can be used to give a detailed description of what"
+       " the pipeline will achieve, how and why it is configured the"
+       " way that it is with the given set of options."
+       " The notes can be as long as you like.",
+      default = ""
+    )
+
   save_vcons: typing.Union[bool, None] = pydantic.Field(
       title = "save/update vCon(s) after pipeline processing",
       default = True
@@ -65,8 +87,9 @@ class PipelineOptions(pydantic.BaseModel):
   If any one of the processors in the pipeline takes more than this number
  of seconds, the processor will be cancled, remaining processors will be
  skipped and the pipeline will be considered failed for the given job/vCon.
+ Zero or None means to wait until complete.
 """,
-  default = None
+  default = 0
     )
 
   failure_queue: typing.Union[str, None] = pydantic.Field(
@@ -325,6 +348,8 @@ class PipelineRunner():
     """
     logger.debug("PipelineDef: {}".format(vcon.pydantic_utils.get_dict(self._pipeline, exclude_none=True)))
     timeout = self._pipeline.pipeline_options.timeout
+    if(timeout <= 0):
+      timeout = None
     run_future = self._do_processes(
         processor_input
       )
