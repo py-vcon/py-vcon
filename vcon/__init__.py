@@ -14,6 +14,7 @@ import copy
 import logging
 import logging.config
 import enum
+import jose.constants
 import cbor2
 import time
 import hashlib
@@ -26,16 +27,13 @@ import pathlib
 import pyjq
 import uuid6
 import requests
-import jose.utils
-import jose.jws
-import jose.jwe
 import pythonjsonlogger.jsonlogger
 import vcon.utils
 import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 def build_logger(name : str) -> logging.Logger:
   logger = logging.getLogger(name)
@@ -58,6 +56,19 @@ def build_logger(name : str) -> logging.Logger:
   return(logger)
 
 logger = build_logger(__name__)
+
+# TODO: this should be a setting
+# Max payload sizes for JWE and JWS.  Default is now 250000
+if(hasattr(jose.constants, "JWE_SIZE_LIMIT")):
+  jose.constants.JWE_SIZE_LIMIT = 25000000
+  logger.debug("Set JWE_SIZE_LIMIT to: {}".format(jose.constants.JWE_SIZE_LIMIT))
+else:
+  logger.debug("JWE_SIZE_LIMIT not supported")
+
+# Delay import the rest of jose stuff until we set the size limit
+import jose.utils
+import jose.jws
+import jose.jwe
 
 try:
   import simplejson as json
@@ -247,6 +258,7 @@ class VconAttribute:
   def __set__(self, instance_object, value : str) -> None:
     raise AttributeError("not allowed to replace {} {}".format(self.name, self._type_name))
 
+
 class VconString(VconAttribute):
   """ descriptor for String attributes in vcon """
   def __init__(self, doc : typing.Union[str, None] = None):
@@ -291,6 +303,17 @@ class VconDictList(VconAttribute):
   def __init__(self, doc : typing.Union[str, None] = None):
     super().__init__(doc = doc)
     self._type_name = "DictList"
+
+  def __get__(self, instance_object, class_type = None):
+    got_value = super().__get__(instance_object, class_type)
+
+    # Always return a list to avoid having to test for null and empty
+    if(got_value is None):
+      got_value = []
+      instance_object._vcon_dict[self.name] = got_value
+
+    return(got_value)
+
 
 class VconPluginMethodType():
   """ Class defining descriptor used to instantiate methods for the named filter plugins """
@@ -1014,7 +1037,7 @@ class Vcon():
       transcript_accessors = list(vcon.accessors.transcript_accessors.keys())
     logger.debug("accessors: {}".format(transcript_accessors))
 
-    for analysis_index, analysis in enumerate(self.analysis):
+    for analysis_index, analysis in enumerate(self.analysis or []):
       if(analysis["type"] == "transcript" and
         analysis["dialog"] == dialog_index
         ):

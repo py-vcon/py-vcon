@@ -99,15 +99,28 @@ jobs:
           apt-cache depends intel-media-va-driver
           echo "Installing apt packages: " $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3.8 | tr "\n" " ")
           sudo apt-get install -y --fix-missing $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3.8 | tr "\n" " ")
+          apt show openssl
           # get latest pip install package list
           python -m pip install --upgrade pip
           #python -m pip install flake8 pytest
           #if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install -r vcon/docker_dev/pip_dev_package_list.txt
           pip install -r vcon/docker_dev/pip_package_list.txt
+          if [[ "${{ matrix.python-version }}" == "3.8" ]]; then
+            echo "Python 3.8 patching"
+            pip3 uninstall --yes cryptography
+            pip3 install 'cryptography<45.0.0'
+          else
+            echo "no version specific python patching"
+          fi
+          # build and install python-vcon
+          rm -f dist/*
+          python -m build
+          pip3 install dist/python_vcon*.tar.gz
           pip install -r vcon/docker_dev/pip_server_requirements.txt
           pip freeze | grep stable
           pip freeze | grep whisper
+          pip freeze
           python3 -c "import stable_whisper;print(stable_whisper.__version__)"
 
       - name: Test py_vcon_server package with pytest
