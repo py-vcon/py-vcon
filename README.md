@@ -88,7 +88,16 @@ Here is a [quick overview](Vcon-Quick-Overview.md) of the different parts of a v
 
 ## Installing py-vcon
 
-    pip install python-vcon
+    pip3 install python-vcon
+
+
+  Note: we are nearing the end of life of Python 3.8 support.  You can still run python-vcon on 3.8 by doing the following:
+
+    pip3 uninstall --yes cryptography
+    pip3 install 'cryptography<45.0.0'
+
+  python-jose version 3.5.x is not supported on Python 3.8.
+  To avoid an undefined RAND_bytes exception, you need to hold back to Cryptograhy version 44.X.X.
 
 ## Vcon Filter Plugins
 
