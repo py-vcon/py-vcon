@@ -1,10 +1,12 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Common setup and components for the RESTful APIs """
 import traceback
 import pydantic
 import fastapi
+import fastapi.middleware.cors
 from py_vcon_server import __version__
 import py_vcon_server.logging_utils
+import py_vcon_server.settings
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
@@ -200,5 +202,16 @@ def init() -> fastapi.FastAPI:
     openapi_tags = openapi_tags
     )
 
+  logger.debug("CORS_ORIGINS: {}".format(py_vcon_server.settings.CORS_ORIGINS))
+  if(py_vcon_server.settings.CORS_ORIGINS):
+    # CORS stuff
+    logger.info("Enabling CORS for {}".format(py_vcon_server.settings.CORS_ORIGINS))
+    restapi.add_middleware(
+        fastapi.middleware.cors.CORSMiddleware,
+        allow_origins=py_vcon_server.settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"]
+      )
   return(restapi)
 

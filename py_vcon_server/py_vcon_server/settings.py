@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import os
 import multiprocessing
 from pathlib import Path
@@ -21,6 +21,11 @@ if(not isinstance(NUM_WORKERS, int)):
   NUM_WORKERS = 0
 
 PLUGIN_PATHS = os.getenv("PLUGIN_PATHS", "").split(",")
+
+CORS_ORIGINS = []
+cors_origins_string = os.getenv("CORS_ORIGINS", "").strip()
+if(cors_origins_string != ""):
+  CORS_ORIGINS = cors_origins_string.split(", ")
 
 # parse out optional weights from name for each queue
 manager = multiprocessing.Manager()
