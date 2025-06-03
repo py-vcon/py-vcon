@@ -23,7 +23,7 @@ logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
 nest_asyncio.apply()
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
@@ -58,7 +58,7 @@ for path in py_vcon_server.settings.PLUGIN_PATHS:
 import py_vcon_server.vcon_api
 import py_vcon_server.admin_api
 
-# Load the VconProcessor bindings
+# Load the builtin VconProcessor bindings
 logger.debug("loading VconProcessors from: {} with prefix: {}".format(
     py_vcon_server.processor.__path__,
     py_vcon_server.processor.__name__ + "."
@@ -68,6 +68,16 @@ py_vcon_server.db.import_bindings(
   py_vcon_server.processor.__name__ + ".", # binding module name prefix
   "VconProcessor" # label
   )
+
+# Load any separately installed addon VconProcessor binding
+addons_path = "{}/processor_addons".format(py_vcon_server.__path__[0])
+logger.debug("Looking for addon processors in: {}".format(addons_path))
+py_vcon_server.db.import_bindings(
+  [addons_path],
+  "", # module prefix, allowing anything
+  "addons" # label
+  )
+
 restapi = py_vcon_server.restful_api.init()
 
 
