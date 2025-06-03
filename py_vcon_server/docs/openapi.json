@@ -3,7 +3,7 @@
   "info": {
     "title": "Python vCon Server",
     "summary": "vCon pipeline processor server cluster and storage API",
-    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
+    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](/pipeline_editor) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
     "contact": {
       "name": "Commercial support available from SIPez",
       "url": "http://www.sipez.com/"
@@ -11,7 +11,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.3.1"
+    "version": "0.3.2"
   },
   "paths": {
     "/server/info": {
@@ -2152,285 +2152,6 @@
         }
       }
     },
-    "/process/{vcon_uuid}/impls_min_init": {
-      "post": {
-        "tags": [
-          "vCon: Processors"
-        ],
-        "summary": "ImplementsMinimalInitOnly",
-        "description": "Attempt to hide abstract class",
-        "operationId": "run_vcon_processor_process__vcon_uuid__impls_min_init_post",
-        "parameters": [
-          {
-            "name": "vcon_uuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Vcon Uuid"
-            }
-          },
-          {
-            "name": "commit_changes",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Commit Changes"
-            }
-          },
-          {
-            "name": "return_whole_vcon",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Return Whole Vcon"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VconProcessorOptions"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
-                }
-              }
-            }
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpErrorResponseBody"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpErrorResponseBody"
-                }
-              }
-            },
-            "description": "Internal Server Error"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/process/{vcon_uuid}/add_party": {
-      "post": {
-        "tags": [
-          "vCon: Processors"
-        ],
-        "summary": "Add party to Vcon",
-        "description": "adds a new party with the Vcon Party Object parameters provided in the **AddPartyOptions**",
-        "operationId": "run_vcon_processor_process__vcon_uuid__add_party_post",
-        "parameters": [
-          {
-            "name": "vcon_uuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Vcon Uuid"
-            }
-          },
-          {
-            "name": "commit_changes",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Commit Changes"
-            }
-          },
-          {
-            "name": "return_whole_vcon",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Return Whole Vcon"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddPartyOptions"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
-                }
-              }
-            }
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpErrorResponseBody"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpErrorResponseBody"
-                }
-              }
-            },
-            "description": "Internal Server Error"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/process/{vcon_uuid}/test_add_party": {
-      "post": {
-        "tags": [
-          "vCon: Processors"
-        ],
-        "summary": "Add party to Vcon",
-        "description": "adds a new party with the Vcon Party Object parameters provided in the **AddPartyOptions**",
-        "operationId": "run_vcon_processor_process__vcon_uuid__test_add_party_post",
-        "parameters": [
-          {
-            "name": "vcon_uuid",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Vcon Uuid"
-            }
-          },
-          {
-            "name": "commit_changes",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Commit Changes"
-            }
-          },
-          {
-            "name": "return_whole_vcon",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": true,
-              "title": "Return Whole Vcon"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AddPartyOptions"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
-                }
-              }
-            }
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpErrorResponseBody"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HttpErrorResponseBody"
-                }
-              }
-            },
-            "description": "Internal Server Error"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/pipeline/{name}/run": {
       "post": {
         "tags": [
@@ -2606,45 +2327,6 @@
   },
   "components": {
     "schemas": {
-      "AddPartyOptions": {
-        "properties": {
-          "input_vcon_index": {
-            "type": "integer",
-            "title": "VconProcessorIO input vCon index",
-            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
-            "default": 0
-          },
-          "should_process": {
-            "type": "boolean",
-            "title": "if True run processor",
-            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
-            "default": true
-          },
-          "format_options": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
-            "default": {}
-          },
-          "tel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tel"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "title": "AddPartyOptions"
-      },
       "DecryptFilterPluginOptions": {
         "properties": {
           "private_pem_key": {
@@ -2670,6 +2352,18 @@
             ],
             "title": "PEM format public key/cert to use for encrypting the vCon",
             "description": "\n    Override the default PEM format public key/cert for encrypting.\n"
+          },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
           },
           "input_vcon_index": {
             "type": "integer",
@@ -2735,6 +2429,18 @@
               ]
             ]
           },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -2775,6 +2481,18 @@
             ],
             "title": "PEM format public key/cert to use for encrypting the vCon",
             "description": "\n    Override the default PEM format public key/cert for encrypting.\n"
+          },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
           },
           "input_vcon_index": {
             "type": "integer",
@@ -2854,7 +2572,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1748295891.4958186
+              1748978311.0138109
             ]
           },
           "server": {
@@ -2878,6 +2596,18 @@
       },
       "JQOptions": {
         "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -3178,6 +2908,18 @@
             "description": "\nThe results of the completion are saved in a new **analysis**\nobject which is added to the input **Vcon**.\n**analysis_type** is the **analysis** type token that is set\non the new **analysis** object in the **Vcon**.\n",
             "default": "summary"
           },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -3253,6 +2995,18 @@
       },
       "PipelineOptions": {
         "properties": {
+          "label": {
+            "type": "string",
+            "title": "pipeline documentation label",
+            "description": "Short documentaion label for the pipeline function. This does not impact the funtionality of this pipeline definition. The label can be used to give a better description of what the pipeline will achieve with the given set of options and configured processors. It is recommended that this be short and on the order of 40 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "pipeline documentation notes",
+            "description": "Documentaion notes for this pipeline definition. This does not impact the funtionality of this pipeline. The notes can be used to give a detailed description of what the pipeline will achieve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "save_vcons": {
             "anyOf": [
               {
@@ -3278,7 +3032,8 @@
               }
             ],
             "title": "processor timeout",
-            "description": "maximum timeout for any processor in the pipeline.\n  If any one of the processors in the pipeline takes more than this number\n of seconds, the processor will be cancled, remaining processors will be\n skipped and the pipeline will be considered failed for the given job/vCon.\n"
+            "description": "maximum timeout for any processor in the pipeline.\n  If any one of the processors in the pipeline takes more than this number\n of seconds, the processor will be cancled, remaining processors will be\n skipped and the pipeline will be considered failed for the given job/vCon.\n Zero or None means to wait until complete.\n",
+            "default": 0
           },
           "failure_queue": {
             "anyOf": [
@@ -3358,6 +3113,18 @@
       },
       "QueueJobOptions": {
         "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -3394,7 +3161,8 @@
               }
             ],
             "title": "From queue name",
-            "description": "name of the queue in which this processor is run.  This may be used for diagnostic purpose to track what pipeline the job came from.  This string does not effect the functionality."
+            "description": "name of the queue in which this processor is run.  This may be used for diagnostic purpose to track what pipeline the job came from.  This string does not effect the functionality.",
+            "default": ""
           }
         },
         "additionalProperties": true,
@@ -3419,6 +3187,18 @@
       },
       "SendEmailOptions": {
         "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -3527,27 +3307,27 @@
             "type": "string",
             "title": "server version",
             "description": "Python package py_vcon_server version number",
-            "default": "0.3.1"
+            "default": "0.3.2"
           },
           "vcon": {
             "type": "string",
             "title": "vcon version",
             "description": "Python package **py_vcon** version number",
-            "default": "0.4.1"
+            "default": "0.4.2"
           },
           "start_time": {
             "type": "number",
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1748295891.4909382
+              1748978311.0087469
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              243895
+              268562
             ]
           }
         },
@@ -3582,7 +3362,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              243895
+              268562
             ]
           },
           "start_time": {
@@ -3590,7 +3370,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1748295891.4923778
+              1748978311.0104055
             ]
           },
           "num_workers": {
@@ -3616,7 +3396,7 @@
             "title": "heartbeat time stamp",
             "description": "epoch seconds time for the last heartbeat on this server",
             "examples": [
-              1748295891.4924948
+              1748978311.0105228
             ]
           }
         },
@@ -3635,6 +3415,18 @@
       },
       "SetParametersOptions": {
         "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -3689,6 +3481,18 @@
             "title": "PEM certificate chain",
             "description": "\nOverride default PEM format certificate chain to include in the signed (JWS x5c) vCon\nand used for verification of the signed vCon.\n",
             "default": []
+          },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
           },
           "input_vcon_index": {
             "type": "integer",
@@ -3768,6 +3572,18 @@
               }
             ],
             "title": "domain string to use when generating a new UUID for the redacted vCon"
+          },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
           },
           "input_vcon_index": {
             "type": "integer",
@@ -4009,6 +3825,18 @@
       },
       "VconProcessorOptions": {
         "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -4156,10 +3984,10 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1748295891,
-              1748295891.2585359,
+              1748978310,
+              1748978310.767857,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2025-05-26T21:44:51.258+00:00",
+              "2025-06-03T19:18:30.767+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -4238,6 +4066,18 @@
             "description": "\nlist of trusted Certificate Authority certificate PEMs to use in filter method.\nIn order to be valid/trusted, one of the certs in the JWS x5c certificate chain\nmust be a trusted CA (i.e. in this list).  Verifcation will fail if\nthis is not the case.\n",
             "default": []
           },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -4315,6 +4155,18 @@
               "word_ass"
             ]
           },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
           "input_vcon_index": {
             "type": "integer",
             "title": "VconProcessorIO input vCon index",
@@ -4355,7 +4207,7 @@
     },
     {
       "name": "Admin: Pipelines",
-      "description": "Entry points to create, update and delete pipelines"
+      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](/pipeline_editor) (Note: link works only on live server)"
     },
     {
       "name": "Admin: In Progress Jobs",
