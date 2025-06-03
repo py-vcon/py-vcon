@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Build script for vcon server package for pypi """
 import os
 import sys
@@ -83,15 +83,30 @@ setuptools.setup(
       'py_vcon_server.db',
       'py_vcon_server.db.redis',
       'py_vcon_server.processor',
+      # dir/sub-package where add on VconProcessors will appear to be installed
+      # They will not really be installed here, but the package manager will make
+      # it appear so.  Use the following in VconProcessor plugin packages:
+      # namespace_packages=['py_vcon_server.processor_addons'],
+      'py_vcon_server.processor_addons',
       'py_vcon_server.processor.builtin',
       'py_vcon_server.states',
       'py_vcon_server.queue',
+      # Cannot get pip to install pipeline_editor as data in a predictable or
+      # discoverable place.  So make it a fake module for now.
+      # can be found using relative path: __file__/pipeline_editor
+      'py_vcon_server.pipeline_editor',
     ],
+
   data_files=[
-      ("py_vcon_server", ["pip_server_requirements.txt"])
+      ("py_vcon_server", ["pip_server_requirements.txt"]),
+      # pip puts these in /usr/local/py_vcon_server, but importlib.resources.path
+      # says its in /usr/local/lib/python3.8/dist-packages/py_vcon_server
+      ("py_vcon_server/pipeline_editor", ["py_vcon_server/pipeline_editor/index.html", "py_vcon_server/pipeline_editor/index.css", "py_vcon_server/pipeline_editor/index.js"]),
       # These are needed for unit tests:
       # ("tests", ["tests/hello.wav", "tests/hello.m4a"]),
     ],
+  # This seems to coerce setup and pip to install the pipeline_editor/index* files.
+  include_package_data=True,
   python_requires=">=3.8",
   tests_require=['pytest', 'pytest-asyncio', 'pytest-dependency', "pytest_httpserver"],
   install_requires = REQUIRES,
