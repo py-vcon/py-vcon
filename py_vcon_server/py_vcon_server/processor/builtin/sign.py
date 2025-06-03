@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ VconProcessor binding for the Vcon signfilter filter_plugin """
 
 import py_vcon_server.processor

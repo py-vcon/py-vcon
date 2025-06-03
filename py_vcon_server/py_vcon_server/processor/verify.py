@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Registration for the JWS verification **VconProcessor** """
 import py_vcon_server.processor
 import py_vcon_server.processor.builtin.verify
