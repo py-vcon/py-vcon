@@ -102,7 +102,8 @@ openapi_tags = [
   },
   {
     "name": PIPELINE_CRUD_TAG,
-    "description": "Entry points to create, update and delete pipelines",
+    "description": "Entry points to create, update and delete pipelines\n\n"
+       "**New:** [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)",
     # "externalDocs": {
     #   "description": "online docs",
     #   "url": None
@@ -181,6 +182,10 @@ or conbination of the following:
   * Admin RESTful API
   * vCon RESTful API
   * Pipeline server with configured number of workers
+
+**New:**
+
+  * [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)
 
 The open source repository at: https://github.com/py-vcon/py-vcon
 """
