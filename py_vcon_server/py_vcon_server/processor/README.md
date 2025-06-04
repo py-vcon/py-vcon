@@ -556,6 +556,22 @@ Base class options for **VconProcessor.processor** method
 
 ### Fields
 
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
 Index to which vCon in the VconProcessorIO is to be used for input
@@ -608,6 +624,22 @@ PEM format public key/cert to use for encrypting the vCon
 example:
 
 default: None
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
@@ -669,6 +701,22 @@ examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
 default: 0:
 
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
 Index to which vCon in the VconProcessorIO is to be used for input
@@ -712,6 +760,22 @@ example:
 
 default: None
 
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
 Index to which vCon in the VconProcessorIO is to be used for input
@@ -746,6 +810,22 @@ JQOptions adds the jq_queries to VconProcessorOptions which defines the
 set of querries to perform on the VconProcessorIO.
 
 ### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
@@ -907,6 +987,22 @@ example:
 
 default: "summary"
 
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
 Index to which vCon in the VconProcessorIO is to be used for input
@@ -941,6 +1037,22 @@ QueueJobOptions indicates where the job is to be queued and optionally labels th
 with the queue from which it came.
 
 ### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
@@ -980,7 +1092,7 @@ name of the queue in which this processor is run.  This may be used for diagnost
 
 example:
 
-default: None
+default: 
 
 
 ## py_vcon_server.processor.builtin.send_email.SendEmailOptions
@@ -991,6 +1103,22 @@ SendEmailOptions provides the SMTP headers and message data required to send
 an SMTP email message.  SendEmailOptions is passed to the send_email processor.
 
 ### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
@@ -1125,6 +1253,22 @@ in the pipeline.
 
 ### Fields
 
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
 Index to which vCon in the VconProcessorIO is to be used for input
@@ -1186,6 +1330,22 @@ and used for verification of the signed vCon.
 example:
 
 default: []
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
@@ -1264,6 +1424,22 @@ example:
 
 default: None
 
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
 Index to which vCon in the VconProcessorIO is to be used for input
@@ -1309,6 +1485,22 @@ this is not the case.
 example:
 
 default: []
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
@@ -1384,6 +1576,22 @@ List of output types to generate.  Current set of value supported are:
 example:
 
 default: ['vendor', 'word_srt', 'word_ass']
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
 
 ##### input_vcon_index (int)
 VconProcessorIO input vCon index
