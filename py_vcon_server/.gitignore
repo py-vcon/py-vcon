@@ -1,2 +1,3 @@
 test_job_pool.*.txt
 pip_server_requirements.txt
+py_vcon_server.egg-info
