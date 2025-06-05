@@ -167,6 +167,27 @@ def test_add_inline_recording(two_party_tel_vcon : vcon.Vcon, empty_vcon : vcon.
 
   # TODO check other recording fields
 
+def test_decode_dialog_inline_body_no_encoding(two_party_tel_vcon : vcon.Vcon, empty_vcon : vcon.Vcon) -> None:
+  # Try to do the best that we can if encoding parameter is missing from dialog
+  vCon = two_party_tel_vcon
+  vCon.set_uuid("vcon.dev")
+  deserialized_vcon = empty_vcon
+  random_size = 4096
+  fake_recording_file = os.urandom(random_size)
+  assert(len(fake_recording_file) == random_size)
+  assert_vcon_array_size(vCon, VCON_DIALOG, 0)
+  media_type = vcon.Vcon.MEDIATYPE_AUDIO_WAV
+  file_name = "fake.wav"
+  duration = 77.4
+  file_length = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
+    duration, [0, 1], media_type, file_name)
+  assert(vCon.dialog[0]['encoding'] == 'base64url')
+  # simulate case where encoding is not set
+  del vCon.dialog[0]['encoding']
+
+  decoded_body = vCon.decode_dialog_inline_body(0)
+  assert(decoded_body  == fake_recording_file)
+
 def test_add_inline_recording_w_originator(two_party_tel_vcon : vcon.Vcon, empty_vcon : vcon.Vcon) -> None:
   """ Test add of a recording file inline to ensure base64 encode and decode are properly done. """
   vCon = two_party_tel_vcon
