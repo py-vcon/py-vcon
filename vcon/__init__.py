@@ -82,8 +82,17 @@ except Exception as import_error:
 
 _LAST_V8_TIMESTAMP = None
 
+# Register builtin filter_plugins
 for finder, module_name, is_package in pkgutil.iter_modules(vcon.filter_plugins.__path__, vcon.filter_plugins.__name__ + "."):
   logger.info("plugin registration: {}".format(module_name))
+  importlib.import_module(module_name)
+
+# Register seperately installed addon filter_plugins
+for finder, module_name, is_package in pkgutil.iter_modules(
+    ["{}_addons".format(vcon.filter_plugins.__path__[0])],
+    "{}_addons.".format(vcon.filter_plugins.__name__)
+  ):
+  logger.info("addon plugin registration: {}".format(module_name))
   importlib.import_module(module_name)
 
 class ExperimentalWarning(Warning):
@@ -2492,7 +2501,7 @@ class Vcon():
       # The only programatic way to do this is to instantiate a Vcon, but this seemed a bit
       # heavy.  So for now just testing a manually maintained list of attributes and  blacklisted
       # token names.
-      instance_attributes = ['_jwe_dict', '_jws_dict', '_state', '_vcon_dict', 'vcon', "Vcon", "filter_plugins", "security", "utils", "cli"]
+      instance_attributes = ['_jwe_dict', '_jws_dict', '_state', '_vcon_dict', 'vcon', "Vcon", "accessors", "bin", "cli", "docker_dev", "filter_plugins", "filter_plugins_addons", "pydantic_utils", "security", "utils"]
       if(name in instance_attributes):
         exists = True
 
