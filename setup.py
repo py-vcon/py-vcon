@@ -70,7 +70,13 @@ setuptools.setup(
   author='Dan Petrie',
   author_email='dan.vcon@sipez.com',
   license='MIT',
-  packages=['vcon', 'vcon.filter_plugins', 'vcon.filter_plugins.impl'],
+  packages=[
+      'vcon',
+      'vcon.filter_plugins',
+      'vcon.filter_plugins.impl',
+      # namespace dir/sub-package where add on filter_plugins will be installed
+      'vcon.filter_plugins_addons',
+    ],
   data_files=[
     ("vcon", ["vcon/docker_dev/pip_package_list.txt"])],
   python_requires=">=3.8",
