@@ -86,7 +86,6 @@ for finder, module_name, is_package in pkgutil.iter_modules(vcon.filter_plugins.
   logger.info("plugin registration: {}".format(module_name))
   importlib.import_module(module_name)
 
-
 class ExperimentalWarning(Warning):
   """
   Warning for methods which modify or construct vCons with experimental or non-vCon standards
@@ -1101,7 +1100,8 @@ class Vcon():
     if(dialog.get("body") is None):
       raise AttributeError("dialog[{}] does not contain an inline body/file".format(dialog_index))
 
-    encoding = dialog.get("encoding", "none").lower()
+    encoding = Vcon.get_object_encoding(dialog, "dialog[{}]".format(dialog_index))
+
     if(encoding == "base64url"):
       # This is wrong.  decode should take a string not bytes, but it fails without the bytes conversion
       # this is a bug in jose.baseurl_decode
@@ -1529,6 +1529,40 @@ class Vcon():
     def objectizeBase64Object(dict_object: dict) -> None:
       dict_object["encoding"] = "binary"
       dict_object["body"] = Vcon.VconBase64Bytes(dict_object["body"])
+
+  @staticmethod
+  def get_object_encoding(dict_object: dict, object_label: str) -> str:
+    """
+    Get the encoding parameter form the given object.
+    It is expected that this is a Dialog, Attachment, Analysis or Group Object
+    """
+    encoding = dict_object.get("encoding", None)
+    if(encoding is None):
+      # Strictly speaking this is not allowed.
+      # encoding is a MUST set parameter in the spec.
+      # Try to infer the coding from the mediatype:
+      mediatype = dict_object.get("mediatype", None)
+      if(mediatype):
+        if(mediatype in [
+            Vcon.MEDIATYPE_IMAGE_PNG,
+            Vcon.MEDIATYPE_AUDIO_WAV,
+            Vcon.MEDIATYPE_AUDIO_MP3,
+            Vcon.MEDIATYPE_AUDIO_MP4,
+            Vcon.MEDIATYPE_VIDEO_MP4,
+            Vcon.MEDIATYPE_VIDEO_OGG,
+          ]):
+          encoding = 'base64url'
+        else:
+          encoding = 'none'
+        logger.warning("{}: missing MUST have 'encoding' parameter. Guessing from mediatype: {}"
+          "  Assuming '{}' encoding.".format(object_label, mediatype, encoding))
+      else:
+        logger.warning("{}: missing MUST have 'encoding' and recommended 'mediatype' parameters."
+          "  Assuming 'none' encoding.".format(object_label))
+    else:
+      encoding.lower()
+
+    return(encoding)
 
 
   @staticmethod
