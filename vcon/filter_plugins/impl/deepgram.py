@@ -187,6 +187,38 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
         # We have not already transcribed this dialog
         if(transcript_index is None):
           recording_bytes = await in_vcon.get_dialog_body(dialog_index)
+          logger.debug("deepgram mediatype: {}".format(dialog['mediatype']))
+          if(dialog["mediatype"] == vcon.Vcon.MEDIATYPE_AUDIO_WAV):
+            # wave does not support all codecs (e.g. GSM)
+            #with wave.open(io.BytesIO(recording_bytes), "rb") as wave_file:
+            #  codec_type = wave_file.getcomptype()
+            #  codec_name = wave_file.getcompname()
+            #  logger.info("deepgram transcribe of wav codec type: {} name: {}".format(codec_type, codec_name))
+
+            # the following does not takes a stream or bytes array despite what the AI says
+            # with io.BytesIO(recording_bytes) as recording_io:
+            #   audio_info = pydub.utils.mediainfo(bytes(recording_bytes, 'utf-8'))
+            #   logger.info("wav file info: {}".format(audio_info))
+
+            # So hack it:
+            #  Wav Header should look like this:
+            # "RIFFllllWAVEfmt ffffccCCssaa..."
+            # llll - length
+            # ffff - frame size
+            # cc - codec ID
+            # CC - channel count
+            file_type = recording_bytes[:4]
+            format_type = recording_bytes[8:12]
+            format_label = recording_bytes[12:16]
+            codec_frame_size_bytes = recording_bytes[16:18]
+            codec_bytes =  recording_bytes[18:20]
+            codec_channeld_bytes = recording_bytes[20:22]
+            if(file_type != b'RIFF' or
+                format_type != b'WAVE' or
+                format_label != b'fmt '
+              ):
+              logger.warning("Wav file header not as expected.  file type: '{}' format: '{}' format label: '{}'".format(
+                file_type, format_type, format_label))
 
           recording_data = {
             "buffer": recording_bytes,
