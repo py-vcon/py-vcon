@@ -68,4 +68,5 @@ For the real/public repo, use the above steps, but substitute step 1 and 3 with 
 Commit all of the changes and tag the build release:
 
     git tag -a python-vcon_x.x.x_build [xxxxx_commit_SHA] -m "Vcon pypi release"
+    git push origin python-vcon_x.x.x_build
 
