@@ -3,7 +3,7 @@
 import typing
 import setuptools
 
-REQUIRES: typing.List[str] = ["python-vcon"]
+REQUIRES: typing.List[str] = ["python-vcon >= 0.5.0"]
 
 __version__ = "0.0.1"
 
