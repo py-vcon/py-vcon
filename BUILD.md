@@ -16,9 +16,10 @@ Create a clean clone of the branch that you want to build as any files in your d
 
 Update the package __version__ number in vcon/vcon/__init__.py
 
-Be sure to clean out the dist directory:
+Be sure to clean out the dist and egg directories:
 
-    rm dist/*
+    rm -r dist
+    rm -r python_vcon.egg-info
 
 In the vcon directory (root containing setup.py and vcon sub-directory):
 
