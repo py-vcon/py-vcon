@@ -124,6 +124,9 @@ You can get the list of registered filter plugins using the following:
 You can build your own FilterPlugins by extending the [FilterPlugin class](vcon/filter_plugins#vconfilter_pluginsfilterplugin).
 You must implement the [filter method](vcon/filter_plugins#filterpluginfilter) and optionally implement the [__init__ method](vcon/filter_plugins#filterplugin__init__) or [__del__ method](vcon/filter_plugins#filterplugin__del__) if your plugin requires some initialization or teardown before it can be used.
 
+A simple example filter_plugin and python build tree and setup.py file can be copied from [here](docs/example_filter_plugin_addon).
+This build, allows you to create a python package that can be installed seperately and on top of python-vcon.
+
 If your custom FilterPlugin requires initialization options or options to be passed to the filter method, you must implement a derived class from [FilterPluginInitOptions](vcon/filter_plugins#vconfilter_pluginsfilterplugininitoptions) or [FilterPluginOptions](vcon/filter_plugins#vconfilter_pluginsfilterpluginoptions) respectively.
 
 You can then register your custom vCon using the following code:
