@@ -535,6 +535,8 @@ How to create new vCon processor plugins
 Note: to load your proprietary vCon plugins, you need to add the path to your plugin registration to the [PLUGIN_PATHS environmental variable](#environmental-variables).
 Plugins are only loaded upon startup.
 
+Alternatively you can build and package your VconProcessor to be installed on top of py-vcon-server.
+A simple example VconProcessor and python build tree and setup.py file can be copied from [here](docs/iexample_processor_addon).
 
 ![FilterPlugin Diagram](../docs/FilterPlugin.png)
 
