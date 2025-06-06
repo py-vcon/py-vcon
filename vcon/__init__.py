@@ -33,7 +33,7 @@ import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
 
-__version__ = "0.4.2"
+__version__ = "0.5.0"
 
 def build_logger(name : str) -> logging.Logger:
   logger = logging.getLogger(name)
