@@ -290,6 +290,7 @@ The unit tests for the server can be run using the following command in this dir
   + **PIPELINE_DB_URL** - DB URL for Pipeline definition database (defaults to: same value as VCON_STORAGE_URL)
   + **STATE_DB_URL** - DB URL for Server State database (defaults to: same value as VCON_STORAGE_URL )
   + **REST_URL** - host and port on which to bind RESTful APIs (defaults to: "http://localhost:8000")
+  + **NUM_RESTAPI_WORKERS** - number of worker processes handling RESTful API requests (defaults to 10)
   + **LOG_LEVEL** - server logging level (defaults to: "DEBUG")
   + **LOGGING_CONFIG_FILE** -  (defaults to: "<install path>/logging.config")
   + **LAUNCH_VCON_API** -  Enable vCon RESTful APIs True/False(defaults to: True)
