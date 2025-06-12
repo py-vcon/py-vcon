@@ -96,7 +96,7 @@ async def run_background_jobs(job_interface) -> None:
     if(job_id is None):
       if(VERBOSE):
         logger.debug("no job waiting a bit")
-      await asyncio.sleep(0.1)
+      await asyncio.sleep(0.5)
       if(VERBOSE):
         logger.debug("no job done waiting")
 
