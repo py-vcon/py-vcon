@@ -5,7 +5,6 @@ fastapi[all]
 fastapi-utils
 nest-asyncio
 packaging
-pkg_resources
 pkgutil-resolve-name
 psutil
 pydantic
