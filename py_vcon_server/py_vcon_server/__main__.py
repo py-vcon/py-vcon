@@ -16,14 +16,15 @@ async def main():
     url_parser = urllib.parse.urlparse(settings.REST_URL)
     host_ip = url_parser.hostname
     port_num = url_parser.port
-    logger.info("vCon server binding to host: {} port: {}".format(host_ip, port_num))
+    logger.info("vCon server binding to host: {} port: {} with {} workers".format(
+      host_ip, port_num, settings.NUM_RESTAPI_WORKERS))
 
     server = Server(config=uvicorn.Config(
         app=restapi,
-        workers=1, 
+        workers=settings.NUM_RESTAPI_WORKERS,
         loop="asyncio",
-        host=host_ip, 
-        port=port_num, 
+        host=host_ip,
+        port=port_num,
         reload=True))
 
     api_task = asyncio.create_task(server.serve())
