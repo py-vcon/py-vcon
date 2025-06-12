@@ -12,6 +12,14 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
 LOGGING_CONFIG_FILE = os.getenv("LOGGING_CONFIG_FILE", Path(__file__).parent / 'logging.conf')
 LAUNCH_VCON_API = os.getenv("LAUNCH_VCON_API", True)
 LAUNCH_ADMIN_API = os.getenv("LAUNCH_ADMIN_API", True)
+
+# FASTapi worker processes
+try:
+  NUM_RESTAPI_WORKERS = int(os.getenv("NUM_RESTAPI_WORKERS", 10))
+except:
+  NUM_RESTAPI_WORKERS = 10
+
+# Number of pipeline server workers (currently disabled)
 try:
   NUM_WORKERS = int(os.getenv("NUM_WORKERS", 0)) #Python Multiprocessing, Syncio, Redis issue os.cpu_count()))
 except:
@@ -48,5 +56,7 @@ for token in queue_tokens:
     raise Exception(
       "Invalid WORK_QUEUE token: {} should be name:weight where name is a string and weight is an integer".
       format(token))
-  WORK_QUEUES[name] = {"weight": weight}
+
+  if(len(name) > 0):
+    WORK_QUEUES[name] = {"weight": weight}
 
