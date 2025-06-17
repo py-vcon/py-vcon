@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import os
 import time
 import asyncio
@@ -45,6 +45,8 @@ async def test_get_server_info():
     assert(this_server_state["state"] == "running")
     assert(this_server_state["last_heartbeat"] > time.time() - 100)
     assert(this_server_state["last_heartbeat"] < time.time())
+    for setting_var in py_vcon_server.settings.STATE_SETTINGS:
+      assert(this_server_state["settings"][setting_var] == getattr(py_vcon_server.settings, setting_var, None))
 
 
 @pytest.mark.asyncio
