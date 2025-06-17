@@ -1,4 +1,5 @@
 # Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+import py_vcon_server.settings
 """
 Interface for server states
 
@@ -94,6 +95,10 @@ class ServerState:
     server_dict["num_workers"] = self._num_workers
     server_dict["state"] = self._state
     server_dict["last_heartbeat"] = time.time()
+    settings = {}
+    for setting_name in py_vcon_server.settings.STATE_SETTINGS:
+      settings[setting_name] = getattr(py_vcon_server.settings, setting_name, None)
+    server_dict["settings"] = settings
 
     redis_con = self._redis_mgr.get_client()
 

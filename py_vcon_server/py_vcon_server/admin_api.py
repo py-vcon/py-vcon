@@ -41,6 +41,9 @@ class ServerInfo(pydantic.BaseModel):
       examples = [os.getpid()]
       )
 
+    settings: typing.Dict[str, typing.Any] = pydantic.Field(
+      title = "server settings values",
+      )
 
 class ServerState(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
     host: str = pydantic.Field(

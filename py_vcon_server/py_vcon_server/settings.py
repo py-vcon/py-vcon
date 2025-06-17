@@ -60,3 +60,8 @@ for token in queue_tokens:
   if(len(name) > 0):
     WORK_QUEUES[name] = {"weight": weight}
 
+STATE_SETTINGS = []
+state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES").strip()
+if(state_settings_list != ""):
+  STATE_SETTINGS = state_settings_list.split(", ")
+
