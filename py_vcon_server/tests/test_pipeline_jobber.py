@@ -364,6 +364,8 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
 
     # run finished job
     await jobber.job_finished(job_result)
+    await jobber.done()
+
 
     # confirm job not put back in queue
     get_response = client.get(
@@ -388,8 +390,6 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(isinstance(in_progress_jobs, dict))
     in_progress = in_progress_jobs.get(job_id, None)
     assert(in_progress is None)
-
-    await jobber.done()
 
 
 #@pytest.mark.skip(reason="BUG: causes \"Event loop is closed\" when run after test_pipeline_jobber") 
