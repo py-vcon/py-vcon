@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import os
 import time
 import asyncio
@@ -46,6 +46,12 @@ async def test_get_server_info():
     assert(this_server_state["last_heartbeat"] > time.time() - 100)
     assert(this_server_state["last_heartbeat"] < time.time())
 
+    # Should be not found
+    get_response = client.delete(
+      "/servers/fooooo",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
 
 @pytest.mark.asyncio
 async def test_server_queue_config():
