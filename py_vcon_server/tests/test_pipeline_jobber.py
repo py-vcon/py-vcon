@@ -364,8 +364,6 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
 
     # run finished job
     await jobber.job_finished(job_result)
-    await jobber.done()
-
 
     # confirm job not put back in queue
     get_response = client.get(
@@ -379,6 +377,7 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(isinstance(job_list, list))
     assert(len(job_list) == 0)
 
+    await jobber.done()
 
     # confirm job not in in_progress list
     get_response = client.get(
