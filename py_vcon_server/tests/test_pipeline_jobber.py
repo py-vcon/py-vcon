@@ -56,7 +56,8 @@ TIMEOUT = 32.0
 PIPELINE_DEFINITION = {
   "pipeline_options": {
       "timeout": TIMEOUT,
-      "save_vcons": True
+      "save_vcons": True,
+      "success_queue": "test_pipeline_queue__success"
     },
   "processors": [
       {
@@ -398,7 +399,7 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     # delete the test job queues, to clean up any 
     # residual from prior tests
-    for q in SERVER_QUEUES.keys():
+    for q in list(SERVER_QUEUES.keys()) + ["test_pipeline_queue__success"]:
       delete_response = client.delete(
           "/queue/{}".format(q),
           headers={"accept": "application/json"},
@@ -438,6 +439,13 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
       "/queue/{}".format(
           list(SERVER_QUEUES.keys())[1]
         ),
+      headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 204)
+
+    # create empty success queue
+    post_response = client.post( 
+      "/queue/{}".format("test_pipeline_queue__success"),
       headers={"accept": "application/json"},
       )
     assert(post_response.status_code == 204)
@@ -506,4 +514,17 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
     assert(in_progress is None)
 
     await jobber.done()
+
+    # Make sure the job when into the success queue
+    get_response = client.get(
+        "/queue/{}".format("test_pipeline_queue__success"),
+        headers={"accept": "application/json"},
+        )
+    assert(get_response.status_code == 200)
+    job_list = get_response.json()
+    assert(isinstance(job_list, list))
+    assert(len(job_list) == 1)
+    assert(job_list[0]["job_type"] == "vcon_uuid")
+    assert(job_list[0]["vcon_uuid"][0] == UUID)
+
 
