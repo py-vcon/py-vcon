@@ -159,3 +159,66 @@ async def test_set_parameters_processor_api():
     assert(len(vcon_dict.get("dialog", [])) == 1)
     assert(len(vcon_dict.get("analysis", [])) == 0)
 
+
+@pytest.mark.asyncio
+async def test_set_parameters_processor_io_api():
+
+  vCon = vcon.Vcon()
+  vCon.load("tests/hello.vcon")
+  assert(len(vCon.dialog) == 1)
+  assert(len(vCon.analysis) == 0)
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+
+    set_response = client.delete("/vcon/{}".format(vCon.uuid))
+    assert(set_response.status_code == 204)
+
+    get_response = client.get(
+      "/vcon/{}".format(vCon.uuid),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
+
+    api_parameters = {
+        "commit_changes": False,
+        "return_whole_vcon": True
+      }
+    options = {
+        "input_dialogs": "",
+        "input_vcon_index": 0,
+        "parameters": {
+           "fu": "bar",
+           "x": 7
+          }
+      }
+    processor_input = {
+        "processor_io": {
+          "vcons": [ vCon.dumpd() ],
+          "parameters": {
+            "who": "two",
+            "fu": "no"
+            }
+        },
+        "processor_options": options
+      }
+    post_response = client.post("/processIO/set_parameters",
+        params = api_parameters,
+        json = processor_input
+      )
+    assert(post_response.status_code == 200)
+    processor_out_dict = post_response.json()
+
+    assert(len(processor_out_dict["vcons"]) == 1)
+    assert(len(processor_out_dict["vcons"][0]["dialog"]) == 1)
+    assert(len(processor_out_dict["vcons"][0]["analysis"]) == 0)
+    assert(processor_out_dict["parameters"]["fu"] == "bar")
+    assert(processor_out_dict["parameters"]["x"] == 7)
+    assert(processor_out_dict["parameters"]["who"] == "two")
+
+    # Verify not saved to VconStorage
+    get_response = client.get(
+      "/vcon/{}".format(vCon.uuid),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
+
