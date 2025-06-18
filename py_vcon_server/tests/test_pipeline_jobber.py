@@ -210,6 +210,22 @@ async def test_server_queue_iterator():
 
 
 @pytest.mark.asyncio
+async def test_in_progress_api():
+  logger.debug("starting test_in_progress_api")
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+
+    set_response = client.put(
+        "/in_progress/{}".format(-1),
+      )
+    assert(set_response.status_code == 404)
+
+    set_response = client.delete(
+        "/in_progress/{}".format(-1),
+      )
+    assert(set_response.status_code == 404)
+
+
+@pytest.mark.asyncio
 async def test_pipeline_jobber(make_inline_audio_vcon):
   logger.debug("starting test_pipeline_jobber")
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
@@ -369,6 +385,7 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
 
     # run finished job
     await jobber.job_finished(job_result)
+    await jobber.done()
 
     # confirm job not put back in queue
     get_response = client.get(
@@ -392,8 +409,6 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(isinstance(in_progress_jobs, dict))
     in_progress = in_progress_jobs.get(job_id, None)
     assert(in_progress is None)
-
-    await jobber.done()
 
 
 #@pytest.mark.skip(reason="BUG: causes \"Event loop is closed\" when run after test_pipeline_jobber") 
