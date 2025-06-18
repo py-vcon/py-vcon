@@ -19,6 +19,14 @@ try:
 except:
   NUM_RESTAPI_WORKERS = 10
 
+# Enable background pipeline server
+RUN_BACKGROUND_JOBS = os.getenv("RUN_BACKGROUND_JOBS", True)
+if(isinstance(RUN_BACKGROUND_JOBS, str)):
+  if(RUN_BACKGROUND_JOBS.lower() == "true"):
+    RUN_BACKGROUND_JOBS = True
+  else:
+    RUN_BACKGROUND_JOBS = False
+
 # Number of pipeline server workers (currently disabled)
 try:
   NUM_WORKERS = int(os.getenv("NUM_WORKERS", 0)) #Python Multiprocessing, Syncio, Redis issue os.cpu_count()))

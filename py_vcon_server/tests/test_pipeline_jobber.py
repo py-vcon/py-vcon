@@ -85,6 +85,10 @@ async def set_queue_config():
   #do_bg = py_vcon_server.RUN_BACKGROUND_JOBS
   #py_vcon_server.RUN_BACKGROUND_JOBS = False
 
+  # Disable backgroun jobber so that it does not interfer
+  run_background = py_vcon_server.settings.RUN_BACKGROUND_JOBS 
+  py_vcon_server.settings.RUN_BACKGROUND_JOBS = False
+
   #global VCON_STORAGE
   #vs = py_vcon_server.db.VconStorage.instantiate(py_vcon_server.settings.VCON_STORAGE_URL)
   #VCON_STORAGE = vs
@@ -111,6 +115,7 @@ async def set_queue_config():
   # Restore workers config
   py_vcon_server.settings.NUM_WORKERS = num_workers
   #py_vcon_server.RUN_BACKGROUND_JOBS = do_bg
+  py_vcon_server.settings.RUN_BACKGROUND_JOBS = run_background 
 
   py_vcon_server.settings.WORK_QUEUES = saved_config
   print("reset queue settings")
@@ -377,8 +382,6 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(isinstance(job_list, list))
     assert(len(job_list) == 0)
 
-    await jobber.done()
-
     # confirm job not in in_progress list
     get_response = client.get(
         "/in_progress",
@@ -389,6 +392,8 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(isinstance(in_progress_jobs, dict))
     in_progress = in_progress_jobs.get(job_id, None)
     assert(in_progress is None)
+
+    await jobber.done()
 
 
 #@pytest.mark.skip(reason="BUG: causes \"Event loop is closed\" when run after test_pipeline_jobber") 

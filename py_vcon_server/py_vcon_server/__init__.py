@@ -27,7 +27,6 @@ __version__ = "0.4.1"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
-RUN_BACKGROUND_JOBS = True
 BACKGROUND_JOBS_RUNNING = False
 BACKGROUND_JOB_TASK = None
 
@@ -125,13 +124,14 @@ async def startup():
   global RUN_BACKGROUND_JOBS
   global BACKGROUND_JOB_TASK
   #JOB_INTERFACE = py_vcon_server.job_worker_pool.JobInterface()
-  JOB_INTERFACE = py_vcon_server.pipeline.PipelineJobHandler(
-      py_vcon_server.settings.QUEUE_DB_URL,
-      #py_vcon_server.queue.JOB_QUEUE,
-      py_vcon_server.settings.PIPELINE_DB_URL,
-      #py_vcon_server.pipeline.PIPELINE_DB,
-      py_vcon_server.states.SERVER_STATE.server_key()
-    )
+  if(py_vcon_server.settings.RUN_BACKGROUND_JOBS):
+    JOB_INTERFACE = py_vcon_server.pipeline.PipelineJobHandler(
+        py_vcon_server.settings.QUEUE_DB_URL,
+        #py_vcon_server.queue.JOB_QUEUE,
+        py_vcon_server.settings.PIPELINE_DB_URL,
+        #py_vcon_server.pipeline.PIPELINE_DB,
+        py_vcon_server.states.SERVER_STATE.server_key()
+      )
 
   if(False):
     #if(py_vcon_server.settings.NUM_WORKERS > 0):
@@ -149,7 +149,7 @@ async def startup():
     # extra time for processes to get started
     time.sleep(5.0)
 
-  elif(RUN_BACKGROUND_JOBS):
+  elif(py_vcon_server.settings.RUN_BACKGROUND_JOBS):
     global BACKGROUND_JOBS_RUNNING
     BACKGROUND_JOBS_RUNNING = True
     logger.info("starting background pipeline job server")
@@ -176,7 +176,6 @@ async def shutdown():
 
   global JOB_MANAGER
   global JOB_INTERFACE
-  global RUN_BACKGROUND_JOBS
   global BACKGROUND_JOBS_RUNNING
   global BACKGROUND_JOB_TASK
   if(JOB_MANAGER):
