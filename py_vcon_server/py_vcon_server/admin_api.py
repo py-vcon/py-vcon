@@ -583,17 +583,13 @@ def init(restapi):
 
       await py_vcon_server.queue.JOB_QUEUE.requeue_in_progress_job(job_id)
 
-    except py_vcon_server.queue.JobNotFound as e:
+    except py_vcon_server.queue.JobDoesNotExist as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.NotFoundResponse("job: {} not found".format(job_id)))
 
     except py_vcon_server.queue.QueueDoesNotExist as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.NotFoundResponse("queue: not found for in progress job: {}".format(job_id)))
-
-    except py_vcon_server.queue.JobNotFound as e:
-      py_vcon_server.restful_api.log_exception(e)
-      return(py_vcon_server.restful_api.NotFoundResponse("job: {} not found".format(job_id)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -632,9 +628,9 @@ def init(restapi):
 
       await py_vcon_server.queue.JOB_QUEUE.requeue_in_progress_job(job_id)
 
-    except py_vcon_server.queue.JobNotFound as e:
+    except py_vcon_server.queue.JobDoesNotExist as e:
       py_vcon_server.restful_api.log_exception(e)
-      return(NotFoundResponse("job: {} not found".format(job_id)))
+      return(py_vcon_server.restful_api.NotFoundResponse("job: {} not found".format(job_id)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
