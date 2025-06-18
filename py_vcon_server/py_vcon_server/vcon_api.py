@@ -4,7 +4,7 @@
 import os
 import typing
 import copy
-import asyncio
+import pydantic
 import fastapi
 import fastapi.responses
 import py_vcon_server.db
@@ -229,6 +229,104 @@ def init(restapi):
         return(py_vcon_server.restful_api.InternalErrorResponse(e))
 
       return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(response_output, exclude_none = True)))
+
+
+  processor_names = py_vcon_server.processor.VconProcessorRegistry.get_processor_names()
+  for processor_name in processor_names:
+    processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
+      processor_name)
+
+    input_class_fields = {
+        'processor_io': (py_vcon_server.processor.VconProcessorOutput, "processor IO"),
+        'processor_options': (processor_inst.processor_options_class(), "processor options")
+      }
+    input_class_name = processor_inst.processor_options_class().__name__.split(".")[-1].replace("Options", "IO")
+    processor_input_class = pydantic.create_model(
+        input_class_name,
+        __base__=pydantic.BaseModel, # need to figure how to add this: **vcon.pydantic_utils.SET_ALLOW),
+        **input_class_fields
+      )
+
+    @restapi.post("/processIO/{}".format(processor_name),
+      summary = processor_inst.title(),
+      description = processor_inst.description(),
+      response_model = py_vcon_server.processor.VconProcessorOutput,
+      responses = py_vcon_server.restful_api.ERROR_RESPONSES,
+      tags = [ py_vcon_server.restful_api.PROCESSOR_TAG ])
+    async def run_vcon_processor_io(
+      processor_input: processor_input_class,
+      request: fastapi.Request,
+      commit_changes: bool = False,
+      ) -> str:
+
+      try:
+        #processor_name = processor_type_dict[type(options)]
+        path = request.url.path
+        processor_name_from_path = os.path.basename(path)
+
+        # Get the processor form the registry
+        processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
+          processor_name_from_path)
+
+        # TODO: take a real lock on the vCon
+        processor_input_dict = vcon.pydantic_utils.get_dict(processor_input, exclude_none = True)
+        processor_io = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
+
+        # Copy the vcons to the input
+        if( processor_input_dict and
+            "processor_io" in processor_input_dict and
+            "vcons" in processor_input_dict["processor_io"]
+          ):
+          for aVcon in processor_input_dict["processor_io"]["vcons"]:
+            await processor_io.add_vcon(aVcon, "fake_lock", False)
+
+        # Copy the parameters to the input
+        if( processor_input_dict and
+            "processor_io" in processor_input_dict and
+            "parameters" in processor_input_dict["processor_io"]
+          ):
+          for parameter_name, parameter_value in processor_input_dict["processor_io"]["parameters"].items():
+            processor_io.set_parameter(parameter_name, parameter_value)
+
+        # format_options for dynamic options
+        formatted_options_dict = processor_io.format_parameters_to_options(processor_input_dict["processor_options"])
+        processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
+
+        logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
+            processor_name,
+            path,
+            type(processor_type_options),
+            processor_type_options,
+            processor_name_from_path
+          ))
+
+        # Run the processor
+        processor_output = await processor_inst.process(
+          processor_io,
+          processor_type_options)
+
+        if(commit_changes):
+          # Save changed Vcons
+          await py_vcon_server.db.VCON_STORAGE.commit(processor_output)
+
+        # TODO: release vCon lock
+
+        # Commit jobs to be queued.
+        # This is done here as opposed to in the queue processor as we
+        # have not yet implemented vCon locking.  It may often be expected that
+        # modification to vCon(s) in a pipeline have been committed at the time
+        # the pipeline queues a job for the vCon.
+        await processor_output.commit_queue_jobs(py_vcon_server.queue.JOB_QUEUE)
+
+        # Get serializable output
+        response_output = await processor_output.get_output()
+
+      except Exception as e:
+        py_vcon_server.restful_api.log_exception(e)
+        return(py_vcon_server.restful_api.InternalErrorResponse(e))
+
+      return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(response_output, exclude_none = True)))
+
 
   async def do_run_pipeline(
       vCon: typing.Union[vcon.Vcon, str],
