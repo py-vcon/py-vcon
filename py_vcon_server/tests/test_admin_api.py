@@ -74,7 +74,6 @@ async def test_server_queue_config():
     assert(post_response.status_code == 204)
     assert(post_response.text == "") 
 
-
     # get the list of queues for this server
     get_response = client.get(
       "/server/queues",
@@ -153,6 +152,13 @@ async def test_job_queue():
       )
     assert(post_response.status_code == 204)
     assert(post_response.text == "")
+
+    # Already created
+    post_response = client.post(
+      "/queue/{}".format(TEST_Q1),
+      headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 404)
 
     # get list of queue names
     get_response = client.get(
