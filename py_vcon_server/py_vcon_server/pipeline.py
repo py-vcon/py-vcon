@@ -806,12 +806,20 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
             ))
 
           # add queue_name and job_id to job def for success queue
-          await self._job_queue.push_vcon_uuid_queue_job(
-              success_queue,
-              queue_job["vcon_uuid"],
-              queue_name,
-              job_id
-            )
+          try:
+            await self._job_queue.push_vcon_uuid_queue_job(
+                success_queue,
+                queue_job["vcon_uuid"],
+                queue_name,
+                job_id
+              )
+          except py_vcon_server.queue.QueueDoesNotExist as bad_queue_name:
+            # log but don't fail the pipeline run
+            logger.exception(bad_queue_name)
+            logger.error("pipeline: {} success queue: {} does not exist".format(
+                queue_name,
+                success_queue
+              ))
         else:
           # should not get here as the job_type should have been screened at the start
           logger.error("Unsupported job type: {}".format(job_type))
@@ -855,12 +863,20 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
               failure_queue
             ))
           # add queue_name and job_id to job def in failure queue
-          await self._job_queue.push_vcon_uuid_queue_job(
+          try:
+            await self._job_queue.push_vcon_uuid_queue_job(
               failure_queue,
               queue_job["vcon_uuid"],
               queue_name,
               job_id
             )
+          except py_vcon_server.queue.QueueDoesNotExist as bad_queue_name:
+            # log but don't fail the pipeline run
+            logger.exception(bad_queue_name)
+            logger.error("pipeline: {} failure queue: {} does not exist".format(
+                queue_name,
+                failure_queue
+              ))
         else:
           # should not get here as the job_type should have been screened at the start
           logger.error("Unsupported job type: {}".format(job_type))
