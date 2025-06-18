@@ -490,9 +490,9 @@ def init(restapi):
       # TODO should error if queue exists
       await py_vcon_server.queue.JOB_QUEUE.create_new_queue(name)
 
-    except py_vcon_server.queue.QueueDoesNotExist as e:
+    except py_vcon_server.queue.QueueAlreadyExists as e:
       py_vcon_server.restful_api.log_exception(e)
-      return(py_vcon_server.restful_api.NotFoundResponse("queue: {} not found".format(name)))
+      return(py_vcon_server.restful_api.NotFoundResponse("queue: {} already exists".format(name)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)

@@ -33,6 +33,10 @@ class QueueDoesNotExist(Exception):
   """ Raised when attempting to operate on a queue which does not exist. """
 
 
+class QueueAlreadyExists(Exception):
+  """ Raised when attempting to create a queue which already exists. """
+
+
 class JobDoesNotExist(Exception):
   """ Raised when attempting to operate on an in progress job which does not exist. """
 
@@ -246,7 +250,7 @@ class JobQueue():
     args = [ name ]
     queue_count = await self._do_lua_create_new_queue(keys = keys, args = args)
     if(queue_count == -1):
-      raise Exception("create_new_queue({}): queue already exists".format(name))
+      raise QueueAlreadyExists("create_new_queue({}): queue already exists".format(name))
 
     return(queue_count)
     
