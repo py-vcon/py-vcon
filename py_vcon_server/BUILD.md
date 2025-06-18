@@ -9,14 +9,15 @@ Make sure python build and twine packages are installed:
 Create a clean clone of the branch that you want to build as any files in your development area may get accidently included in the vcon package:
 
     git clone https://github.com/py-vcon/py-vcon.git
+    cd py-vcon
     git checkout [xxxxx_commit_SHA]
-    cd py-vcon/py_vcon_server
+    cd py_vcon_server
 
 Update the package __version__ number in vcon/vcon/__init__.py
 
 Be sure to clean out the dist directory:
 
-    rm dist/*
+    rm -rf dist py_vcon_server.egg-info
 
 In the py_vcon_server directory (root containing setup.py and py_vcon_server sub-directory):
 
@@ -28,10 +29,13 @@ This creates sub-directory dist containing (x.x.x in the names below represents 
   * py_vcon_server-x.x.x.tar.gz
 
 Test your package files on a clean VM or Docker container.
+In preparation for testing, install your newly build server package:
+
+    pip3 install dist/py_vcon_server-x.x.x.tar.gz
+
 First follow the test file setup instructions for the[ python_vcon pagage testing](README.md#testing-the-vcon-package).
 Then following [these instructions](README.md#testing-the-vcon-server) for test the server after installing the py_vcon_server package (replacing x.x.x with the build version number):
 
-    pip3 install dist/py_vcon_server-x.x.x.tar.gz
 
 Push the package install files up to the pypi repo.
 
