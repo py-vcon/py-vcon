@@ -1,6 +1,9 @@
 *.env
 **/*.swp
 **/*.swo
+.coverage
+.coveragerc
+coverage.xml
 dist
 src
 layers
