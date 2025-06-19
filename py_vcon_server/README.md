@@ -46,14 +46,39 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
 
 ## Overview of vCon Server
 
-The Python vCon Server provides the ability to do the following:
-  * Store, retrieve, modify and delete vCons
-  * Perform operations on one or more vCons using a pluggable framework of **vCon processors**
-  * Run a single **vCon processor** via a RESTful API, using provided or stored vCons
-  * Group a sequence of vCon operations (**vCon processors** to execute) and associated configuration into a **Pipeline** definition
-  * Run a **vCon pipeline**, via a RESTful API, using provide or stored vCons
-  * Queue vCon jobs for the **pipeline server** to run through **vCon pipelines**
-  * Administer and monitor the server and configuration via an Admin RESTful API
+The **Python vCon Server** enables AI-driven workflows, analysis, and decision-making for business conversations.
+It leverages **vCon** (conversation data) to provide powerful automation and insights for contact centers and messaging systems.
+Below are the key features of the **py_vcon_server**:
+
+### Key Features:
+
+- **vCon Storage and Management**:  
+  - Optionally store, retrieve, modify, and delete vCon conversations to manage conversation data effectively.
+
+- **vCon Processors**:  
+  - Perform operations on one or more vCons using a **pluggable framework of vCon processors**. This allows flexibility in executing various tasks such as transcription, text analysis, sentiment analysis, agent evaluation, categorization, and more.
+
+- **Single vCon Processor Execution via REST API**:  
+  - Run a single **vCon processor** via a RESTful API, using either provided or stored vCons. This enables on-demand processing of individual conversations.
+
+- **Pipeline (Workflow) Definitions**:  
+  - Group a sequence of **vCon processors** into a **Pipeline** (workflow) definition. Each pipeline can execute a series of operations in the correct order, with associated configurations, streamlining the workflow.
+
+- **Run vCon Pipelines via REST API**:  
+  - Execute a **vCon pipeline** via a RESTful API using provided or stored vCons, enabling seamless integration with other systems and automation platforms.
+
+- **Job Queueing**:  
+  - Queue vCon jobs for the **pipeline server** to process through **vCon pipelines**. This ensures efficient processing of large numbers of vCons, leveraging the power of pipeline execution.
+
+- **Server Administration and Monitoring**:  
+  - Administer and monitor the server, pipelines, and configurations via an **Admin RESTful API**, providing flexibility for remote management and monitoring.
+
+- **Scalability**:  
+  - Scale the server with multiple instances, all sharing state and configuration management. This allows for distributed processing and handling of larger workloads across various server instances.
+
+### Summary:
+The **py_vcon_server** empowers businesses to automate workflows, analyze conversations, and make data-driven decisions using AI-powered pipelines.
+With its RESTful API integrations and scalability features, it provides the flexibility to optimize contact center operations and communication platforms.
 
 
 The Python vCon server an be thought of as the aggregation of the following high level components:

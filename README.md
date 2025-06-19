@@ -16,14 +16,35 @@
 
 ## Introduction
 
-We are working to make vCon a new IETF standard for containing conversational data.  Conversational data may consists of:
- * The metadata (who, what, when, where, how, why, etc.) including partipants or **parties**
- * The conversation exchange or **dialog** in its original mode (text, audio, video)
- * Related documents or **attachments** (e.g. presentations, images, contracts and other files)
- * **Analysis** (e.g. transcritpions, translations, summary, notes, sentiment analysis, action items, bullet points, etc.).
+We are working to make **vCon** a new IETF standard for containing conversational data.
+**vCon** aims to unify and standardize how we handle data from diverse communication sources, making it easier to integrate and apply analysis, categorization, and decision-making to business conversations.
 
-The point of a vCon standard is to make it easier to integrate communication platforms with post conversation analysis services.
-We want to make it easier to take your converstation data from your contact center, phone application or video conferencing service and allow you use 3rd party SaaS offerings for conversation analysis.
+**Conversational data** may consist of the following components:
+- **Metadata**: Information such as participants (parties), timestamps, context (who, what, when, where, how, why, etc.), and more.
+- **Dialog**: The conversation exchange itself, in its original mode, whether text, audio, or video.
+- **Attachments**: Related documents, such as presentations, images, contracts, and other files shared during the conversation.
+- **Analysis**: Post-conversation insights, including transcriptions, translations, summaries, sentiment analysis, action items, and key takeaways.
+
+The purpose of the **vCon standard** is to simplify the integration of communication platforms with post-conversation analysis services, enabling more efficient workflows for businesses.
+By standardizing the format of conversational data, **vCon** allows seamless interaction with **AI-driven analysis** and decision-making tools, enhancing the value of the data for actionable insights.
+
+With the **py-vcon** project, we are making it easier to extract, manage, and process conversation data from various sources, such as contact centers, phone applications, and video conferencing services.
+The **py-vcon-server** package further extends this by offering a flexible and scalable server framework for processing and analyzing vCon conversations.
+
+The goal is to provide a seamless way to use third-party SaaS offerings and integrate them into your workflows for advanced conversation analysis-whether it's for customer support, sales, or any communication-driven business process.
+
+By adopting the **vCon** standard and utilizing the **py-vcon** tools, businesses can unlock the power of their conversational data and apply AI-driven workflows that automate tasks like categorization, sentiment analysis, and decision-making.
+
+### Key Features of py-vcon and py-vcon-server:
+- **Python Library**: Construct and operate on individual vCons using Python.
+- **Command Line Interface**: Construct and operate on individual vCons in your favorite command shell.
+- **Integration**: Leverage a pluggable framework for third-party analysis tools and services.
+- **Extensibility**: Add custom processors to handle specific tasks related to your conversation data.
+- **AI Workflows**: Automatically categorize, analyze, and process conversations using AI-driven pipelines.
+- **Flexible API**: Interact with vCon conversations programmatically through RESTful APIs.
+- **Scalability**: Easily scale your pipeline processing, from a single instance to thousands of servers.
+
+We are committed to making **vCon** the go-to standard for conversational data and helping businesses optimize how they manage and analyze conversations at scale.
 
 Want to learn more about vCon? see: [What is a vCon?](#what-is-a-vcon)
 
@@ -35,15 +56,18 @@ Currently this consists of two primary Python packages:
    * [command line interface](vcon/bin/README.md) - supporting piping of Vcon construction and operations
    * [Filter plugins](#vcon-filter-plugins) - to extend operations to perform on a Vcon
 
- * The [py-vcon-server package](py_vcon_server/README.md) provides:
-   * RESTful APIs
-   * Flexible Architecture
-   * Scales from 1 to 1000s of servers
-   * Storage - abstracted to enable support for your favorite database
-   * Job Queuing - for performing a sequence of processing operations on vCons
-   * Pipelining - naming and configuring sequences of processor operations to repeatedly perform on vCons
-   * Extensible modules - framework for adding open source or proprietary vCon processor operations
+* The [py-vcon-server package](py_vcon_server/README.md) extends the **python-vcon** package to provide:
 
+AI-driven workflows and decision-making for your business conversations, whether they originate from a call center, contact center, customer support, or your phone and video conferencing applications.
+The server offers the following capabilities:
+
+- **RESTful APIs** for seamless integration and interaction with your systems
+- **Flexible Architecture** to adapt to various use cases and environments
+- **Scalability** to scale from a single server to thousands of instances
+- **Storage** abstraction, enabling support for your preferred database solution
+- **Job Queuing** for efficiently processing vCon conversations through AI workflows, analysis, and decision-making
+- **Pipelining** to define, name, and configure workflows for repetitive operations on vCon conversations
+- **Extensible Modules** to add open-source or proprietary vCon processor operations, enhancing functionality
 
 ## Table of Contents
 
