@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit tests for signing processor """
 import pytest
 import pytest_asyncio
@@ -203,6 +203,12 @@ async def test_sign_processor_api(make_2_party_tel_vcon : vcon.Vcon) -> None:
     verify_out_dict = post_response.json()
     print("responces: {}".format(verify_out_dict))
     assert(verify_out_dict["exception_class"] == "InvalidSignature")
+    assert(isinstance(verify_out_dict["exception_stack"], list))
+    assert(len(verify_out_dict["exception_stack"]) > 0)
+    assert(verify_out_dict["py_vcon_server_version"] == py_vcon_server.__version__)
+    assert(verify_out_dict["py_vcon_version"] == vcon.__version__)
+    assert(isinstance(verify_out_dict["processor_options"], dict))
+    assert(len(verify_out_dict["processor_options"]["allowed_ca_cert_pems"][0]) > 500)
 
 SIGN_PIPE_DEF_DICT = {
   "pipeline_options": {
