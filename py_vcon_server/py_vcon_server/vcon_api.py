@@ -225,8 +225,10 @@ def init(restapi):
         return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
 
       except Exception as e:
-        py_vcon_server.restful_api.log_exception(e)
-        return(py_vcon_server.restful_api.InternalErrorResponse(e))
+        # Add options to response for easier diagnostics and error reporting
+        exception_error_content = py_vcon_server.restful_api.InternalErrorResponse(e,
+            {"processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True)})
+        return(exception_error_content)
 
       return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(response_output, exclude_none = True)))
 
@@ -323,7 +325,10 @@ def init(restapi):
 
       except Exception as e:
         py_vcon_server.restful_api.log_exception(e)
-        return(py_vcon_server.restful_api.InternalErrorResponse(e))
+        # Add options to response for easier diagnostics and error reporting
+        exception_error_content = py_vcon_server.restful_api.InternalErrorResponse(e,
+            {"processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True)})
+        return(exception_error_content)
 
       return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(response_output, exclude_none = True)))
 
