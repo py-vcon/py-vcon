@@ -4,6 +4,7 @@ import traceback
 import pydantic
 import fastapi
 import fastapi.middleware.cors
+import vcon
 from py_vcon_server import __version__
 import py_vcon_server.logging_utils
 import py_vcon_server.settings
@@ -62,7 +63,10 @@ class InternalErrorResponse(fastapi.responses.JSONResponse):
             #"exception_dir": "{}".format(dir(exception)),
             "exception_module": "{}".format(getattr(exception, "__module__", None)),
             "exception_class": "{}".format(exception.__class__.__name__),
-            "exception_stack": traceback.format_exception(None, exception, exception.__traceback__)
+            "exception_stack": traceback.format_exception(None, exception, exception.__traceback__),
+            # Make it easier for reporting issues by including versions
+            "py_vcon_server_version": __version__,
+            "py_vcon_version": vcon.__version__
           }
       )
 
