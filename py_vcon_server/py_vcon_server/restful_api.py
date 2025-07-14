@@ -1,5 +1,6 @@
 # Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Common setup and components for the RESTful APIs """
+import typing
 import traceback
 import pydantic
 import fastapi
@@ -52,22 +53,30 @@ class InternalErrorResponse(fastapi.responses.JSONResponse):
 
   def __init__(
       self, 
-      exception: Exception
+      exception: Exception,
+      extra_content: typing.Union[None, typing.Dict[str, typing.Any]] = None
     ):
+
+    content = {
+        "detail": "Exception: {} {} {}".format(exception.__class__.__name__, exception.__cause__, exception.__context__),
+        "exception": "{}".format(exception),
+        "exception_args": "{}".format(exception.args),
+        #"exception_dir": "{}".format(dir(exception)),
+        "exception_module": "{}".format(getattr(exception, "__module__", None)),
+        "exception_class": "{}".format(exception.__class__.__name__),
+        "exception_stack": traceback.format_exception(None, exception, exception.__traceback__),
+        # Make it easier for reporting issues by including versions
+        "py_vcon_server_version": __version__,
+        "py_vcon_version": vcon.__version__
+      }
+
+    if(extra_content is not None):
+      for name in extra_content:
+        content[name] = extra_content[name]
+
     super().__init__(
         status_code = 500,
-        content = {
-            "detail": "Exception: {} {} {}".format(exception.__class__.__name__, exception.__cause__, exception.__context__),
-            "exception": "{}".format(exception),
-            "exception_args": "{}".format(exception.args),
-            #"exception_dir": "{}".format(dir(exception)),
-            "exception_module": "{}".format(getattr(exception, "__module__", None)),
-            "exception_class": "{}".format(exception.__class__.__name__),
-            "exception_stack": traceback.format_exception(None, exception, exception.__traceback__),
-            # Make it easier for reporting issues by including versions
-            "py_vcon_server_version": __version__,
-            "py_vcon_version": vcon.__version__
-          }
+        content = content
       )
 
 
