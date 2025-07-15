@@ -552,6 +552,10 @@ class VconProcessorOutput(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
       default = {}
     )
 
+  queue_jobs: typing.List[typing.Dict[str, typing.Any]] = pydantic.Field(
+      title = "list of queue jobs to be queued after running pipelne",
+      default = []
+    )
 
 class VconProcessorIO():
   """ Abstract input and output for a VconProcessor """
@@ -782,7 +786,8 @@ class VconProcessorIO():
     response_output = VconProcessorOutput(
       vcons = out_vcons,
       vcons_modified = self._vcon_update,
-      parameters = self._parameters
+      parameters = self._parameters,
+      queue_jobs = self._jobs_to_queue
       )
 
     return(response_output)
