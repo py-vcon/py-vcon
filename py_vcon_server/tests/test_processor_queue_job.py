@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit tests for queue job processor """
 import pytest
 import pytest_asyncio
@@ -125,6 +125,8 @@ async def test_sign_processor_api(make_2_party_tel_vcon : vcon.Vcon) -> None:
     processor_out_dict = post_response.json()
     assert(len(processor_out_dict["vcons"]) == 1)
     assert(not processor_out_dict["vcons_modified"][0])
+    assert(len(processor_out_dict["queue_jobs"]) == 1)
+    assert(processor_out_dict["queue_jobs"][0]["vcon_uuids"][0] == in_vcon.uuid)
 
     # Get the jobs in the queue and verify the new job is in it.
     get_response = client.get(
