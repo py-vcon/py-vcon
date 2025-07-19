@@ -178,7 +178,7 @@ async def test_sign_processor_api(make_2_party_tel_vcon : vcon.Vcon) -> None:
     assert(db_signed_vcon.uuid == UUID)
 
     parameters = {
-        "commit_changes": False,
+        "commit_changes": True,
         "return_whole_vcon": True
       }
 
@@ -209,6 +209,18 @@ async def test_sign_processor_api(make_2_party_tel_vcon : vcon.Vcon) -> None:
     assert(verify_out_dict["py_vcon_version"] == vcon.__version__)
     assert(isinstance(verify_out_dict["processor_options"], dict))
     assert(len(verify_out_dict["processor_options"]["allowed_ca_cert_pems"][0]) > 500)
+
+    # Try to transcribe, should fail as vCon is in verified state.
+    post_response = client.post("/process/{}/deepgram".format(UUID),
+        params = parameters,
+        json = {} # default options
+      )
+    #expect it to fail as it is in verified state
+    assert(post_response.status_code == 500)
+    tx_out_dict = post_response.json()
+    print("tx error: {}".format(tx_out_dict))
+    assert(tx_out_dict["exception"].startswith("Cannot modify Vcon"))
+
 
 SIGN_PIPE_DEF_DICT = {
   "pipeline_options": {
@@ -293,6 +305,14 @@ SIGN_PIPE_DEF4_DICT = {
                 "is_four": ".parameters.four == \"four\""
               }
           }
+      },
+      {
+        "processor_name": "create_appended",
+        "processor_options": {}
+      },
+      {
+        "processor_name": "whisper_base",
+        "processor_options": {"input_vcon_index": 1}
       }
     ]
 }
@@ -472,6 +492,7 @@ async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
     pipeline_out_dict = post_response.json()
     print("pipe out: {}".format(pipeline_out_dict))
     modified_vcon = vcon.Vcon()
+    assert(len(pipeline_out_dict["vcons"]) == 2) # original and appended
     modified_vcon.loadd(pipeline_out_dict["vcons"][0])
     # signed and then serialized, makes it unverified
     assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
@@ -482,6 +503,13 @@ async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
     assert(pipeline_out_dict["parameters"]["num_analysis"] == 0)
     assert(pipeline_out_dict["parameters"]["num_parties"] == 2)
     assert(pipeline_out_dict["parameters"]["is_three"] == False)
+
+    assert(modified_vcon.uuid == UUID)
+    assert(pipeline_out_dict["vcons"][1]["uuid"] != UUID)
+    assert(pipeline_out_dict["vcons"][1]["appended"]["uuid"] == UUID)
+    print("analysis keys: {}".format(pipeline_out_dict["vcons"][1]["analysis"][0].keys()))
+    assert(pipeline_out_dict["vcons"][1]["analysis"][0]["vendor"] == "openai")
+
 
     # put pipeline with no verification and jq processor
     set_response = client.put(
