@@ -1321,7 +1321,13 @@ class FilterPluginProcessor(VconProcessor):
 
     out_vcon = await in_vcon.filter(self.plugin_name, formatted_options)
 
-    await processor_input.update_vcon(out_vcon)
+    # Some vCons modify an exising vCon, some create a new vCon
+    # TODO: should use filter_plugin metadata to check if no modifications were made.
+    if(in_vcon.uuid == out_vcon.uuid):
+      await processor_input.update_vcon(out_vcon)
+    # New vCon created by filter plugin
+    else:
+      await processor_input.add_vcon(out_vcon)
 
     return(processor_input)
 
