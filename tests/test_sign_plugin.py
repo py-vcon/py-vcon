@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Unit tests for signing filter plugin """
 import pytest
 import json
@@ -87,6 +87,15 @@ async def test_sign_2party(two_party_tel_vcon : vcon.Vcon) -> None:
   print("sig keys: {}".format(signed_dict["signatures"][0]["header"].keys()))
   assert(len(signed_dict["signatures"][0]["header"]["x5c"]) == 3)
 
+  try:
+    await deserialized_signed_vcon.create_appended({})
+    raise Exception("shold ot get here.  vCon is in signed state")
+
+  except  vcon.InvalidVconState as invalid_state_error:
+    # expected
+    print("got exception: {}".format(invalid_state_error))
+    pass
+
   await deserialized_signed_vcon.verifyfilter({"allowed_ca_cert_pems": [ca_cert_string]})
   assert(deserialized_signed_vcon._state == vcon.VconStates.VERIFIED)
   assert(len(deserialized_signed_vcon.parties) == 2)
@@ -94,4 +103,16 @@ async def test_sign_2party(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(deserialized_signed_vcon.parties[1]['tel'] == call_data['destination'])
   print("verified vCon: {}".format(deserialized_signed_vcon.dumps()))
 
+  try:
+    deserialized_signed_vcon.add_party({"tel": "1234"})
+    raise Exception("should fail modification as vCon is signed in verified state")
+  except vcon.InvalidVconState as invalid_state_error:
+    # expected
+    pass
+
+  appendable_vcon = await deserialized_signed_vcon.create_appended({})
+  # print("appended: {}".format(appendable_vcon.appended))
+  assert(appendable_vcon.uuid != deserialized_signed_vcon.uuid)
+  assert("uuid" in appendable_vcon.appended)
+  assert(appendable_vcon.appended["uuid"] == deserialized_signed_vcon.uuid)
 
