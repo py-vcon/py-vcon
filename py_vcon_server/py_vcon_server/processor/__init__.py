@@ -1327,7 +1327,7 @@ class FilterPluginProcessor(VconProcessor):
       await processor_input.update_vcon(out_vcon)
     # New vCon created by filter plugin
     else:
-      await processor_input.add_vcon(out_vcon)
+      await processor_input.add_vcon(out_vcon, None, False)
 
     return(processor_input)
 
