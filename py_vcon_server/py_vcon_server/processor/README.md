@@ -9,6 +9,7 @@
  + [Introduction](#introduction)
  + [Processor Classes](#processors)
    * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
+   * [py_vcon_server.processor.builtin.create_appended.Appended](#py_vcon_serverprocessorbuiltincreate_appendedappended)
    * [py_vcon_server.processor.builtin.decrypt.Decrypt](#py_vcon_serverprocessorbuiltindecryptdecrypt)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
    * [py_vcon_server.processor.builtin.encrypt.Encrypt](#py_vcon_serverprocessorbuiltinencryptencrypt)
@@ -24,6 +25,7 @@
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
    * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
+   * [py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginInitOptions](#py_vcon_serverprocessorbuiltincreate_appendedappendedfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
@@ -39,6 +41,7 @@
 
  + [Processor Options Classes](#processor-options-classes)
    * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
+   * [py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginOptions](#py_vcon_serverprocessorbuiltincreate_appendedappendedfilterpluginoptions)
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
@@ -131,6 +134,28 @@ Methods:
 
 
 **__init__**(self, title: str, description: str, version: str, init_options: VconProcessorInitOptions, processor_options_class: typing.Type[py_vcon_server.processor.VconProcessorOptions], may_modify_vcons: bool)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
+## py_vcon_server.processor.builtin.create_appended.Appended
+
+ - **Name:** create_appended
+ - **Version:** 0.0.1
+ - **Summary:** vCon create appended **VconProcessor**
+
+vCon create appended **VconProcessor**
+This **VconProcessor** will create a new appendable vCon copy from the
+given vCon and add it to the VconProcessorIO.  Typically the input vCon
+is signed, but that is not necessary.
+
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginInitOptions](#py_vcon_serverprocessorbuiltincreate_appendedappendedfilterplugininitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginOptions](#py_vcon_serverprocessorbuiltincreate_appendedappendedfilterpluginoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
 
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
@@ -384,6 +409,15 @@ derived class in the **VconProcessorRegistry**
 ### Fields
 none
 
+## py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginInitOptions
+
+ - **Summary:** Create appended vCOn filter_plugin initialization optios
+
+initialization class for VconProcessor wrapper for AppendedFilterPlugin **FilterPlugin**
+
+### Fields
+none
+
 ## py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions
 
  - **Summary:** JWE decripting of vCon **FilterPlugin** intialization object
@@ -553,6 +587,55 @@ default: "base"
  - **Summary:** VconProcessorOptions
 
 Base class options for **VconProcessor.processor** method 
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example:
+
+default: {}
+
+
+## py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginOptions
+
+ - **Summary:** Appended filter method options
+
+processor options class for **processor** method of VconProcessor wrapper for AppendedFilterPlugin **FilterPlugin**
 
 ### Fields
 
