@@ -872,7 +872,7 @@ to be transcribed.
 
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
-default: 
+default: 0:
 
 ## vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions
  - encrypt filter method options
@@ -1289,7 +1289,7 @@ to be transcribed.
 
 examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
-default: 
+default: 0:
 
 ##### output_types (typing.List[str])
 transcription output types
