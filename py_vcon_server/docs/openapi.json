@@ -3,7 +3,7 @@
   "info": {
     "title": "Python vCon Server",
     "summary": "vCon pipeline processor server cluster and storage API",
-    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](/pipeline_editor) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
+    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
     "contact": {
       "name": "Commercial support available from SIPez",
       "url": "http://www.sipez.com/"
@@ -11,7 +11,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.3.2"
+    "version": "0.4.0"
   },
   "paths": {
     "/server/info": {
@@ -1036,6 +1036,99 @@
         }
       }
     },
+    "/process/{vcon_uuid}/create_appended": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon create appended **VconProcessor**",
+        "description": "vCon create appended **VconProcessor**\nThis **VconProcessor** will create a new appendable vCon copy from the\ngiven vCon and add it to the VconProcessorIO.  Typically the input vCon\nis signed, but that is not necessary.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__create_appended_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendedFilterPluginOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process/{vcon_uuid}/decrypt": {
       "post": {
         "tags": [
@@ -1091,7 +1184,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1184,7 +1277,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1277,7 +1370,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1370,7 +1463,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1463,7 +1556,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1556,7 +1649,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1649,7 +1742,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1742,7 +1835,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1835,7 +1928,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -1928,7 +2021,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -2021,7 +2114,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -2114,7 +2207,969 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/VconProcessorOutput"
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/create_appended": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon create appended **VconProcessor**",
+        "description": "vCon create appended **VconProcessor**\nThis **VconProcessor** will create a new appendable vCon copy from the\ngiven vCon and add it to the VconProcessorIO.  Typically the input vCon\nis signed, but that is not necessary.",
+        "operationId": "run_vcon_processor_io_processIO_create_appended_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppendedFilterPluginIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/decrypt": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon decryption **VconProcessor**",
+        "description": "vCon decryption **VconProcessor**\nThis **VconProcessor** will decrypt the JWE form vCon into the signed/unverified JWS vCon form.",
+        "operationId": "run_vcon_processor_io_processIO_decrypt_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecryptFilterPluginIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/deepgram": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Deepgram transcription binding for **VconProcessor**",
+        "description": "Deepgram transcription binding for **VconProcessor**\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Deepgram** **Vcon** **filter_plug** for transcription is used.",
+        "operationId": "run_vcon_processor_io_processIO_deepgram_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeepgramIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/encrypt": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon encryption **VconProcessor**",
+        "description": "vCon encryption **VconProcessor**\nThis **VconProcessor** will encrypt the Vcon into its JWE form.",
+        "operationId": "run_vcon_processor_io_processIO_encrypt_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EncryptFilterPluginIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/jq": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "set VconProcessorIO parameter(s) from result(s) of JQ query(s) on VconPRocessorIO input",
+        "description": "For each name, value pair in jq_queries field in ProcessorOptions, save the result of the JQ query defined in value in the VconProcessorIO parameter in name.  The query is into a dict representation of the input VconProcessorIO.  At the top level this dict contains: 'vcons', an array of the zero or more input vCons and 'parameters', the dict of parameters in the input VconProcessorIO.",
+        "operationId": "run_vcon_processor_io_processIO_jq_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JQIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/openai_chat_completion": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "OpenAi Chat Completion binding for **VconProcessor**",
+        "description": "OpenAi Chat Completion binding for **VconProcessor**\n\nThis **VconProcessor** will input the text dialog and transcribed dialog(s) for one or all of the audio dialogs in the input Vcon and add an analysis object containing the generative AI output for the prompt provided in the option.\nThe **openai_chat_completions** **Vcon** **filter_plug** is used.",
+        "operationId": "run_vcon_processor_io_processIO_openai_chat_completion_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenAiChatCompletionIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/queue_job": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Processor to add a job to a **JobeQueue**",
+        "description": "A vCon_uuid Job is added to the named queue, using the UUID from the vCon at the **input_vcon_index** in the input options.",
+        "operationId": "run_vcon_processor_io_processIO_queue_job_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueueJobIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/send_email": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "VconProcessor to send email message",
+        "description": "used to send SMTP messages using content from vCon or VconProcessorIP parameters.",
+        "operationId": "run_vcon_processor_io_processIO_send_email_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/set_parameters": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "set VconProcessorIO parameters from process options input",
+        "description": "set VconProcessorIO parameters from the parameters dict field provided in the processor options",
+        "operationId": "run_vcon_processor_io_processIO_set_parameters_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetParametersIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/sign": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon signing **VconProcessor**",
+        "description": "vCon signing **VconProcessor**\nThis **VconProcessor** will with sign the Vcon using JWS.",
+        "operationId": "run_vcon_processor_io_processIO_sign_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignFilterPluginIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/text_pii_redactor": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "create a redacted vCon with the text PII redacted from the given input vCon",
+        "description": "the PII in the input vCon is redacted using the **pii_redact** filter_plugin.  By default, the redacted transcript is not saved and the input vCon is unmodified.  A new redacted vCon is created, referencing the input, unredacted vCon.  By default the unredacted vCon is copied to the redacted vCon with the text, audio and video media in the dialogs removed.  The parts removed, is defined by a JQ query in the **jq_redaction_query** parameter.",
+        "operationId": "run_vcon_processor_io_processIO_text_pii_redactor_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextPiiRedactorIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/verify": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon verification **VconProcessor**",
+        "description": "vCon verification **VconProcessor**\nThis **VconProcessor** will verify the JWS signed Vcon.",
+        "operationId": "run_vcon_processor_io_processIO_verify_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyFilterPluginIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/whisper_base": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Whisper OpenAI transcription binding for **VconProcessor**  with model size: base",
+        "description": "Whisper OpenAI transcription binding for **VconProcessor**  with model size: base\n\nThis **VconProcessor** will transcribe one or all of the audio dialogs in the input Vcon and add analysis object(s) containing the transcription for the dialogs.\nThe **Whisper** **Vcon** **filter_plug** for transcription is used which is built upon the OpenAI Whisper package.",
+        "operationId": "run_vcon_processor_io_processIO_whisper_base_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WhisperIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
                 }
               }
             }
@@ -2220,7 +3275,7 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/VconProcessorOutput"
+                      "$ref": "#/components/schemas/VconProcessorOutput-Output"
                     },
                     {
                       "type": "null"
@@ -2300,7 +3355,7 @@
                 "schema": {
                   "anyOf": [
                     {
-                      "$ref": "#/components/schemas/VconProcessorOutput"
+                      "$ref": "#/components/schemas/VconProcessorOutput-Output"
                     },
                     {
                       "type": "null"
@@ -2327,6 +3382,75 @@
   },
   "components": {
     "schemas": {
+      "AppendedFilterPluginIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/AppendedFilterPluginOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "AppendedFilterPluginIO"
+      },
+      "AppendedFilterPluginOptions": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Appended filter method options",
+        "description": "processor options class for **processor** method of VconProcessor wrapper for AppendedFilterPlugin **FilterPlugin**"
+      },
+      "DecryptFilterPluginIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/DecryptFilterPluginOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "DecryptFilterPluginIO"
+      },
       "DecryptFilterPluginOptions": {
         "properties": {
           "private_pem_key": {
@@ -2391,6 +3515,20 @@
         "type": "object",
         "title": "decrypt filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for DecryptFilterPlugin **FilterPlugin**"
+      },
+      "DeepgramIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/DeepgramOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "DeepgramIO"
       },
       "DeepgramOptions": {
         "properties": {
@@ -2467,6 +3605,20 @@
         "type": "object",
         "title": "Deepgram transcription filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for Deepgram **FilterPlugin**"
+      },
+      "EncryptFilterPluginIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/EncryptFilterPluginOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "EncryptFilterPluginIO"
       },
       "EncryptFilterPluginOptions": {
         "properties": {
@@ -2572,7 +3724,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1748978311.0138109
+              1752947119.6542149
             ]
           },
           "server": {
@@ -2593,6 +3745,20 @@
           "server"
         ],
         "title": "InProgressJob"
+      },
+      "JQIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/JQOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "JQIO"
       },
       "JQOptions": {
         "properties": {
@@ -2769,6 +3935,20 @@
           "signature"
         ],
         "title": "JwsSignature"
+      },
+      "OpenAiChatCompletionIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/OpenAiChatCompletionOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "OpenAiChatCompletionIO"
       },
       "OpenAiChatCompletionOptions": {
         "properties": {
@@ -3111,6 +4291,20 @@
         "type": "object",
         "title": "QueueJob"
       },
+      "QueueJobIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/QueueJobOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "QueueJobIO"
+      },
       "QueueJobOptions": {
         "properties": {
           "label": {
@@ -3184,6 +4378,20 @@
         },
         "type": "object",
         "title": "QueueProperties"
+      },
+      "SendEmailIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/SendEmailOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "SendEmailIO"
       },
       "SendEmailOptions": {
         "properties": {
@@ -3307,34 +4515,39 @@
             "type": "string",
             "title": "server version",
             "description": "Python package py_vcon_server version number",
-            "default": "0.3.2"
+            "default": "0.4.0"
           },
           "vcon": {
             "type": "string",
             "title": "vcon version",
             "description": "Python package **py_vcon** version number",
-            "default": "0.4.2"
+            "default": "0.5.0"
           },
           "start_time": {
             "type": "number",
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1748978311.0087469
+              1752947119.649077
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              268562
+              359124
             ]
+          },
+          "settings": {
+            "type": "object",
+            "title": "server settings values"
           }
         },
         "type": "object",
         "required": [
           "start_time",
-          "pid"
+          "pid",
+          "settings"
         ],
         "title": "ServerInfo"
       },
@@ -3362,7 +4575,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              268562
+              359124
             ]
           },
           "start_time": {
@@ -3370,7 +4583,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1748978311.0104055
+              1752947119.6508055
             ]
           },
           "num_workers": {
@@ -3396,7 +4609,7 @@
             "title": "heartbeat time stamp",
             "description": "epoch seconds time for the last heartbeat on this server",
             "examples": [
-              1748978311.0105228
+              1752947119.6509147
             ]
           }
         },
@@ -3412,6 +4625,20 @@
           "last_heartbeat"
         ],
         "title": "ServerState"
+      },
+      "SetParametersIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/SetParametersOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "SetParametersIO"
       },
       "SetParametersOptions": {
         "properties": {
@@ -3458,6 +4685,20 @@
         "type": "object",
         "title": "SetParametersOptions",
         "description": "SetParametersOptions is passed to the set_parameters processor and is used\nto set one or more parameter values from the given dict of parameters.  The\ninput parameters as well as those set or overwritten by the set_parameters\nprocessor are passed on via the VconProcessorIO to the subsquent processors\nin the pipeline."
+      },
+      "SignFilterPluginIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/SignFilterPluginOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "SignFilterPluginIO"
       },
       "SignFilterPluginOptions": {
         "properties": {
@@ -3520,6 +4761,20 @@
         "type": "object",
         "title": "Sign filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for SignFilterPlugin **FilterPlugin**"
+      },
+      "TextPiiRedactorIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/TextPiiRedactorOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "TextPiiRedactorIO"
       },
       "TextPiiRedactorOptions": {
         "properties": {
@@ -3864,7 +5119,54 @@
         "title": "VconProcessorOptions",
         "description": "Base class options for **VconProcessor.processor** method "
       },
-      "VconProcessorOutput": {
+      "VconProcessorOutput-Input": {
+        "properties": {
+          "vcons": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/VconUnsignedObject"
+                },
+                {
+                  "$ref": "#/components/schemas/VconSignedObject-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/VconEncryptedObject"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "array of **Vcon** objects",
+            "default": []
+          },
+          "vcons_modified": {
+            "items": {
+              "type": "boolean"
+            },
+            "type": "array",
+            "title": "boolean indicated if the **Vcon** in the **vcons** array has been modified from the input version",
+            "default": []
+          },
+          "parameters": {
+            "type": "object",
+            "title": "dict of parameters passed as input to and output from VconProcessor",
+            "default": {}
+          },
+          "queue_jobs": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "list of queue jobs to be queued after running pipelne",
+            "default": []
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "VconProcessorOutput",
+        "description": "Serializable Output results from a VconProcessor "
+      },
+      "VconProcessorOutput-Output": {
         "properties": {
           "vcons": {
             "items": {
@@ -3896,6 +5198,14 @@
             "type": "object",
             "title": "dict of parameters passed as input to and output from VconProcessor",
             "default": {}
+          },
+          "queue_jobs": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array",
+            "title": "list of queue jobs to be queued after running pipelne",
+            "default": []
           }
         },
         "additionalProperties": true,
@@ -3984,10 +5294,10 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1748978310,
-              1748978310.767857,
+              1752947119,
+              1752947119.4232686,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2025-06-03T19:18:30.767+00:00",
+              "2025-07-19T17:45:19.423+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -4055,6 +5365,20 @@
         ],
         "title": "VconUnsignedObject"
       },
+      "VerifyFilterPluginIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/VerifyFilterPluginOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "VerifyFilterPluginIO"
+      },
       "VerifyFilterPluginOptions": {
         "properties": {
           "allowed_ca_cert_pems": {
@@ -4104,6 +5428,20 @@
         "type": "object",
         "title": "verify filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for VerifyFilterPlugin **FilterPlugin**"
+      },
+      "WhisperIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/WhisperOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "WhisperIO"
       },
       "WhisperOptions": {
         "properties": {
@@ -4207,7 +5545,7 @@
     },
     {
       "name": "Admin: Pipelines",
-      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](/pipeline_editor) (Note: link works only on live server)"
+      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)"
     },
     {
       "name": "Admin: In Progress Jobs",
