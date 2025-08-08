@@ -227,7 +227,10 @@ def init(restapi):
       except Exception as e:
         # Add options to response for easier diagnostics and error reporting
         exception_error_content = py_vcon_server.restful_api.InternalErrorResponse(e,
-            {"processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True)})
+            {
+              "processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True),
+              "processor_name": processor_name_from_path
+            })
         return(exception_error_content)
 
       return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(response_output, exclude_none = True)))
@@ -327,7 +330,11 @@ def init(restapi):
         py_vcon_server.restful_api.log_exception(e)
         # Add options to response for easier diagnostics and error reporting
         exception_error_content = py_vcon_server.restful_api.InternalErrorResponse(e,
-            {"processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True)})
+            {
+              "processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True),
+              "processor_name": processor_name_from_path
+
+            })
         return(exception_error_content)
 
       return(fastapi.responses.JSONResponse(content = vcon.pydantic_utils.get_dict(response_output, exclude_none = True)))
