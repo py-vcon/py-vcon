@@ -48,9 +48,6 @@ def init(restapi):
     logger.debug(
       "Returning whole vcon for {} found: {}".format(vcon_uuid, vCon is not None))
 
-    if(vCon is None):
-      raise(fastapi.HTTPException(status_code=404, detail="Vcon not found"))
-
     return(fastapi.responses.JSONResponse(content=vCon.dumpd()))
 
   @restapi.post("/vcon",
@@ -78,10 +75,6 @@ def init(restapi):
       vcon_object.loadd(vcon_dict)
 
       await py_vcon_server.db.VCON_STORAGE.set(vcon_dict)
-
-    except vcon.InvalidVconJson as e:
-      py_vcon_server.restful_api.log_exception(e)
-      return(py_vcon_server.restful_api.ValidationError(str(e)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
