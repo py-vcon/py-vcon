@@ -489,10 +489,6 @@ def init(restapi):
       # TODO should error if queue exists
       await py_vcon_server.queue.JOB_QUEUE.create_new_queue(name)
 
-    except py_vcon_server.queue.QueueDoesNotExist as e:
-      py_vcon_server.restful_api.log_exception(e)
-      return(py_vcon_server.restful_api.NotFoundResponse("queue: {} not found".format(name)))
-
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.InternalErrorResponse(e))
@@ -576,21 +572,14 @@ def init(restapi):
 
     try:
       logger.debug("removing job: {} from in progress and pushing to queue")
-      if(not isinstance(job_id, int)):
-        logger.info("Error: unsupport job_id type: {}".format(job_id))
-        return None
 
       await py_vcon_server.queue.JOB_QUEUE.requeue_in_progress_job(job_id)
 
-    except py_vcon_server.queue.JobNotFound as e:
-      py_vcon_server.restful_api.log_exception(e)
-      return(py_vcon_server.restful_api.NotFoundResponse("job: {} not found".format(job_id)))
-
     except py_vcon_server.queue.QueueDoesNotExist as e:
       py_vcon_server.restful_api.log_exception(e)
-      return(py_vcon_server.restful_api.NotFoundResponse("queue: not found for in progress job: {}".format(job_id)))
+      return(py_vcon_server.restful_api.NotFoundResponse("{}".format(str(e))))
 
-    except py_vcon_server.queue.JobNotFound as e:
+    except py_vcon_server.queue.JobDoesNotExist as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.NotFoundResponse("job: {} not found".format(job_id)))
 
@@ -625,15 +614,12 @@ def init(restapi):
 
     try:
       logger.debug("removing job: {} from in progress")
-      if(not isinstance(job_id, int)):
-        logger.info("Error: unsupport job_id type: {}".format(job_id))
-        return None
 
-      await py_vcon_server.queue.JOB_QUEUE.requeue_in_progress_job(job_id)
+      await py_vcon_server.queue.JOB_QUEUE.remove_in_progress_job(job_id)
 
-    except py_vcon_server.queue.JobNotFound as e:
+    except py_vcon_server.queue.JobDoesNotExist as e:
       py_vcon_server.restful_api.log_exception(e)
-      return(NotFoundResponse("job: {} not found".format(job_id)))
+      return(py_vcon_server.restful_api.NotFoundResponse("job: {} not found".format(job_id)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
