@@ -238,7 +238,7 @@ class JobQueue():
     redis_con = self._redis_mgr.get_client()
     return(int(await redis_con.get(JOB_ID_KEY)))
 
-  async def create_new_queue(self, name: str) -> None:
+  async def create_new_queue(self, name: str) -> int:
     """ Create a new job queue with the given name """
 
     assert(isinstance(name, str))
@@ -249,7 +249,7 @@ class JobQueue():
       raise Exception("create_new_queue({}): queue already exists".format(name))
 
     return(queue_count)
-    
+
   async def delete_queue(self, name: str) -> typing.List[dict]:
     """
     Pull all of the jobs off of the named, queue and
@@ -366,10 +366,10 @@ class JobQueue():
     job_json = await self._do_lua_remove_in_progress_job(keys = keys, args = args)
 
     if(job_json == -1):
-      raise JobDoesNotExist("requeue_in_progress_job({}): job does not exist".format(job_id))
+      raise JobDoesNotExist("remove_in_progress_job({}): job does not exist".format(job_id))
 
     if(isinstance(job_json, int) and job_json != 0):
-      raise Exception("requeue_in_progress_job({}): unknown error: {}".format(job_id, job_json))
+      raise Exception("remove_in_progress_job({}): unknown error: {}".format(job_id, job_json))
 
     job_dict = json.loads(job_json)
     # convert the start time string to a float
