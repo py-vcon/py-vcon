@@ -48,6 +48,13 @@ async def test_get_server_info():
     for setting_var in py_vcon_server.settings.STATE_SETTINGS:
       assert(this_server_state["settings"][setting_var] == getattr(py_vcon_server.settings, setting_var, None))
 
+    # Try to delete no-existing server state
+    get_response = client.delete(
+      "/servers/foo",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 500)
+
 
 @pytest.mark.asyncio
 async def test_server_queue_config():
@@ -60,6 +67,13 @@ async def test_server_queue_config():
     assert(delete_response.status_code == 200 or
       delete_response.status_code == 404)
 
+    # Delete one more time to test not found case
+    delete_response = client.delete(
+      "/server/queue/{}".format(TEST_Q1),
+      headers={"accept": "application/json"},
+      )
+    assert(delete_response.status_code == 404)
+
     # Add the test queue
     props = {"weight": 5}
     post_response = client.post(
@@ -69,7 +83,6 @@ async def test_server_queue_config():
       )
     assert(post_response.status_code == 204)
     assert(post_response.text == "") 
-
 
     # get the list of queues for this server
     get_response = client.get(
@@ -149,6 +162,13 @@ async def test_job_queue():
       )
     assert(post_response.status_code == 204)
     assert(post_response.text == "")
+
+    # Try adding the queue again
+    post_response = client.post(
+      "/queue/{}".format(TEST_Q1),
+      headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 500)
 
     # get list of queue names
     get_response = client.get(
