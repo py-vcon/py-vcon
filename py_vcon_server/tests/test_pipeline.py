@@ -313,6 +313,16 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(not pipe2_name in pipe_list)
     assert(not bad_pipe_name in pipe_list)
 
+    # attemt to add a invalid pipeline
+    set_response = client.put(
+        "/pipeline/{}".format(
+          bad_pipe_name
+        ),
+        json = {"foo": "bar"}, 
+        params = { "validate_processor_options": True}
+      )
+    assert(set_response.status_code == 422)
+
     set_response = client.put(
         "/pipeline/{}".format(
           pipe_name
