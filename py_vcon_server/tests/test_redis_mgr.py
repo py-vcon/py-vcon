@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import os 
 import sys
 import uuid
@@ -14,6 +14,8 @@ print("CWD: {}".format(os.getcwd()))
 print(sys.path, file=sys.stderr)
 import py_vcon_server.db.redis.redis_mgr
 from py_vcon_server.settings import VCON_STORAGE_URL
+
+py_vcon_server.db.redis.redis_mgr.VERBOSE = True
 
 r_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(VCON_STORAGE_URL)
 
@@ -40,4 +42,5 @@ async def test_get_set():
     result = await r.json().get(key)
     assert(result==None)
 
+    py_vcon_server.db.redis.redis_mgr.VERBOSE = False
 
