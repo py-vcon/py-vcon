@@ -7,16 +7,28 @@ import pytest_asyncio
 import py_vcon_server.queue
 from py_vcon_server.settings import QUEUE_DB_URL
 
+CREATED_JOBS = []
+
 @pytest_asyncio.fixture()
 async def job_queue():
     # Before test
     print("initializing job queue")
+    global CREATED_JOBS
+    CREATED_JOBS = []
     jq = py_vcon_server.queue.JobQueue(QUEUE_DB_URL)
     print("initialized job queue")
     yield jq
 
     # after test
     print("shutting down job queue")
+    # Clean up junk we left in the in_progress queue
+    for job_id in CREATED_JOBS:
+      try:
+        print("Removing job id: {}".format(job_id))
+        await jq.remove_in_progress_job(job_id)
+      except py_vcon_server.queue.JobDoesNotExist:
+        # Its ok if it was already removed
+        pass
     await jq.shutdown()
     print("shutdown job queue")
 
@@ -116,6 +128,7 @@ async def test_queue_lifecycle(job_queue):
   assert(jobs[1]["vcon_uuid"] == uuids2)
 
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  CREATED_JOBS.append(in_progress_job["id"])
   first_in_progress_job = in_progress_job
   assert(isinstance(in_progress_job, dict))
   assert(in_progress_job["queue"] == q1)
@@ -207,6 +220,7 @@ async def test_queue_lifecycle(job_queue):
     raise e
 
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  CREATED_JOBS.append(in_progress_job["id"])
   second_in_progress_job = in_progress_job
   # Now:
   # q1 had uuids2 job
@@ -251,6 +265,7 @@ async def test_queue_lifecycle(job_queue):
   assert(num_jobs == 1)
   # make the job in progress
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  CREATED_JOBS.append(in_progress_job["id"])
   third_in_progress_job = in_progress_job 
   jobs_before = await job_queue.get_queue_jobs(q1)
   assert(len(jobs_before) == 0)
@@ -295,6 +310,7 @@ async def test_in_progress_api(job_queue):
 
     # Move the job from the queue to in_progress
     in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+    CREATED_JOBS.append(in_progress_job["id"])
 
     # Get list of in_progress_jobs
     get_response = client.get(
@@ -363,6 +379,7 @@ async def test_in_progress_api(job_queue):
 
     # Move the job from the queue to in_progress
     in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+    CREATED_JOBS.append(in_progress_job["id"])
 
     # Get list of in_progress_jobs
     get_response = client.get(
@@ -420,6 +437,7 @@ async def test_in_progress_api(job_queue):
 
     # Move the job from the queue to in_progress
     in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+    CREATED_JOBS.append(in_progress_job["id"])
 
     # Delete the queue
     get_response = client.delete(
