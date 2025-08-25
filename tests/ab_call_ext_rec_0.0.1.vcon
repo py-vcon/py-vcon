@@ -26,7 +26,31 @@
       "alg": "SHA-512"
     }
   ],
-  "analysis": [],
-  "attachments": [],
+  "analysis": [
+    {
+      "type": "transcript",
+      "transcript": "{}",
+      "vendor_schema": "bobject",
+      "vendor_product": "bob",
+      "mimetype": "application/foo",
+      "signature": "Re9R7UWKaD7yN9kxoYLbFFNSKU8XfH18NFbTc3AgT4_aBubMtvGUEtRmP6XUxSS3Nl4LU-1mOCtezoTHQ67cVQ",
+      "alg": "SHA-512"
+    },
+    {
+      "type": "transcript",
+      "transcript": "{}",
+      "vendor": "Whisper",
+      "mimetype": "application/foo",
+      "signature": "Re9R7UWKaD7yN9kxoYLbFFNSKU8XfH18NFbTc3AgT4_aBubMtvGUEtRmP6XUxSS3Nl4LU-1mOCtezoTHQ67cVQ",
+      "alg": "SHA-512"
+    }
+  ],
+  "attachments": [
+    {
+      "mimetype": "application/bar",
+      "signature": "Re9R7UWKaD7yN9kxoYLbFFNSKU8XfH18NFbTc3AgT4_aBubMtvGUEtRmP6XUxSS3Nl4LU-1mOCtezoTHQ67cVQ",
+      "alg": "SHA-512"
+    }
+  ],
   "uuid": "0183878b-dacf-8e27-973a-91e26eb8001b"
 }
