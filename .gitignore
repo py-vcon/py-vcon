@@ -2,7 +2,6 @@
 **/*.swp
 **/*.swo
 .coverage
-.coveragerc
 coverage.xml
 dist
 src
@@ -12,11 +11,6 @@ vcon.egg-info
 python_vcon.egg-info
 **/.mypy_cache
 **/__pycache__
-server/static/*.wav
-server/static/*.mp3
-server/static/*.ogg
-.DS_Store
-server/.DS_Store
 **/dump.rdb
 **/*.ipynb
 

@@ -1,0 +1,9 @@
+[run]
+# HTML is more readable, xml needed for badge output option:
+#    pytest --cov=vcon --cov-report xml --cov-report html -v -rP tests
+# For badge:
+#    genbadge coverage -i coverage.xml
+omit = 
+  # Not testable in unit test, only used in package build
+  vcon/filter_plugins_addons/__init__.py
+
