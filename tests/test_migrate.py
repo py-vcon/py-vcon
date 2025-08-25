@@ -36,3 +36,14 @@ def test_migrate_0_0_2():
   assert("alg" not in migrated_vcon.dialog[0])
   assert(migrated_vcon.dialog[0]["content_hash"] == "sha512-Re9R7UWKaD7yN9kxoYLbFFNSKU8XfH18NFbTc3AgT4_aBubMtvGUEtRmP6XUxSS3Nl4LU-1mOCtezoTHQ67cVQ")
 
+  assert("mimetype" not in migrated_vcon.analysis[0])
+  assert(migrated_vcon.analysis[0]["mediatype"] == "application/foo")
+  assert(migrated_vcon.analysis[0]["product"] == "bob")
+  assert(migrated_vcon.analysis[0]["schema"] == "bobject")
+  assert(migrated_vcon.analysis[0]["encoding"] == "none")
+
+  assert(migrated_vcon.analysis[1]["mediatype"] == "application/foo")
+  assert(migrated_vcon.analysis[1]["product"] == "whisper")
+  assert(migrated_vcon.analysis[1]["vendor"] == "openai")
+  assert(migrated_vcon.analysis[1]["encoding"] == "none")
+
