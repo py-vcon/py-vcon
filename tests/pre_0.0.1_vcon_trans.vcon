@@ -27,9 +27,11 @@
     {
       "type": "transcript",
       "dialog": 0,
-      "transcript": { "a": "b", "c": 3 },
+      "transcript": {
+        "a": "b",
+        "c": 3
+      },
       "vendor": "DeepGram"
     }
-  ],
-  "attachments": []
+  ]
 }
