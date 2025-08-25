@@ -790,6 +790,47 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
           removed_job
         ))
 
+    job_id = results["id"]
+    queue_job = results["job"]
+    queue_name = results["queue"]
+    job_type = queue_job.get("job_type", None)
+    pipeline = results.get("pipeline", None)
+    if(pipeline):
+      success_queue = pipeline["pipeline_options"].get("success_queue", None)
+      if(success_queue and success_queue != ""):
+        if(job_type == "vcon_uuid"):
+          logger.debug("queuing job: {} from: {} to success queue: {}".format(
+              job_id,
+              queue_name,
+              success_queue
+            ))
+
+          # add queue_name and job_id to job def for success queue
+          try:
+            await self._job_queue.push_vcon_uuid_queue_job(
+                success_queue,
+                queue_job["vcon_uuid"],
+                queue_name,
+                job_id
+              )
+          except py_vcon_server.queue.QueueDoesNotExist as bad_queue_name:
+            # log but don't fail the pipeline run
+            logger.exception(bad_queue_name)
+            logger.error("pipeline: {} success queue: {} does not exist".format(
+                queue_name,
+                success_queue
+              ))
+        else:
+          # should not get here as the job_type should have been screened at the start
+          logger.error("Unsupported job type: {}".format(job_type))
+      else:
+        logger.info("no success queue for job: {} pipeline: {}".format(job_id, queue_name))
+    else:
+      logger.error("no pipeline definition for: {} job id: {}".format(
+         queue_name,
+         job_id
+        ))
+
 
   async def job_canceled(
       self,
@@ -810,7 +851,6 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     queue_job = results["job"]
     job_type = queue_job.get("job_type", None)
     queue_name = results["queue"]
-    job_type = queue_job["job_type"]
     pipeline = results.get("pipeline", None)
     if(pipeline):
       failure_queue = pipeline["pipeline_options"].get("failure_queue", None)
@@ -823,17 +863,25 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
               failure_queue
             ))
           # add queue_name and job_id to job def in failure queue
-          await self._job_queue.push_vcon_uuid_queue_job(
+          try:
+            await self._job_queue.push_vcon_uuid_queue_job(
               failure_queue,
               queue_job["vcon_uuid"],
               queue_name,
               job_id
             )
+          except py_vcon_server.queue.QueueDoesNotExist as bad_queue_name:
+            # log but don't fail the pipeline run
+            logger.exception(bad_queue_name)
+            logger.error("pipeline: {} failure queue: {} does not exist".format(
+                queue_name,
+                failure_queue
+              ))
         else:
           # should not get here as the job_type should have been screened at the start
           logger.error("Unsupported job type: {}".format(job_type))
       else:
-        logger.info("no error queue for job: {} pipeline: {}".format(job_id, queue_name))
+        logger.info("no failure queue for job: {} pipeline: {}".format(job_id, queue_name))
 
     else:
       logger.error("no pipeline definition for: {} job id: {}".format(

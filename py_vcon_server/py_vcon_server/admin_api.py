@@ -352,6 +352,10 @@ def init(restapi):
       logger.debug("deleting server state: {}".format(server_key))
       server_dict = await py_vcon_server.states.SERVER_STATE.delete_server_state(server_key)
 
+    except py_vcon_server.states.ServerStateNotFound as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.NotFoundResponse("{}".format(e)))
+
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.InternalErrorResponse(e))
@@ -488,6 +492,10 @@ def init(restapi):
       logger.debug("Creating new queue: {}".format(name))
       # TODO should error if queue exists
       await py_vcon_server.queue.JOB_QUEUE.create_new_queue(name)
+
+    except py_vcon_server.queue.QueueAlreadyExists as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.NotFoundResponse("queue: {} already exists".format(name)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)

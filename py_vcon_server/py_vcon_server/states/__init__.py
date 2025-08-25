@@ -179,10 +179,9 @@ class ServerState:
   async def delete_server_state(self, server_key: str) -> None:
     redis_con = self._redis_mgr.get_client()
     # Remove server from hash
-    states_deleted = await redis_con.hdel(self._hash_key, server_key)
-    if(states_deleted != 1):
-      raise ServerStateNotFound("no state found for server key: {}".format(server_key))
-
+    delete_count = await redis_con.hdel(self._hash_key, server_key)
+    if(delete_count != 1):
+      raise(ServerStateNotFound("server state for: {} not found".format(server_key)))
     logger.debug("Deleted server state for: {}".format(server_key))
 
 

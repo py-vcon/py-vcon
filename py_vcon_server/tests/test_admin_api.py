@@ -55,6 +55,12 @@ async def test_get_server_info():
       )
     assert(get_response.status_code == 500)
 
+    # Should be not found
+    get_response = client.delete(
+      "/servers/fooooo",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
 
 @pytest.mark.asyncio
 async def test_server_queue_config():
