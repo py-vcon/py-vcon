@@ -53,7 +53,7 @@ async def test_get_server_info():
       "/servers/foo",
       headers={"accept": "application/json"},
       )
-    assert(get_response.status_code == 500)
+    assert(get_response.status_code == 404)
 
     # Should be not found
     get_response = client.delete(
@@ -174,7 +174,10 @@ async def test_job_queue():
       "/queue/{}".format(TEST_Q1),
       headers={"accept": "application/json"},
       )
-    assert(post_response.status_code == 500)
+    error_description = post_response.json()
+    #print("add existing error: {}".format(error_description))
+    assert(error_description["detail"] == 'queue: {} already exists'.format(TEST_Q1))
+    assert(post_response.status_code == 422)
 
     # get list of queue names
     get_response = client.get(
