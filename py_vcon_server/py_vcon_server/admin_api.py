@@ -495,7 +495,7 @@ def init(restapi):
 
     except py_vcon_server.queue.QueueAlreadyExists as e:
       py_vcon_server.restful_api.log_exception(e)
-      return(py_vcon_server.restful_api.NotFoundResponse("queue: {} already exists".format(name)))
+      return(py_vcon_server.restful_api.ValidationError("queue: {} already exists".format(name)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
