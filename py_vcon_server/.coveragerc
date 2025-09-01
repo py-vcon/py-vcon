@@ -1,0 +1,13 @@
+[run]
+# HTML for human reading and XML for badge output option:
+#    pytest --cov=py_vcon_server --cov-report html  --cov-report xml  -v -rP tests
+# For badge:
+#    genbadge coverage -i coverage.xml
+omit = 
+  # Not testabe in unit test, gets tested 100% every startup
+  py_vcon_server/__main__.py
+  # Not testable in unit test, only used in package build
+  py_vcon_server/processor_addons/__init__.py
+  # Not used currently:
+  py_vcon_server/job_worker_pool.py
+
