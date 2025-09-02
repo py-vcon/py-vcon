@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Vcon serialization tests """
 
 import pytest
@@ -12,7 +13,7 @@ vcon_json_emptys = """
   "redacted": [
     {}
   ],
-  "appended": [
+  "amended": [
     {}
   ],
   "group": [
