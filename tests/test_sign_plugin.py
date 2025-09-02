@@ -88,8 +88,8 @@ async def test_sign_2party(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(len(signed_dict["signatures"][0]["header"]["x5c"]) == 3)
 
   try:
-    await deserialized_signed_vcon.create_appended({})
-    raise Exception("shold ot get here.  vCon is in signed state")
+    await deserialized_signed_vcon.create_amended({})
+    raise Exception("should ot get here.  vCon is in signed state")
 
   except  vcon.InvalidVconState as invalid_state_error:
     # expected
@@ -110,9 +110,9 @@ async def test_sign_2party(two_party_tel_vcon : vcon.Vcon) -> None:
     # expected
     pass
 
-  appendable_vcon = await deserialized_signed_vcon.create_appended({})
-  # print("appended: {}".format(appendable_vcon.appended))
-  assert(appendable_vcon.uuid != deserialized_signed_vcon.uuid)
-  assert("uuid" in appendable_vcon.appended)
-  assert(appendable_vcon.appended["uuid"] == deserialized_signed_vcon.uuid)
+  amendable_vcon = await deserialized_signed_vcon.create_amended({})
+  # print("amended: {}".format(amendable_vcon.amended))
+  assert(amendable_vcon.uuid != deserialized_signed_vcon.uuid)
+  assert("uuid" in amendable_vcon.amended)
+  assert(amendable_vcon.amended["uuid"] == deserialized_signed_vcon.uuid)
 
