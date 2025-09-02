@@ -307,7 +307,7 @@ SIGN_PIPE_DEF4_DICT = {
           }
       },
       {
-        "processor_name": "create_appended",
+        "processor_name": "create_amended",
         "processor_options": {}
       },
       {
@@ -492,7 +492,7 @@ async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
     pipeline_out_dict = post_response.json()
     print("pipe out: {}".format(pipeline_out_dict))
     modified_vcon = vcon.Vcon()
-    assert(len(pipeline_out_dict["vcons"]) == 2) # original and appended
+    assert(len(pipeline_out_dict["vcons"]) == 2) # original and amended
     modified_vcon.loadd(pipeline_out_dict["vcons"][0])
     # signed and then serialized, makes it unverified
     assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
@@ -506,7 +506,7 @@ async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
 
     assert(modified_vcon.uuid == UUID)
     assert(pipeline_out_dict["vcons"][1]["uuid"] != UUID)
-    assert(pipeline_out_dict["vcons"][1]["appended"]["uuid"] == UUID)
+    assert(pipeline_out_dict["vcons"][1]["amended"]["uuid"] == UUID)
     print("analysis keys: {}".format(pipeline_out_dict["vcons"][1]["analysis"][0].keys()))
     assert(pipeline_out_dict["vcons"][1]["analysis"][0]["vendor"] == "openai")
 
