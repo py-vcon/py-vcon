@@ -7,63 +7,63 @@ import vcon.filter_plugins
 logger = vcon.build_logger(__name__)
 
 
-class AppendedFilterPluginInitOptions(
+class AmendedFilterPluginInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
-  title = "Create appended vCOn filter_plugin initialization optios"
+  title = "Create amended vCOn filter_plugin initialization optios"
   ):
   """
-  A **AppendedFilterPluginInitOptions** object is provided to the
-  **AppendedFilterPlugin.__init__** method when it is first loaded.  Its
+  A **AmendedFilterPluginInitOptions** object is provided to the
+  **AmendedFilterPlugin.__init__** method when it is first loaded.  Its
   attributes effect how the registered **FilterPlugin** functions.
-  AppendedFilterPluginInitOptions does not add any new fields to
+  AmendedFilterPluginInitOptions does not add any new fields to
   FilterPluginInitOptions.
   """
 
-class AppendedFilterPluginOptions(
+class AmendedFilterPluginOptions(
   vcon.filter_plugins.FilterPluginOptions,
-  title = "Appended filter method options"
+  title = "Amended filter method options"
   ):
   """
-  Options for creating an appended vCon in filter_plugin.
-  AppendedFilterPluginOptions adds no new fields to FilterPluginOptions
+  Options for creating an amended vCon in filter_plugin.
+  AmendedFilterPluginOptions adds no new fields to FilterPluginOptions
   """
 
-class AppendedFilterPlugin(vcon.filter_plugins.FilterPlugin):
+class AmendedFilterPlugin(vcon.filter_plugins.FilterPlugin):
   """
-  **FilterPlugin** for creating an appended version of the input vCon.
+  **FilterPlugin** for creating an amended version of the input vCon.
   The vCon must be either in the unsigned or verified states to be able to 
-  create a appendable copy.
+  create a amendable copy.
   """
-  init_options_type = AppendedFilterPluginInitOptions
+  init_options_type = AmendedFilterPluginInitOptions
 
 
   def __init__(
     self,
-    init_options: AppendedFilterPluginInitOptions
+    init_options: AmendedFilterPluginInitOptions
     ):
     """
     Parameters:
-      init_options (AppendedFilterPluginInitOptions) - the initialization options for the create appended vCon in plugin
+      init_options (AmendedFilterPluginInitOptions) - the initialization options for the create amended vCon in plugin
     """
     super().__init__(
       init_options,
-      AppendedFilterPluginOptions
+      AmendedFilterPluginOptions
       )
 
 
   async def filter(
     self,
     in_vcon: vcon.Vcon,
-    options: AppendedFilterPluginOptions
+    options: AmendedFilterPluginOptions
     ) -> vcon.Vcon:
     """
-    Create appendable copy of input vCon
+    Create amendable copy of input vCon
 
     Parameters:
-      options (AppendedFilterPluginOptions)
+      options (AmendedFilterPluginOptions)
 
     Returns:
-      the appended Vcon object
+      the amended Vcon object
     """
 
     # Serialize unsigned, verified data, don't deep copy as
@@ -73,11 +73,11 @@ class AppendedFilterPlugin(vcon.filter_plugins.FilterPlugin):
     out_vcon = vcon.Vcon()
     out_vcon.loadd(vcon_dict)
 
-    # The appendable vcon needs its own UUID
+    # The amendable vcon needs its own UUID
     out_vcon.set_uuid("py-test.org", True)
 
-    # Set appended properties for prior version of vCon
-    out_vcon.set_appended(in_vcon.uuid)
+    # Set amended properties for prior version of vCon
+    out_vcon.set_amended(in_vcon.uuid)
 
     return(out_vcon)
 
@@ -87,10 +87,10 @@ class AppendedFilterPlugin(vcon.filter_plugins.FilterPlugin):
       filter_vcon: vcon.Vcon
     ) -> None:
     """
-    Check to see that the vCon is in a valid state to create an appendable copy
+    Check to see that the vCon is in a valid state to create an amendable copy
     """
 
     if(filter_vcon._state not in [vcon.VconStates.UNSIGNED, vcon.VconStates.VERIFIED]):
-      raise vcon.InvalidVconState("Cannot create/copy vCon to appended vCon unless current state is UNSIGNED or VERIFIED."
+      raise vcon.InvalidVconState("Cannot create/copy vCon to amended vCon unless current state is UNSIGNED or VERIFIED."
         "  Current state: {}".format(filter_vcon._state))
 
