@@ -1,21 +1,34 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import asyncio
 import pytest
 import time
+import fastapi.testclient
 import pytest_asyncio
 import py_vcon_server.queue
 from py_vcon_server.settings import QUEUE_DB_URL
+
+CREATED_JOBS = []
 
 @pytest_asyncio.fixture()
 async def job_queue():
     # Before test
     print("initializing job queue")
+    global CREATED_JOBS
+    CREATED_JOBS = []
     jq = py_vcon_server.queue.JobQueue(QUEUE_DB_URL)
     print("initialized job queue")
     yield jq
 
     # after test
     print("shutting down job queue")
+    # Clean up junk we left in the in_progress queue
+    for job_id in CREATED_JOBS:
+      try:
+        print("Removing job id: {}".format(job_id))
+        await jq.remove_in_progress_job(job_id)
+      except py_vcon_server.queue.JobDoesNotExist:
+        # Its ok if it was already removed
+        pass
     await jq.shutdown()
     print("shutdown job queue")
 
@@ -115,6 +128,7 @@ async def test_queue_lifecycle(job_queue):
   assert(jobs[1]["vcon_uuid"] == uuids2)
 
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  CREATED_JOBS.append(in_progress_job["id"])
   first_in_progress_job = in_progress_job
   assert(isinstance(in_progress_job, dict))
   assert(in_progress_job["queue"] == q1)
@@ -206,6 +220,7 @@ async def test_queue_lifecycle(job_queue):
     raise e
 
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  CREATED_JOBS.append(in_progress_job["id"])
   second_in_progress_job = in_progress_job
   # Now:
   # q1 had uuids2 job
@@ -250,6 +265,7 @@ async def test_queue_lifecycle(job_queue):
   assert(num_jobs == 1)
   # make the job in progress
   in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+  CREATED_JOBS.append(in_progress_job["id"])
   third_in_progress_job = in_progress_job 
   jobs_before = await job_queue.get_queue_jobs(q1)
   assert(len(jobs_before) == 0)
@@ -265,4 +281,207 @@ async def test_queue_lifecycle(job_queue):
 
   # TODO:
   # add info logging in JobQueue??
+
+@pytest.mark.asyncio
+async def test_in_progress_api(job_queue):
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    q1 = "test_queue_1"
+
+    try:
+      # This is to clean up if queue reminents exist from prior test run
+      await job_queue.delete_queue(q1)
+    except py_vcon_server.queue.QueueDoesNotExist as e:
+      # ignore if delete failed due to queue not existing
+      pass
+    except Exception as e:
+      raise e
+
+    # Create new empty queue
+    num_queues = await job_queue.create_new_queue(q1)
+    assert(num_queues >= 1)
+
+    # Push a job into the queue
+    uuids = [ "fake_uuid" ]
+    num_jobs = await job_queue.push_vcon_uuid_queue_job(q1, uuids)
+    assert(num_jobs == 1)
+
+    server_key = "pytest_run:-1:-1:{}".format(time.time())
+
+    # Move the job from the queue to in_progress
+    in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+    CREATED_JOBS.append(in_progress_job["id"])
+
+    # Get list of in_progress_jobs
+    get_response = client.get(
+      "/in_progress",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    in_progress_dict = get_response.json()
+    assert(in_progress_job["id"] in list(in_progress_dict.keys()))
+    assert(in_progress_dict[in_progress_job["id"]]["job"]["vcon_uuid"] == uuids)
+
+    # check that the queue is now empty
+    get_response = client.get(
+      "/queue/{}".format(q1),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    queue_list = get_response.json()
+    assert(len(queue_list) == 0)
+
+    # Delete the in_progress job
+    get_response = client.delete(
+      "/in_progress/{}".format(in_progress_job["id"]),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 204)
+
+    # should fail as its already deleted
+    get_response = client.delete(
+      "/in_progress/{}".format(in_progress_job["id"]),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
+
+
+    # check that the queue is now empty
+    get_response = client.get(
+      "/queue/{}".format(q1),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    queue_list = get_response.json()
+    assert(len(queue_list) == 0)
+
+    # Get list of in_progress_jobs
+    get_response = client.get(
+      "/in_progress",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    in_progress_dict = get_response.json()
+    # Job should no longer be in dict
+    assert(in_progress_job["id"] not in list(in_progress_dict.keys()))
+
+    # invalid job id type, should be int
+    get_response = client.delete(
+      "/in_progress/foo",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 422)
+
+    # Push a new job into the queue
+    uuids = [ "fake_uuid" ]
+    num_jobs = await job_queue.push_vcon_uuid_queue_job(q1, uuids)
+    assert(num_jobs == 1)
+
+    # Move the job from the queue to in_progress
+    in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+    CREATED_JOBS.append(in_progress_job["id"])
+
+    # Get list of in_progress_jobs
+    get_response = client.get(
+      "/in_progress",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    in_progress_dict = get_response.json()
+    assert(in_progress_job["id"] in list(in_progress_dict.keys()))
+    assert(in_progress_dict[in_progress_job["id"]]["job"]["vcon_uuid"] == uuids)
+
+    # check that the queue is now empty
+    get_response = client.get(
+      "/queue/{}".format(q1),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    queue_list = get_response.json()
+    assert(len(queue_list) == 0)
+
+    # move the job from in_progress back into the queue
+    get_response = client.put(
+      "/in_progress/{}".format(in_progress_job["id"]),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 204)
+
+    # Should fail a second time as the job is no longer in_progress
+    get_response = client.put(
+      "/in_progress/{}".format(in_progress_job["id"]),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
+
+
+    # check that the job is back in the queue now
+    get_response = client.get(
+      "/queue/{}".format(q1),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    queue_list = get_response.json()
+    assert(len(queue_list) == 1)
+    assert(queue_list[0]["vcon_uuid"] == uuids)
+
+    # Get list of in_progress_jobs
+    get_response = client.get(
+      "/in_progress",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    in_progress_dict = get_response.json()
+    # Job should not be in dict
+    assert(in_progress_job["id"] not in list(in_progress_dict.keys()))
+
+    # Move the job from the queue to in_progress
+    in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+    CREATED_JOBS.append(in_progress_job["id"])
+
+    # Delete the queue
+    get_response = client.delete(
+      "/queue/{}".format(q1),
+      headers={"accept": "application/json"},
+      )
+    # Should have been empty
+    assert(get_response.status_code == 200)
+    queue_list = get_response.json()
+    assert(len(queue_list) == 0)
+
+    # Get list of in_progress_jobs
+    get_response = client.get(
+      "/in_progress",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 200)
+    in_progress_dict = get_response.json()
+    # Job should be in dict
+    assert(in_progress_job["id"] in list(in_progress_dict.keys()))
+
+    # Try to move the job from non0existing queue to in_progress
+    try:
+      in_progress_job = await job_queue.pop_queued_job(q1, server_key)
+      raise Exception("Should not get here, queue does not exist")
+    except py_vcon_server.queue.QueueDoesNotExist:
+      # expected
+      pass
+
+    # try to move the job from in_progress back into the not existing queue
+    get_response = client.put(
+      "/in_progress/{}".format(in_progress_job["id"]),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
+    not_found_details = get_response.json()
+    print("queue not found details: {}".format(not_found_details))
+
+    # try to move non-existing job from in_progress
+    get_response = client.put(
+      "/in_progress/{}".format(0),
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
+    not_found_details = get_response.json()
+    print("queue not found details: {}".format(not_found_details))
 

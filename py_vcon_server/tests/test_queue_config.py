@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import os
 import asyncio
 import pytest
@@ -87,6 +87,9 @@ async def test_queue_config():
     delete_response = client.delete("/server/queue/{}".format("DDD"))
     assert(delete_response.status_code == 204)
     assert(delete_response.text == "")
+    # Already deleted should be not found
+    delete_response = client.delete("/server/queue/{}".format("DDD"))
+    assert(delete_response.status_code == 404)
 
     assert(len(py_vcon_server.settings.WORK_QUEUES.items()) == 6)
     assert(py_vcon_server.settings.WORK_QUEUES["A"]["weight"] == 4)

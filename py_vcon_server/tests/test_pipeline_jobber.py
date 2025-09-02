@@ -56,7 +56,8 @@ TIMEOUT = 32.0
 PIPELINE_DEFINITION = {
   "pipeline_options": {
       "timeout": TIMEOUT,
-      "save_vcons": True
+      "save_vcons": True,
+      "success_queue": "test_pipeline_queue__success"
     },
   "processors": [
       {
@@ -84,6 +85,10 @@ async def set_queue_config():
   #do_bg = py_vcon_server.RUN_BACKGROUND_JOBS
   #py_vcon_server.RUN_BACKGROUND_JOBS = False
 
+  # Disable backgroun jobber so that it does not interfer
+  run_background = py_vcon_server.settings.RUN_BACKGROUND_JOBS 
+  py_vcon_server.settings.RUN_BACKGROUND_JOBS = False
+
   #global VCON_STORAGE
   #vs = py_vcon_server.db.VconStorage.instantiate(py_vcon_server.settings.VCON_STORAGE_URL)
   #VCON_STORAGE = vs
@@ -110,6 +115,7 @@ async def set_queue_config():
   # Restore workers config
   py_vcon_server.settings.NUM_WORKERS = num_workers
   #py_vcon_server.RUN_BACKGROUND_JOBS = do_bg
+  py_vcon_server.settings.RUN_BACKGROUND_JOBS = run_background 
 
   py_vcon_server.settings.WORK_QUEUES = saved_config
   print("reset queue settings")
@@ -201,6 +207,22 @@ async def test_server_queue_iterator():
     #       headers={"accept": "application/json"},
     #     )
     #   assert(delete_response.status_code == 204)
+
+
+@pytest.mark.asyncio
+async def test_in_progress_api():
+  logger.debug("starting test_in_progress_api")
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+
+    set_response = client.put(
+        "/in_progress/{}".format(-1),
+      )
+    assert(set_response.status_code == 404)
+
+    set_response = client.delete(
+        "/in_progress/{}".format(-1),
+      )
+    assert(set_response.status_code == 404)
 
 
 @pytest.mark.asyncio
@@ -363,6 +385,7 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
 
     # run finished job
     await jobber.job_finished(job_result)
+    await jobber.done()
 
     # confirm job not put back in queue
     get_response = client.get(
@@ -376,7 +399,6 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(isinstance(job_list, list))
     assert(len(job_list) == 0)
 
-
     # confirm job not in in_progress list
     get_response = client.get(
         "/in_progress",
@@ -388,8 +410,6 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     in_progress = in_progress_jobs.get(job_id, None)
     assert(in_progress is None)
 
-    await jobber.done()
-
 
 #@pytest.mark.skip(reason="BUG: causes \"Event loop is closed\" when run after test_pipeline_jobber") 
 @pytest.mark.asyncio
@@ -398,7 +418,7 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     # delete the test job queues, to clean up any 
     # residual from prior tests
-    for q in SERVER_QUEUES.keys():
+    for q in list(SERVER_QUEUES.keys()) + ["test_pipeline_queue__success"]:
       delete_response = client.delete(
           "/queue/{}".format(q),
           headers={"accept": "application/json"},
@@ -438,6 +458,13 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
       "/queue/{}".format(
           list(SERVER_QUEUES.keys())[1]
         ),
+      headers={"accept": "application/json"},
+      )
+    assert(post_response.status_code == 204)
+
+    # create empty success queue
+    post_response = client.post( 
+      "/queue/{}".format("test_pipeline_queue__success"),
       headers={"accept": "application/json"},
       )
     assert(post_response.status_code == 204)
@@ -506,4 +533,17 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
     assert(in_progress is None)
 
     await jobber.done()
+
+    # Make sure the job when into the success queue
+    get_response = client.get(
+        "/queue/{}".format("test_pipeline_queue__success"),
+        headers={"accept": "application/json"},
+        )
+    assert(get_response.status_code == 200)
+    job_list = get_response.json()
+    assert(isinstance(job_list, list))
+    assert(len(job_list) == 1)
+    assert(job_list[0]["job_type"] == "vcon_uuid")
+    assert(job_list[0]["vcon_uuid"][0] == UUID)
+
 

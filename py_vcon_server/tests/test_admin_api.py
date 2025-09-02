@@ -14,6 +14,7 @@ TEST_UUID1 = "fake_uuid1"
 TEST_UUID2 = "fake_uuid2"
 TEST_JOB1 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID1 ] }
 TEST_JOB2 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID2 ] }
+TEST_JOB_UNSUPPORTED = { "job_type": "foo", "my_stuff": [ TEST_UUID1 ] }
 TEST_SERVER_KEY = "test_admin_api:-1:-1:1234"
 
 @pytest.mark.asyncio
@@ -48,6 +49,19 @@ async def test_get_server_info():
     for setting_var in py_vcon_server.settings.STATE_SETTINGS:
       assert(this_server_state["settings"][setting_var] == getattr(py_vcon_server.settings, setting_var, None))
 
+    # Try to delete no-existing server state
+    get_response = client.delete(
+      "/servers/foo",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
+
+    # Should be not found
+    get_response = client.delete(
+      "/servers/fooooo",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 404)
 
 @pytest.mark.asyncio
 async def test_server_queue_config():
@@ -60,6 +74,13 @@ async def test_server_queue_config():
     assert(delete_response.status_code == 200 or
       delete_response.status_code == 404)
 
+    # Delete one more time to test not found case
+    delete_response = client.delete(
+      "/server/queue/{}".format(TEST_Q1),
+      headers={"accept": "application/json"},
+      )
+    assert(delete_response.status_code == 404)
+
     # Add the test queue
     props = {"weight": 5}
     post_response = client.post(
@@ -69,7 +90,6 @@ async def test_server_queue_config():
       )
     assert(post_response.status_code == 204)
     assert(post_response.text == "") 
-
 
     # get the list of queues for this server
     get_response = client.get(
@@ -150,6 +170,16 @@ async def test_job_queue():
     assert(post_response.status_code == 204)
     assert(post_response.text == "")
 
+    # Try adding the queue again
+    post_response = client.post(
+      "/queue/{}".format(TEST_Q1),
+      headers={"accept": "application/json"},
+      )
+    error_description = post_response.json()
+    #print("add existing error: {}".format(error_description))
+    assert(error_description["detail"] == 'queue: {} already exists'.format(TEST_Q1))
+    assert(post_response.status_code == 422)
+
     # get list of queue names
     get_response = client.get(
       "/queues",
@@ -160,6 +190,17 @@ async def test_job_queue():
     assert(isinstance(queue_list, list))
     # queue does exist and should be in the list
     assert(TEST_Q1 in queue_list)
+
+    # Try adding an unsupported job type
+    put_response = client.put(
+      "/queue/{}".format(TEST_Q1),
+      headers={"accept": "application/json"},
+      content = json.dumps(TEST_JOB_UNSUPPORTED)
+      )
+    assert(put_response.status_code == 500)
+    put_error = put_response.json()
+    #assert("bar" in "{}".format(put_error))
+    assert("type" in put_error["exception"] or "vcon_uuid" in put_error["exception"])
 
     # Add a job
     put_response = client.put(

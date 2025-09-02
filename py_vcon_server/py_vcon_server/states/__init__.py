@@ -45,6 +45,9 @@ logger = py_vcon_server.logging_utils.init_logger(__name__)
 
 SERVER_STATE = None
 
+class ServerStateNotFound(Exception):
+  """ Raised when referencing a non-existing server state """
+
 class ServerState:
   # key for hash of all servers
   _hash_key = "servers"
@@ -176,8 +179,11 @@ class ServerState:
   async def delete_server_state(self, server_key: str) -> None:
     redis_con = self._redis_mgr.get_client()
     # Remove server from hash
-    await redis_con.hdel(self._hash_key, server_key)
+    delete_count = await redis_con.hdel(self._hash_key, server_key)
+    if(delete_count != 1):
+      raise(ServerStateNotFound("server state for: {} not found".format(server_key)))
     logger.debug("Deleted server state for: {}".format(server_key))
+
 
   def pid(self) -> str:
     """ Return the server prociess id """

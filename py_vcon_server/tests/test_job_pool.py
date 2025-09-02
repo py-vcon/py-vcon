@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import typing
 import os
 import time
@@ -203,6 +203,9 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
 
 
   def verify_finished_jobs(self, count: int):
+    if(not len(self._finished_jobs) == count):
+      for job in self._finished_jobs:
+        print("finished jobs: {}".format(job["id"]))
     assert(len(self._finished_jobs) == count)
     if(count > 0):
       assert(len(self._first_start) == 1)

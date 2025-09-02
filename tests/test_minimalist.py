@@ -35,6 +35,20 @@ def test_party_parameters(empty_vcon : vcon.Vcon):
 
   assert(len(empty_vcon.parties) == 0)
 
+  try:
+    empty_vcon.add_party({"tel": "1234", "foo": "bar"})
+    raise Exception("should not get her, bad party parameter")
+  except AttributeError as e:
+    pass
+
+  assert(len(empty_vcon.parties) == 0)
+
+  empty_vcon.add_party({"tel": "1234", "name": "Alice"})
+  assert(len(empty_vcon.parties) == 1)
+  assert(empty_vcon.parties[0]["tel"] == "1234")
+  assert(empty_vcon.parties[0]["name"] == "Alice")
+
+
 def test_party_tel(empty_vcon : vcon.Vcon):
   """ Test adding first party with a tel url to create simple vCon """
 

@@ -99,8 +99,9 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
       "content-type": recording_data["mediatype"],
       "Authorization": "Token " + self._init_options.deepgram_key
       }
+    # Should make this a parameter
     requests_options = {
-      "timeout": 20
+      "timeout": 200
       }
 
     response = requests.post(
@@ -167,7 +168,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     # TODO add some of these to DeepgramOptions
     transcribe_options = {
       'language': 'en',
-      'model': 'nova-2-meeting',  # should make this an option: nova-2, nova-2-phonecall, nova-2-meeting, nova-2-medical
+      'model': 'nova-3',  # should make this an option: nova-2, nova-2-phonecall, nova-2-meeting, nova-2-medical
       'punctuate': 'true',
       'smart_format': 'true',
       'diarize': 'true'
