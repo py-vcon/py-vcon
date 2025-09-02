@@ -404,7 +404,7 @@ class Vcon():
   UUID = "uuid"
   SUBJECT = "subject"
   REDACTED = "redacted"
-  APPENDED = "appended"
+  AMENDED = "amended"
   GROUP = "group"
   PARTIES = "parties"
   DIALOG = "dialog"
@@ -420,7 +420,7 @@ class Vcon():
   subject = VconString(doc = "vCon subject string attribute")
 
   redacted = VconDict(doc = "redacted Dict for reference or inclusion of less redacted signed or encrypted version of this vCon")
-  appended = VconDict(doc = "appended Dict for reference or includsion of signed or encrypted vCon to which this vCon appends data")
+  amended = VconDict(doc = "amended Dict for reference or includsion of signed or encrypted vCon to which this vCon amends data")
 
   group = VconDictList(doc = "List of Dicts referencing or including other vCons to be aggregated by this vCon")
   parties = VconDictList(doc = "List of Dicts, one for each party to this conversation")
@@ -2429,22 +2429,22 @@ class Vcon():
 
 
   @tag_vcon_references
-  def set_appended(self, uuid: str) -> None:
+  def set_amended(self, uuid: str) -> None:
     """
-    Set/replace the parameters of the Appended Object for reference by UUID
+    Set/replace the parameters of the Amended Object for reference by UUID
 
     Parameters:  
-      **uuid** - the UUID of the vCon that this vCon appends content to
+      **uuid** - the UUID of the vCon that this vCon amends content to
 
     Returns:  None
     """
 
     self._attempting_modify()
 
-    new_appended = {}
-    new_appended["uuid"] = uuid
+    new_amended = {}
+    new_amended["uuid"] = uuid
 
-    self._vcon_dict[Vcon.APPENDED] = new_appended
+    self._vcon_dict[Vcon.AMENDED] = new_amended
 
 
   @tag_vcon_references
@@ -2456,7 +2456,7 @@ class Vcon():
     defined in this vCon which containes the group list.
 
     Parameters:  
-      **uuid** - the UUID of the vCon that this vCon appends content to
+      **uuid** - the UUID of the vCon that is to be part of this group of vCons
 
     Returns:  None
     """
