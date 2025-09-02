@@ -14,6 +14,7 @@ TEST_UUID1 = "fake_uuid1"
 TEST_UUID2 = "fake_uuid2"
 TEST_JOB1 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID1 ] }
 TEST_JOB2 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID2 ] }
+TEST_JOB_UNSUPPORTED = { "job_type": "foo", "my_stuff": [ TEST_UUID1 ] }
 TEST_SERVER_KEY = "test_admin_api:-1:-1:1234"
 
 @pytest.mark.asyncio
@@ -189,6 +190,17 @@ async def test_job_queue():
     assert(isinstance(queue_list, list))
     # queue does exist and should be in the list
     assert(TEST_Q1 in queue_list)
+
+    # Try adding an unsupported job type
+    put_response = client.put(
+      "/queue/{}".format(TEST_Q1),
+      headers={"accept": "application/json"},
+      content = json.dumps(TEST_JOB_UNSUPPORTED)
+      )
+    assert(put_response.status_code == 500)
+    put_error = put_response.json()
+    #assert("bar" in "{}".format(put_error))
+    assert("type" in put_error["exception"] or "vcon_uuid" in put_error["exception"])
 
     # Add a job
     put_response = client.put(
