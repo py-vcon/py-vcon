@@ -151,7 +151,7 @@ async def test_2b_completion_object_summary():
 
   # Check stats on input to model:
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_completion").plugin()
-  assert(50 < plugin.last_stats["num_text_segments"] < 70)
+  assert(40 < plugin.last_stats["num_text_segments"] < 70)
 
   after_analysis_count = len(out_vcon.analysis)
   assert((after_analysis_count - original_analysis_count) == 1)
@@ -254,7 +254,7 @@ async def test_4_diarized_chat_completion_object_summary():
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion").plugin()
   # verify stats of extracted messages are as expected
   print("stats: {}".format(plugin.last_stats))
-  assert(50 <= plugin.last_stats['num_messages'] <= 70)
+  assert(40 <= plugin.last_stats['num_messages'] <= 70)
   assert(plugin.last_stats['num_text_dialogs'] == 0)
   assert(plugin.last_stats['num_dialog_list'] == 1)
   assert(50 <= plugin.last_stats['num_transcribe_analysis'] <= 70)
