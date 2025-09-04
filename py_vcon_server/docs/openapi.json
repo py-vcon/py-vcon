@@ -11,7 +11,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.4.0"
+    "version": "0.4.1"
   },
   "paths": {
     "/server/info": {
@@ -1036,14 +1036,14 @@
         }
       }
     },
-    "/process/{vcon_uuid}/create_appended": {
+    "/process/{vcon_uuid}/create_amended": {
       "post": {
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "vCon create appended **VconProcessor**",
-        "description": "vCon create appended **VconProcessor**\nThis **VconProcessor** will create a new appendable vCon copy from the\ngiven vCon and add it to the VconProcessorIO.  Typically the input vCon\nis signed, but that is not necessary.",
-        "operationId": "run_vcon_processor_process__vcon_uuid__create_appended_post",
+        "summary": "vCon create amended **VconProcessor**",
+        "description": "vCon create amended **VconProcessor**\nThis **VconProcessor** will create a new amendable vCon copy from the\ngiven vCon and add it to the VconProcessorIO.  Typically the input vCon\nis signed, but that is not necessary.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__create_amended_post",
         "parameters": [
           {
             "name": "vcon_uuid",
@@ -1080,7 +1080,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AppendedFilterPluginOptions"
+                "$ref": "#/components/schemas/AmendedFilterPluginOptions"
               }
             }
           }
@@ -2245,14 +2245,14 @@
         }
       }
     },
-    "/processIO/create_appended": {
+    "/processIO/create_amended": {
       "post": {
         "tags": [
           "vCon: Processors"
         ],
-        "summary": "vCon create appended **VconProcessor**",
-        "description": "vCon create appended **VconProcessor**\nThis **VconProcessor** will create a new appendable vCon copy from the\ngiven vCon and add it to the VconProcessorIO.  Typically the input vCon\nis signed, but that is not necessary.",
-        "operationId": "run_vcon_processor_io_processIO_create_appended_post",
+        "summary": "vCon create amended **VconProcessor**",
+        "description": "vCon create amended **VconProcessor**\nThis **VconProcessor** will create a new amendable vCon copy from the\ngiven vCon and add it to the VconProcessorIO.  Typically the input vCon\nis signed, but that is not necessary.",
+        "operationId": "run_vcon_processor_io_processIO_create_amended_post",
         "parameters": [
           {
             "name": "commit_changes",
@@ -2270,7 +2270,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AppendedFilterPluginIO"
+                "$ref": "#/components/schemas/AmendedFilterPluginIO"
               }
             }
           }
@@ -3382,21 +3382,21 @@
   },
   "components": {
     "schemas": {
-      "AppendedFilterPluginIO": {
+      "AmendedFilterPluginIO": {
         "properties": {
           "processor_io": {
             "$ref": "#/components/schemas/VconProcessorOutput-Input",
             "default": "processor IO"
           },
           "processor_options": {
-            "$ref": "#/components/schemas/AppendedFilterPluginOptions",
+            "$ref": "#/components/schemas/AmendedFilterPluginOptions",
             "default": "processor options"
           }
         },
         "type": "object",
-        "title": "AppendedFilterPluginIO"
+        "title": "AmendedFilterPluginIO"
       },
-      "AppendedFilterPluginOptions": {
+      "AmendedFilterPluginOptions": {
         "properties": {
           "label": {
             "type": "string",
@@ -3434,8 +3434,8 @@
         },
         "additionalProperties": true,
         "type": "object",
-        "title": "Appended filter method options",
-        "description": "processor options class for **processor** method of VconProcessor wrapper for AppendedFilterPlugin **FilterPlugin**"
+        "title": "Amended filter method options",
+        "description": "processor options class for **processor** method of VconProcessor wrapper for AmendedFilterPlugin **FilterPlugin**"
       },
       "DecryptFilterPluginIO": {
         "properties": {
@@ -3724,7 +3724,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1752947119.6542149
+              1757027135.939591
             ]
           },
           "server": {
@@ -4515,7 +4515,7 @@
             "type": "string",
             "title": "server version",
             "description": "Python package py_vcon_server version number",
-            "default": "0.4.0"
+            "default": "0.4.1"
           },
           "vcon": {
             "type": "string",
@@ -4528,14 +4528,14 @@
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1752947119.649077
+              1757027135.927884
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              359124
+              41544
             ]
           },
           "settings": {
@@ -4575,7 +4575,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              359124
+              41544
             ]
           },
           "start_time": {
@@ -4583,7 +4583,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1752947119.6508055
+              1757027135.9318745
             ]
           },
           "num_workers": {
@@ -4609,7 +4609,7 @@
             "title": "heartbeat time stamp",
             "description": "epoch seconds time for the last heartbeat on this server",
             "examples": [
-              1752947119.6509147
+              1757027135.9321446
             ]
           }
         },
@@ -5294,10 +5294,10 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1752947119,
-              1752947119.4232686,
+              1757027135,
+              1757027135.5856392,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2025-07-19T17:45:19.423+00:00",
+              "2025-09-04T23:05:35.585+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
