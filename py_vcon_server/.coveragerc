@@ -1,6 +1,6 @@
 [run]
 # HTML for human reading and XML for badge output option:
-#    pytest --cov=py_vcon_server --cov-report html  --cov-report xml  -v -rP tests
+#    pytest --cov=py_vcon_server --cov-report htmll:coverage_py_vcon_server  --cov-report xml  -v -rP tests
 # For badge:
 #    genbadge coverage -i coverage.xml
 omit = 
