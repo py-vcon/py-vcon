@@ -422,6 +422,37 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(set_response.status_code == 204)
     assert(make_inline_audio_vcon.uuid == UUID)
 
+    # non-existing pipeline name
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          "bogus_pipeline",
+          UUID
+        ),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(post_response.status_code == 404)
+
+    # non-existing vCon UUID
+    post_response = client.post(
+      "/pipeline/{}/run/{}".format(
+          pipe2_name,
+          "bogus_UUID"
+        ),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(post_response.status_code == 500)
     # Run the pipeline on a simple/small vCon, should timeout
     post_response = client.post(
       "/pipeline/{}/run/{}".format(
@@ -528,6 +559,22 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(modified_vcon.analysis[1]["type"] == "summary")
     assert(modified_vcon.analysis[1]["vendor"] == "openai")
     assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+
+    # run with invalid pipeline name
+    post_response = client.post(
+      "/pipeline/{}/run".format(
+          "bogus_pipeline"
+        ),
+        json = make_inline_audio_vcon.dumpd(),
+        params = {
+            "save_vcons": False,
+            "return_results": True
+          },
+        headers={"accept": "application/json"},
+      )
+    pipeline_out_dict = post_response.json()
+    print("pipe out: {}".format(pipeline_out_dict))
+    assert(post_response.status_code == 404)
 
     # run with vCon in body, should succeed
     post_response = client.post(
