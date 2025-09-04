@@ -9,7 +9,7 @@
  + [Introduction](#introduction)
  + [Processor Classes](#processors)
    * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
-   * [py_vcon_server.processor.builtin.create_appended.Appended](#py_vcon_serverprocessorbuiltincreate_appendedappended)
+   * [py_vcon_server.processor.builtin.create_amended.Amended](#py_vcon_serverprocessorbuiltincreate_amendedamended)
    * [py_vcon_server.processor.builtin.decrypt.Decrypt](#py_vcon_serverprocessorbuiltindecryptdecrypt)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
    * [py_vcon_server.processor.builtin.encrypt.Encrypt](#py_vcon_serverprocessorbuiltinencryptencrypt)
@@ -25,7 +25,7 @@
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
    * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
-   * [py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginInitOptions](#py_vcon_serverprocessorbuiltincreate_appendedappendedfilterplugininitoptions)
+   * [py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginInitOptions](#py_vcon_serverprocessorbuiltincreate_amendedamendedfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
@@ -41,7 +41,7 @@
 
  + [Processor Options Classes](#processor-options-classes)
    * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
-   * [py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginOptions](#py_vcon_serverprocessorbuiltincreate_appendedappendedfilterpluginoptions)
+   * [py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginOptions](#py_vcon_serverprocessorbuiltincreate_amendedamendedfilterpluginoptions)
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
@@ -138,19 +138,19 @@ Methods:
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
-## py_vcon_server.processor.builtin.create_appended.Appended
+## py_vcon_server.processor.builtin.create_amended.Amended
 
- - **Name:** create_appended
+ - **Name:** create_amended
  - **Version:** 0.0.1
- - **Summary:** vCon create appended **VconProcessor**
+ - **Summary:** vCon create amended **VconProcessor**
 
-vCon create appended **VconProcessor**
-This **VconProcessor** will create a new appendable vCon copy from the
+vCon create amended **VconProcessor**
+This **VconProcessor** will create a new amendable vCon copy from the
 given vCon and add it to the VconProcessorIO.  Typically the input vCon
 is signed, but that is not necessary.
 
- - **Initialization options Object:** [py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginInitOptions](#py_vcon_serverprocessorbuiltincreate_appendedappendedfilterplugininitoptions)
- - **Processing options Object:** [py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginOptions](#py_vcon_serverprocessorbuiltincreate_appendedappendedfilterpluginoptions)
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginInitOptions](#py_vcon_serverprocessorbuiltincreate_amendedamendedfilterplugininitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginOptions](#py_vcon_serverprocessorbuiltincreate_amendedamendedfilterpluginoptions)
 
 Methods:
 
@@ -409,11 +409,11 @@ derived class in the **VconProcessorRegistry**
 ### Fields
 none
 
-## py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginInitOptions
+## py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginInitOptions
 
- - **Summary:** Create appended vCOn filter_plugin initialization optios
+ - **Summary:** Create amended vCOn filter_plugin initialization optios
 
-initialization class for VconProcessor wrapper for AppendedFilterPlugin **FilterPlugin**
+initialization class for VconProcessor wrapper for AmendedFilterPlugin **FilterPlugin**
 
 ### Fields
 none
@@ -631,11 +631,11 @@ example:
 default: {}
 
 
-## py_vcon_server.processor.builtin.create_appended.AppendedFilterPluginOptions
+## py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginOptions
 
- - **Summary:** Appended filter method options
+ - **Summary:** Amended filter method options
 
-processor options class for **processor** method of VconProcessor wrapper for AppendedFilterPlugin **FilterPlugin**
+processor options class for **processor** method of VconProcessor wrapper for AmendedFilterPlugin **FilterPlugin**
 
 ### Fields
 
