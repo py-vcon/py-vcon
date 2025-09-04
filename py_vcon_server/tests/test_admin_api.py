@@ -34,6 +34,16 @@ async def test_get_server_info():
     assert(version_dict["start_time"] <= time.time())
     assert(version_dict["start_time"] > time.time() - 1000)
 
+    # Cause the next redis lookup to fail
+    py_vcon_server.db.redis.redis_mgr.FAIL_NEXT = 1
+    get_response = client.get(
+      "/servers",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 500)
+    assert(py_vcon_server.db.redis.redis_mgr.FAIL_NEXT == 0)
+
+    # Should succeed this time
     get_response = client.get(
       "/servers",
       headers={"accept": "application/json"},
@@ -81,8 +91,9 @@ async def test_server_queue_config():
       )
     assert(delete_response.status_code == 404)
 
-    # Add the test queue
     props = {"weight": 5}
+
+    # Add the test queue
     post_response = client.post(
       "/server/queue/{}".format(TEST_Q1),
       json = props,
@@ -90,6 +101,15 @@ async def test_server_queue_config():
       )
     assert(post_response.status_code == 204)
     assert(post_response.text == "") 
+
+    # Cause the next redis query to fail
+    #py_vcon_server.db.redis.redis_mgr.FAIL_NEXT = 1
+    #get_response = client.get(
+    #  "/server/queues",
+    #  headers={"accept": "application/json"},
+    #  )
+    #assert(get_response.status_code == 500)
+    #assert(py_vcon_server.db.redis.redis_mgr.FAIL_NEXT == 0)
 
     # get the list of queues for this server
     get_response = client.get(
@@ -125,6 +145,15 @@ TEST_Q1 = "test_admin_pau_q1"
 @pytest.mark.asyncio
 async def test_job_queue():
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    # Cause the next redis query to fail
+    #py_vcon_server.db.redis.redis_mgr.FAIL_NEXT = 1
+    #delete_response = client.delete(
+    #  "/queue/{}".format(TEST_Q1),
+    #  headers={"accept": "application/json"},
+    #  )
+    #assert(delete_response.status_code == 500)
+    #assert(py_vcon_server.db.redis.redis_mgr.FAIL_NEXT == 0)
+
     delete_response = client.delete(
       "/queue/{}".format(TEST_Q1),
       headers={"accept": "application/json"},
@@ -140,6 +169,15 @@ async def test_job_queue():
     else:
       assert(delete_response.status_code == 200)
       assert(isinstance(delete_response.json(), list))
+
+    # Cause next redis query to fail
+    #py_vcon_server.db.redis.redis_mgr.FAIL_NEXT = 1
+    #get_response = client.get(
+    #  "/queue/{}".format(TEST_Q1),
+    #  headers={"accept": "application/json"},
+    #  )
+    #assert(get_response.status_code == 500)
+    #assert(py_vcon_server.db.redis.redis_mgr.FAIL_NEXT == 0)
 
     # get jobs in non existing queue
     get_response = client.get(
