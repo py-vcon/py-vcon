@@ -50,6 +50,13 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   assert(io_object._vcon_locks[0] is None)
   assert(not io_object._vcon_update[0])
 
+  try:
+    # index too big
+    io_object.is_vcon_modified(10)
+    raise Exception("Should not get here index 10 does not exist")
+  except Exception:
+    pass
+
   vcon2_object = copy.deepcopy(vcon_object)
   assert(vcon2_object.uuid == UUID)
   vcon2_object.parties[0]["tel"] = "abcd"
@@ -92,6 +99,14 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
     else:
       raise e
 
+  new_vcon = vcon.Vcon()
+  new_vcon.set_uuid("test.py-vcon.org")
+  try:
+    await io_object.update_vcon(new_vcon)
+    raise Exception("new UUID should not be allowed as update")
+  except Exception:
+    pass
+
   vcon4_object = vcon.Vcon()
   try:
     await io_object.add_vcon(vcon4_object, "lockkey")
@@ -122,6 +137,12 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
   assert(rw_io_object._vcon_update[0])
   assert((await rw_io_object.get_vcon()).parties[0]["tel"] == "abcd")
   assert((await rw_io_object.get_vcon()).parties[1]["tel"] == "efgh")
+  try:
+    # Index too big
+    await rw_io_object.get_vcon(index=10)
+    raise Exception("Should not get here index 10 too big")
+  except py_vcon_server.processor.VconNotFound:
+    pass
 
   # Add with no lock and read_write
   await rw_io_object.add_vcon(vcon4_object, None, False)
@@ -142,6 +163,27 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
 
   except KeyError as foo_not_found:
     # expected
+    pass
+
+  try:
+    # format_options references undefined key foo
+    rw_io_object.format_parameters_to_options({"format_options": {"foo2": "ddd {foo} ggg"}})
+    raise Exception("Should have rasied exception for undefined parameter foo")
+  except py_vcon_server.processor.ParameterNotFound:
+    pass
+
+  try:
+    # passing in wrong type
+    rw_io_object.format_parameters_to_options([])
+    raise Exception("Should have rasied exception for invalid type (list)")
+  except Exception:
+    pass
+
+  try:
+    # passing in empty UUID array
+    rw_io_object.add_vcon_uuid_queue_job("foo", [], None)
+    raise Exception("Should have rasied exception for empty list")
+  except Exception:
     pass
 
   rw_io_object.set_parameter("foo", "bar")
