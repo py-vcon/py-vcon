@@ -9,6 +9,7 @@
  + [Introduction](#introduction)
  + [Filter Plugin Classes](#filter-plugin-classes)
    - [vcon.filter_plugins.FilterPlugin](#vconfilter_pluginsfilterplugin)
+   - [vcon.filter_plugins.impl.create_amended.AmendedFilterPlugin](#vconfilter_pluginsimplcreate_amendedamendedfilterplugin)
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPlugin](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugin)
    - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPlugin](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugin)
@@ -21,6 +22,7 @@
    - [vcon.filter_plugins.impl.whisper.Whisper](#vconfilter_pluginsimplwhisperwhisper)
  + [Filter Plugin Initialization Options Classes](#filter-plugin-initialization-options-classes)
    - [vcon.filter_plugins.FilterPluginInitOptions](#vconfilter_pluginsfilterplugininitoptions)
+   - [vcon.filter_plugins.impl.create_amended.AmendedFilterPluginInitOptions](#vconfilter_pluginsimplcreate_amendedamendedfilterplugininitoptions)
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginInitOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugininitoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugininitoptions)
@@ -33,6 +35,7 @@
    - [vcon.filter_plugins.impl.whisper.WhisperInitOptions](#vconfilter_pluginsimplwhisperwhisperinitoptions)
  + [Filter Plugin Options Classes](#filter-plugin-options-classes)
    - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
+   - [vcon.filter_plugins.impl.create_amended.AmendedFilterPluginOptions](#vconfilter_pluginsimplcreate_amendedamendedfilterpluginoptions)
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterpluginoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
@@ -128,6 +131,49 @@ Returns:
 **options** - [vcon.filter_plugins.FilterPluginOptions](#vconfilter_pluginsfilterpluginoptions)
 
 ### FilterPlugin.\_\_del__
+\_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
+## vcon.filter_plugins.impl.create_amended.AmendedFilterPlugin
+
+  **FilterPlugin** for creating an amended version of the input vCon.
+  The vCon must be either in the unsigned or verified states to be able to 
+  create a amendable copy.
+  
+
+**Methods**:
+
+### AmendedFilterPlugin.\_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.create_amended.AmendedFilterPluginInitOptions)
+
+Parameters:
+  init_options (AmendedFilterPluginInitOptions) - the initialization options for the create amended vCon in plugin
+
+
+**init_options** - [vcon.filter_plugins.impl.create_amended.AmendedFilterPluginInitOptions](#vconfilter_pluginsimplcreate_amendedamendedfilterplugininitoptions)
+
+### AmendedFilterPlugin.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.create_amended.AmendedFilterPluginOptions) -> vcon.Vcon
+
+
+Create amendable copy of input vCon
+
+Parameters:
+  options (AmendedFilterPluginOptions)
+
+Returns:
+  the amended Vcon object
+
+
+**options** - [vcon.filter_plugins.impl.create_amended.AmendedFilterPluginOptions](#vconfilter_pluginsimplcreate_amendedamendedfilterpluginoptions)
+
+### AmendedFilterPlugin.\_\_del__
 \_\_del__(self)
 
 
@@ -594,6 +640,18 @@ base class for **FilterPlugin** initialization options
 #### Fields:
 None
 
+## vcon.filter_plugins.impl.create_amended.AmendedFilterPluginInitOptions
+ - Create amended vCOn filter_plugin initialization optios
+
+A **AmendedFilterPluginInitOptions** object is provided to the
+**AmendedFilterPlugin.__init__** method when it is first loaded.  Its
+attributes effect how the registered **FilterPlugin** functions.
+AmendedFilterPluginInitOptions does not add any new fields to
+FilterPluginInitOptions.
+
+#### Fields:
+None
+
 ## vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginInitOptions
  - JWE decripting of vCon **FilterPlugin** intialization object
 
@@ -804,6 +862,15 @@ default: "base"
  - FilterPluginOptions
 
 base class for **FilterPlugin.filter** method options 
+
+#### Fields:
+None
+
+## vcon.filter_plugins.impl.create_amended.AmendedFilterPluginOptions
+ - Amended filter method options
+
+Options for creating an amended vCon in filter_plugin.
+AmendedFilterPluginOptions adds no new fields to FilterPluginOptions
 
 #### Fields:
 None
