@@ -17,6 +17,7 @@ import py_vcon_server.logging_utils
 
 
 VERBOSE = False
+FAIL_NEXT = 0
 
 logger = py_vcon_server.logging_utils.init_logger(__name__)
 
@@ -132,6 +133,11 @@ class RedisMgr():
     if(self._redis_pool is None):
       logger.info("redis_pool ({}) is not initialized".format(self._label))
       raise RedisPoolNotInitialized("redis pool ({}) not initialize".format(self._label))
+
+    global FAIL_NEXT
+    if(FAIL_NEXT > 0):
+      FAIL_NEXT -= 1
+      raise RedisPoolNotInitialized("Force failure for testing, FAIL_NEXT: {}".format(FAIL_NEXT))
 
     client = redis.asyncio.client.Redis(connection_pool=self._redis_pool)
     if(VERBOSE):
