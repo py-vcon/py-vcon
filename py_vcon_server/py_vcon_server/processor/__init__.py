@@ -599,7 +599,7 @@ class VconProcessorIO():
     """ Get the Vcon at index in the form indicated by vcon_type """
 
     if(index >= len(self._vcons)):
-      raise VconNotFound("index: {} is behond the end of the Vcon array of length: {}".format(
+      raise VconNotFound("index: {} is beyond the end of the Vcon array of length: {}".format(
         index,
         len(self._vcons)))
 
@@ -804,7 +804,7 @@ class VconProcessorIO():
     Note: jobs do NOT get commit to the database.  They are only added to this **VconProcessorIO** object.
     """
 
-    if(len(vcon_uuids) < 0):
+    if(len(vcon_uuids) < 1):
       raise Exception("no vCon UUIDs provided")
 
     job: typing.Dict[str, typing.Any] = {}
