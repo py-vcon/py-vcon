@@ -32,7 +32,7 @@ The following categories of methods are implemented on the Vcon class.
    * [set_dialog_parameter](#set_dialog_parameter)
  * Methods to reference other vCons from a vCon
    * [add_group_object](#add_group_object)
-   * [set_appended](#set_appended)
+   * [set_amended](#set_amended)
    * [set_redacted](#set_redacted)
  * Methods to access or modify Vcon Party objects
    * [add_party](#add_party)
@@ -372,21 +372,21 @@ The group list references vCons which are sub-conversations, part of a larger co
 defined in this vCon which containes the group list.
 
 Parameters:  
-  **uuid** - the UUID of the vCon that this vCon appends content to
+  **uuid** - the UUID of the vCon that is to be part of this group of vCons
 
 Returns:  None
 
 
 
-### set_appended
+### set_amended
 
-**set_appended**(self, uuid: 'str') -> 'None'
+**set_amended**(self, uuid: 'str') -> 'None'
 
 
-Set/replace the parameters of the Appended Object for reference by UUID
+Set/replace the parameters of the Amended Object for reference by UUID
 
 Parameters:  
-  **uuid** - the UUID of the vCon that this vCon appends content to
+  **uuid** - the UUID of the vCon that this vCon amends content to
 
 Returns:  None
 
