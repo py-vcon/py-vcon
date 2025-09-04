@@ -244,8 +244,6 @@ def init(restapi):
 
     try:
       logger.debug("setting queue: {} property: {}".format(name, properties))
-      if(not isinstance(properties, QueueProperties)):
-        raise Exception("Invalid type: {} for queue: {} properties: {}".format(type(properties), name, properties))
       py_vcon_server.settings.WORK_QUEUES[name] = dict(properties)
       logger.debug("WORK_QUEUES: {}".format(py_vcon_server.settings.WORK_QUEUES))
 
