@@ -311,6 +311,13 @@ async def test_in_progress_api(job_queue):
     # Move the job from the queue to in_progress
     in_progress_job = await job_queue.pop_queued_job(q1, server_key)
     CREATED_JOBS.append(in_progress_job["id"])
+    # Cause the next redis query to fail
+    py_vcon_server.db.redis.redis_mgr.FAIL_NEXT = 1
+    get_response = client.get(
+      "/in_progress",
+      headers={"accept": "application/json"},
+      )
+    assert(get_response.status_code == 500)
 
     # Get list of in_progress_jobs
     get_response = client.get(
