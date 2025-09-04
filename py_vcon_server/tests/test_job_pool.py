@@ -776,11 +776,12 @@ async def test_job_async_scheduler_manager_more():
       except6,
       cpu9
     ])
-  test_jobber.verify_finished_jobs(5)
 
   # cancel5 cancels work in progress which results in an exception
   # plus except5
   test_jobber.verify_exception_jobs(2)
+
+  test_jobber.verify_finished_jobs(5)
 
   # jobs are considered canceled only if cancelled before starting
   test_jobber.verify_canceled_jobs(0)
