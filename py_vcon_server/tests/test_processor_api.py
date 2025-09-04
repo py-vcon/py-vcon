@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 import asyncio
 import pytest
 import pytest_asyncio
@@ -37,6 +37,12 @@ async def test_deepgram_processor_api():
         "input_dialogs": "",
         "input_vcon_index": 0
       }
+    post_response = client.post("/process/{}/deepgram".format("bogus_uuid"),
+        params = parameters,
+        json = options
+      )
+    assert(post_response.status_code == 404)
+
     post_response = client.post("/process/{}/deepgram".format(vCon.uuid),
         params = parameters,
         json = options
