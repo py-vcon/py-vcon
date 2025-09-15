@@ -8,7 +8,7 @@ pkgutil-resolve-name
 psutil
 pydantic
 pyjq
-python-vcon >= 0.5.0
+python-vcon >= 0.6.0
 redis
 setuptools
 smtpdfix
