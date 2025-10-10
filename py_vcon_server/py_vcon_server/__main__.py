@@ -25,11 +25,13 @@ async def main():
         loop="asyncio",
         host=host_ip,
         port=port_num,
-        reload=True))
+        #reload=True cannot reload and have workers
+      ))
 
     api_task = asyncio.create_task(server.serve())
 
     await asyncio.wait([api_task])
 
-asyncio.run(main())
+if __name__ == "__main__":
+  asyncio.run(main())
 
