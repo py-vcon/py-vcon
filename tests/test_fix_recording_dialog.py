@@ -5,7 +5,7 @@ import pytest
 
 
 @pytest.mark.asyncio
-async def test_jq_redaction():
+async def test_fix_recording_dialog():
   external_vcon = vcon.Vcon()
   external_vcon.load("tests/ab_call_ext_rec_0.0.1.vcon")
   assert(len(external_vcon.dialog)  == 1)
