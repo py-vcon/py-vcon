@@ -119,13 +119,26 @@ class RedisMgr():
   def _create_sentinel_pool(self):
     """
     Create a Sentinel connection for HA Redis setup.
-    URL format: sentinel://host1:port1,host2:port2/master_name?db=0&password=xxx
+    URL formats supported:
+      sentinel://:password@host1:port1,host2:port2/master_name?db=0
+      sentinel://host1:port1,host2:port2/master_name?db=0&password=xxx
     """
     parsed = urlparse(self._redis_url)
     
-    # Parse sentinel hosts
+    # Extract password from authority section (standard URL format)
+    # Format: sentinel://:password@host1,host2/master
+    netloc = parsed.netloc
+    redis_password = parsed.password  # Extract password from URL authority
+    
+    # Remove credentials from netloc to get just the hosts
+    if '@' in netloc:
+      # Strip username:password@ part
+      netloc = netloc.split('@', 1)[1]
+    
+    # Parse sentinel hosts from the cleaned netloc
     sentinel_hosts = []
-    for host_port in parsed.netloc.split(','):
+    for host_port in netloc.split(','):
+      host_port = host_port.strip()
       if ':' in host_port:
         host, port = host_port.rsplit(':', 1)
         sentinel_hosts.append((host, int(port)))
@@ -137,10 +150,12 @@ class RedisMgr():
     if not self._master_name:
       self._master_name = 'mymaster'
     
-    # Parse query params
+    # Parse query params (for backward compatibility and additional options)
     params = parse_qs(parsed.query)
     db = int(params.get('db', ['0'])[0])
-    password = params.get('password', [None])[0]
+    
+    # Password priority: query param overrides URL authority
+    password = params.get('password', [redis_password])[0]
     sentinel_password = params.get('sentinel_password', [None])[0]
     
     # Create Sentinel instance
