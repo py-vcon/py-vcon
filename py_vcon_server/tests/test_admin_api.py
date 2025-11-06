@@ -13,7 +13,7 @@ TEST_Q1 = "test_admin_api_q1"
 TEST_UUID1 = "fake_uuid1"
 TEST_UUID2 = "fake_uuid2"
 TEST_JOB1 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID1 ] }
-TEST_JOB2 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID2 ] }
+TEST_JOB2 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID2 ], "parameters": {"a": 1, "b": "B"} }
 TEST_JOB_UNSUPPORTED = { "job_type": "foo", "my_stuff": [ TEST_UUID1 ] }
 TEST_SERVER_KEY = "test_admin_api:-1:-1:1234"
 
@@ -288,6 +288,8 @@ async def test_job_queue():
     assert(len(job_list[1]["vcon_uuid"]) == 1)
     assert(job_list[1]["vcon_uuid"][0] == TEST_UUID2)
     assert(job_list[1]["job_type"] == "vcon_uuid")
+    assert(len(job_list[1]["parameters"]) == 2)
+    assert(job_list[1]["parameters"] == TEST_JOB2["parameters"])
 
     # move a job into in progress
     assert(py_vcon_server.queue.JOB_QUEUE is not None)
@@ -343,4 +345,5 @@ async def test_job_queue():
     assert(len(job_list[1]["vcon_uuid"]) == 1)
     assert(job_list[1]["vcon_uuid"][0] == TEST_UUID2)
     assert(job_list[1]["job_type"] == "vcon_uuid")
+    assert(job_list[1]["parameters"] == TEST_JOB2["parameters"])
 
