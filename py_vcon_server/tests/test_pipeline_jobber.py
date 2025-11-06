@@ -68,6 +68,9 @@ PIPELINE_DEFINITION = {
       {
         "processor_name": "openai_chat_completion",
         "processor_options":  {
+             "format_options": {
+                 "analysis_type": "{sums}"
+              }
           }
       }
     ]
@@ -294,7 +297,7 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(make_inline_audio_vcon.uuid == UUID)
 
     # Add this vcon as a job in the queue
-    queue_job1 = { "job_type": "vcon_uuid", "vcon_uuid": [ UUID ] }
+    queue_job1 = { "job_type": "vcon_uuid", "vcon_uuid": [ UUID ], "parameters": { "sums": "SUMS"} }
     put_response = client.put(
         "/queue/{}".format(
             list(SERVER_QUEUES.keys())[1]
@@ -381,7 +384,7 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     vcon_dict = get_response.json()
     assert(len(vcon_dict["analysis"]) == 2)
     assert(vcon_dict["analysis"][0]["type"] == "transcript")
-    assert(vcon_dict["analysis"][1]["type"] == "summary")
+    assert(vcon_dict["analysis"][1]["type"] == "SUMS") # job parameter overrided value
 
     # run finished job
     await jobber.job_finished(job_result)
@@ -480,7 +483,7 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
     assert(make_inline_audio_vcon.uuid == UUID)
 
     # Add this vcon as a job in the queue
-    queue_job1 = { "job_type": "vcon_uuid", "vcon_uuid": [ UUID ] }
+    queue_job1 = { "job_type": "vcon_uuid", "vcon_uuid": [ UUID ], "parameters": { "sums": "SUMS"} }
     put_response = client.put(
         "/queue/{}".format(
             list(SERVER_QUEUES.keys())[1]
@@ -519,7 +522,7 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
     vcon_dict = get_response.json()
     assert(len(vcon_dict["analysis"]) == 2)
     assert(vcon_dict["analysis"][0]["type"] == "transcript")
-    assert(vcon_dict["analysis"][1]["type"] == "summary")
+    assert(vcon_dict["analysis"][1]["type"] == "SUMS") # job parameter overrided value
 
     # confirm job not in in_progress list
     get_response = client.get(
