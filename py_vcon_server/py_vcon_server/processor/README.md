@@ -13,6 +13,7 @@
    * [py_vcon_server.processor.builtin.decrypt.Decrypt](#py_vcon_serverprocessorbuiltindecryptdecrypt)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
    * [py_vcon_server.processor.builtin.encrypt.Encrypt](#py_vcon_serverprocessorbuiltinencryptencrypt)
+   * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialog](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialog)
    * [py_vcon_server.processor.builtin.jq.JQProcessor](#py_vcon_serverprocessorbuiltinjqjqprocessor)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
    * [py_vcon_server.processor.builtin.queue_job.QueueJob](#py_vcon_serverprocessorbuiltinqueue_jobqueuejob)
@@ -29,6 +30,7 @@
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
+   * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogInitOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialoginitoptions)
    * [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
    * [py_vcon_server.processor.builtin.queue_job.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinqueue_jobvconprocessorinitoptions)
@@ -45,6 +47,7 @@
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
+   * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialogoptions)
    * [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
    * [py_vcon_server.processor.builtin.queue_job.QueueJobOptions](#py_vcon_serverprocessorbuiltinqueue_jobqueuejoboptions)
@@ -212,6 +215,26 @@ This **VconProcessor** will encrypt the Vcon into its JWE form.
 
  - **Initialization options Object:** [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
  - **Processing options Object:** [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
+## py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialog
+
+ - **Name:** fix_recording_dialog
+ - **Version:** 0.0.1
+ - **Summary:** vCon fix recording dialog **VconProcessor**
+
+vCon fix recording dialog **VconProcessor**
+This **VconProcessor** will fix dialog parameters that need updating post recording
+
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogInitOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialoginitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialogoptions)
 
 Methods:
 
@@ -484,6 +507,15 @@ example:
 
 default: None
 
+
+## py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogInitOptions
+
+ - **Summary:** Initialization options for fix recording info filter_plugin
+
+initialization class for VconProcessor wrapper for FixRecordingDialog **FilterPlugin**
+
+### Fields
+none
 
 ## py_vcon_server.processor.builtin.jq.OpenAiChatCompletionInitOptions
 
@@ -842,6 +874,74 @@ PEM format public key/cert to use for encrypting the vCon
 example:
 
 default: None
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example:
+
+default: {}
+
+
+## py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogOptions
+
+ - **Summary:** Fix recording dialog filter_plugin options
+
+processor options class for **processor** method of VconProcessor wrapper for FixRecordingDialog **FilterPlugin**
+
+### Fields
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** recording **dialog** objects
+
+Indicates which recording **dialog** objects in the given **Vcon** are
+to have recording info (duration and content_hash) fixed.
+
+ * **""** (empty str or None) - all recording **dialogs** are to be fixed.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are to be fixed.
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be fixed.
+ * **[]** (empty list[int]) - none of the **dialog** objects are to be fixed.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be fixed.
+
+**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
+
+
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
+default: 0:
 
 ##### label (str)
 processor documentation label
