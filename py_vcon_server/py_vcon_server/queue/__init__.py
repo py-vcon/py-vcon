@@ -387,11 +387,14 @@ class JobQueue():
 
   async def push_vcon_uuid_queue_job(self,
     name: str,
-    vcon_uuids: [str],
+    vcon_uuids: typing.List[str],
     from_queue: typing.Union[str, None] = None,
     failed_job: typing.Union[int, None] = None
     ) -> int:
     """
+    Should probably depreicate this interface in favor of:
+    push_vcon_queue_job
+
     Push a vCon UUID queue job object onto the named queue.
 
     params:
@@ -406,6 +409,25 @@ class JobQueue():
     returns: length of the queue (where the new job is in the queue)
     """
 
+    job_json: typing.Dict[str, typing.Any] = {
+        "job_type": "vcon_uuid",
+        "vcon_uuid": vcon_uuids
+      }
+
+    if(from_queue and len(from_queue) > 0):
+      job_json["queue"] = from_queue
+    if(failed_job):
+      job_json["failed_job_id"] = failed_job
+
+    return(await self.push_vcon_queue_job(name, job_json))
+
+
+  async def push_vcon_queue_job(self,
+    name: str,
+    job_json: typing.Dict[str, typing.Any]
+    ) -> int:
+
+    vcon_uuids = job_json.get("vcon_uuid", None)
     if(not isinstance(vcon_uuids, list)):
       raise Exception("expecting vcon_uuids to be a list, got: {}".format(type(vcon_uuids)))
 
@@ -413,14 +435,9 @@ class JobQueue():
       raise Exception("vcon_uuids array must contain at least one UUID")
 
     # TODO: limitation to be removed
+
     if(len(vcon_uuids) > 1):
       raise Exception("currently only support exactly 1 UUID")
-
-    job_json = { "job_type": "vcon_uuid", "vcon_uuid": vcon_uuids }
-    if(from_queue and len(from_queue) > 0):
-      job_json["queue"] = from_queue
-    if(failed_job):
-      job_json["failed_job_id"] = failed_job
 
     keys = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name]
     args = [ name, json.dumps(job_json)]
