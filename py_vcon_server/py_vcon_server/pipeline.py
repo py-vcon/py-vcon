@@ -736,6 +736,12 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         else:
           lock = None
         await pipeline_input.add_vcon(vcon_uuid, lock, False)
+ 
+      # Copy parameters, if set for the job, to the input
+      parameters = queue_job.get("parameters", None)
+      if(parameters and len(parameters)):
+        for name, value in parameters.items():
+          pipeline_input.set_parameter(name, value)
 
     else:
       raise Exception("unsupported queue job type: {}".format(job_type))
