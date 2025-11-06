@@ -94,11 +94,18 @@ class QueueJob(pydantic.BaseModel): # may need to add **vcon.pydantic_utils.SET_
       description = "queue job type (currently only \"vcon_uuid\" allowed)",
       default = "vcon_uuid"
       )
+
     vcon_uuid: typing.List[str] = pydantic.Field(
       title = "vCon UUIDs",
       description = "array of vCon UUIDs (currently must be exactly 1)",
       examples = [["0185656d-fake-UUID-84fd-5b4de1ef42b4"]],
       default = []
+      )
+
+    parameters: typing.Dict[str, typing.Any] = pydantic.Field(
+      title = "Pipeline Parameters",
+      description = "Optional parameters to be set before running the Pipeline job",
+      default = {}
       )
 
 
@@ -455,7 +462,8 @@ def init(restapi):
       if(job.job_type != "vcon_uuid"):
         logger.info("Error: unsupport job type: {}".format(job.job_type))
 
-      queue_length = await py_vcon_server.queue.JOB_QUEUE.push_vcon_uuid_queue_job(name, job.vcon_uuid)
+      job_dict = vcon.pydantic_utils.get_dict(job, exclude_none=True)
+      queue_length = await py_vcon_server.queue.JOB_QUEUE.push_vcon_queue_job(name, job_dict)
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
