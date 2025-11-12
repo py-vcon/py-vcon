@@ -119,5 +119,10 @@ class FixRecordingDialog(vcon.filter_plugins.FilterPlugin):
           sig_hash = vcon.security.sha_512_hash(body)
           dialog["content_hash"] = vcon.security.build_content_hash_token(sign_type, sig_hash)
 
+      # Attempt to get the duration
+      duration = vcon.utils.get_recording_duration(body)
+      if(duration):
+        dialog["duration"] = duration
+
     return(in_vcon)
 
