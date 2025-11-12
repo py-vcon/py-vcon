@@ -24,6 +24,7 @@ The following categories of methods are implemented on the Vcon class.
    * [add_dialog_inline_email_message](#add_dialog_inline_email_message)
    * [add_dialog_inline_recording](#add_dialog_inline_recording)
    * [add_dialog_inline_text](#add_dialog_inline_text)
+   * [add_transfer_dialog](#add_transfer_dialog)
    * [decode_dialog_inline_body](#decode_dialog_inline_body)
    * [find_transcript_for_dialog](#find_transcript_for_dialog)
    * [get_dialog_body](#get_dialog_body)
@@ -237,6 +238,41 @@ Parameters:
 
 Returns:  
   Index of the new dialog in the Dialog Object array parameter.
+
+
+
+### add_transfer_dialog
+
+**add_transfer_dialog**(self, transferee: 'int', transferor: 'int', transfer_target: 'int', original_dialog: 'int', target_dialog: 'typing.Union[int, None]', consultative_dialog: 'typing.Union[int, None]' = None) -> 'int'
+
+
+ A **transfer** type dialog Object shows the relationship of
+ dialogs and the role of parties in the transfer of call or conversation
+ from one party to another.  There are two types of transfer: blind and consultative.
+ With a blind transfer, there are only 2 dialogs: the orginal call and the target or
+ resulting call.  In a consultative call there are 3 dialogs, the two as in a blind trasnfer
+ and a consultative dialog which occurs before the transfer is completed.
+
+ This method constructs a **transfer** type dialog.
+
+Parameters:
+  **transferee** (int): party index for the party from the original call that gets
+            transfered to the target call
+  **transferor** (int): party index for the party from the original call that performs
+            or actuates the transfer.  It th transfer is no actually initiated by a party,
+            (e.g system or applications initiated), this is the party from the original
+            call that particiaptes in the consultation if one occurs and is not a party
+            to the target or resulting outcome call.
+  **transfer_target** (int): party index to the new party introduced in the target call
+  **original_dialog** (int): the index to the original call dialog
+  **target_dialog** (int, None): the index to the target or resulting outcome call.  The
+            transferor may decide not to complete the transfer after the consultation.
+            In this case, the transfer_dialog may be None.
+  **consultative_dialog** (int, None): the index to the consultative dialog if one
+            occurred.
+
+Returns:
+        Index to the added dialog
 
 
 
