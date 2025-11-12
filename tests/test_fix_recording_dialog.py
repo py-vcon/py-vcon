@@ -25,6 +25,6 @@ async def test_fix_recording_dialog():
 
   assert(original_hash == fixed_vcon.dialog[0]["content_hash"])
 
-  # TODO:
-  # assert(original_duration == fixed_vcon.dialog[0]["duration"])
+  print(f"duration: {fixed_vcon.dialog[0]['duration']}")
+  assert(original_duration == fixed_vcon.dialog[0]["duration"])
 
