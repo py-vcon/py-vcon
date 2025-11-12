@@ -13,6 +13,7 @@
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPlugin](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugin)
    - [vcon.filter_plugins.impl.deepgram.Deepgram](#vconfilter_pluginsimpldeepgramdeepgram)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPlugin](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugin)
+   - [vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialog](#vconfilter_pluginsimplfix_recording_dialogfixrecordingdialog)
    - [vcon.filter_plugins.impl.jq_redaction.JqRedaction](#vconfilter_pluginsimpljq_redactionjqredaction)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletion](#vconfilter_pluginsimplopenaiopenaichatcompletion)
    - [vcon.filter_plugins.impl.openai.OpenAICompletion](#vconfilter_pluginsimplopenaiopenaicompletion)
@@ -26,6 +27,7 @@
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginInitOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterplugininitoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramInitOptions](#vconfilter_pluginsimpldeepgramdeepgraminitoptions)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginInitOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterplugininitoptions)
+   - [vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialogInitOptions](#vconfilter_pluginsimplfix_recording_dialogfixrecordingdialoginitoptions)
    - [vcon.filter_plugins.impl.jq_redaction.JqRedactionInitOptions](#vconfilter_pluginsimpljq_redactionjqredactioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions](#vconfilter_pluginsimplopenaiopenaichatcompletioninitoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions](#vconfilter_pluginsimplopenaiopenaicompletioninitoptions)
@@ -39,6 +41,7 @@
    - [vcon.filter_plugins.impl.decrypt_filter_plugin.DecryptFilterPluginOptions](#vconfilter_pluginsimpldecrypt_filter_plugindecryptfilterpluginoptions)
    - [vcon.filter_plugins.impl.deepgram.DeepgramOptions](#vconfilter_pluginsimpldeepgramdeepgramoptions)
    - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
+   - [vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialogOptions](#vconfilter_pluginsimplfix_recording_dialogfixrecordingdialogoptions)
    - [vcon.filter_plugins.impl.jq_redaction.JqRedactionOptions](#vconfilter_pluginsimpljq_redactionjqredactionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions](#vconfilter_pluginsimplopenaiopenaichatcompletionoptions)
    - [vcon.filter_plugins.impl.openai.OpenAICompletionOptions](#vconfilter_pluginsimplopenaiopenaicompletionoptions)
@@ -297,6 +300,49 @@ Returns:
 **options** - [vcon.filter_plugins.impl.encrypt_filter_plugin.EncryptFilterPluginOptions](#vconfilter_pluginsimplencrypt_filter_pluginencryptfilterpluginoptions)
 
 ### EncryptFilterPlugin.\_\_del__
+\_\_del__(self)
+
+
+Teardown/uninitialization method for the plugin
+
+Parameters: None
+
+
+
+## vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialog
+
+  filter_plugin to fix duration and content_hash which are missing
+  or incorrect after a recording is completed.
+  
+
+**Methods**:
+
+### FixRecordingDialog.\_\_init__
+\_\_init__(self, init_options: vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialogInitOptions)
+
+Parameters:
+  init_options (FixRecordingDialogInitOptions) - the initialization options for the fox recording dialog info plugin
+
+
+**init_options** - [vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialogInitOptions](#vconfilter_pluginsimplfix_recording_dialogfixrecordingdialoginitoptions)
+
+### FixRecordingDialog.filter
+filter(self, in_vcon: vcon.Vcon, options: vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialogOptions) -> vcon.Vcon
+
+
+Fix the duration and if externally reference recording (url is present)
+also fix or set the content_hash. 
+
+Parameters:
+  options (FixRecordingDialogOptions)
+
+Returns:
+  the vCon with fixed dialog(s) in_vcon
+
+
+**options** - [vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialogOptions](#vconfilter_pluginsimplfix_recording_dialogfixrecordingdialogoptions)
+
+### FixRecordingDialog.\_\_del__
 \_\_del__(self)
 
 
@@ -719,6 +765,16 @@ example:
 
 default: None
 
+## vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialogInitOptions
+ - Initialization options for fix recording info filter_plugin
+
+FixRecordingDialogInitOptions is a FilterPluginInitOptions with no added fields.
+A FixRecordingDialogInitOptions is passed to the JqRedaction filter_plugin when
+it is first initialized.
+
+#### Fields:
+None
+
 ## vcon.filter_plugins.impl.jq_redaction.JqRedactionInitOptions
  - Initialization options for JQ redaction filter_plugin
 
@@ -957,6 +1013,38 @@ PEM format public key/cert to use for encrypting the vCon
 example:
 
 default: None
+
+## vcon.filter_plugins.impl.fix_recording_dialog.FixRecordingDialogOptions
+ - Fix recording dialog filter_plugin options
+
+FixRecordingDialogOptions is a FilterPluginOptions with fields to
+which recording dialogs to fix.  It is sometime useful to add a recording
+dialog before the recording is complete.  At that time the recording
+duration and for externally reference recordings, the content_hash cannot
+be calculated.
+
+A FixRecordingDialogOptions is passed to the filter method.
+
+#### Fields:
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** recording **dialog** objects
+
+Indicates which recording **dialog** objects in the given **Vcon** are
+to have recording info (duration and content_hash) fixed.
+
+ * **""** (empty str or None) - all recording **dialogs** are to be fixed.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are to be fixed.
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be fixed.
+ * **[]** (empty list[int]) - none of the **dialog** objects are to be fixed.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be fixed.
+
+**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
+
+
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
+default: 0:
 
 ## vcon.filter_plugins.impl.jq_redaction.JqRedactionOptions
  - JQ redaction filter_plugin options
