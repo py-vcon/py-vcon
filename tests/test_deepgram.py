@@ -61,12 +61,63 @@ async def test_deepgram_transcribe_inline_dialog():
 
   text_list = await out_vcon.get_dialog_text(0)
   print("text: {}".format(json.dumps(text_list, indent = 2)))
-  assert(52 <= len(text_list) <= 75)
+  assert(100 <= len(text_list) <= 170)
 
   # Run again, should not generate duplicate analysis
   out_vcon2 = await out_vcon.deepgram({})
   assert(len(out_vcon.analysis) == analysis_count + 1)
   assert(len(out_vcon2.analysis) == analysis_count + 1)
+
+
+@pytest.mark.asyncio
+async def test_deepgram_2_channel_inline_dialog():
+  """ Test Deepgram plugin with an 2 channel inline audio dialog """
+  in_vcon = vcon.Vcon()
+  in_vcon.set_uuid("tests.python-vcon.org")
+
+  assert(in_vcon.set_party_parameter("name", "Agent") == 0)
+  assert(in_vcon.set_party_parameter("name", "Customer") == 1)
+
+  file_path = "tests/agent_2_channel.wav"
+  with open(file_path, "rb") as file_handle:
+    body_bytes = file_handle.read()
+  assert(len(body_bytes) > 1000000)
+
+  start_time = "2023-08-31T18:26:36.987+00:00"
+  duration = 0
+  parties = [0,1]
+
+  in_vcon.add_dialog_inline_recording(
+      body_bytes,
+      start_time,
+      duration,
+      parties,
+      vcon.Vcon.MEDIATYPE_AUDIO_WAV
+    )
+
+  options = vcon.filter_plugins.TranscribeOptions()
+  out_vcon = await in_vcon.deepgram(options)
+  assert(len(out_vcon.dialog) == 1)
+  assert(len(out_vcon.analysis) == 1)
+  out_vcon.dump("agent_2_channel_out.vcon")
+
+  dialog_texts = await in_vcon.get_dialog_text(
+    0, #dialog_index
+    True, # find text from transcript analysis if dialog is a recording and transcript exists
+    False  # transcribe this recording dialog if transcript does not exist
+    )
+
+  sorted_texts = sorted(dialog_texts.copy(), key = lambda msg: msg["start"])
+
+  # Should have 25-32 sentences
+  assert(len(sorted_texts) >= 25)
+  assert(len(sorted_texts) < 32)
+  agent_sentence_count = sum(phrase.get("parties") == 0 for phrase in sorted_texts)
+  customer_sentence_count = sum(phrase.get("parties") == 1 for phrase in sorted_texts)
+  assert(agent_sentence_count + customer_sentence_count == len(sorted_texts))
+  assert(agent_sentence_count > 10)
+  assert(customer_sentence_count > 8)
+  print("\n".join(map(str, sorted_texts)))
 
 
 @pytest.mark.asyncio
