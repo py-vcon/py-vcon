@@ -1,8 +1,13 @@
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Utilities and helper functions for the vcon package """
 
 import datetime
 import email.utils
 import typing
+import json
+import subprocess
+import ffmpeg
+import sox
 
 def epoch_to_rfc2822(time : typing.Union[int, float]) -> str:
   """ Returns RFC2822 date for given epoch time """
@@ -84,3 +89,48 @@ def cannonize_date(date : typing.Union[int, float, str, datetime.datetime]) -> s
     raise AttributeError("unsupported type: {} value: {} for date".format(type(date), date))
 
   return(date_string)
+
+
+def get_recording_duration(
+  recording_file: typing.Union[typing.BinaryIO, str, bytes]
+  ) -> typing.Union[float, None]:
+
+    if(isinstance(recording_file, bytes)):
+      try:
+        # This avoids writing to a temporary file on disk.
+        cmd = [
+            'ffprobe',
+            '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'json',
+            '-i', 'pipe:0'  # Read from stdin
+          ]
+
+        result = subprocess.run(
+            cmd,
+            input=recording_file,
+            capture_output=True
+        )
+
+        if(result.returncode == 0):
+          probe_result = json.loads(result.stdout)
+          duration = float(probe_result['format']['duration'])
+
+        else:
+          duration = None
+        return duration
+
+      except Exception as e:
+        raise e
+
+    else:
+      try:
+        recording_meta = ffmpeg.probe(recording_file)
+        duration = float(recording_meta["streams"][0]['duration'])
+      except Exception as e:
+        #logger.debug("could not get duration of {} using ffmpeg, trying sox\n{}".format(recording_file, e))
+        sox_info = sox.file_info.info(str(recording_file))
+        duration = sox_info["duration"]
+
+      return(duration)
+
