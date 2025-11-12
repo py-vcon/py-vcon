@@ -171,6 +171,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
       'model': 'nova-3',  # should make this an option: nova-2, nova-2-phonecall, nova-2-meeting, nova-2-medical
       'punctuate': 'true',
       'smart_format': 'true',
+      'multichannel': 'true',
       'diarize': 'true'
       }
 
