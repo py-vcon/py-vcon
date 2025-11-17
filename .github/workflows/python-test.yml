@@ -20,11 +20,23 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
+    # 1) Free a bunch of disk space on the runner
+    - name: Free disk space
+      uses: jlumbroso/free-disk-space@v1.3.1
+      with:
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true
+        tool-cache: false
+
     - name: checkout ${{ github.ref }}
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }} os ${{ runner.os }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
@@ -34,6 +46,8 @@ jobs:
 
     - name: Install dependencies
       run: |
+        set -euxo pipefail
+
         pwd
         ls -l vcon/docker_dev
         # Pull out comments and python3 specific packages as the platform already has that
@@ -52,8 +66,8 @@ jobs:
         echo "test openssl rand: " `openssl rand -hex 16`
         python -m pip install --upgrade pip
         python -m pip install --upgrade pip
-        pip install -r vcon/docker_dev/pip_dev_package_list.txt
-        pip install -r vcon/docker_dev/pip_package_list.txt
+        pip install --no-cache-dir -r vcon/docker_dev/pip_dev_package_list.txt
+        pip install --no-cache-dir -r vcon/docker_dev/pip_package_list.txt
         if [[ "${{ matrix.python-version }}" == "3.8" ]]; then
           echo "Python 3.8 patching"
           pip3 uninstall --yes cryptography
