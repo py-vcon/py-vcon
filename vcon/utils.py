@@ -2,10 +2,10 @@
 """ Utilities and helper functions for the vcon package """
 
 import datetime
+import os
+import tempfile
 import email.utils
 import typing
-import json
-import subprocess
 import ffmpeg
 import sox
 
@@ -95,42 +95,33 @@ def get_recording_duration(
   recording_file: typing.Union[typing.BinaryIO, str, bytes]
   ) -> typing.Union[float, None]:
 
+    tmp_path = None
+
     if(isinstance(recording_file, bytes)):
+      # Could not get stream based solutions to work reliably
+      # So create temp file
+      with tempfile.NamedTemporaryFile(
+          delete=False,
+          # suffix=ext
+        ) as tmp:
+        tmp.write(recording_file)
+        tmp_path = tmp.name
+        recording_file = tmp_path
+
+    try:
+      recording_meta = ffmpeg.probe(recording_file)
+      duration = float(recording_meta["streams"][0]['duration'])
+    except Exception as e:
+      #logger.debug("could not get duration of {} using ffmpeg, trying sox\n{}".format(recording_file, e))
+      sox_info = sox.file_info.info(str(recording_file))
+      duration = sox_info["duration"]
+
+    finally:
       try:
-        # This avoids writing to a temporary file on disk.
-        cmd = [
-            'ffprobe',
-            '-v', 'error',
-            '-show_entries', 'format=duration',
-            '-of', 'json',
-            '-i', 'pipe:0'  # Read from stdin
-          ]
+        if(tmp_path and os.path.exists(tmp_path)):
+          os.unlink(tmp_path)
+      except Exception:
+        pass
 
-        result = subprocess.run(
-            cmd,
-            input=recording_file,
-            capture_output=True
-        )
-
-        if(result.returncode == 0):
-          probe_result = json.loads(result.stdout)
-          duration = float(probe_result['format']['duration'])
-
-        else:
-          duration = None
-        return duration
-
-      except Exception as e:
-        raise e
-
-    else:
-      try:
-        recording_meta = ffmpeg.probe(recording_file)
-        duration = float(recording_meta["streams"][0]['duration'])
-      except Exception as e:
-        #logger.debug("could not get duration of {} using ffmpeg, trying sox\n{}".format(recording_file, e))
-        sox_info = sox.file_info.info(str(recording_file))
-        duration = sox_info["duration"]
-
-      return(duration)
+    return(duration)
 
