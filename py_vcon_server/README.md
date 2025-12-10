@@ -323,6 +323,7 @@ The unit tests for the server can be run using the following command in this dir
   + **LAUNCH_VCON_API** -  Enable vCon RESTful APIs True/False(defaults to: True)
   + **LAUNCH_ADMIN_API** - Enable Admin RESTful APIs True/False (defaults to: True)
   + **WORK_QUEUES** -  List of job queues the pipeline server is to pull jobs from.
+  + **ENABLE_PROMETHEUS** - Enable entry point and capture of metrics for Prometheus.
 If no queue names are specified, the pipeline server will not run any jobs.
 This list of queue names can be [added](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/set_server_queue_properties_server_queue__name__post) and [removed](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers/delete_server_queue_server_queue__name__delete) on a live server using the [Admin Server set of RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/Admin%3A%20Servers).
 The environmental variable has the format of comma separated queue names, each with an optional colon separated weight integer.
