@@ -231,5 +231,57 @@ def init() -> fastapi.FastAPI:
         allow_methods=["*"],
         allow_headers=["*"]
       )
+
+    if(py_vcon_server.settings.ENABLE_PROMETHEUS):
+      logger.info("Prometheus metrics enabled")
+
+      import prometheus_fastapi_instrumentator
+      import prometheus_fastapi_instrumentator.metrics
+      import prometheus_client
+      def http_requests_by_client():
+        metric = prometheus_client.Counter(
+            'http_requests_by_client_total',
+            'Total requests by calling service',
+            ['client_host', 'method', 'handler', 'status']
+          )
+
+        def instrumentation(info: prometheus_fastapi_instrumentator.metrics.Info) -> None:
+          client_host = info.request.client.host
+          metric.labels(
+              client_host=client_host,
+              method=info.method,
+              handler=info.modified_handler,
+              status=info.modified_status
+            ).inc()
+
+        return instrumentation
+
+      promethius_instrumentor = prometheus_fastapi_instrumentator.Instrumentator(
+          should_group_status_codes = False,
+          should_ignore_untemplated = False,
+          should_respect_env_var = False,
+          should_instrument_requests_inprogress = True,
+          excluded_handlers=["/metrics"],
+          #inprogress_name="http_requests_inprogress",
+          inprogress_labels=True,
+        )
+
+      # Default out of the box FASTapi metrices
+      # Per entry point stats
+      # Add request counter (http_requests_total)
+      promethius_instrumentor.add(prometheus_fastapi_instrumentator.metrics.requests())
+
+      # Add latency with custom buckets (seconds)
+      promethius_instrumentor.add(
+        prometheus_fastapi_instrumentator.metrics.latency(
+            buckets=(0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0)
+          )
+        )
+
+      # Per client stats
+      promethius_instrumentor.add(http_requests_by_client())
+      promethius_instrumentor.instrument(restapi)
+      promethius_instrumentor.expose(restapi)
+
   return(restapi)
 
