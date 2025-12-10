@@ -73,3 +73,11 @@ state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, LOG_LEVEL, LAUNCH_V
 if(state_settings_list != ""):
   STATE_SETTINGS = state_settings_list.split(", ")
 
+# Enable Prometheus metrics entry point
+ENABLE_PROMETHEUS = os.getenv("ENABLE_PROMETHEUS", False)
+if(isinstance(ENABLE_PROMETHEUS, str)):
+  if(ENABLE_PROMETHEUS.lower() == "true"):
+    ENABLE_PROMETHEUS = True
+  else:
+    ENABLE_PROMETHEUS = False
+
