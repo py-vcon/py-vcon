@@ -311,6 +311,12 @@ The unit tests for the server can be run using the following command in this dir
     source testenv
     pytest -v -rP tests
 
+The open source supports the following database connection URL schemes for the environmental variables that expect a DB URL:
+ * redis://:password@host:port/db
+ * rediss://:password@host:port/db?ssl_cert_reqs=none
+ * rediss://:password@host:port/db?ssl_ca_certs=/etc/ssl/yourca/ca.crt
+ * sentinel://:password@host1:port1,host2:port2/master_name?db=0
+
 ## Environmental Variables
   +  **VCON_STORAGE_URL** - DB URL for vCon storage database (defaults to:"redis://localhost" )
   +  **QUEUE_DB_URL** - DB URL for Job Queue and job status database (defaults to: same value as VCON_STORAGE_URL)
