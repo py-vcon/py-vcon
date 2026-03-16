@@ -3,7 +3,7 @@
   "info": {
     "title": "Python vCon Server",
     "summary": "vCon pipeline processor server cluster and storage API",
-    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
+    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](../pipeline_editor/index.html) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
     "contact": {
       "name": "Commercial support available from SIPez",
       "url": "http://www.sipez.com/"
@@ -11,7 +11,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.4.1"
+    "version": "0.5.5"
   },
   "paths": {
     "/server/info": {
@@ -1408,6 +1408,99 @@
         }
       }
     },
+    "/process/{vcon_uuid}/fix_recording_dialog": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon fix recording dialog **VconProcessor**",
+        "description": "vCon fix recording dialog **VconProcessor**\nThis **VconProcessor** will fix dialog parameters that need updating post recording",
+        "operationId": "run_vcon_processor_process__vcon_uuid__fix_recording_dialog_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixRecordingDialogOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process/{vcon_uuid}/jq": {
       "post": {
         "tags": [
@@ -2493,6 +2586,80 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EncryptFilterPluginIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/fix_recording_dialog": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon fix recording dialog **VconProcessor**",
+        "description": "vCon fix recording dialog **VconProcessor**\nThis **VconProcessor** will fix dialog parameters that need updating post recording",
+        "operationId": "run_vcon_processor_io_processIO_fix_recording_dialog_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixRecordingDialogIO"
               }
             }
           }
@@ -3673,6 +3840,91 @@
         "title": "encrypt filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for EncryptFilterPlugin **FilterPlugin**"
       },
+      "FixRecordingDialogIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/FixRecordingDialogOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "FixRecordingDialogIO"
+      },
+      "FixRecordingDialogOptions": {
+        "properties": {
+          "input_dialogs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "input **Vcon** recording **dialog** objects",
+            "description": "\nIndicates which recording **dialog** objects in the given **Vcon** are\nto have recording info (duration and content_hash) fixed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be fixed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be fixed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be fixed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be fixed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be fixed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n",
+            "default": "0:",
+            "examples": [
+              "",
+              "0:",
+              "0:-2",
+              "2:5",
+              "0:6:2",
+              [],
+              [
+                1,
+                4,
+                5,
+                9
+              ]
+            ]
+          },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Fix recording dialog filter_plugin options",
+        "description": "processor options class for **processor** method of VconProcessor wrapper for FixRecordingDialog **FilterPlugin**"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3724,7 +3976,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1757027135.939591
+              1773693424.4010725
             ]
           },
           "server": {
@@ -4286,6 +4538,12 @@
                 "0185656d-fake-UUID-84fd-5b4de1ef42b4"
               ]
             ]
+          },
+          "parameters": {
+            "type": "object",
+            "title": "Pipeline Parameters",
+            "description": "Optional parameters to be set before running the Pipeline job",
+            "default": {}
           }
         },
         "type": "object",
@@ -4515,27 +4773,27 @@
             "type": "string",
             "title": "server version",
             "description": "Python package py_vcon_server version number",
-            "default": "0.4.1"
+            "default": "0.5.5"
           },
           "vcon": {
             "type": "string",
             "title": "vcon version",
             "description": "Python package **py_vcon** version number",
-            "default": "0.5.0"
+            "default": "0.6.4"
           },
           "start_time": {
             "type": "number",
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1757027135.927884
+              1773693424.3949397
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              41544
+              101748
             ]
           },
           "settings": {
@@ -4575,7 +4833,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              41544
+              101748
             ]
           },
           "start_time": {
@@ -4583,7 +4841,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1757027135.9318745
+              1773693424.3967466
             ]
           },
           "num_workers": {
@@ -4609,7 +4867,7 @@
             "title": "heartbeat time stamp",
             "description": "epoch seconds time for the last heartbeat on this server",
             "examples": [
-              1757027135.9321446
+              1773693424.3968828
             ]
           }
         },
@@ -5294,10 +5552,10 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1757027135,
-              1757027135.5856392,
+              1773693424,
+              1773693424.0809634,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2025-09-04T23:05:35.585+00:00",
+              "2026-03-16T20:37:04.080+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -5545,7 +5803,7 @@
     },
     {
       "name": "Admin: Pipelines",
-      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)"
+      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](../pipeline_editor/index.html) (Note: link works only on live server)"
     },
     {
       "name": "Admin: In Progress Jobs",
