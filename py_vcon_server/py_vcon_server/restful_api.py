@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Common setup and components for the RESTful APIs """
 import typing
 import traceback
@@ -116,7 +116,7 @@ openapi_tags = [
   {
     "name": PIPELINE_CRUD_TAG,
     "description": "Entry points to create, update and delete pipelines\n\n"
-       "**New:** [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)",
+       "**New:** [Visual Pipeline Editor](../pipeline_editor/index.html) (Note: link works only on live server)",
     # "externalDocs": {
     #   "description": "online docs",
     #   "url": None
@@ -198,7 +198,7 @@ or conbination of the following:
 
 **New:**
 
-  * [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)
+  * [Visual Pipeline Editor](../pipeline_editor/index.html) (Note: link works only on live server)
 
 The open source repository at: https://github.com/py-vcon/py-vcon
 """
@@ -220,9 +220,20 @@ def init() -> fastapi.FastAPI:
     openapi_tags = openapi_tags
     )
 
+  # Middleware to read X-Forwarded-Prefix from nginx and set ASGI root_path
+  # This makes FastAPI advertise the correct nginx-prefixed URL in openapi.json
+  # so Swagger UI "Try it out" / Execute sends requests to the right nginx path.
+  # Has no effect when accessed directly (no X-Forwarded-Prefix header present).
+  @restapi.middleware("http")
+  async def set_root_path_from_header(request: fastapi.Request, call_next):
+    forwarded_prefix = request.headers.get("x-forwarded-prefix")
+    if forwarded_prefix:
+      request.scope["root_path"] = forwarded_prefix
+    return await call_next(request)
+
+  # CORS stuff
   logger.debug("CORS_ORIGINS: {}".format(py_vcon_server.settings.CORS_ORIGINS))
   if(py_vcon_server.settings.CORS_ORIGINS):
-    # CORS stuff
     logger.info("Enabling CORS for {}".format(py_vcon_server.settings.CORS_ORIGINS))
     restapi.add_middleware(
         fastapi.middleware.cors.CORSMiddleware,
