@@ -116,7 +116,7 @@ openapi_tags = [
   {
     "name": PIPELINE_CRUD_TAG,
     "description": "Entry points to create, update and delete pipelines\n\n"
-       "**New:** [Visual Pipeline Editor](../pipeline_editor/index.html) (Note: link works only on live server)",
+       "**New:** [Visual Pipeline Editor](./pipeline_editor/index.html) (Note: link works only on live server)",
     # "externalDocs": {
     #   "description": "online docs",
     #   "url": None
@@ -198,7 +198,7 @@ or conbination of the following:
 
 **New:**
 
-  * [Visual Pipeline Editor](../pipeline_editor/index.html) (Note: link works only on live server)
+  * [Visual Pipeline Editor](./pipeline_editor/index.html) (Note: link works only on live server)
 
 The open source repository at: https://github.com/py-vcon/py-vcon
 """
@@ -220,6 +220,9 @@ def init() -> fastapi.FastAPI:
     openapi_tags = openapi_tags
     )
 
+  # Paths that need root_path for correct OpenAPI server URL generation
+  OPENAPI_PATHS = {'/openapi.json', '/docs', '/redoc'}
+
   # Middleware to read X-Forwarded-Prefix from nginx and set ASGI root_path
   # This makes FastAPI advertise the correct nginx-prefixed URL in openapi.json
   # so Swagger UI "Try it out" / Execute sends requests to the right nginx path.
@@ -227,7 +230,7 @@ def init() -> fastapi.FastAPI:
   @restapi.middleware("http")
   async def set_root_path_from_header(request: fastapi.Request, call_next):
     forwarded_prefix = request.headers.get("x-forwarded-prefix")
-    if forwarded_prefix:
+    if forwarded_prefix and request.url.path in OPENAPI_PATHS:
       request.scope["root_path"] = forwarded_prefix
     return await call_next(request)
 
