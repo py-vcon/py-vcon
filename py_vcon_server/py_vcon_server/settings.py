@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import os
 import multiprocessing
 from pathlib import Path
@@ -8,6 +8,7 @@ QUEUE_DB_URL = os.getenv("QUEUE_DB__URL", VCON_STORAGE_URL)
 PIPELINE_DB_URL = os.getenv("PIPELINE_DB_URL", VCON_STORAGE_URL)
 STATE_DB_URL = os.getenv("STATE_DB_URL", VCON_STORAGE_URL)
 REST_URL = os.getenv("REST_URL", "http://localhost:8000")
+PROXY_PATH = os.getenv("PROXY_PATH", None)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
 LOGGING_CONFIG_FILE = os.getenv("LOGGING_CONFIG_FILE", Path(__file__).parent / 'logging.conf')
 LAUNCH_VCON_API = os.getenv("LAUNCH_VCON_API", True)
@@ -69,7 +70,7 @@ for token in queue_tokens:
     WORK_QUEUES[name] = {"weight": weight}
 
 STATE_SETTINGS = []
-state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES").strip()
+state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, PROXY_PATH, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES").strip()
 if(state_settings_list != ""):
   STATE_SETTINGS = state_settings_list.split(", ")
 
