@@ -23,7 +23,7 @@ logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
 nest_asyncio.apply()
 
-__version__ = "0.5.7"
+__version__ = "0.5.10"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
