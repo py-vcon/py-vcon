@@ -43,6 +43,7 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
   + [Testing the vCon server](#testing-the-vcon-server)
   + [Future Release Features](#future-release-features)
   + [Extending the vCon Server](#extending-the-vcon-server)
+  + [Building VconProcessor Plugins with Claude AI](#building-vconprocessor-plugins-with-claude-ai)
   + [Support](#support)
 
 
@@ -584,6 +585,15 @@ Plugins are only loaded upon startup.
 How to bind a different backend DB
   + [Example Redis binding for VconStorage](py_vcon_server/db/redis/__init__.py)
   + [Example registration of Redis binding for VconStorage](py_vcon_server/db/redis_registration.py)
+
+## Building VconProcessor Plugins with Claude AI
+
+The following guides walk you through using Claude AI to design and build VconProcessor plugins as independent addon packages.
+
+  * [Setting up a Claude Project for py-vcon development](docs/claude-project-setup-processor-dev.md) — how to create a Claude Project pre-loaded with the py-vcon repository knowledge
+  * [Claude Project instructions for building VconProcessor plugins](docs/claude-project-instructions-processor-dev.md) — the structured two-phase process (design then build) and project instructions to paste into your Claude Project
+  * [Designing a VconProcessor plugin: the jinja_report example](docs/designing-a-vcon-processor-plugin.md) — a complete worked example showing the design discussion for a Jinja2 template report generator plugin
+
 
 ## Support
 
