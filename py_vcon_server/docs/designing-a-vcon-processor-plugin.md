@@ -133,7 +133,8 @@ Key decisions for how jinja_report maps to this:
 
   * **vendor** — defaults to `"jinja"`, overridable via `analysis_vendor` option.
 
-  * **product** and **schema** — default to None (omitted from the analysis object).
+  * **product** and **schema** — default to empty string (omitted from the analysis
+    object when empty).
     These are primarily useful for non-text structured output where a consumer needs
     to identify the format.  The `add_analysis()` method already checks for
     None/empty and skips adding the field.
@@ -141,6 +142,16 @@ Key decisions for how jinja_report maps to this:
   * **mediatype** — passed via `**optional_parameters` as `media_type` option,
     defaulting to `"text/plain"`.  For HTML report templates, the user would set
     this to `"text/html"`.
+
+**A note on pydantic defaults and the pipeline editor:** the initial design used
+`typing.Union[str, None]` with `default = None` for optional fields like
+`analysis_type`, `analysis_product`, and `analysis_schema`.  This produced correct
+Python behavior, but pydantic omits `None` defaults from the generated JSON schema.
+The pipeline editor uses the schema `default` key (not the `required` array) to
+determine whether a field is mandatory, so these fields appeared as required in the
+editor.  The fix was to change the type to `str` with `default = ""` and check for
+empty string in the `process()` method.  The same pattern applies to
+`analysis_dialog_index`, which uses `default = []` instead of `None`.
 
 
 ## Design Decision: Analysis Dialog Index
@@ -288,18 +299,22 @@ Parties:
 {% endfor %}
 ```
 
-
 ## Loading the Plugin
 
-To load the plugin at server startup, add the registration module path to the
-`PLUGIN_PATHS` environment variable:
+Install the addon pip package:
+```bash
+pip install py_vcon_server.processor_addons.jinja-report
+```
 
+The py-vcon-server automatically discovers and loads processor addons installed
+under the `py_vcon_server.processor_addons` namespace package.  No changes to
+the `PLUGIN_PATHS` environment variable are needed.
+
+In a development environment where py-vcon-server is loaded via `PYTHONPATH`
+rather than pip install, namespace package merging does not occur automatically.
+In that case you can either use `pip install --no-deps -e .` from the addon
+project directory, or add the registration module path to `PLUGIN_PATHS`:
 ```bash
 export PLUGIN_PATHS="py_vcon_server.processor_addons.jinja_report"
 ```
 
-Or append to an existing value:
-
-```bash
-export PLUGIN_PATHS="${PLUGIN_PATHS},py_vcon_server.processor_addons.jinja_report"
-```

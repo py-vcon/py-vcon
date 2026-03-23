@@ -72,6 +72,16 @@ Walk through the options fields with the developer.  For each new field, define:
   * Example value(s)
   * Pydantic Field title and description
 
+**Important pydantic/pipeline editor interaction:** avoid using `default = None`
+for optional fields.  Pydantic omits `None` defaults from the generated JSON
+schema, which causes the pipeline editor to treat those fields as mandatory.
+Instead use empty sentinel values:
+
+  * `str` fields: use `default = ""`
+  * `List` fields: use `default = []`
+
+Then check for empty in the `process()` method (e.g. `if analysis_type != ""`).
+
 Then review how the **inherited** VconProcessorOptions fields apply to this
 processor:
 
