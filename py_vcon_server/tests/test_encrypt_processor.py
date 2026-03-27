@@ -418,7 +418,7 @@ async def test_encrypt_pipeline(make_inline_audio_vcon: vcon.Vcon):
       encrypted_vcon.loadd(pipeline_out_dict["vcons"][0])
       assert(encrypted_vcon._state == vcon.VconStates.ENCRYPTED)
       assert(encrypted_vcon.uuid == UUID)
-    exception Exception:
+    except Exception:
       print("pipe out: {}".format(pipeline_out_dict))
       raise
 
