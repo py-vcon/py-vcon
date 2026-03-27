@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ FilterPlugin for Deepgram transcription """
 import typing
 import json
@@ -73,8 +73,8 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
       logger.warning("Deepgram plugin: key not set.  Plugin will be a no-op")
       self.deepgram_client = None
 
-    else:
-      self.deepgram_client = deepgram.Deepgram(init_options.deepgram_key)
+    #else:
+    #  self.deepgram_client = deepgram.Deepgram(init_options.deepgram_key)
 
 
 
@@ -157,7 +157,8 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     if(len(dialog_indices) == 0):
       return(out_vcon)
 
-    if(self.deepgram_client is None):
+    if(self._init_options.deepgram_key is None or
+       self._init_options.deepgram_key == ""):
       logger.warning("Deepgram.filter: deepgram_key is not set, no transcription performed")
       return(out_vcon)
 
