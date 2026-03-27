@@ -1,7 +1,8 @@
 # runtime dependencies:
 # Deepgram 3+ uses match statement which does not run on python < 3.10
-deepgram-sdk < 3 ; python_version < "3.10"
-deepgram-sdk >= 3 ; python_version >= "3.10"
+#deepgram-sdk < 3 ; python_version < "3.10"
+#deepgram-sdk >= 3 ; python_version >= "3.10"
+# Using deepgram RESTful API directly to avoid version changes.
 cbor2
 cryptography >= 37, < 45.0.0 ; python_version < "3.9"
 cryptography >= 37 ; python_version >= "3.9"
@@ -40,5 +41,5 @@ tensorflow
 scikit-learn
 dataprofiler
 # datasketches 5.2.0+ requires nanobind which does not support Python < 3.9
-datasketches < 5.2.0 ; python_version < "3.9"
+datasketches < 5.0.0 ; python_version < "3.9"
 
