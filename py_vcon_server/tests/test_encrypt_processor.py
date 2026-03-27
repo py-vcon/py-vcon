@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit tests for encrypting processor """
 import json
 import pytest
@@ -408,16 +408,19 @@ async def test_encrypt_pipeline(make_inline_audio_vcon: vcon.Vcon):
           },
         headers={"accept": "application/json"},
       )
-    assert(post_response.status_code == 200)
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    assert(len(pipeline_out_dict["vcons"]) == 1)
-    assert(pipeline_out_dict["vcons_modified"][0])
-    assert({"unprotected", "ciphertext"} <= pipeline_out_dict["vcons"][0].keys())
-    encrypted_vcon = vcon.Vcon()
-    encrypted_vcon.loadd(pipeline_out_dict["vcons"][0])
-    assert(encrypted_vcon._state == vcon.VconStates.ENCRYPTED)
-    assert(encrypted_vcon.uuid == UUID)
+    try:
+      assert(post_response.status_code == 200)
+      assert(len(pipeline_out_dict["vcons"]) == 1)
+      assert(pipeline_out_dict["vcons_modified"][0])
+      assert({"unprotected", "ciphertext"} <= pipeline_out_dict["vcons"][0].keys())
+      encrypted_vcon = vcon.Vcon()
+      encrypted_vcon.loadd(pipeline_out_dict["vcons"][0])
+      assert(encrypted_vcon._state == vcon.VconStates.ENCRYPTED)
+      assert(encrypted_vcon.uuid == UUID)
+    exception Exception:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise
 
     set_response = client.put(
         "/pipeline/{}".format(
@@ -448,13 +451,17 @@ async def test_encrypt_pipeline(make_inline_audio_vcon: vcon.Vcon):
           },
         headers={"accept": "application/json"},
       )
-    assert(post_response.status_code == 200)
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    assert(len(pipeline_out_dict["vcons"]) == 1)
-    assert(pipeline_out_dict["vcons_modified"][0])
-    # Note: we get back a signed/unverified vCon
-    assert({"payload", "signatures"} <= pipeline_out_dict["vcons"][0].keys())
+    try:
+      assert(post_response.status_code == 200)
+      assert(len(pipeline_out_dict["vcons"]) == 1)
+      assert(pipeline_out_dict["vcons_modified"][0])
+      # Note: we get back a signed/unverified vCon
+      assert({"payload", "signatures"} <= pipeline_out_dict["vcons"][0].keys())
+    except Exception:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise
+
     unverified_vcon = vcon.Vcon()
     unverified_vcon.loadd(pipeline_out_dict["vcons"][0])
     assert(unverified_vcon._state == vcon.VconStates.UNVERIFIED)
