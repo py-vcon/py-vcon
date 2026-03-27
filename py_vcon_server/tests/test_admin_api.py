@@ -236,10 +236,10 @@ async def test_job_queue():
       headers={"accept": "application/json"},
       content = json.dumps(TEST_JOB_UNSUPPORTED)
       )
-    assert(put_response.status_code == 500)
     put_error = put_response.json()
     #assert("bar" in "{}".format(put_error))
     assert("type" in put_error["exception"] or "vcon_uuid" in put_error["exception"])
+    assert(put_response.status_code == 500)
 
     # Add a job
     put_response = client.put(
