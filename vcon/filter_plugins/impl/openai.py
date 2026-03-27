@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ OpenAI FilterPlugin implentation """
 import typing
 import datetime
@@ -88,7 +88,7 @@ your license/API key using the following:
     openai.api_key = "your key here"
     openai.Model.list()
 """,
-    default = 'gpt-4-1106-preview',
+    default = 'gpt-4.1-nano-2025-04-14',
     examples = [
       'davinci',
       'gpt-4',
