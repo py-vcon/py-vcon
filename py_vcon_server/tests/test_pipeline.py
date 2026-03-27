@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit tests for Pipeline and related data objects """
 import pydantic
 import pytest
@@ -467,28 +467,33 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
         headers={"accept": "application/json"},
       )
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
     if(post_response.status_code == 200):
       # TODO: this should fail with timeout of 0.1
-      assert(len(pipeline_out_dict["vcons"]) == 1)
-      assert(len(pipeline_out_dict["vcons_modified"]) == 1)
-      assert(pipeline_out_dict["vcons_modified"][0])
-      modified_vcon = vcon.Vcon()
-      modified_vcon.loadd(pipeline_out_dict["vcons"][0])
-      assert(len(modified_vcon.dialog) == 1)
-      assert(modified_vcon.dialog[0]["type"] == "recording")
-      assert(len(modified_vcon.analysis) == 2)
-      assert(modified_vcon.analysis[0]["type"] == "transcript")
-      assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
-      assert(modified_vcon.analysis[0]["product"] == "transcription")
-      assert(modified_vcon.analysis[1]["type"] == "summary")
-      assert(modified_vcon.analysis[1]["vendor"] == "openai")
-      assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+      try:
+        assert(len(pipeline_out_dict["vcons"]) == 1)
+        assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+        assert(pipeline_out_dict["vcons_modified"][0])
+        modified_vcon = vcon.Vcon()
+        modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+        assert(len(modified_vcon.dialog) == 1)
+        assert(modified_vcon.dialog[0]["type"] == "recording")
+        assert(len(modified_vcon.analysis) == 2)
+        assert(modified_vcon.analysis[0]["type"] == "transcript")
+        assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
+        assert(modified_vcon.analysis[0]["product"] == "transcription")
+        assert(modified_vcon.analysis[1]["type"] == "summary")
+        assert(modified_vcon.analysis[1]["vendor"] == "openai")
+        assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+      except Exception:
+        print("pipe out: {}".format(pipeline_out_dict))
+        raise
     elif(post_response.status_code == 430):
+      print("pipe out: {}".format(pipeline_out_dict))
       # pipe_out_dict
       # TODO confirm timeout in error message
       pass
     else:
+      print("pipe out: {}".format(pipeline_out_dict))
       assert(post_response.status_code != 200)
 
 
@@ -544,22 +549,25 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
         headers={"accept": "application/json"},
       )
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    assert(post_response.status_code == 200)
-    assert(len(pipeline_out_dict["vcons"]) == 1)
-    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
-    assert(pipeline_out_dict["vcons_modified"][0])
-    modified_vcon = vcon.Vcon()
-    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
-    assert(len(modified_vcon.dialog) == 1)
-    assert(modified_vcon.dialog[0]["type"] == "recording")
-    assert(len(modified_vcon.analysis) == 2)
-    assert(modified_vcon.analysis[0]["type"] == "transcript")
-    assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
-    assert(modified_vcon.analysis[0]["product"] == "transcription")
-    assert(modified_vcon.analysis[1]["type"] == "summary")
-    assert(modified_vcon.analysis[1]["vendor"] == "openai")
-    assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+    try:
+      assert(post_response.status_code == 200)
+      assert(len(pipeline_out_dict["vcons"]) == 1)
+      assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+      assert(pipeline_out_dict["vcons_modified"][0])
+      modified_vcon = vcon.Vcon()
+      modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+      assert(len(modified_vcon.dialog) == 1)
+      assert(modified_vcon.dialog[0]["type"] == "recording")
+      assert(len(modified_vcon.analysis) == 2)
+      assert(modified_vcon.analysis[0]["type"] == "transcript")
+      assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
+      assert(modified_vcon.analysis[0]["product"] == "transcription")
+      assert(modified_vcon.analysis[1]["type"] == "summary")
+      assert(modified_vcon.analysis[1]["vendor"] == "openai")
+      assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+    try:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise
 
     # run with invalid pipeline name
     post_response = client.post(
@@ -590,22 +598,26 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
         headers={"accept": "application/json"},
       )
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    assert(post_response.status_code == 200)
-    assert(len(pipeline_out_dict["vcons"]) == 1)
-    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
-    assert(pipeline_out_dict["vcons_modified"][0])
-    modified_vcon = vcon.Vcon()
-    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
-    assert(len(modified_vcon.dialog) == 1)
-    assert(modified_vcon.dialog[0]["type"] == "recording")
-    assert(len(modified_vcon.analysis) == 2)
-    assert(modified_vcon.analysis[0]["type"] == "transcript")
-    assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
-    assert(modified_vcon.analysis[0]["product"] == "transcription")
-    assert(modified_vcon.analysis[1]["type"] == "summary")
-    assert(modified_vcon.analysis[1]["vendor"] == "openai")
-    assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+    try:
+      assert(post_response.status_code == 200)
+      assert(len(pipeline_out_dict["vcons"]) == 1)
+      assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+      assert(pipeline_out_dict["vcons_modified"][0])
+      modified_vcon = vcon.Vcon()
+      modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+      assert(len(modified_vcon.dialog) == 1)
+      assert(modified_vcon.dialog[0]["type"] == "recording")
+      assert(len(modified_vcon.analysis) == 2)
+      assert(modified_vcon.analysis[0]["type"] == "transcript")
+      assert(modified_vcon.analysis[0]["vendor"] == "deepgram")
+      assert(modified_vcon.analysis[0]["product"] == "transcription")
+      assert(modified_vcon.analysis[1]["type"] == "summary")
+      assert(modified_vcon.analysis[1]["vendor"] == "openai")
+      assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
+    try:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise
+
     # The pipeline was run with no save of the vCons at the end.
     # Verify that the vCon in Storage did not get updated
     get_response = client.get(
@@ -630,10 +642,13 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
           },
         headers = {"accept": "application/json"},
       )
-    assert(post_response.status_code == 200)
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    assert(pipeline_out_dict is None)
+    try:
+      assert(post_response.status_code == 200)
+      assert(pipeline_out_dict is None)
+    except Exception:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise
 
     # test commit of vCons after pipeline run
     # Verify that the vCon in Storage DID get updated
@@ -737,17 +752,20 @@ async def test_pipeline_conditional(make_inline_audio_vcon: vcon.Vcon):
         headers={"accept": "application/json"},
       )
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    assert(post_response.status_code == 200)
-    assert(len(pipeline_out_dict["vcons"]) == 1)
-    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
-    # As we pass the vCon into the RESDful API it is considered new/modified
-    # WRT the vCon DB
-    assert(pipeline_out_dict["vcons_modified"][0])
-    unmodified_vcon = vcon.Vcon()
-    unmodified_vcon.loadd(pipeline_out_dict["vcons"][0])
-    print("pipeline output keys: {}".format(pipeline_out_dict.keys()))
-    assert(len(unmodified_vcon.dialog) == 1)
-    assert(len(unmodified_vcon.analysis) == 0)
-    assert(len(pipeline_out_dict["parameters"]) == 2)
+    try:
+      assert(post_response.status_code == 200)
+      assert(len(pipeline_out_dict["vcons"]) == 1)
+      assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+      # As we pass the vCon into the RESDful API it is considered new/modified
+      # WRT the vCon DB
+      assert(pipeline_out_dict["vcons_modified"][0])
+      unmodified_vcon = vcon.Vcon()
+      unmodified_vcon.loadd(pipeline_out_dict["vcons"][0])
+      print("pipeline output keys: {}".format(pipeline_out_dict.keys()))
+      assert(len(unmodified_vcon.dialog) == 1)
+      assert(len(unmodified_vcon.analysis) == 0)
+      assert(len(pipeline_out_dict["parameters"]) == 2)
+    except Exception:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise
 
