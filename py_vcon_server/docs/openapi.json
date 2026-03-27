@@ -3,7 +3,7 @@
   "info": {
     "title": "Python vCon Server",
     "summary": "vCon pipeline processor server cluster and storage API",
-    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](../pipeline_editor/index.html) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
+    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](./pipeline_editor/index.html) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
     "contact": {
       "name": "Commercial support available from SIPez",
       "url": "http://www.sipez.com/"
@@ -11,7 +11,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.5.5"
+    "version": "0.5.10"
   },
   "paths": {
     "/server/info": {
@@ -3976,7 +3976,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1773693424.4010725
+              1774641286.49373
             ]
           },
           "server": {
@@ -4238,7 +4238,7 @@
             "type": "string",
             "title": "**OpenAI** model name to use for generative AI",
             "description": "\nThe named model is used to feed the transcription/text and then ask it the\ngiven prompt.\nOpenAI has numerous trained models, the latest of which may not be listed here\nin examples.\n\nYou can get the current list of of available models for\nyour license/API key using the following:\n\n    import openai\n    openai.api_key = \"your key here\"\n    openai.Model.list()\n",
-            "default": "gpt-4-1106-preview",
+            "default": "gpt-4.1-nano-2025-04-14",
             "examples": [
               "davinci",
               "gpt-4",
@@ -4754,6 +4754,12 @@
           "text_body": {
             "type": "string",
             "title": "main text body of the email message to be sent",
+            "description": "Plain text content for the email body.  Set to empty string if only HTML body is desired."
+          },
+          "html_body": {
+            "type": "string",
+            "title": "HTML body of the email message to be sent",
+            "description": "HTML content for the email body.  If both text_body and html_body are provided, a multipart/alternative message is sent.  If only html_body is provided, a text/html message is sent.",
             "default": ""
           },
           "client_hostname": {
@@ -4764,6 +4770,9 @@
         },
         "additionalProperties": true,
         "type": "object",
+        "required": [
+          "text_body"
+        ],
         "title": "SendEmailOptions",
         "description": "SendEmailOptions provides the SMTP headers and message data required to send\nan SMTP email message.  SendEmailOptions is passed to the send_email processor."
       },
@@ -4773,7 +4782,7 @@
             "type": "string",
             "title": "server version",
             "description": "Python package py_vcon_server version number",
-            "default": "0.5.5"
+            "default": "0.5.10"
           },
           "vcon": {
             "type": "string",
@@ -4786,14 +4795,14 @@
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1773693424.3949397
+              1774641286.4885042
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              101748
+              11470
             ]
           },
           "settings": {
@@ -4833,7 +4842,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              101748
+              11470
             ]
           },
           "start_time": {
@@ -4841,7 +4850,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1773693424.3967466
+              1774641286.490142
             ]
           },
           "num_workers": {
@@ -4867,7 +4876,7 @@
             "title": "heartbeat time stamp",
             "description": "epoch seconds time for the last heartbeat on this server",
             "examples": [
-              1773693424.3968828
+              1774641286.490252
             ]
           }
         },
@@ -5552,10 +5561,10 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1773693424,
-              1773693424.0809634,
+              1774641286,
+              1774641286.203373,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2026-03-16T20:37:04.080+00:00",
+              "2026-03-27T19:54:46.203+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },
@@ -5803,7 +5812,7 @@
     },
     {
       "name": "Admin: Pipelines",
-      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](../pipeline_editor/index.html) (Note: link works only on live server)"
+      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](./pipeline_editor/index.html) (Note: link works only on live server)"
     },
     {
       "name": "Admin: In Progress Jobs",
