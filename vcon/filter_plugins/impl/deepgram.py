@@ -7,7 +7,7 @@ import pydantic
 import requests
 import tenacity
 import vcon.filter_plugins
-import deepgram
+#import deepgram
 
 logger = vcon.build_logger(__name__)
 
