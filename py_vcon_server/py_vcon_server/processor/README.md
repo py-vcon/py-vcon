@@ -305,7 +305,7 @@ Methods:
 ## py_vcon_server.processor.builtin.send_email.SendEmail
 
  - **Name:** send_email
- - **Version:** 0.0.1
+ - **Version:** 0.1.0
  - **Summary:** VconProcessor to send email message
 
 used to send SMTP messages using content from vCon or VconProcessorIP parameters.
@@ -1090,7 +1090,7 @@ your license/API key using the following:
 
 examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
 
-default: "gpt-4-1106-preview"
+default: "gpt-4.1-nano-2025-04-14"
 
 ##### prompt (str)
 the prompt or question to ask about the transcription/text
@@ -1409,7 +1409,15 @@ default: ""
 
 ##### text_body (str)
 main text body of the email message to be sent
-None
+Plain text content for the email body.  Set to empty string if only HTML body is desired.
+
+example:
+
+default: None
+
+##### html_body (str)
+HTML body of the email message to be sent
+HTML content for the email body.  If both text_body and html_body are provided, a multipart/alternative message is sent.  If only html_body is provided, a text/html message is sent.
 
 example:
 
