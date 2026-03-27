@@ -215,6 +215,7 @@ PIPE_CONDITIONAL_DICT = {
             "format_options": {
                 "should_process": "{party0_has_email_address}"
               },
+            "text_body": "Hello vCon",
             "smtp_host": "foo"
           }
         },
