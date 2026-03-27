@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import typing
 import time
 import os
@@ -95,6 +95,7 @@ class QueueJob(pydantic.BaseModel): # may need to add **vcon.pydantic_utils.SET_
       default = "vcon_uuid"
       )
 
+    # If we support other job types, this needs to become optional
     vcon_uuid: typing.List[str] = pydantic.Field(
       title = "vCon UUIDs",
       description = "array of vCon UUIDs (currently must be exactly 1)",

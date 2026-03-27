@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import os
 import time
 import asyncio
@@ -14,7 +14,8 @@ TEST_UUID1 = "fake_uuid1"
 TEST_UUID2 = "fake_uuid2"
 TEST_JOB1 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID1 ] }
 TEST_JOB2 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID2 ], "parameters": {"a": 1, "b": "B"} }
-TEST_JOB_UNSUPPORTED = { "job_type": "foo", "my_stuff": [ TEST_UUID1 ] }
+# The current QueueJob model is strict. So to get to the type checking code, we need a vcon_uuid list
+TEST_JOB_UNSUPPORTED = { "job_type": "foo", "vcon_uuid": [], "my_stuff": [ TEST_UUID1 ] }
 TEST_SERVER_KEY = "test_admin_api:-1:-1:1234"
 
 @pytest.mark.asyncio
