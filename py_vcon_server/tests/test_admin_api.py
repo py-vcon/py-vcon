@@ -250,7 +250,7 @@ async def test_job_queue():
     put_response = client.put(
       "/queue/{}".format(TEST_Q1),
       headers={"accept": "application/json"},
-      content = json.dumps(TEST_JOB1)
+      json = TEST_JOB1
       )
     assert(put_response.status_code == 200)
     queue_position = put_response.json()
