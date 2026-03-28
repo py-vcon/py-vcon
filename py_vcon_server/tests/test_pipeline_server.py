@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import copy
 import json
 import time
@@ -113,7 +113,7 @@ async def test_pipeline(make_inline_audio_vcon):
               WORK_QUEUE
             ),
           headers={"accept": "application/json"},
-          content = json.dumps(queue_job1)
+          json = queue_job1
         )
       assert(put_response.status_code == 200)
       queue_position = put_response.json()

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import copy
 import json
 import pytest
@@ -303,7 +303,7 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
             list(SERVER_QUEUES.keys())[1]
           ),
         headers={"accept": "application/json"},
-        content = json.dumps(queue_job1)
+        json = queue_job1
       )
     assert(put_response.status_code == 200)
     queue_position = put_response.json()
@@ -489,7 +489,7 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
             list(SERVER_QUEUES.keys())[1]
           ),
         headers={"accept": "application/json"},
-        content = json.dumps(queue_job1)
+        json = queue_job1
       )
     assert(put_response.status_code == 200)
     queue_position = put_response.json()
