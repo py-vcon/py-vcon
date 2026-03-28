@@ -33,7 +33,7 @@ import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
 
-__version__ = "0.6.4"
+__version__ = "0.6.8"
 
 def build_logger(name : str) -> logging.Logger:
   logger = logging.getLogger(name)
@@ -1743,39 +1743,73 @@ class Vcon():
     base_uri: str = "http://{host}:{port}/vcon",
     host: str = "localhost",
     port: int = 8000,
-    # not sure why I cannot use vcon.Vcon.MEDIATYPE_JSON here
-    post_kwargs: typing.Dict[str, typing.Any] = {"timeout": 20}
+    post_kwargs: typing.Optional[typing.Dict[str, typing.Any]] = None,
     ) -> None:
     """
-    HTTP Post this Vcon from the given base_uri and path.
-
-    Parameters:  
-    **base_url** (str) - template URL for HTTP post  
-    **host** (str) - host IP or DNS name to use in URL  
-    **port** (int) - HTTP port to use  
-    **post_kwargs** (dict) - extra args to pass to requests.post
-
+    HTTP Post this Vcon to the given URL.
+ 
+    Supports two URL styles:
+ 
+    1. **Template style** (original, backward-compatible)::
+ 
+         base_uri="http://{host}:{port}/vcon", host="localhost", port=8000
+ 
+    2. **Multi-host URL with load balancing and failover**::
+ 
+         base_uri="http://:password@host1:port1,host2:port2/path?db=0"
+ 
+       When the URL contains comma-separated host:port pairs, DNS names
+       are resolved to all A/AAAA records, the addresses are shuffled for
+       load balancing, and failover is attempted on connection errors or
+       502/503/504 responses.
+ 
+    Parameters:
+      **base_uri** (str) - template URL or multi-host URL for HTTP post
+      **host** (str) - host IP or DNS name (used only with template URLs)
+      **port** (int) - HTTP port (used only with template URLs)
+      **post_kwargs** (dict, optional) - extra args:
+          ``connect_timeout`` (float) - TCP/TLS connection timeout.
+              Keep short for fast failover (default: 5 s).
+          ``read_timeout`` (float) - time to wait for response data.
+              Set high for LLM/transcription backends
+              (default: 300 s).
+          ``write_timeout`` (float) - time to send request body
+              (default: 20 s).
+          ``pool_timeout`` (float) - time to wait for a connection
+              from the pool (default: 10 s).
+          ``max_retries`` (int) - max addresses to attempt before
+              giving up (default: try all resolved).
+ 
     Return: none
     """
-    if(post_kwargs is None):
-      post_kwargs = {
-          "timeout": 20,
-          "content-type": vcon.Vcon.MEDIATYPE_JSON
-        }
-
-    uri = base_uri.format(
-      host = host,
-      port = port
+    from vcon.http_lb import HttpLb
+ 
+    if post_kwargs is None:
+      post_kwargs = {}
+ 
+    # Resolve template placeholders.
+    if "{host}" in base_uri or "{port}" in base_uri:
+      uri = base_uri.format(host=host, port=port)
+    else:
+      uri = base_uri
+ 
+    resp = await HttpLb.post(
+      url=uri,
+      body=self.dumpd(),
+      content_type=vcon.Vcon.MEDIATYPE_JSON,
+      connect_timeout=post_kwargs.get("connect_timeout", None),
+      read_timeout=post_kwargs.get("read_timeout", None),
+      write_timeout=post_kwargs.get("write_timeout", None),
+      pool_timeout=post_kwargs.get("pool_timeout", None),
+      max_retries=post_kwargs.get("max_retries", None),
+    )
+ 
+    if not (200 <= resp.status_code < 300):
+      raise Exception(
+        "post of {} resulted in error code: {} text: {} content: {}".format(
+          uri, resp.status_code, resp.text, resp.content
+        )
       )
-
-    req = requests.post(uri, json = self.dumpd(), **post_kwargs)
-    if(not(200 <= req.status_code < 300)):
-      raise Exception("post of {} resulted in error code: {} text: {} content: {}".format(
-        uri,
-        req.status_code,
-        req.text,
-        req.content
-        ))
 
 
   @tag_serialize
@@ -2024,38 +2058,81 @@ class Vcon():
     host: str = "localhost",
     port: int = 8000,
     path: str = "/vcon/{uuid}",
-    # not sure why I cannot use vcon.Vcon.MEDIATYPE_JSON here
-    get_kwargs: typing.Dict[str, typing.Any] = {"timeout": 20, "headers": {"accept": "application/json"}}
+    get_kwargs: typing.Optional[typing.Dict[str, typing.Any]] = None,
     ) -> None:
     """
     HTTP GET the Vcon from the given base_uri and path.
 
-    Parameters:  
-    **uuid** (str) - UUID of the vCon to retrieve  
-    **base_url** (str) - template URL for HTTP post  
-    **host** (str) - host IP or DNS name to use in URL  
-    **port** (int) - HTTP port to use  
-    **path** (str) - template path for the URL  
-    **get_kwargs** (dict) - extra args to pass to requests.get
+    Supports two URL styles:
+
+    1. **Template style** (original, backward-compatible)::
+
+         base_uri="http://{host}:{port}{path}", host="localhost",
+         port=8000, path="/vcon/{uuid}"
+
+    2. **Multi-host URL with load balancing and failover**::
+
+         base_uri="http://:password@host1:port1,host2:port2/vcon/{uuid}"
+
+       The ``{uuid}`` placeholder in the URL is replaced with the
+       *uuid* parameter.
+
+    Parameters:
+      **uuid** (str) - UUID of the vCon to retrieve
+      **base_uri** (str) - template URL or multi-host URL
+      **host** (str) - host IP or DNS name (used only with template URLs)
+      **port** (int) - HTTP port (used only with template URLs)
+      **path** (str) - template path (used only with template URLs)
+      **get_kwargs** (dict, optional) - extra args:
+          ``connect_timeout`` (float) - TCP/TLS connection timeout
+              (default: 5 s).
+          ``read_timeout`` (float) - time to wait for response data
+              (default: 300 s).
+          ``write_timeout`` (float) - time to send request body
+              (default: 20 s).
+          ``pool_timeout`` (float) - time to wait for a connection
+              from the pool (default: 10 s).
+          ``max_retries`` (int) - max addresses to attempt before
+              giving up (default: try all resolved).
 
     Return: none
     """
-    if(get_kwargs is None):
-      get_kwargs = {"timeout": 20, "headers": {"accept": vcon.Vcon.MEDIATYPE_JSON }}
+    from vcon.http_lb import HttpLb
 
-    uri = base_uri.format(
-      host = host,
-      port = port,
-      path = path.format(uuid = uuid)
+    if get_kwargs is None:
+      get_kwargs = {}
+
+    # Resolve template placeholders.
+    if "{host}" in base_uri or "{port}" in base_uri:
+      uri = base_uri.format(
+        host=host,
+        port=port,
+        path=path.format(uuid=uuid)
       )
-    req = requests.get(uri, **get_kwargs)
-    if(not(200 <= req.status_code < 300)):
+    elif "{uuid}" in base_uri:
+      uri = base_uri.format(uuid=uuid)
+    else:
+      uri = base_uri
+
+    resp = await HttpLb.get(
+      url=uri,
+      headers={"accept": vcon.Vcon.MEDIATYPE_JSON},
+      connect_timeout=get_kwargs.get("connect_timeout", None),
+      read_timeout=get_kwargs.get("read_timeout", None),
+      write_timeout=get_kwargs.get("write_timeout", None),
+      pool_timeout=get_kwargs.get("pool_timeout", None),
+      max_retries=get_kwargs.get("max_retries", None),
+    )
+
+    if not (200 <= resp.status_code < 300):
       raise Exception("get of {} resulted in error: {}".format(
         uri,
-        req.status_code
-        ))
-    vcon_json = req.content
+        resp.status_code
+      ))
+
+    vcon_json = resp.content
     self.loads(vcon_json)
+
 
   @tag_signing
   def sign(self, private_key_pem_file: str, cert_chain_pem_files : typing.List[str]) -> None:

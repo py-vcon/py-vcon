@@ -22,6 +22,8 @@ uuid6
 python-json-logger
 python-multipart
 
+# module http_lb dependencies
+httpx
 
 # whisper dependencies
 ffmpeg-python
