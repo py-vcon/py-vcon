@@ -565,7 +565,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
       assert(modified_vcon.analysis[1]["type"] == "summary")
       assert(modified_vcon.analysis[1]["vendor"] == "openai")
       assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
-    try:
+    except Exception:
       print("pipe out: {}".format(pipeline_out_dict))
       raise
 
@@ -614,7 +614,7 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
       assert(modified_vcon.analysis[1]["type"] == "summary")
       assert(modified_vcon.analysis[1]["vendor"] == "openai")
       assert(modified_vcon.analysis[1]["product"] == "ChatCompletion")
-    try:
+    except Exception:
       print("pipe out: {}".format(pipeline_out_dict))
       raise
 
