@@ -16,7 +16,6 @@ python-jose !=3.4.*
 python-dateutil
 pytz
 regex
-requests
 sox
 tenacity
 uuid6
@@ -34,7 +33,7 @@ transformers
 whisper
 
 # stable-ts dependencies:
-numpy < 1.25
+numpy < 1.25 ; python_version < "3.11"
 torch >= 2.1
 stable-ts > 2
 
