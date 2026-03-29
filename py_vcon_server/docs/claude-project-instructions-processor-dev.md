@@ -182,6 +182,43 @@ The **implementation file** contains three classes:
   * `<Name>Options` — extends `VconProcessorOptions` with the plugin-specific fields
   * `<Name>` — extends `VconProcessor`, implements `__init__` and `process()`
 
+HTTP Requests in Plugins: Use vcon.http_lb.HttpLb
+When a VconProcessor plugin needs to make HTTP requests (e.g. calling external APIs, webhooks, or services), it must use vcon.http_lb.HttpLb instead of requests, httpx, or aiohttp directly.
+
+HttpLb is an async static class in vcon/http_lb.py that provides:
+
+Load balancing — resolved DNS addresses are shuffled so successive calls distribute traffic across hosts.
+Failover — each resolved address is tried in turn; connection errors and retryable HTTP status codes (502, 503, 504) advance to the next address automatically.
+Multi-host URLs — a single URL can specify multiple hosts (e.g. http://h1:8000,h2:8001/path) for built-in redundancy.
+Configurable timeouts — connect, read, write, and pool timeouts can all be set per request.
+Available methods
+All methods are async and @staticmethod on HttpLb:
+
+HttpLb.get(url, ...) — HTTP GET
+HttpLb.post(url, body=..., content_type=..., ...) — HTTP POST
+HttpLb.put(url, body=..., content_type=..., ...) — HTTP PUT
+HttpLb.request(method, url, body=..., ...) — generic method for any HTTP verb (e.g. "DELETE", "PATCH")
+All return an httpx.Response.
+
+Usage in a processor
+python
+import vcon.http_lb
+
+class MyProcessor(py_vcon_server.processor.VconProcessor):
+    async def process(self, processor_input, options):
+        response = await vcon.http_lb.HttpLb.post(
+            options.api_url,
+            body=payload_dict,
+            content_type="application/json",
+            connect_timeout=5.0,
+            read_timeout=30.0,
+        )
+        response.raise_for_status()
+        result = response.json()
+        ...
+Dependency
+HttpLb requires httpx, which is already listed in the py-vcon pip requirements. Addon packages do not need to add httpx to their own dependencies as long as they depend on python-vcon.
+
 #### 2.2 Create the Unit Tests
 
 The test file must be **self-contained** with no dependencies on files outside the
