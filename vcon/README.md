@@ -614,18 +614,42 @@ Returns:
 
 ### get
 
-**get**(self, uuid: 'str', base_uri: 'str' = 'http://{host}:{port}{path}', host: 'str' = 'localhost', port: 'int' = 8000, path: 'str' = '/vcon/{uuid}', get_kwargs: 'typing.Dict[str, typing.Any]' = {'timeout': 20, 'headers': {'accept': 'application/json'}}) -> 'None'
+**get**(self, uuid: 'str', base_uri: 'str' = 'http://{host}:{port}{path}', host: 'str' = 'localhost', port: 'int' = 8000, path: 'str' = '/vcon/{uuid}', get_kwargs: 'typing.Optional[typing.Dict[str, typing.Any]]' = None) -> 'None'
 
 
 HTTP GET the Vcon from the given base_uri and path.
 
-Parameters:  
-**uuid** (str) - UUID of the vCon to retrieve  
-**base_url** (str) - template URL for HTTP post  
-**host** (str) - host IP or DNS name to use in URL  
-**port** (int) - HTTP port to use  
-**path** (str) - template path for the URL  
-**get_kwargs** (dict) - extra args to pass to requests.get
+Supports two URL styles:
+
+1. **Template style** (original, backward-compatible)::
+
+     base_uri="http://{host}:{port}{path}", host="localhost",
+     port=8000, path="/vcon/{uuid}"
+
+2. **Multi-host URL with load balancing and failover**::
+
+     base_uri="http://:password@host1:port1,host2:port2/vcon/{uuid}"
+
+   The ``{uuid}`` placeholder in the URL is replaced with the
+   *uuid* parameter.
+
+Parameters:
+  **uuid** (str) - UUID of the vCon to retrieve
+  **base_uri** (str) - template URL or multi-host URL
+  **host** (str) - host IP or DNS name (used only with template URLs)
+  **port** (int) - HTTP port (used only with template URLs)
+  **path** (str) - template path (used only with template URLs)
+  **get_kwargs** (dict, optional) - extra args:
+      ``connect_timeout`` (float) - TCP/TLS connection timeout
+          (default: 5 s).
+      ``read_timeout`` (float) - time to wait for response data
+          (default: 300 s).
+      ``write_timeout`` (float) - time to send request body
+          (default: 20 s).
+      ``pool_timeout`` (float) - time to wait for a connection
+          from the pool (default: 10 s).
+      ``max_retries`` (int) - max addresses to attempt before
+          giving up (default: try all resolved).
 
 Return: none
 
@@ -708,16 +732,42 @@ Returns: none
 
 ### post
 
-**post**(self, base_uri: 'str' = 'http://{host}:{port}/vcon', host: 'str' = 'localhost', port: 'int' = 8000, post_kwargs: 'typing.Dict[str, typing.Any]' = {'timeout': 20}) -> 'None'
+**post**(self, base_uri: 'str' = 'http://{host}:{port}/vcon', host: 'str' = 'localhost', port: 'int' = 8000, post_kwargs: 'typing.Optional[typing.Dict[str, typing.Any]]' = None) -> 'None'
 
 
-HTTP Post this Vcon from the given base_uri and path.
+HTTP Post this Vcon to the given URL.
 
-Parameters:  
-**base_url** (str) - template URL for HTTP post  
-**host** (str) - host IP or DNS name to use in URL  
-**port** (int) - HTTP port to use  
-**post_kwargs** (dict) - extra args to pass to requests.post
+Supports two URL styles:
+
+1. **Template style** (original, backward-compatible)::
+
+     base_uri="http://{host}:{port}/vcon", host="localhost", port=8000
+
+2. **Multi-host URL with load balancing and failover**::
+
+     base_uri="http://:password@host1:port1,host2:port2/path?db=0"
+
+   When the URL contains comma-separated host:port pairs, DNS names
+   are resolved to all A/AAAA records, the addresses are shuffled for
+   load balancing, and failover is attempted on connection errors or
+   502/503/504 responses.
+
+Parameters:
+  **base_uri** (str) - template URL or multi-host URL for HTTP post
+  **host** (str) - host IP or DNS name (used only with template URLs)
+  **port** (int) - HTTP port (used only with template URLs)
+  **post_kwargs** (dict, optional) - extra args:
+      ``connect_timeout`` (float) - TCP/TLS connection timeout.
+          Keep short for fast failover (default: 5 s).
+      ``read_timeout`` (float) - time to wait for response data.
+          Set high for LLM/transcription backends
+          (default: 300 s).
+      ``write_timeout`` (float) - time to send request body
+          (default: 20 s).
+      ``pool_timeout`` (float) - time to wait for a connection
+          from the pool (default: 10 s).
+      ``max_retries`` (int) - max addresses to attempt before
+          giving up (default: try all resolved).
 
 Return: none
 
