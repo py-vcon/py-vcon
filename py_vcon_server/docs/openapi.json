@@ -11,7 +11,7 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.5.10"
+    "version": "0.5.11"
   },
   "paths": {
     "/server/info": {
@@ -1501,6 +1501,99 @@
         }
       }
     },
+    "/process/{vcon_uuid}/jinja_report": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Jinja2 template report generator **VconProcessor**",
+        "description": "Renders a Jinja2 template using the VconProcessorIO as the template context.  The template has access to all vCons and parameters in the VconProcessorIO.  The rendered output is stored as a VconProcessorIO parameter and optionally as a new analysis object in the vCon.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__jinja_report_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JinjaReportOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/process/{vcon_uuid}/jq": {
       "post": {
         "tags": [
@@ -2660,6 +2753,80 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/FixRecordingDialogIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/jinja_report": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Jinja2 template report generator **VconProcessor**",
+        "description": "Renders a Jinja2 template using the VconProcessorIO as the template context.  The template has access to all vCons and parameters in the VconProcessorIO.  The rendered output is stored as a VconProcessorIO parameter and optionally as a new analysis object in the vCon.",
+        "operationId": "run_vcon_processor_io_processIO_jinja_report_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JinjaReportIO"
               }
             }
           }
@@ -3976,7 +4143,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1774641286.49373
+              1774814581.1327767
             ]
           },
           "server": {
@@ -4067,6 +4234,157 @@
         "type": "object",
         "title": "JQOptions",
         "description": "JOptions is passed to the jq processor when processing the VconProcessorIO.\nJQOptions adds the jq_queries to VconProcessorOptions which defines the\nset of querries to perform on the VconProcessorIO."
+      },
+      "JinjaReportIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/JinjaReportOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "JinjaReportIO"
+      },
+      "JinjaReportOptions": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "default": {}
+          },
+          "template": {
+            "type": "string",
+            "title": "Jinja2 template string",
+            "description": "Jinja2 template string to render using the VconProcessorIO as the template context.  The template has access to two top level variables: **vcons** (array of vCon dicts) and **parameters** (dict of VconProcessorIO parameters).  For example: {{ vcons[0].uuid }} accesses the first vCon's UUID.",
+            "examples": [
+              "Conversation Report\n===================\nUUID: {{ vcons[0].uuid }}\nSubject: {{ vcons[0].subject | default(\"N/A\", true) }}\nDate: {{ vcons[0].dialog[0].start | default(\"N/A\", true) }}\nDuration: {{ vcons[0].dialog[0].duration | default(\"N/A\", true) }} seconds\n\nParties:\n{% for p in vcons[0].parties -%}\n  - {{ p.name | default(\"Unknown\", true) }}\n{% endfor %}"
+            ]
+          },
+          "output_parameter_name": {
+            "type": "string",
+            "title": "output parameter name for rendered template",
+            "description": "Name of the VconProcessorIO parameter in which to store the rendered template output string.",
+            "default": "report_output",
+            "examples": [
+              "report_output"
+            ]
+          },
+          "analysis_type": {
+            "type": "string",
+            "title": "analysis object type",
+            "description": "If set, the rendered template output is added as a new analysis object in the vCon indicated by **input_vcon_index** with this type value.  If not set, no analysis object is created.",
+            "default": "",
+            "examples": [
+              "report"
+            ]
+          },
+          "analysis_vendor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "analysis object vendor",
+            "description": "Vendor string for the analysis object.  Only used when **analysis_type** is set.",
+            "default": "jinja",
+            "examples": [
+              "jinja"
+            ]
+          },
+          "analysis_product": {
+            "type": "string",
+            "title": "analysis object product",
+            "description": "Product string for the analysis object.  Only used when **analysis_type** is set.  Typically only needed for non-text output formats where a consumer needs to identify the format.",
+            "default": "",
+            "examples": [
+              "jinja_report"
+            ]
+          },
+          "analysis_schema": {
+            "type": "string",
+            "title": "analysis object schema",
+            "description": "Schema string for the analysis object.  Only used when **analysis_type** is set.  Typically only needed for non-text output formats where a consumer needs to identify the format.",
+            "default": "",
+            "examples": [
+              "text_report"
+            ]
+          },
+          "media_type": {
+            "type": "string",
+            "title": "analysis object media type",
+            "description": "Media type for the analysis object.  Only used when **analysis_type** is set.",
+            "default": "text/plain",
+            "examples": [
+              "text/plain",
+              "text/html"
+            ]
+          },
+          "analysis_dialog_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "analysis object dialog index",
+            "description": "Dialog index or list of dialog indices that the analysis object references.  Only used when **analysis_type** is set.  If not set (None), defaults to all dialog indices in the vCon at runtime.",
+            "default": [],
+            "examples": [
+              0,
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "template"
+        ],
+        "title": "JinjaReportOptions",
+        "description": "JinjaReportOptions defines the Jinja2 template and output destinations for the\njinja_report processor.\n\nThe **template** field is a Jinja2 template string that is rendered using the\nVconProcessorIO as the template context.  The template has access to two top\nlevel variables:\n\n  * **vcons** - array of dicts, one for each vCon in the VconProcessorIO\n  * **parameters** - dict of parameters from the VconProcessorIO\n\nThe rendered output is always stored in the VconProcessorIO parameter named\nby **output_parameter_name**.  If **analysis_type** is set, the rendered output\nis also added as a new analysis object in the vCon indicated by **input_vcon_index**."
       },
       "JweUnprotectedObject": {
         "properties": {
@@ -4782,27 +5100,27 @@
             "type": "string",
             "title": "server version",
             "description": "Python package py_vcon_server version number",
-            "default": "0.5.10"
+            "default": "0.5.11"
           },
           "vcon": {
             "type": "string",
             "title": "vcon version",
             "description": "Python package **py_vcon** version number",
-            "default": "0.6.4"
+            "default": "0.6.9"
           },
           "start_time": {
             "type": "number",
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1774641286.4885042
+              1774814581.1265574
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              11470
+              41818
             ]
           },
           "settings": {
@@ -4842,7 +5160,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              11470
+              41818
             ]
           },
           "start_time": {
@@ -4850,7 +5168,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1774641286.490142
+              1774814581.1286159
             ]
           },
           "num_workers": {
@@ -4876,7 +5194,7 @@
             "title": "heartbeat time stamp",
             "description": "epoch seconds time for the last heartbeat on this server",
             "examples": [
-              1774641286.490252
+              1774814581.1287236
             ]
           }
         },
@@ -5561,10 +5879,10 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1774641286,
-              1774641286.203373,
+              1774814580,
+              1774814580.8193917,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2026-03-27T19:54:46.203+00:00",
+              "2026-03-29T20:03:00.819+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },

@@ -14,6 +14,7 @@
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
    * [py_vcon_server.processor.builtin.encrypt.Encrypt](#py_vcon_serverprocessorbuiltinencryptencrypt)
    * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialog](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialog)
+   * [py_vcon_server.processor.builtin.jinja_report.JinjaReport](#py_vcon_serverprocessorbuiltinjinja_reportjinjareport)
    * [py_vcon_server.processor.builtin.jq.JQProcessor](#py_vcon_serverprocessorbuiltinjqjqprocessor)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
    * [py_vcon_server.processor.builtin.queue_job.QueueJob](#py_vcon_serverprocessorbuiltinqueue_jobqueuejob)
@@ -31,6 +32,7 @@
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogInitOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialoginitoptions)
+   * [py_vcon_server.processor.builtin.jinja_report.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjinja_reportvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
    * [py_vcon_server.processor.builtin.queue_job.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinqueue_jobvconprocessorinitoptions)
@@ -48,6 +50,7 @@
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialogoptions)
+   * [py_vcon_server.processor.builtin.jinja_report.JinjaReportOptions](#py_vcon_serverprocessorbuiltinjinja_reportjinjareportoptions)
    * [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
    * [py_vcon_server.processor.builtin.queue_job.QueueJobOptions](#py_vcon_serverprocessorbuiltinqueue_jobqueuejoboptions)
@@ -260,6 +263,24 @@ Methods:
 **__init__**(self, init_options: JQInitOptions)
 
 **process**(self, processor_input: VconProcessorIO, options: JQOptions)
+
+
+## py_vcon_server.processor.builtin.jinja_report.JinjaReport
+
+ - **Name:** jinja_report
+ - **Version:** 0.0.1
+ - **Summary:** Jinja2 template report generator **VconProcessor**
+
+Renders a Jinja2 template using the VconProcessorIO as the template context.  The template has access to all vCons and parameters in the VconProcessorIO.  The rendered output is stored as a VconProcessorIO parameter and optionally as a new analysis object in the vCon.
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.jinja_report.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjinja_reportvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.jinja_report.JinjaReportOptions](#py_vcon_serverprocessorbuiltinjinja_reportjinjareportoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: JinjaReportInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: JinjaReportOptions)
 
 
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletion
@@ -539,7 +560,7 @@ examples: ['sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu']
 default: None
 
 
-## py_vcon_server.processor.builtin.openai.SignFilterPluginInitOptions
+## py_vcon_server.processor.builtin.jinja_report.SignFilterPluginInitOptions
 
  - **Summary:** JWS signing of vCon **FilterPlugin** intialization object
 
@@ -568,7 +589,7 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.queue_job.VerifyFilterPluginInitOptions
+## py_vcon_server.processor.builtin.openai.VerifyFilterPluginInitOptions
 
  - **Summary:** JWS verification of vCon **FilterPlugin** intialization object
 
@@ -590,7 +611,7 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.send_email.WhisperInitOptions
+## py_vcon_server.processor.builtin.queue_job.WhisperInitOptions
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
@@ -1041,6 +1062,131 @@ None
 examples: [{'party_count': '.parties | length', 'first_dialog_type': '.vcons[0].dialog[0].type', 'party0_has_email_address': '.vcons[0].parties[0].email | length > 0'}]
 
 default: {}
+
+
+## py_vcon_server.processor.builtin.jinja_report.JinjaReportOptions
+
+ - **Summary:** JinjaReportOptions
+
+JinjaReportOptions defines the Jinja2 template and output destinations for the
+jinja_report processor.
+
+The **template** field is a Jinja2 template string that is rendered using the
+VconProcessorIO as the template context.  The template has access to two top
+level variables:
+
+  * **vcons** - array of dicts, one for each vCon in the VconProcessorIO
+  * **parameters** - dict of parameters from the VconProcessorIO
+
+The rendered output is always stored in the VconProcessorIO parameter named
+by **output_parameter_name**.  If **analysis_type** is set, the rendered output
+is also added as a new analysis object in the vCon indicated by **input_vcon_index**.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+example:
+
+default: {}
+
+##### template (str)
+Jinja2 template string
+Jinja2 template string to render using the VconProcessorIO as the template context.  The template has access to two top level variables: **vcons** (array of vCon dicts) and **parameters** (dict of VconProcessorIO parameters).  For example: {{ vcons[0].uuid }} accesses the first vCon's UUID.
+
+examples: ['Conversation Report\n===================\nUUID: {{ vcons[0].uuid }}\nSubject: {{ vcons[0].subject | default("N/A", true) }}\nDate: {{ vcons[0].dialog[0].start | default("N/A", true) }}\nDuration: {{ vcons[0].dialog[0].duration | default("N/A", true) }} seconds\n\nParties:\n{% for p in vcons[0].parties -%}\n  - {{ p.name | default("Unknown", true) }}\n{% endfor %}']
+
+default: None
+
+##### output_parameter_name (str)
+output parameter name for rendered template
+Name of the VconProcessorIO parameter in which to store the rendered template output string.
+
+examples: ['report_output']
+
+default: "report_output"
+
+##### analysis_type (str)
+analysis object type
+If set, the rendered template output is added as a new analysis object in the vCon indicated by **input_vcon_index** with this type value.  If not set, no analysis object is created.
+
+examples: ['report']
+
+default: ""
+
+##### analysis_vendor (typing.Union[str, NoneType])
+analysis object vendor
+Vendor string for the analysis object.  Only used when **analysis_type** is set.
+
+examples: ['jinja']
+
+default: jinja
+
+##### analysis_product (str)
+analysis object product
+Product string for the analysis object.  Only used when **analysis_type** is set.  Typically only needed for non-text output formats where a consumer needs to identify the format.
+
+examples: ['jinja_report']
+
+default: ""
+
+##### analysis_schema (str)
+analysis object schema
+Schema string for the analysis object.  Only used when **analysis_type** is set.  Typically only needed for non-text output formats where a consumer needs to identify the format.
+
+examples: ['text_report']
+
+default: ""
+
+##### media_type (str)
+analysis object media type
+Media type for the analysis object.  Only used when **analysis_type** is set.
+
+examples: ['text/plain', 'text/html']
+
+default: "text/plain"
+
+##### analysis_dialog_index (typing.Union[int, typing.List[int]])
+analysis object dialog index
+Dialog index or list of dialog indices that the analysis object references.  Only used when **analysis_type** is set.  If not set (None), defaults to all dialog indices in the vCon at runtime.
+
+examples: [0, [0, 1]]
+
+default: []
 
 
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions
