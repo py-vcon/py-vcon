@@ -1,8 +1,8 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 
 import typing
 import pydantic
-import pyjq
+import jq
 import vcon.pydantic_utils
 import py_vcon_server.processor
 
@@ -83,8 +83,9 @@ class JQProcessor(py_vcon_server.processor.VconProcessor):
           options.jq_queries[parameter_name]
         ))
 
-      query_result = pyjq.all(options.jq_queries[parameter_name],
-        dict_to_query)[0]
+      compiled_query = jq.compile(options.jq_queries[parameter_name])
+      query_result = compiled_query.input_value(dict_to_query).all()[0]
+
       logger.debug("setting parameter: {} to {}".format(
           parameter_name,
           query_result

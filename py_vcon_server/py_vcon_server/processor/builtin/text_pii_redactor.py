@@ -1,8 +1,7 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 
 import typing
 import pydantic
-import pyjq
 import vcon.filter_plugins.impl.jq_redaction
 import vcon.filter_plugins.impl.redact_pii
 import py_vcon_server.processor

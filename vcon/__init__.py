@@ -24,7 +24,7 @@ import warnings
 import datetime
 import email
 import pathlib
-import pyjq
+import jq
 import uuid6
 import requests
 import pythonjsonlogger.jsonlogger
@@ -33,7 +33,7 @@ import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
 
-__version__ = "0.6.8"
+__version__ = "0.6.9"
 
 def build_logger(name : str) -> logging.Logger:
   logger = logging.getLogger(name)
@@ -2433,13 +2433,16 @@ class Vcon():
       raise InvalidVconState("Vcon state: {} cannot read parameters".format(self._state))
 
     if(isinstance(query, str)):
-      return(pyjq.all(query, self.dumpd()))
+      compiled_query = jq.compile(query)
+
+      return(compiled_query.input_value(self.dumpd()).all())
 
     else:
       results = {}
       vcon_dict = self.dumpd()
       for query_name, query_string in query.items():
-        results[query_name] = pyjq.all(query_string, vcon_dict)[0]
+        compiled_query = jq.compile(query_string)
+        results[query_name] = compiled_query.input_value(vcon_dict).all()[0]
 
       return(results)
 

@@ -5,7 +5,7 @@ import datetime
 import logging
 import pydantic
 import openai
-import pyjq
+import jq
 import tenacity
 import vcon
 import vcon.filter_plugins
@@ -364,7 +364,8 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
         text_body
       )
 
-    query_result = pyjq.all(options.jq_result, completion_result)
+    compiled_query = jq.compile(options.jq_result)
+    query_result = compiled_query.input_value(completion_result).all()
     if(len(query_result) == 0):
       logger.warning("{} jq query resulted in no elements.  No analysis object added".format(
        self.__class__.__name__
@@ -698,7 +699,8 @@ class OpenAIChatCompletion(OpenAICompletion):
     #   temperature = options.temperature
     #   )
 
-    query_result = pyjq.all(options.jq_result, chat_completion_result)
+    compiled_query = jq.compile(options.jq_result)
+    query_result = compiled_query.input_value(chat_completion_result).all()
     if(len(query_result) == 0):
       logger.warning("{} jq query resulted in no elements.  No analysis object added".format(
        self.__class__.__name__

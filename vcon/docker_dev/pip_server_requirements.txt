@@ -8,8 +8,12 @@ pkgutil-resolve-name
 psutil
 pydantic
 pyjq
-python-vcon >= 0.6.0
+python-vcon >= 0.6.9
 redis
 setuptools
 smtpdfix
 uvicorn
+# Optional stuff
+prometheus_client
+prometheus_fastapi_instrumentator
+
