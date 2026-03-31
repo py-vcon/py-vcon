@@ -160,11 +160,6 @@ class JinjaReport(py_vcon_server.processor.VconProcessor):
     Does not modify the vCon unless analysis_type is set.
     """
 
-    formatted_options = processor_input.format_parameters_to_options(options)
-    # force pydantic typing and defaults
-    if(isinstance(formatted_options, dict)):
-      formatted_options = JinjaReportOptions(**formatted_options)
-
     # Build the template context dict from VconProcessorIO
     # This follows the same pattern as the jq processor
     context = {
@@ -180,7 +175,7 @@ class JinjaReport(py_vcon_server.processor.VconProcessor):
     # Render the template
     try:
       env = jinja2.Environment(undefined = jinja2.StrictUndefined)
-      template = env.from_string(formatted_options.template)
+      template = env.from_string(options.template)
       result = template.render(**context)
     except jinja2.TemplateError as template_error:
       logger.error("jinja_report template rendering error: {}".format(template_error))
@@ -188,23 +183,23 @@ class JinjaReport(py_vcon_server.processor.VconProcessor):
 
     logger.debug("jinja_report rendered {} characters to parameter: {}".format(
         len(result),
-        formatted_options.output_parameter_name
+        options.output_parameter_name
       ))
 
     # Always store the rendered output as a parameter
-    processor_input.set_parameter(formatted_options.output_parameter_name, result)
+    processor_input.set_parameter(options.output_parameter_name, result)
 
     # Optionally add the rendered output as an analysis object
-    if(formatted_options.analysis_type is not None and
-      formatted_options.analysis_type != ""):
+    if(options.analysis_type is not None and
+      options.analysis_type != ""):
 
-      index = formatted_options.input_vcon_index
+      index = options.input_vcon_index
       in_vcon = await processor_input.get_vcon(index)
       if(in_vcon is None):
         raise Exception("Vcon not found for index: {}".format(index))
 
       # Determine dialog index
-      dialog_index = formatted_options.analysis_dialog_index
+      dialog_index = options.analysis_dialog_index
       if(isinstance(dialog_index, list) and len(dialog_index) == 0):
         # Default to all dialog indices
         num_dialogs = len(in_vcon.dialog) if in_vcon.dialog else 0
@@ -217,23 +212,23 @@ class JinjaReport(py_vcon_server.processor.VconProcessor):
 
       # Build optional parameters for add_analysis
       extra_params = {}
-      extra_params["mediatype"] = formatted_options.media_type
-      if(formatted_options.analysis_product is not None and
-        formatted_options.analysis_product != ""):
-        extra_params["product"] = formatted_options.analysis_product
+      extra_params["mediatype"] = options.media_type
+      if(options.analysis_product is not None and
+        options.analysis_product != ""):
+        extra_params["product"] = options.analysis_product
 
       logger.debug("jinja_report adding analysis type={} to vcon uuid={} dialog={}".format(
-          formatted_options.analysis_type,
+          options.analysis_type,
           in_vcon.uuid,
           dialog_index
         ))
 
       in_vcon.add_analysis(
         dialog_index,
-        formatted_options.analysis_type,
+        options.analysis_type,
         result,
-        formatted_options.analysis_vendor,
-        formatted_options.analysis_schema,
+        options.analysis_vendor,
+        options.analysis_schema,
         "none",
         **extra_params
         )

@@ -473,7 +473,10 @@ async def test_jinja_report_format_options():
         }
     }
 
-  proc_output = await jinja_proc_inst.process(proc_input, jinja_options)
+  formatted_options = proc_input.format_parameters_to_options(jinja_options)
+  formatted_options = jinja_proc_inst.processor_options_class()(**formatted_options)
+
+  proc_output = await jinja_proc_inst.process(proc_input, formatted_options)
 
   result = proc_output.get_parameter("formatted_output")
   assert(UUID in result)
