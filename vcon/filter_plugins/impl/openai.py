@@ -88,7 +88,7 @@ your license/API key using the following:
     openai.api_key = "your key here"
     openai.Model.list()
 """,
-    default = 'gpt-4.1-nano-2025-04-14',
+    default = 'gpt-4o-mini',
     examples = [
       'davinci',
       'gpt-4',
