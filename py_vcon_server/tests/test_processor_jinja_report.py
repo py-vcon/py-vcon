@@ -616,3 +616,84 @@ async def test_jinja_report_processio_api():
     result = proc_io_out["parameters"]["report_output"]
     assert(UUID in result)
     assert("Prior: hello" in result)
+
+# ============================================================
+#  Test: RESTful API - /processIO/jinja_report format_options
+#  with missing parameter
+# ============================================================
+@pytest.mark.asyncio
+async def test_jinja_report_processio_api_missing_format_param():
+  """ Test that format_options referencing a nonexistent parameter returns 500 """
+  in_vcon = make_1_dialog_vcon()
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+
+    parameters = {
+        "commit_changes": False
+      }
+
+    request_body = {
+        "processor_io": {
+            "vcons": [in_vcon.dumpd()],
+            "parameters": {}
+          },
+        "processor_options": {
+            "template": "{{ vcons[0].uuid }}",
+            "format_options": {
+                "output_parameter_name": "{nonexistent_param}"
+              }
+          }
+      }
+
+    post_response = client.post("/processIO/jinja_report",
+        params = parameters,
+        json = request_body
+      )
+    assert(post_response.status_code == 500)
+    error_body = post_response.json()
+    print(f"paramter not found respoinse: {error_body}")
+    assert("detail" in error_body or "error" in error_body or "traceback" in error_body)
+    # Verify the error message references the missing parameter
+    error_text = str(error_body)
+    assert("nonexistent_param" in error_text or "ParameterNotFound" in error_text)
+
+# ============================================================
+#  Test: RESTful API - /process/{vcon_uuid}/jinja_report
+#  format_options with missing parameter
+# ============================================================
+@pytest.mark.asyncio
+async def test_jinja_report_proc_api_missing_format_param():
+  """ Test that format_options referencing a nonexistent parameter returns 500 """
+  in_vcon = make_1_dialog_vcon()
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+
+    # Put the vCon in the DB
+    set_response = client.post("/vcon", json = in_vcon.dumpd())
+    assert(set_response.status_code == 204)
+
+    parameters = {
+        "commit_changes": False,
+        "return_whole_vcon": False
+      }
+
+    jinja_options = {
+        "template": "{{ vcons[0].uuid }}",
+        "format_options": {
+            "output_parameter_name": "{nonexistent_param}"
+          }
+      }
+
+    post_response = client.post("/process/{}/jinja_report".format(UUID),
+        params = parameters,
+        json = jinja_options
+      )
+    assert(post_response.status_code == 500)
+    error_body = post_response.json()
+    error_text = str(error_body)
+    assert("nonexistent_param" in error_text or "ParameterNotFound" in error_text)
+
+    # Cleanup
+    delete_response = client.delete("/vcon/{}".format(UUID))
+    assert(delete_response.status_code == 204)
+
