@@ -166,6 +166,7 @@ def init(restapi):
       ) -> str:
 
       try:
+        processor_type_options = None
         #processor_name = processor_type_dict[type(options)]
         path = request.url.path
         processor_name_from_path = os.path.basename(path)
@@ -219,9 +220,13 @@ def init(restapi):
 
       except Exception as e:
         # Add options to response for easier diagnostics and error reporting
+        if(processor_type_options is not None):
+          error_options = vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True)
+        else:
+          error_options = vcon.pydantic_utils.get_dict(options, exclude_none = True)
         exception_error_content = py_vcon_server.restful_api.InternalErrorResponse(e,
             {
-              "processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True),
+              "processor_options": error_options,
               "processor_name": processor_name_from_path
             })
         return(exception_error_content)
@@ -258,6 +263,7 @@ def init(restapi):
       ) -> str:
 
       try:
+        processor_type_options = None
         #processor_name = processor_type_dict[type(options)]
         path = request.url.path
         processor_name_from_path = os.path.basename(path)
@@ -322,11 +328,14 @@ def init(restapi):
       except Exception as e:
         py_vcon_server.restful_api.log_exception(e)
         # Add options to response for easier diagnostics and error reporting
+        if(processor_type_options is not None):
+          error_options = vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True)
+        else:
+          error_options = processor_input_dict.get("processor_options", {})
         exception_error_content = py_vcon_server.restful_api.InternalErrorResponse(e,
             {
-              "processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True),
+              "processor_options": error_options,
               "processor_name": processor_name_from_path
-
             })
         return(exception_error_content)
 
