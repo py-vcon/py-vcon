@@ -30,10 +30,13 @@ conversations without repeatedly explaining the codebase.
 
 ## Step 2: Add Repository Files as Project Knowledge
 
-1. In the project settings, click **Add Knowledge**
-2. Select the option to add from a **GitHub repository**
-3. Provide the repository URL: `https://github.com/py-vcon/py-vcon`
-4. From the file browser, select the files listed below
+1. In the project settings, click **Files +**
+2. Select **GitHub**
+3. Claude will request permision to access your GitHub.  Click **Authorize Claude**.
+4. When complete, click back on **Files +**, and select **GitHub**.
+5. Click on the **link** icon, next to **Select a repository**.
+6. Provide the repository URL: `https://github.com/py-vcon/py-vcon`
+7. From the file browser, select the files listed below
 
 The files are organized below by category. All paths are relative to the
 repository root.
@@ -101,7 +104,7 @@ repository root.
 
 ## Step 3: Verify the Setup
 
-After adding all files, you should have **24 files** loaded as Project Knowledge.
+After adding all files, you should have **26 files** loaded as Project Knowledge.
 To verify the project is working:
 
 1. Open a new conversation within the project
@@ -114,7 +117,7 @@ To verify the project is working:
 
 ## Summary of Files
 
-Below is the complete flat list of all 24 files for quick reference:
+Below is the complete flat list of all 26 files for quick reference:
 
 ```
 README.md
