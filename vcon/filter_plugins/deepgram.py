@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Deepgram audio transcription filter plugin registration """
 import os
 import datetime
@@ -21,9 +21,9 @@ vcon.filter_plugins.FilterPluginRegistry.register(
 class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
   def get_text(self):
     """
-    Get speaker, text and time stamps for Whisper transcript.
+    Get speaker, text and time stamps for Deepgram transcript.
 
-    Currently diarization is not supported for Whisper so there
+    Currently diarization is not supported for Deepgram so there
     is only one text chunk, not a chunk per speaker and spoken
     segment.
     """
