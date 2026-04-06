@@ -7,6 +7,7 @@ import fastapi
 import fastapi.middleware.cors
 import vcon
 from py_vcon_server import __version__
+import py_vcon_server
 import py_vcon_server.logging_utils
 import py_vcon_server.settings
 
@@ -206,7 +207,7 @@ or conbination of the following:
 
 The open source repository at: https://github.com/py-vcon/py-vcon
 """
-def init() -> fastapi.FastAPI:
+def init(lifespan=None) -> fastapi.FastAPI:
   restapi = fastapi.FastAPI(
     title = "Python vCon Server",
     description = description,
@@ -221,7 +222,8 @@ def init() -> fastapi.FastAPI:
     license_info = {
       "name": "MIT License"
       },
-    openapi_tags = openapi_tags
+    openapi_tags = openapi_tags,
+    lifespan = lifespan
     )
 
   # Paths that need root_path for correct OpenAPI server URL generation
@@ -237,6 +239,18 @@ def init() -> fastapi.FastAPI:
     if forwarded_prefix and request.url.path in OPENAPI_PATHS:
       request.scope["root_path"] = forwarded_prefix
     return await call_next(request)
+
+
+  # Shutdown middleware — rejects new requests with 503 when shutdown is in progress
+  @restapi.middleware("http")
+  async def shutdown_middleware(request: fastapi.Request, call_next):
+    if py_vcon_server.SHUTDOWN_REQUESTED and request.url.path != "/metrics":
+      return fastapi.responses.JSONResponse(
+          status_code = 503,
+          content = {"detail": "Server is shutting down"}
+        )
+    return await call_next(request)
+
 
   # CORS stuff
   logger.debug("CORS_ORIGINS: {}".format(py_vcon_server.settings.CORS_ORIGINS))
