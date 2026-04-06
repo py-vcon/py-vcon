@@ -21,6 +21,10 @@ ERROR_RESPONSES = {
   404: {
     "model" : HttpErrorResponseBody
     },
+  430: {
+    "model" : HttpErrorResponseBody,
+    "description": "Processing timeout"
+    },
   500: {
     "model" : HttpErrorResponseBody
     }
