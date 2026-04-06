@@ -1,9 +1,10 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Implementation of the Vcon API entry points """
 
 import os
 import typing
 import copy
+import asyncio
 import pydantic
 import fastapi
 import fastapi.responses
@@ -162,7 +163,8 @@ def init(restapi):
       vcon_uuid: str,
       request: fastapi.Request,
       commit_changes: bool = False,
-      return_whole_vcon: bool = True
+      return_whole_vcon: bool = True,
+      timeout: float = py_vcon_server.settings.DEFAULT_PROCESSOR_TIMEOUT
       ) -> str:
 
       try:
@@ -174,6 +176,13 @@ def init(restapi):
         # Get the processor form the registry
         processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
           processor_name_from_path)
+
+        if timeout is not None:
+            effective_timeout = timeout if timeout > 0 else None
+        else:
+            effective_timeout = py_vcon_server.settings.DEFAULT_PROCESSOR_TIMEOUT
+            if effective_timeout <= 0:
+                effective_timeout = None
 
         # TODO: take a real lock on the vCon
 
@@ -192,10 +201,11 @@ def init(restapi):
             processor_name_from_path
           ))
 
-        # Run the processor
-        processor_output = await processor_inst.process(
-          processor_input,
-          processor_type_options)
+        # Run the processor with a timeout
+        processor_output = await asyncio.wait_for(
+            processor_inst.process(processor_input, processor_type_options),
+            effective_timeout
+        )
 
         if(commit_changes):
           # Save changed Vcons
@@ -217,6 +227,15 @@ def init(restapi):
       except py_vcon_server.db.VconNotFound as e:
         py_vcon_server.restful_api.log_exception(e)
         return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
+
+      except asyncio.TimeoutError:
+        timeout_message = "Processor {} timed out after {} seconds on vCon {}".format(
+            processor_name_from_path,
+            effective_timeout,
+            vcon_uuid
+          )
+        logger.warning(timeout_message)
+        return py_vcon_server.restful_api.ProcessingTimeout(timeout_message)
 
       except Exception as e:
         # Add options to response for easier diagnostics and error reporting
@@ -260,6 +279,7 @@ def init(restapi):
       processor_input: processor_input_class,
       request: fastapi.Request,
       commit_changes: bool = False,
+      timeout: float = py_vcon_server.settings.DEFAULT_PROCESSOR_TIMEOUT
       ) -> str:
 
       try:
@@ -267,6 +287,13 @@ def init(restapi):
         #processor_name = processor_type_dict[type(options)]
         path = request.url.path
         processor_name_from_path = os.path.basename(path)
+
+        if timeout is not None:
+            effective_timeout = timeout if timeout > 0 else None
+        else:
+            effective_timeout = py_vcon_server.settings.DEFAULT_PROCESSOR_TIMEOUT
+            if effective_timeout <= 0:
+                effective_timeout = None
 
         # Get the processor form the registry
         processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
@@ -304,10 +331,11 @@ def init(restapi):
             processor_name_from_path
           ))
 
-        # Run the processor
-        processor_output = await processor_inst.process(
-          processor_io,
-          processor_type_options)
+        # Run the processor, with a timeout
+        processor_output = await asyncio.wait_for(
+            processor_inst.process(processor_io, processor_type_options),
+            effective_timeout
+          )
 
         if(commit_changes):
           # Save changed Vcons
@@ -324,6 +352,14 @@ def init(restapi):
 
         # Get serializable output
         response_output = await processor_output.get_output()
+
+      except asyncio.TimeoutError:
+        timeout_message = "Processor {} timed out after {} seconds".format(
+            processor_name_from_path,
+            effective_timeout
+        )
+        logger.warning(timeout_message)
+        return py_vcon_server.restful_api.ProcessingTimeout(timeout_message)
 
       except Exception as e:
         py_vcon_server.restful_api.log_exception(e)
@@ -458,7 +494,7 @@ def init(restapi):
           vcon_object.dict
         ))
       py_vcon_server.restful_api.log_exception(timeout_exception)
-      return(py_vcon_server.restful_api.ProcessingTimeout(
+      plieturn(py_vcon_server.restful_api.ProcessingTimeout(
           "Error: pipeline: {} input Vcon with uuid: {} processing time exeeded timeout".format(
             name,
             vcon_object.uuid,
