@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ good implementations of **VconProcessor** for testing """
 
 import typing
@@ -8,6 +8,7 @@ import py_vcon_server.processor
 __version__ = "0.0.1"
 
 class AddPartyOptions(py_vcon_server.processor.VconProcessorOptions):
+  """minimal doc to pass"""
   tel: typing.Optional[str] = None
   
 
