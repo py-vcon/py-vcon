@@ -140,7 +140,7 @@ class ServerState:
     logger.info("Server state unregistered")
 
   async def update_heartbeat(self) -> None:
-    self.register(True)
+    await self.register(True)
 
   async def starting(self) -> None:
     await self.register(True)
