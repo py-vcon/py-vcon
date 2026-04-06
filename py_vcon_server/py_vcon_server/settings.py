@@ -14,6 +14,7 @@ LOGGING_CONFIG_FILE = os.getenv("LOGGING_CONFIG_FILE", Path(__file__).parent / '
 LAUNCH_VCON_API = os.getenv("LAUNCH_VCON_API", True)
 LAUNCH_ADMIN_API = os.getenv("LAUNCH_ADMIN_API", True)
 DEFAULT_PROCESSOR_TIMEOUT = float(os.getenv("DEFAULT_PROCESSOR_TIMEOUT", 300.0))
+HEARTBEAT_PERIOD = int(os.getenv("HEARTBEAT_PERIOD", 60))
 
 # FASTapi worker processes
 try:
@@ -71,7 +72,7 @@ for token in queue_tokens:
     WORK_QUEUES[name] = {"weight": weight}
 
 STATE_SETTINGS = []
-state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, PROXY_PATH, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES, DEFAULT_PROCESSOR_TIMEOUT").strip()
+state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, PROXY_PATH, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES, HEARTBEAT_PERIOD, DEFAULT_PROCESSOR_TIMEOUT").strip()
 if(state_settings_list != ""):
   STATE_SETTINGS = state_settings_list.split(", ")
 
