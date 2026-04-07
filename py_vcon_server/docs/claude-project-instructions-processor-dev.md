@@ -356,3 +356,56 @@ This requires:
     header handles this without needing `pip install -e .`)
   * Redis running (for VconStorage)
   * `jinja2` or other addon dependencies installed
+
+#### 2.4 Running the Plugin in the Server (Development)
+
+There are three ways to run and test a VconProcessor plugin, depending on
+the development stage.
+
+**Mode 1: Unit tests (no server running)**
+
+Run from the addon project root:
+
+    pytest -v -rP tests/
+
+The test file's namespace path extension header handles making the addon
+importable without any install step.  Requires `py-vcon` and `py-vcon-server`
+on PYTHONPATH and Redis running.
+
+**Mode 2: Running in the server (development)**
+
+To test the plugin in a running py-vcon-server loaded via PYTHONPATH, create
+symlinks from the addon's `processor_addons` contents into the server's
+`processor_addons` directory.  From the `py-vcon/py_vcon_server` directory:
+
+    ln -s /path/to/py_vcon_server_<plugin_name>/py_vcon_server/processor_addons/<plugin_name>.py \
+        py_vcon_server/processor_addons/<plugin_name>.py
+    ln -s /path/to/py_vcon_server_<plugin_name>/py_vcon_server/processor_addons/<plugin_name>_impl \
+        py_vcon_server/processor_addons/<plugin_name>_impl
+
+Then add the registration module to `PLUGIN_PATHS` and start the server:
+
+    export PLUGIN_PATHS="py_vcon_server.processor_addons.<plugin_name>"
+    python3 -m py_vcon_server
+
+The symlinks make the addon's files visible under the server's package
+namespace without copying.  Code changes in the addon source are reflected
+immediately (restart the server to pick them up).
+
+Remove the symlinks when done to keep the server source tree clean.
+
+**Mode 3: Production install (pip packages)**
+
+When both `py-vcon-server` and the addon are installed as pip packages,
+namespace package merging happens automatically:
+
+    pip install py-vcon-server
+    pip install py_vcon_server.processor_addons.<plugin_name>
+
+Add the registration module to `PLUGIN_PATHS`:
+
+    export PLUGIN_PATHS="py_vcon_server.processor_addons.<plugin_name>"
+
+Or if the addon's pip package is installed, the server will discover it
+automatically through the namespace package mechanism.
+
