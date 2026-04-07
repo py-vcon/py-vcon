@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Vcon Pipeline processor objects and methods """
 import os
 import typing
@@ -742,6 +742,12 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       if(parameters and len(parameters)):
         for name, value in parameters.items():
           pipeline_input.set_parameter(name, value)
+
+      pipeline_input.set_run_context({
+          py_vcon_server.processor.RUN_CONTEXT_ENTRY_POINT:   "background",
+          py_vcon_server.processor.RUN_CONTEXT_PIPELINE_NAME: queue_name,
+          py_vcon_server.processor.RUN_CONTEXT_JOB_ID:        str(job_id)
+        })
 
     else:
       raise Exception("unsupported queue job type: {}".format(job_type))
