@@ -1,12 +1,15 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+import os
 import copy
 import json
+import importlib
 import pytest
 import pytest_asyncio
 import fastapi.testclient
 import logging
 import py_vcon_server
 import py_vcon_server.settings
+import py_vcon_server.metrics
 from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 
 logger = logging.getLogger(__name__)
@@ -375,6 +378,10 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     # Run a job 
     job_result = await jobber.do_job(job)
 
+    # Metrics assertions — verify ACTIVE_RUNS cleaned up after job completes
+    assert len(py_vcon_server.metrics.ACTIVE_RUNS) == 0, \
+        "ACTIVE_RUNS should be empty after do_job() completes"
+
     # Confirm transcript and summary were created
     get_response = client.get(
       "/vcon/{}".format(UUID),
@@ -501,6 +508,10 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
     assert(job_id is not None)
     assert(len(job_id) > 0)
 
+    # Metrics assertions — verify ACTIVE_RUNS cleaned up after job completes
+    assert len(py_vcon_server.metrics.ACTIVE_RUNS) == 0, \
+        "ACTIVE_RUNS should be empty after run_one_job() completes"
+
     # Check job is not in job queue
     get_response = client.get(
         "/queue/{}".format(
@@ -549,4 +560,194 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
     assert(job_list[0]["job_type"] == "vcon_uuid")
     assert(job_list[0]["vcon_uuid"][0] == UUID)
 
+#    get_responses tests with Prometheus ENABLED
+# ============================================================
 
+@pytest.mark.asyncio
+async def test_pipeline_jobber_metrics_with_prometheus(make_inline_audio_vcon):
+  """
+  Repeat a background job run with Prometheus enabled.
+  Verifies:
+    - ACTIVE_RUNS is empty after completion
+    - Prometheus duration histogram has observations for the processors
+    - Prometheus active gauge returns to 0 after completion
+  """
+  # Enable Prometheus
+  py_vcon_server.settings.ENABLE_PROMETHEUS = True
+  py_vcon_server.metrics._INSTRUMENTATION_INSTALLED = False
+  py_vcon_server.metrics._processor_active_gauge = None
+  py_vcon_server.metrics._processor_duration_hist = None
+  py_vcon_server.metrics._background_job_heartbeat = None
+
+  try:
+    with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+      # Verify Prometheus metrics were created
+      assert py_vcon_server.metrics._processor_active_gauge is not None, \
+          "Prometheus active gauge should be created when ENABLE_PROMETHEUS=True"
+      assert py_vcon_server.metrics._processor_duration_hist is not None, \
+          "Prometheus duration histogram should be created when ENABLE_PROMETHEUS=True"
+
+      # Clean up queues
+      for q in SERVER_QUEUES.keys():
+        client.delete("/queue/{}".format(q), headers={"accept": "application/json"})
+
+      jobber = py_vcon_server.pipeline.PipelineJobHandler(
+          py_vcon_server.settings.QUEUE_DB_URL,
+          py_vcon_server.settings.PIPELINE_DB_URL,
+          "unit_test_server_prometheus"
+        )
+
+      # Set up pipeline
+      client.put(
+          "/pipeline/{}".format(list(SERVER_QUEUES.keys())[1]),
+          json=PIPELINE_DEFINITION,
+          params={"validate_processor_options": True}
+        )
+
+      # Create queue
+      client.post(
+          "/queue/{}".format(list(SERVER_QUEUES.keys())[1]),
+          headers={"accept": "application/json"}
+        )
+
+      # Store vCon and queue a job
+      client.post("/vcon", json=make_inline_audio_vcon.dumpd())
+      queue_job = {"job_type": "vcon_uuid", "vcon_uuid": [UUID], "parameters": {"sums": "SUMS"}}
+      client.put(
+          "/queue/{}".format(list(SERVER_QUEUES.keys())[1]),
+          headers={"accept": "application/json"},
+          json=queue_job
+        )
+
+      # Run the job
+      job_def = await jobber.get_job()
+      assert job_def is not None
+      job_result = await jobber.do_job(job_def)
+
+      # ACTIVE_RUNS should be empty after completion
+      assert len(py_vcon_server.metrics.ACTIVE_RUNS) == 0, \
+          "ACTIVE_RUNS should be empty after do_job() completes with Prometheus enabled"
+
+      # Prometheus active gauge should be 0 for each processor that ran
+      for processor_name in ["deepgram", "openai_chat_completion"]:
+        active_value = 0
+        for metric_family in py_vcon_server.metrics._processor_active_gauge.collect():
+          for sample in metric_family.samples:
+            if (sample.name == "py_vcon_server_processor_active" and
+                sample.labels.get("processor_name") == processor_name and
+                sample.labels.get("entry_point") == "background"):
+              active_value = sample.value
+              break
+        assert active_value == 0, \
+            "{} active gauge should be 0 after job completes".format(processor_name)
+
+      # Prometheus duration histogram should have observations
+      for processor_name in ["deepgram", "openai_chat_completion"]:
+        observed_count = 0
+        for metric_family in py_vcon_server.metrics._processor_duration_hist.collect():
+          for sample in metric_family.samples:
+            if (sample.name == "py_vcon_server_processor_duration_seconds_count" and
+                sample.labels.get("processor_name") == processor_name and
+                sample.labels.get("entry_point") == "background" and
+                sample.labels.get("status") == "success"):
+              observed_count = sample.value
+              break
+        assert observed_count >= 1, \
+            "{} duration histogram should have at least one observation".format(processor_name)
+
+      await jobber.job_finished(job_result)
+      await jobber.done()
+
+      # Cleanup
+      client.delete("/vcon/{}".format(UUID))
+      for q in list(SERVER_QUEUES.keys()) + ["test_pipeline_queue__success"]:
+        client.delete("/queue/{}".format(q), headers={"accept": "application/json"})
+      client.delete("/pipeline/{}".format(list(SERVER_QUEUES.keys())[1]))
+
+  finally:
+    # Restore Prometheus to disabled
+    py_vcon_server.settings.ENABLE_PROMETHEUS = False
+    py_vcon_server.metrics._INSTRUMENTATION_INSTALLED = False
+    py_vcon_server.metrics._processor_active_gauge = None
+    py_vcon_server.metrics._processor_duration_hist = None
+    py_vcon_server.metrics._background_job_heartbeat = None
+
+@pytest.mark.asyncio
+async def test_pipeline_jobber_run_one_job_metrics_with_prometheus(make_inline_audio_vcon):
+  """
+  Repeat run_one_job with Prometheus enabled.
+  Verifies entry_point="background" appears in histogram labels.
+  """
+  py_vcon_server.settings.ENABLE_PROMETHEUS = True
+  py_vcon_server.metrics._INSTRUMENTATION_INSTALLED = False
+  py_vcon_server.metrics._processor_active_gauge = None
+  py_vcon_server.metrics._processor_duration_hist = None
+  py_vcon_server.metrics._background_job_heartbeat = None
+
+  try:
+    with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+      assert py_vcon_server.metrics._processor_duration_hist is not None
+
+      # Clean up
+      for q in SERVER_QUEUES.keys():
+        client.delete("/queue/{}".format(q), headers={"accept": "application/json"})
+
+      jobber = py_vcon_server.pipeline.PipelineJobHandler(
+          py_vcon_server.settings.QUEUE_DB_URL,
+          py_vcon_server.settings.PIPELINE_DB_URL,
+          "unit_test_server_prometheus2"
+        )
+
+      # Set up pipeline and queue
+      client.put(
+          "/pipeline/{}".format(list(SERVER_QUEUES.keys())[1]),
+          json=PIPELINE_DEFINITION,
+          params={"validate_processor_options": True}
+        )
+      client.post(
+          "/queue/{}".format(list(SERVER_QUEUES.keys())[1]),
+          headers={"accept": "application/json"}
+        )
+      client.post("/vcon", json=make_inline_audio_vcon.dumpd())
+      queue_job = {"job_type": "vcon_uuid", "vcon_uuid": [UUID], "parameters": {"sums": "SUMS"}}
+      client.put(
+          "/queue/{}".format(list(SERVER_QUEUES.keys())[1]),
+          headers={"accept": "application/json"},
+          json=queue_job
+        )
+
+      job_id = await jobber.run_one_job()
+      assert job_id is not None
+
+      # ACTIVE_RUNS empty after completion
+      assert len(py_vcon_server.metrics.ACTIVE_RUNS) == 0, \
+          "ACTIVE_RUNS should be empty after run_one_job() with Prometheus enabled"
+
+      # Duration histogram has background entry_point observations
+      for processor_name in ["deepgram", "openai_chat_completion"]:
+        observed_count = 0
+        for metric_family in py_vcon_server.metrics._processor_duration_hist.collect():
+          for sample in metric_family.samples:
+            if (sample.name == "py_vcon_server_processor_duration_seconds_count" and
+                sample.labels.get("processor_name") == processor_name and
+                sample.labels.get("entry_point") == "background" and
+                sample.labels.get("status") == "success"):
+              observed_count = sample.value
+              break
+        assert observed_count >= 1, \
+            "{} histogram should have background entry_point observation".format(processor_name)
+
+      await jobber.done()
+
+      # Cleanup
+      client.delete("/vcon/{}".format(UUID))
+      for q in list(SERVER_QUEUES.keys()) + ["test_pipeline_queue__success"]:
+        client.delete("/queue/{}".format(q), headers={"accept": "application/json"})
+      client.delete("/pipeline/{}".format(list(SERVER_QUEUES.keys())[1]))
+
+  finally:
+    py_vcon_server.settings.ENABLE_PROMETHEUS = False
+    py_vcon_server.metrics._INSTRUMENTATION_INSTALLED = False
+    py_vcon_server.metrics._processor_active_gauge = None
+    py_vcon_server.metrics._processor_duration_hist = None
+    py_vcon_server.metrics._background_job_heartbeat = None
