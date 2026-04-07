@@ -12,6 +12,7 @@ import py_vcon_server.settings
 import py_vcon_server.db
 import py_vcon_server.states
 import py_vcon_server.queue
+import py_vcon_server.metrics
 from py_vcon_server.logging_utils import init_logger
 import logging
 import nest_asyncio
@@ -151,6 +152,9 @@ async def lifespan(app: fastapi.FastAPI):
   py_vcon_server.pipeline.PIPELINE_DB = py_vcon_server.pipeline.PipelineDb(py_vcon_server.settings.PIPELINE_DB_URL)
   await py_vcon_server.pipeline.PIPELINE_DB.test()
 
+  # Install processor instrumentation (must be after plugin loading, before jobs start)
+  py_vcon_server.metrics.install_instrumentation()
+
   # Start heartbeat task
   if py_vcon_server.settings.HEARTBEAT_PERIOD > 0:
     HEARTBEAT_RUNNING = True
@@ -229,6 +233,7 @@ async def run_background_jobs(job_interface) -> None:
   else:
     logger.debug("background pipline server disabled")
   while(BACKGROUND_JOBS_RUNNING):
+    py_vcon_server.metrics.update_background_job_heartbeat()
     job_id = await job_interface.run_one_job()
 
     # Prevent a fast spin when no job in queue
