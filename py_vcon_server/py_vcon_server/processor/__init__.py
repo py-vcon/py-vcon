@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Abstract VconProcessor and registry """
 
 import enum
@@ -525,14 +525,21 @@ class VconProcessorOptions(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
 
   format_options: typing.Dict[str, str] = pydantic.Field(
       title = "set VconProcessorOptions fields with formatted strings built from parameters",
-      description = "dict of strings keys and values where key is the name of a"
-        " VconProcessorOptions field, to be set with the formated value string"
-        " with the VconProcessorIO parameters dict as input.  For example"
-        " {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: '"
-        " concatindated with the value returned from VconProcessorIO."
-        "get_parameters('bar').  This occurs before the given VconProcessor"
-        " performs it's process method and does not perminimently modify the"
-        " VconProcessorOptions fields",
+      description="""Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+        
+        RESERVED NAMES: Some processors inject additional placeholder values
+        that override parameters with the same name. Reserved names include:
+        dialog_index, analysis_index, attachment_index, extension, mimetype,
+        source_filename, source_path. Avoid using these as parameter names
+        if you use processors that reserve them.
+        """,
       default = {}
     )
   #rename_output: dict[str, str]
@@ -700,6 +707,23 @@ class VconProcessorIO():
         return(index)
 
     raise Exception("vCon {} not found in VconProcessorIO".format(uuid))
+
+
+  def set_run_context(self, context: dict) -> None:
+    """
+    Set the run context for this VconProcessorIO.
+    Use the RUN_CONTEXT_* constants for well-known keys.
+    Additional arbitrary keys may be added for debug/diagnostic purposes.
+    """
+    self._run_context = context
+
+  def get_run_context(self) -> dict:
+    """
+    Get the run context for this VconProcessorIO.
+    Returns empty dict if no context has been set.
+    """
+    return getattr(self, "_run_context", {})
+
 
   def set_parameter(
       self,
@@ -1040,6 +1064,12 @@ class VconProcessor():
     logger.debug("deleting {}".format(self.__class__.__name__))
 
 
+# Well-known keys for VconProcessorIO.set_run_context()
+# Additional arbitrary keys may be added without changing this list
+RUN_CONTEXT_ENTRY_POINT   = "entry_point"   # str: "/process", "/processIO", "/pipeline", "background"
+RUN_CONTEXT_PIPELINE_NAME = "pipeline_name" # str: pipeline name, or "" if not applicable
+RUN_CONTEXT_JOB_ID        = "job_id"        # str: background job ID, or "" if not applicable
+
 # dict of names and VconProcessor registered
 VCON_PROCESSOR_REGISTRY = {}
 
@@ -1167,7 +1197,51 @@ class VconProcessorRegistry():
       )
 
     VCON_PROCESSOR_REGISTRY[name] = processor_registration
+
+    # Store the registered name on the processor instance so the
+    # instrumentation decorator can report it in ACTIVE_RUNS and metrics
+    if(processor_registration._processor_instance is not None):
+      processor_registration._processor_instance._processor_name = name
+
+    # Wrap process() on the concrete class with current instrumentation decorator
+    if(processor_registration._processor_instance is not None):
+      import py_vcon_server.metrics
+      cls = type(processor_registration._processor_instance)
+      if(not py_vcon_server.metrics.is_instrumented(cls.process)):
+        cls.process = py_vcon_server.metrics.get_instrumentation_decorator()(cls.process)
+
     logger.info("Registered VconProcessor: {}".format(name))
+
+
+  # @staticmethod
+  # def unregister(name: str) -> bool:
+  #   """
+  #   Unregister a VconProcessor by name.
+  #   
+  #   WARNING: This method is intended for use in unit tests ONLY.
+  #   It removes a processor from the registry so that it does not
+  #   appear in API routes or documentation generation. It does NOT
+  #   unload the module from sys.modules or clean up any other
+  #   references to the processor class.
+  #   
+  #   Do not use this in production code. Processors are expected
+  #   to be registered once at startup and remain registered for
+  #   the lifetime of the server.
+  #   
+  #   Parameters:
+  #       name: str - the registered name of the VconProcessor
+  #       
+  #   Returns:
+  #       bool - True if processor was unregistered, False if not found
+  #   """
+  #   if name in VCON_PROCESSOR_REGISTRY:
+  #       del VCON_PROCESSOR_REGISTRY[name]
+  #       logger.debug("Unregistered VconProcessor: {}".format(name))
+  #       return True
+  #   else:
+  #       logger.warning("VconProcessor not found for unregister: {}".format(name))
+  #       return False
+
 
   @staticmethod
   def get_processor_names(successfully_loaded: bool = True) -> typing.List[str]:
