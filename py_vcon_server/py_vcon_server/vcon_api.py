@@ -189,6 +189,11 @@ def init(restapi):
         processor_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
         await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
 
+        # Instrumentation context
+        processor_input.set_run_context({
+            py_vcon_server.processor.RUN_CONTEXT_ENTRY_POINT: "/process"
+          })
+
         # format_options for dynamic options
         formatted_options_dict = processor_input.format_parameters_to_options(vcon.pydantic_utils.get_dict(options))
         processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
@@ -303,6 +308,11 @@ def init(restapi):
         processor_input_dict = vcon.pydantic_utils.get_dict(processor_input, exclude_none = True)
         processor_io = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
 
+        # Instrumentation context
+        processor_io.set_run_context({
+            py_vcon_server.processor.RUN_CONTEXT_ENTRY_POINT: "/processIO"
+          })
+
         # Copy the vcons to the input
         if( processor_input_dict and
             "processor_io" in processor_input_dict and
@@ -394,6 +404,10 @@ def init(restapi):
       # Build the VconProcessorIO
       pipeline_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
       await pipeline_input.add_vcon(vCon, lock_key, False)
+      pipeline_input.set_run_context({
+          py_vcon_server.processor.RUN_CONTEXT_ENTRY_POINT:   "/pipeline/run/uuid" if vcon_in_storage else "/pipeline/run",
+          py_vcon_server.processor.RUN_CONTEXT_PIPELINE_NAME: pipeline_name
+        })
 
       # Get the pipeline
       pipe_def = await py_vcon_server.pipeline.PIPELINE_DB.get_pipeline(pipeline_name)
