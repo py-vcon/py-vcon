@@ -244,7 +244,7 @@ def init(lifespan=None) -> fastapi.FastAPI:
   # Shutdown middleware — rejects new requests with 503 when shutdown is in progress
   @restapi.middleware("http")
   async def shutdown_middleware(request: fastapi.Request, call_next):
-    if py_vcon_server.SHUTDOWN_REQUESTED and request.url.path != "/metrics":
+    if py_vcon_server.SHUTDOWN_REQUESTED and request.url.path not in ("/metrics", "/diagnostics"):
       return fastapi.responses.JSONResponse(
           status_code = 503,
           content = {"detail": "Server is shutting down"}
@@ -293,7 +293,7 @@ def init(lifespan=None) -> fastapi.FastAPI:
         should_ignore_untemplated = False,
         should_respect_env_var = False,
         should_instrument_requests_inprogress = True,
-        excluded_handlers=["/metrics"],
+        excluded_handlers=["/metrics", "/diagnostics"],
         #inprogress_name="http_requests_inprogress",
         inprogress_labels=True,
       )
@@ -317,6 +317,26 @@ def init(lifespan=None) -> fastapi.FastAPI:
 
   else:
     logger.info(f"Prometheus metrics disabled ({py_vcon_server.settings.ENABLE_PROMETHEUS})")
+
+
+  @restapi.get("/diagnostics",
+    tags = [ SERVER_TAG ],
+    summary = "Get currently active processor runs",
+    description = "Returns a dict of currently running processor invocations with "
+      "processor name, vCon UUIDs, entry point, pipeline name, job ID, start time "
+      "and elapsed seconds.  Use this endpoint to diagnose blocked or long-running "
+      "processors.  This is a point-in-time snapshot — no history is retained."
+    )
+  async def get_diagnostics():
+    import time
+    import py_vcon_server.metrics
+    now = time.time()
+    result = {}
+    for run_id, run in py_vcon_server.metrics.ACTIVE_RUNS.items():
+      result[run_id] = dict(run)
+      result[run_id]["elapsed_seconds"] = now - run["start_time"]
+    return result
+
 
   return(restapi)
 
