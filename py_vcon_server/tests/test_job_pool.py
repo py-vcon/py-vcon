@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import typing
 import os
 import time
@@ -673,7 +673,25 @@ async def run_jobs_in_async_scheduler(jobs: list):
   for task in asyncio.all_tasks():
     logger.debug("task: {}".format(task))
 
-  await asyncio.sleep(2)
+  # new wait strategy:
+  # Wait until all jobs have been pulled from the input queue by the scheduler.
+  # Once remaining_jobs()==0 every job has been submitted to the worker pool.
+  # finish() then waits for all submitted (in-flight) jobs to complete before
+  # returning, so we do not need a fixed sleep here.
+  deadline = time.time() + 60
+  while time.time() < deadline:
+    if test_jobber.remaining_jobs() <= 0:
+      break
+    logger.debug("waiting for {} remaining jobs".format(
+        test_jobber.remaining_jobs()))
+    await asyncio.sleep(0.1)
+
+
+  # 2nd wait strategy:
+  # not consisetnly enough
+  # await asyncio.sleep(2)
+
+  # Original wait strategy:
   # Make sure there was time to start all the jobs, before telling it to finish up
   # while(True):
   #   remaining_jobs = test_jobber.remaining_jobs()
