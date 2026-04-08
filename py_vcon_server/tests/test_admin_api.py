@@ -62,7 +62,8 @@ async def test_get_server_info():
     assert(worker_state["last_heartbeat"] > time.time() - 100)
     assert(worker_state["last_heartbeat"] < time.time())
     for setting_var in py_vcon_server.settings.STATE_SETTINGS:
-      assert(this_server_state["settings"][setting_var] == getattr(py_vcon_server.settings, setting_var, None))
+      assert(this_server_state["settings"][setting_var] == getattr(py_vcon_server.settings, setting_var, None),
+        "setting: {} not expected value".format(setting_var))
 
     # Try to delete no-existing server state
     get_response = client.delete(
