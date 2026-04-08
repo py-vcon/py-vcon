@@ -74,11 +74,14 @@ class ServerState(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
       title = "server state",
       examples = ["starting_up", "running", "shutting_down", "unknown"],
       )
-    last_heartbeat: float = pydantic.Field(
-      title = "heartbeat time stamp",
-      description = "epoch seconds time for the last heartbeat on this server",
-      examples = [time.time()]
+    workers: typing.Dict[str, typing.Any] = pydantic.Field(
+      title = "worker states",
+      description = "dict of worker_key to worker state, keyed by "
+        "host:port:pid:start_time:worker_pid.  Each entry contains "
+        "last_heartbeat, worker_pid, start_time and state.",
+      default = {}
       )
+
 
 
 class QueueProperties(pydantic.BaseModel):

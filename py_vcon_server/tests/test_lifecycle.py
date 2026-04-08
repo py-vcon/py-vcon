@@ -43,12 +43,17 @@ def make_test_vcon() -> vcon.Vcon:
 
 
 def get_this_server_heartbeat(client) -> float:
-  """ Helper: read last_heartbeat for this server via /servers REST endpoint """
+  """ Helper: read last_heartbeat for this worker via /servers REST endpoint """
   response = client.get("/servers")
   assert response.status_code == 200, \
       "Failed to get server states: {}".format(response.text)
   server_key = py_vcon_server.states.SERVER_STATE.server_key()
-  return response.json()[server_key]["last_heartbeat"]
+  worker_key = py_vcon_server.states.SERVER_STATE.worker_key()
+  server_entry = response.json()[server_key]
+  assert worker_key in server_entry["workers"], \
+      "Worker key {} not found in workers: {}".format(
+          worker_key, list(server_entry["workers"].keys()))
+  return server_entry["workers"][worker_key]["last_heartbeat"]
 
 
 # ============================================================
@@ -207,6 +212,119 @@ def test_heartbeat_loop_fires_and_stops():
   finally:
     py_vcon_server.settings.HEARTBEAT_PERIOD = original_period
 
+# ============================================================
+#  Test: worker_key format
+# ============================================================
+
+def test_worker_key_format():
+  """ worker_key() should be server_key() + ":" + str(os.getpid()) """
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    server_key = py_vcon_server.states.SERVER_STATE.server_key()
+    worker_key = py_vcon_server.states.SERVER_STATE.worker_key()
+    assert worker_key.startswith(server_key + ":"), \
+        "worker_key should start with server_key + ':'"
+    pid_suffix = worker_key[len(server_key) + 1:]
+    assert pid_suffix == str(os.getpid()), \
+        "worker_key suffix should be the current PID"
+
+
+# ============================================================
+#  Test: worker entry exists in /servers after startup
+# ============================================================
+
+def test_worker_entry_in_servers_response():
+  """
+  After lifespan startup, /servers response should contain a workers
+  sub-dict for this server, with an entry for this worker's key.
+  """
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    response = client.get("/servers")
+    assert response.status_code == 200
+    server_key = py_vcon_server.states.SERVER_STATE.server_key()
+    worker_key = py_vcon_server.states.SERVER_STATE.worker_key()
+    servers = response.json()
+    assert server_key in servers, \
+        "server_key not found in /servers response"
+    server_entry = servers[server_key]
+    assert "workers" in server_entry, \
+        "server entry missing 'workers' key"
+    assert worker_key in server_entry["workers"], \
+        "worker_key {} not found in workers: {}".format(
+            worker_key, list(server_entry["workers"].keys()))
+    worker = server_entry["workers"][worker_key]
+    assert "last_heartbeat" in worker
+    assert "state" in worker
+    assert "worker_pid" in worker
+    assert worker["worker_pid"] == os.getpid()
+    assert worker["last_heartbeat"] > time.time() - 100
+    assert worker["last_heartbeat"] < time.time()
+
+
+# ============================================================
+#  Test: state transitions update server blob state field
+# ============================================================
+
+def test_state_transitions_reflected_in_servers():
+  """
+  After lifespan startup completes (running state), /servers should
+  show state="running" at the server level and in the worker entry.
+  """
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    response = client.get("/servers")
+    assert response.status_code == 200
+    server_key = py_vcon_server.states.SERVER_STATE.server_key()
+    worker_key = py_vcon_server.states.SERVER_STATE.worker_key()
+    servers = response.json()
+    server_entry = servers[server_key]
+    assert server_entry["state"] == "running", \
+        "server entry state should be 'running'"
+    worker = server_entry["workers"][worker_key]
+    assert worker["state"] == "running", \
+        "worker entry state should be 'running'"
+
+
+# ============================================================
+#  Test: /server/info returns combined server+workers blob
+# ============================================================
+
+def test_server_info_includes_workers():
+  """
+  /server/info should return the same combined server+workers
+  structure as the matching entry in /servers.
+  """
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    response = client.get("/server/info")
+    assert response.status_code == 200
+    info = response.json()
+    assert "workers" in info, \
+        "/server/info response missing 'workers' key"
+    worker_key = py_vcon_server.states.SERVER_STATE.worker_key()
+    assert worker_key in info["workers"], \
+        "worker_key not found in /server/info workers"
+
+
+# ============================================================
+#  Test: server entry gone from /servers after shutdown
+# ============================================================
+
+def test_server_entry_removed_after_shutdown():
+  """
+  After TestClient exits (lifespan shutdown complete), the server
+  key should no longer appear in a fresh /servers query.
+  We verify this by starting a second TestClient after the first exits.
+  """
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    server_key = py_vcon_server.states.SERVER_STATE.server_key()
+
+  # Lifespan shutdown has completed — start a new client to query Redis
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client2:
+    response = client2.get("/servers")
+    assert response.status_code == 200
+    servers = response.json()
+    # The old server_key should be gone (unregister() deleted it)
+    assert server_key not in servers, \
+        "old server_key {} still present in /servers after shutdown".format(
+            server_key)
 
 # ============================================================
 #  Test 9: In-flight request completes before shutdown

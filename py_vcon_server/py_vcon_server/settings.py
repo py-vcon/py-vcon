@@ -47,7 +47,7 @@ if(cors_origins_string != ""):
   CORS_ORIGINS = cors_origins_string.split(", ")
 
 # parse out optional weights from name for each queue
-manager = multiprocessing.Manager()
+#manager = multiprocessing.Manager()
 #WORK_QUEUES: multiprocessing.managers.DictProxy = manager.dict({})
 WORK_QUEUES = {}
 queue_tokens = os.getenv("WORK_QUEUES", "").split(",")
