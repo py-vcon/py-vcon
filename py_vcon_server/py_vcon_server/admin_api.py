@@ -340,7 +340,8 @@ def init(restapi):
 
 
   @restapi.delete("/servers/{server_key}",
-    status_code = 204,
+    status_code = 200,
+    response_model = typing.Dict[str, int],
     tags = [ py_vcon_server.restful_api.SERVER_TAG ])
   async def delete_server_state(server_key: str):
     """
@@ -359,7 +360,7 @@ def init(restapi):
 
     try:
       logger.debug("deleting server state: {}".format(server_key))
-      server_dict = await py_vcon_server.states.SERVER_STATE.delete_server_state(server_key)
+      worker_count = await py_vcon_server.states.SERVER_STATE.delete_server_state(server_key)
 
     except py_vcon_server.states.ServerStateNotFound as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -371,7 +372,9 @@ def init(restapi):
 
     logger.debug("Deleted server state: {}".format(server_key))
 
-    # no return should cause 204, no content
+    return fastapi.responses.JSONResponse(
+        content={"workers_deleted": worker_count}
+      )
 
 
   @restapi.get("/queues",

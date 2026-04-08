@@ -512,12 +512,11 @@ class ServerState:
     return result
 
 
-  async def delete_server_state(self, server_key: str) -> None:
+  async def delete_server_state(self, server_key: str) -> int:
     """
     DevOps force-delete of a (possibly stale) server state entry.
     Force=True: cleans up all worker entries unconditionally.
-    Logs the number of orphaned workers cleaned up.
-    Returns: None (204 no content -- worker count return deferred to future PR)
+    Returns: number of orphaned workers cleaned up (0 for a clean entry)
     """
     keys = [SERVER_HASH_KEY, SERVER_WORKER_HASH_KEY]
     args = [server_key, SERVER_WORKERS_SET_PREFIX, "1"]
@@ -538,6 +537,7 @@ class ServerState:
           "for server {}".format(worker_count, server_key)
         )
     logger.debug("Deleted server state for: {}".format(server_key))
+    return worker_count
 
 
   def pid(self) -> int:

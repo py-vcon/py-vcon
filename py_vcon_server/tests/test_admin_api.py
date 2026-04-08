@@ -131,7 +131,8 @@ async def test_delete_server_state_cleans_workers():
           "/servers/{}".format(fake_server_key),
           headers={"accept": "application/json"},
         )
-      assert delete_response.status_code == 204
+      assert delete_response.status_code == 200
+      assert delete_response.json()["workers_deleted"] == 1
 
       # Verify server entry is gone from /servers
       get_response = client.get("/servers")
@@ -197,7 +198,8 @@ async def test_old_format_entry_readable_and_deletable():
           "/servers/{}".format(old_key),
           headers={"accept": "application/json"},
         )
-      assert delete_response.status_code == 204
+      assert delete_response.status_code == 200
+      assert delete_response.json()["workers_deleted"] == 0
 
       # Should be gone
       get_response = client.get("/servers")
