@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     # Service containers to run with `runner-job`
     services:
@@ -151,6 +151,17 @@ jobs:
         run: |
           # Run all Vcon server package unit tests
           (cd py_vcon_server; pytest -v -rP tests)
+
+      - name: Run multi-worker integration test
+        env:
+          VCON_STORAGE_URL: redis://localhost
+          REST_URL: http://localhost:8000
+          PYTHONPATH: ${{ github.workspace }}/py_vcon_server
+          MULTIWORKER_STARTUP_TIMEOUT: "60"
+          MULTIWORKER_JOB_POLL_TIMEOUT: "60"
+        run: |
+          cd py_vcon_server
+          python3 scripts/test_multiworker.py --workers 2
 
       - name: get pip freeze config for successful run
 
