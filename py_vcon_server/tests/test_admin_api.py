@@ -491,6 +491,33 @@ async def test_job_queue():
 
 
 @pytest.mark.asyncio
+async def test_create_duplicate_queue():
+  """Creating a queue that already exists should return 422"""
+  pipe_name = "test_duplicate_queue"
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    # Clean up first
+    client.delete("/queue/{}".format(pipe_name))
+
+    # Create the queue
+    post_response = client.post(
+      "/queue/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(post_response.status_code == 204)
+
+    # Try to create it again — should fail
+    post_response = client.post(
+      "/queue/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(post_response.status_code == 422)
+
+    # Clean up
+    client.delete("/queue/{}".format(pipe_name))
+
+
+@pytest.mark.asyncio
 async def test_pipeline_crud():
   """Test pipeline create, get, list, and delete via admin API"""
   pipe_name = "test_coverage_pipeline"
