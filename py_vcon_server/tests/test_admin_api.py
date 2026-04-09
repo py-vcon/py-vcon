@@ -489,3 +489,100 @@ async def test_job_queue():
     assert(job_list[1]["job_type"] == "vcon_uuid")
     assert(job_list[1]["parameters"] == TEST_JOB2["parameters"])
 
+
+@pytest.mark.asyncio
+async def test_pipeline_crud():
+  """Test pipeline create, get, list, and delete via admin API"""
+  pipe_name = "test_coverage_pipeline"
+
+  # Minimal valid pipeline definition using a known registered processor
+  pipe_def = {
+    "pipeline_options": {
+      "label": "Coverage test pipeline",
+      "save_vcons": False,
+      "timeout": 0
+    },
+    "processors": [
+      {
+        "processor_name": "set_parameters",
+        "processor_options": {}
+      }
+    ]
+  }
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+
+    # Clean up in case prior test left debris
+    client.delete("/pipeline/{}".format(pipe_name))
+
+    # PUT - create pipeline
+    put_response = client.put(
+      "/pipeline/{}".format(pipe_name),
+      json=pipe_def,
+      headers={"accept": "application/json"},
+    )
+    assert(put_response.status_code == 204)
+
+    # GET - retrieve pipeline
+    get_response = client.get(
+      "/pipeline/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(get_response.status_code == 200)
+    returned_def = get_response.json()
+    assert(returned_def["pipeline_options"]["label"] == "Coverage test pipeline")
+    assert(len(returned_def["processors"]) == 1)
+    assert(returned_def["processors"][0]["processor_name"] == "set_parameters")
+
+    # GET /pipelines - list should include our pipeline
+    list_response = client.get(
+      "/pipelines",
+      headers={"accept": "application/json"},
+    )
+    assert(list_response.status_code == 200)
+    pipeline_list = list_response.json()
+    assert(pipe_name in pipeline_list)
+
+    # DELETE - remove pipeline
+    delete_response = client.delete(
+      "/pipeline/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(delete_response.status_code == 204)
+
+    # GET after delete - should be 404
+    get_response = client.get(
+      "/pipeline/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(get_response.status_code == 404)
+
+    # DELETE again - should be 404
+    delete_response = client.delete(
+      "/pipeline/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(delete_response.status_code == 404)
+
+    # PUT with unregistered processor - should return 422 validation error
+    bad_pipe_def = {
+      "pipeline_options": {
+        "label": "Bad pipeline",
+        "save_vcons": False,
+        "timeout": 0
+      },
+      "processors": [
+        {
+          "processor_name": "nonexistent_processor_xyz",
+          "processor_options": {}
+        }
+      ]
+    }
+
+    put_response = client.put(
+      "/pipeline/{}".format(pipe_name),
+      json=bad_pipe_def,
+      headers={"accept": "application/json"},
+    )
+    assert(put_response.status_code == 422)
+
