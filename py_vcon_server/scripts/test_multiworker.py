@@ -357,7 +357,8 @@ def stage3_blocking_isolation(results: Results, base_url: str, block_seconds: in
   block_thread.start()
 
   # Give the blocking request time to reach the server and occupy a worker
-  time.sleep(1.5)
+  # CI runners can be slow — allow this to be configured.
+  time.sleep(float(os.environ.get("MULTIWORKER_BLOCK_WAIT", "1.5")))
 
   health_start = time.time()
   try:

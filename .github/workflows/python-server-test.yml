@@ -159,6 +159,8 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/py_vcon_server
           MULTIWORKER_STARTUP_TIMEOUT: "60"
           MULTIWORKER_JOB_POLL_TIMEOUT: "60"
+          MULTIWORKER_BLOCK_WAIT: "3.0"
+
         run: |
           cd py_vcon_server
           python3 scripts/test_multiworker.py --workers 2
