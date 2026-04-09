@@ -7,7 +7,6 @@ packaging
 pkgutil-resolve-name
 psutil
 pydantic
-pyjq
 python-vcon >= 0.6.9
 redis
 setuptools
