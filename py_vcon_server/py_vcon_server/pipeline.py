@@ -405,8 +405,9 @@ class PipelineRunner():
             self._pipeline_name,
             next_proc_input.is_vcon_modified(0)
           ))
+
+      vcon_index = processor_type_options.input_vcon_index
       if(processor_type_options.should_process):
-        vcon_index = processor_type_options.input_vcon_index
         logger.debug("Starting pipeline {} processor: {} on vCon: {} (index: {})".format(
             self._pipeline_name,
             processor_name,
