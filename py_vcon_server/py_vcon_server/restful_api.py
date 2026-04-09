@@ -241,15 +241,26 @@ def init(lifespan=None) -> fastapi.FastAPI:
     return await call_next(request)
 
 
-  # Shutdown middleware — rejects new requests with 503 when shutdown is in progress
   @restapi.middleware("http")
   async def shutdown_middleware(request: fastapi.Request, call_next):
-    if py_vcon_server.SHUTDOWN_REQUESTED and request.url.path not in ("/metrics", "/diagnostics"):
+    exempt = request.url.path in ("/metrics", "/diagnostics")
+
+    if py_vcon_server.SHUTDOWN_REQUESTED and not exempt:
       return fastapi.responses.JSONResponse(
           status_code = 503,
           content = {"detail": "Server is shutting down"}
         )
-    return await call_next(request)
+
+    # Track non-exempt in-flight requests for graceful drain.
+    # ACTIVE_REQUESTS is read by Server.on_tick() to decide when
+    # it is safe to hand shutdown control back to uvicorn.
+    if not exempt:
+      py_vcon_server.ACTIVE_REQUESTS += 1
+    try:
+      return await call_next(request)
+    finally:
+      if not exempt:
+        py_vcon_server.ACTIVE_REQUESTS -= 1
 
 
   # CORS stuff

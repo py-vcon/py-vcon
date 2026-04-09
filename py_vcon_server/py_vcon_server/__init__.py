@@ -1,6 +1,8 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import sys
 import time
+import signal
+import uvicorn
 import asyncio
 import fastapi
 import vcon
@@ -22,7 +24,11 @@ VERBOSE = False
 logger = init_logger(__name__)
 logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
-nest_asyncio.apply()
+
+try:
+  nest_asyncio.apply()
+except ValueError:
+  pass  # uvloop already patched this loop; nest_asyncio not needed
 
 __version__ = "0.5.11"
 
@@ -31,9 +37,12 @@ JOB_MANAGER = None
 BACKGROUND_JOBS_RUNNING = False
 BACKGROUND_JOB_TASK = None
 SHUTDOWN_REQUESTED = False
+ACTIVE_REQUESTS = 0    # count of non-exempt in-flight entry point requests
 HEARTBEAT_RUNNING = False
 HEARTBEAT_TASK = None
-
+# Paths exempt from 503 shutdown middleware and drain tracking.
+# These remain accessible during graceful shutdown for monitoring.
+EXEMPT_SHUTDOWN_PATHS = {"/metrics", "/diagnostics"}
 
 # TODO make this a setting
 ASYNC_SCHEDULER = True
@@ -100,6 +109,106 @@ async def heartbeat_loop() -> None:
     except Exception as e:
       logger.warning("Heartbeat update failed: {}".format(e))
       # Continue — transient Redis failures should not kill the heartbeat
+
+
+def _uvicorn_install_signal_handlers_needs_fix() -> bool:
+  """
+  Uvicorn < 0.23 uses asyncio.get_event_loop() in install_signal_handlers()
+  which returns the wrong loop when nest_asyncio is applied on Python 3.8,
+  causing signal handlers to never fire in spawned worker processes.
+  Detect by inspecting the base method source.
+  """
+  try:
+    import inspect as _inspect
+    import uvicorn.server
+    src = _inspect.getsource(uvicorn.server.Server.install_signal_handlers)
+    return "get_event_loop" in src and "get_running_loop" not in src
+  except Exception:
+    return False  # if we can't inspect, don't override
+
+_UVICORN_NEEDS_SIGNAL_FIX = _uvicorn_install_signal_handlers_needs_fix()
+
+
+class Server(uvicorn.Server):
+  """
+  Uvicorn Server subclass implementing graceful shutdown that keeps
+  the socket open (and /metrics + /diagnostics reachable) until all
+  in-flight entry point requests and the current background job complete.
+
+  Defined here (not in __main__) so that multiprocessing spawn can
+  pickle the bound method server.run and find this class by its fully
+  qualified name py_vcon_server.Server.
+  """
+
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self._drain_requested = False
+
+  if _UVICORN_NEEDS_SIGNAL_FIX:
+    def install_signal_handlers(self) -> None:
+      import threading
+      import asyncio
+      if threading.current_thread() is not threading.main_thread():
+          return
+
+      try:
+          # Use get_running_loop() rather than get_event_loop() to ensure
+          # we install handlers on the actual running loop.  In Python 3.8
+          # with nest_asyncio, get_event_loop() may return a different loop
+          # than the one actually running, causing signal handlers to never fire.
+          loop = asyncio.get_running_loop()
+          for sig in (signal.SIGINT, signal.SIGTERM):
+              loop.add_signal_handler(sig, self.handle_exit, sig, None)
+          logger.info(
+              "Signal handlers installed via get_running_loop() "
+              "(uvicorn get_event_loop fix applied)"
+            )
+
+      except RuntimeError:
+          # No running loop — fall back to signal.signal() (Windows or
+          # contexts where the loop hasn't started yet)
+          for sig in (signal.SIGINT, signal.SIGTERM):
+              signal.signal(sig, self.handle_exit)
+          logger.info("Signal handlers installed via signal.signal()")
+
+
+  def handle_exit(self, sig: int, frame) -> None:
+    #import sys
+    #print(f"handle_exit called sig={sig} pid={os.getpid()}", flush=True, file=sys.stderr)
+    global SHUTDOWN_REQUESTED, BACKGROUND_JOBS_RUNNING
+
+    if self.should_exit and sig == signal.SIGINT:
+      self.force_exit = True
+      return
+
+    logger.info(
+        "Shutdown signal {} received — starting graceful drain, "
+        "socket remains open for {} during drain".format(
+            sig, ", ".join(sorted(EXEMPT_SHUTDOWN_PATHS))
+          )
+      )
+
+    SHUTDOWN_REQUESTED = True
+    BACKGROUND_JOBS_RUNNING = False
+    self._drain_requested = True
+    # Do NOT call super().handle_exit() — that sets should_exit=True
+    # and causes uvicorn to close the socket before drain completes.
+
+  async def on_tick(self, counter: int) -> bool:
+    if self._drain_requested:
+      active = ACTIVE_REQUESTS
+      bg_task = BACKGROUND_JOB_TASK
+      bg_done = (bg_task is None or bg_task.done())
+
+      if active == 0 and bg_done:
+        logger.info(
+            "Drain complete (active_requests={}, background_job=done) "
+            "— handing shutdown to uvicorn".format(active)
+          )
+        self._drain_requested = False
+        self.should_exit = True
+
+    return await super().on_tick(counter)
 
 
 from contextlib import asynccontextmanager
