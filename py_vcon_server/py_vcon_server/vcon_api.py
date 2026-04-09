@@ -119,6 +119,10 @@ def init(restapi):
       transform_result = await py_vcon_server.db.VCON_STORAGE.jq_query(vcon_uuid, jq_transform)
       logger.debug("jq  transform result: {}".format(transform_result))
 
+    except py_vcon_server.db.VconNotFound as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
+
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.InternalErrorResponse(e))
@@ -139,6 +143,10 @@ def init(restapi):
       logger.info("vcon UID: {} jsonpath query string: {}".format(vcon_uuid, path_string))
       query_result = await py_vcon_server.db.VCON_STORAGE.json_path_query(vcon_uuid, path_string)
       logger.debug("jsonpath query result: {}".format(query_result))
+
+    except py_vcon_server.db.VconNotFound as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
