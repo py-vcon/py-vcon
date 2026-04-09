@@ -629,14 +629,18 @@ def stage5_concurrent_jobs(results: Results, base_url: str):
     concurrent_time = time.time() - concurrent_start
     print("  Concurrent (2 jobs) wall time: {:.2f}s".format(concurrent_time))
 
-    threshold = single_time * 1.6
+    # Use a minimum floor for single_time to avoid an unrealistically tight
+    # threshold when the job completes unusually fast on a warm CI runner.
+    effective_single_time = max(single_time, 0.5)
+    threshold = effective_single_time * 1.6
     passed = concurrent_time < threshold
     results.record(5, "Two jobs run concurrently", passed,
-        "2-job wall time {:.2f}s < threshold {:.2f}s (1.6x single {:.2f}s)".format(
-            concurrent_time, threshold, single_time)
+        "2-job wall time {:.2f}s < threshold {:.2f}s (1.6x effective single {:.2f}s)".format(
+            concurrent_time, threshold, effective_single_time)
         if passed else
         "2-job wall time {:.2f}s >= threshold {:.2f}s — jobs ran sequentially".format(
             concurrent_time, threshold))
+
     return passed
 
 
