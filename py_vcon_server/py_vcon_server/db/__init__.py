@@ -1,4 +1,5 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+import sys
 import typing
 import urllib
 import asyncio
@@ -17,17 +18,33 @@ class VconNotFound(Exception):
 def import_bindings(path: typing.List[str], module_prefix: str, label: str):
   """ Import the modules and interface registrations """
   for finder, module_name, is_package in pkgutil.iter_modules(
-    path,
-    module_prefix
+      path,
+      module_prefix
     ):
-    #logger.debug("finder type: {} dir: {}".format(type(finder), dir(finder)))
-    mod_found = finder.find_module(module_name)
-    #logger.debug("mod_found type: {} dir: {}".format(type(mod_found), dir(mod_found)))
     logger.info("{} module load: {} is_package: {}".format(label, module_name, is_package))
-    # Use finder to load the module as import_module will fail if path is not in PYTHONPATH
-    mod_found.load_module(module_name)
-    #importlib.import_module(module_name)
-
+    # finder.find_module() and load_module() were removed in Python 3.12.
+    # Temporarily add the finder's directory to sys.path so that
+    # importlib.import_module() can locate the module regardless of whether
+    # the path is in PYTHONPATH.  We import by the local (unqualified) name
+    # and then register the result under the full prefixed module_name so
+    # that subsequent imports of that name resolve to the same object.
+    if module_prefix:
+      # The module is part of a known package (e.g. py_vcon_server.processor.jq).
+      # importlib.import_module can resolve it by its full name directly.
+      importlib.import_module(module_name)
+    else:
+      # No prefix: the module lives at finder.path but has no parent package
+      # on sys.path (e.g. PLUGIN_PATHS entries).  Temporarily add the path
+      # so importlib can find it, then register it under its full name.
+      local_name = module_name
+      orig_sys_path = sys.path[:]
+      try:
+        if finder.path not in sys.path:
+          sys.path.append(finder.path)
+        mod = importlib.import_module(local_name)
+        sys.modules[module_name] = mod
+      finally:
+        sys.path[:] = orig_sys_path
 
 # Should this be a class or global methods??
 class VconStorage():
