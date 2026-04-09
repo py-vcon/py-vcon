@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 
 import asyncio
 import pytest
@@ -111,4 +111,43 @@ async def test_jq_proc_api(make_inline_audio_vcon):
       pass
     assert(proc_io_out["parameters"]["is_three"] == False)
     assert(proc_io_out["parameters"]["is_four"] == False)
+
+
+@pytest.mark.asyncio
+async def test_jq_empty_queries(make_2_party_tel_vcon: vcon.Vcon):
+  """When jq_queries is empty the processor should warn but not fail"""
+  in_vcon = make_2_party_tel_vcon
+
+  proc_input = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  await proc_input.add_vcon(in_vcon, "fake_lock", False)
+
+  jq_proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("jq")
+  jq_options = jq_proc_inst.processor_options_class()(
+    jq_queries={}
+  )
+
+  # Should complete without error, just logs a warning
+  proc_output = await jq_proc_inst.process(proc_input, jq_options)
+  assert(proc_output is not None)
+
+
+@pytest.mark.asyncio
+async def test_jq_multiple_queries(make_2_party_tel_vcon: vcon.Vcon):
+  """Test jq processor with multiple queries at once"""
+  in_vcon = make_2_party_tel_vcon
+
+  proc_input = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  await proc_input.add_vcon(in_vcon, "fake_lock", False)
+
+  jq_proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("jq")
+  jq_options = jq_proc_inst.processor_options_class()(
+    jq_queries={
+      "party_tel_0": ".vcons[0].parties[0].tel",
+      "party_count": ".vcons[0].parties | length"
+    }
+  )
+
+  proc_output = await jq_proc_inst.process(proc_input, jq_options)
+  assert(proc_output.get_parameter("party_tel_0") == "1234")
+  assert(proc_output.get_parameter("party_count") == 2)
 
