@@ -16,6 +16,10 @@ Structure:
     ACTIVE_RUNS population during active runs, /diagnostics content,
     entry point context fields, and shutdown middleware exemption.
 
+  Section 4: Prometheus multiprocess mode — PROMETHEUS_MULTIPROC_DIR handling
+    Tests for the fallback directory creation in install_instrumentation()
+    and the always-registered /metrics endpoint behavior.
+
 Note on module state:
   _INSTRUMENTATION_INSTALLED is a module-level global. Once set True by
   install_instrumentation() it cannot be unset within the same process.
@@ -461,10 +465,7 @@ def test_prometheus_gauges_created_after_install(enable_prometheus):
 def test_prometheus_metric_objects_created_with_prometheus(enable_prometheus):
   """
   When ENABLE_PROMETHEUS=True, install_instrumentation() creates all
-  three Prometheus metric objects. Tests the objects directly since
-  the /metrics route is only registered when py_vcon_server is first
-  loaded with ENABLE_PROMETHEUS=True — it cannot be added retroactively
-  without a module reload.
+  three Prometheus metric objects.
   """
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     assert metrics._processor_active_gauge is not None, \
@@ -698,3 +699,409 @@ def test_error_status_recorded_in_histogram(enable_prometheus):
         "histogram should have at least one error observation for status=error"
 
     client.delete("/vcon/{}".format(UUID))
+
+
+def test_metrics_endpoint_body_contains_processor_metrics_after_run(enable_prometheus):
+  """
+  After a processor run completes, the /metrics endpoint response body
+  contains py_vcon_server processor metrics with the correct processor name.
+
+  This test goes through the full MultiProcessCollector path — it verifies
+  that metrics written to mmap files by the processor are readable via the
+  custom /metrics endpoint, not just via internal prometheus_client objects.
+  This is the key regression test for the multiprocess mode change: the old
+  .expose() endpoint used the single-process registry and would only return
+  metrics for the scraping worker in a multi-worker deployment.
+  """
+  in_vcon = make_test_vcon()
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    set_response = client.post("/vcon", json=in_vcon.dumpd())
+    assert set_response.status_code == 204
+
+    post_response = client.post(
+        "/process/{}/timeout_test_sleep_async".format(UUID),
+        json={"sleep_seconds": 0.1}
+      )
+    assert post_response.status_code == 200
+
+    # Hit /metrics and check response body contains our custom metrics
+    metrics_response = client.get("/metrics")
+    assert metrics_response.status_code == 200
+    body = metrics_response.text
+
+    # Prometheus text format must contain HELP and TYPE lines
+    assert "# HELP py_vcon_server_processor_duration_seconds" in body, \
+        "/metrics should contain HELP line for processor duration histogram"
+    assert "# TYPE py_vcon_server_processor_duration_seconds histogram" in body, \
+        "/metrics should contain TYPE line for processor duration histogram"
+    assert "# HELP py_vcon_server_processor_active" in body, \
+        "/metrics should contain HELP line for processor active gauge"
+
+    # Histogram count for this processor should be >= 1
+    # Line format: py_vcon_server_processor_duration_seconds_count{...} N.0
+    import re
+    count_total = 0.0
+    for line in body.splitlines():
+      m = re.match(
+          r'^py_vcon_server_processor_duration_seconds_count'
+          r'\{[^}]*processor_name="timeout_test_sleep_async"[^}]*\}'
+          r'\s+([\d.]+)',
+          line
+        )
+      if m:
+        count_total += float(m.group(1))
+
+    assert count_total >= 1.0, \
+        "/metrics body should show at least 1 observation for " \
+        "timeout_test_sleep_async, got {:.0f}. Body excerpt:\n{}".format(
+            count_total,
+            "\n".join(l for l in body.splitlines()
+                if "timeout_test_sleep_async" in l)[:500]
+          )
+
+    client.delete("/vcon/{}".format(UUID))
+
+
+def test_update_background_job_heartbeat_sets_gauge_when_enabled(enable_prometheus):
+  """
+  update_background_job_heartbeat() sets the background job heartbeat gauge
+  to approximately the current epoch time when ENABLE_PROMETHEUS=True.
+
+  Covers the _background_job_heartbeat.set(time.time()) path in
+  update_background_job_heartbeat() which is only reached when the gauge
+  object exists (i.e. Prometheus is enabled and instrumentation installed).
+  """
+  assert metrics._background_job_heartbeat is not None, \
+      "heartbeat gauge should exist when Prometheus is enabled"
+
+  before = time.time()
+  metrics.update_background_job_heartbeat()
+  after = time.time()
+
+  # Read the gauge value via collect() — avoids relying on internal
+  # _value attribute which varies across prometheus_client versions
+  gauge_value = None
+  for metric_family in metrics._background_job_heartbeat.collect():
+    for sample in metric_family.samples:
+      if sample.name == "py_vcon_server_background_job_heartbeat_timestamp":
+        gauge_value = sample.value
+        break
+
+  assert gauge_value is not None, \
+      "heartbeat gauge should have a sample after update_background_job_heartbeat()"
+  assert before <= gauge_value <= after, \
+      "gauge value {:.3f} should be between before={:.3f} and after={:.3f}".format(
+          gauge_value, before, after)
+
+
+def test_install_instrumentation_handles_prometheus_init_failure(reset_metrics, caplog):
+  """
+  If prometheus_client raises during metric creation, install_instrumentation()
+  logs a WARNING and does not crash.  _INSTRUMENTATION_INSTALLED is still set
+  True (instrumentation framework works) but all gauge objects remain None
+  (no Prometheus metrics collected).
+
+  Covers the except branch in install_instrumentation() that fires when
+  prometheus_client.Gauge or Histogram construction fails (e.g. registry
+  conflict or missing dependency).
+  """
+  import logging
+  import unittest.mock
+
+  original = py_vcon_server.settings.ENABLE_PROMETHEUS
+  py_vcon_server.settings.ENABLE_PROMETHEUS = True
+
+  try:
+    # Patch the _get_or_create helper inside install_instrumentation() by
+    # making the entire prometheus_client module unavailable via sys.modules.
+    # This forces the `import prometheus_client` inside install_instrumentation()
+    # to raise ImportError, which is caught by the except block.
+    import sys
+    real_prom = sys.modules.get("prometheus_client")
+    sys.modules["prometheus_client"] = None  # causes ImportError on import
+
+    try:
+      with caplog.at_level(logging.WARNING, logger="py_vcon_server.metrics"):
+        metrics.install_instrumentation()
+    finally:
+      # Restore prometheus_client immediately — other tests need it
+      if real_prom is not None:
+        sys.modules["prometheus_client"] = real_prom
+      else:
+        del sys.modules["prometheus_client"]
+
+    assert metrics._INSTRUMENTATION_INSTALLED, \
+        "_INSTRUMENTATION_INSTALLED should be True even after Prometheus init failure"
+    assert metrics._processor_active_gauge is None, \
+        "_processor_active_gauge should remain None after init failure"
+    assert metrics._processor_duration_hist is None, \
+        "_processor_duration_hist should remain None after init failure"
+    assert metrics._background_job_heartbeat is None, \
+        "_background_job_heartbeat should remain None after init failure"
+
+    warning_messages = [r.message for r in caplog.records
+        if r.levelno == logging.WARNING]
+    assert any("failed to initialize Prometheus metrics" in m
+        for m in warning_messages), \
+        "should log WARNING about Prometheus init failure, got: {}".format(
+            warning_messages)
+
+  finally:
+    py_vcon_server.settings.ENABLE_PROMETHEUS = original
+
+
+# ==============================================================================
+#  SECTION 4: Prometheus multiprocess mode — PROMETHEUS_MULTIPROC_DIR handling
+#  Tests for the fallback directory creation in install_instrumentation()
+#  and the always-registered /metrics endpoint behavior.
+# ==============================================================================
+
+# ── Fallback PROMETHEUS_MULTIPROC_DIR creation ────────────────────────────────
+
+def test_fallback_prom_dir_created_when_not_set(reset_metrics):
+  """
+  When ENABLE_PROMETHEUS=True and PROMETHEUS_MULTIPROC_DIR is not set,
+  install_instrumentation() creates a fallback temp directory and sets
+  the env var.  The directory must exist on disk.
+  Verifies the fallback path in metrics.py that handles unit test /
+  CLI usage where __main__.py has not run.
+  """
+  original_prom_dir = os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+  original_enable = py_vcon_server.settings.ENABLE_PROMETHEUS
+  created_dir = None
+
+  try:
+    py_vcon_server.settings.ENABLE_PROMETHEUS = True
+    assert not os.environ.get("PROMETHEUS_MULTIPROC_DIR", ""), \
+        "PROMETHEUS_MULTIPROC_DIR should not be set before this test"
+
+    metrics.install_instrumentation()
+
+    created_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR", "")
+    assert created_dir, \
+        "PROMETHEUS_MULTIPROC_DIR should be set after install_instrumentation()"
+    assert os.path.isdir(created_dir), \
+        "fallback PROMETHEUS_MULTIPROC_DIR directory should exist on disk: {}".format(
+            created_dir)
+    assert "pyvcon_prom_fallback_" in created_dir, \
+        "fallback dir should have expected prefix: {}".format(created_dir)
+
+  finally:
+    py_vcon_server.settings.ENABLE_PROMETHEUS = original_enable
+    if created_dir and os.path.isdir(created_dir):
+      import shutil
+      shutil.rmtree(created_dir, ignore_errors=True)
+    # Restore original env state
+    if original_prom_dir is not None:
+      os.environ["PROMETHEUS_MULTIPROC_DIR"] = original_prom_dir
+    else:
+      os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+
+
+def test_fallback_not_triggered_when_dir_already_set(reset_metrics):
+  """
+  When ENABLE_PROMETHEUS=True and PROMETHEUS_MULTIPROC_DIR is already set
+  to a valid directory, install_instrumentation() does NOT create a new
+  fallback directory — it uses the existing one.
+  Verifies that __main__.py's pre-set directory is respected.
+  """
+  import tempfile
+  original_prom_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR", None)
+  original_enable = py_vcon_server.settings.ENABLE_PROMETHEUS
+  pre_set_dir = tempfile.mkdtemp(prefix="test_prom_preset_")
+
+  try:
+    py_vcon_server.settings.ENABLE_PROMETHEUS = True
+    os.environ["PROMETHEUS_MULTIPROC_DIR"] = pre_set_dir
+
+    metrics.install_instrumentation()
+
+    after_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR", "")
+    assert after_dir == pre_set_dir, \
+        "install_instrumentation() should not override existing " \
+        "PROMETHEUS_MULTIPROC_DIR: expected {} got {}".format(
+            pre_set_dir, after_dir)
+
+  finally:
+    py_vcon_server.settings.ENABLE_PROMETHEUS = original_enable
+    import shutil
+    shutil.rmtree(pre_set_dir, ignore_errors=True)
+    # Restore original env state
+    if original_prom_dir is not None:
+      os.environ["PROMETHEUS_MULTIPROC_DIR"] = original_prom_dir
+    else:
+      os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+
+
+# ── /metrics endpoint always-registered behavior ─────────────────────────────
+
+def test_metrics_endpoint_returns_200_when_prometheus_disabled():
+  """
+  /metrics returns 200 (not 404) even when ENABLE_PROMETHEUS=False.
+  The route is always registered regardless of Prometheus setting.
+  Previously .expose() only registered the route when Prometheus was
+  enabled, causing 404s when scrapers hit the endpoint with Prometheus off.
+  """
+  assert not py_vcon_server.settings.ENABLE_PROMETHEUS, \
+      "this test requires ENABLE_PROMETHEUS=False (default)"
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    response = client.get("/metrics")
+    assert response.status_code == 200, \
+        "/metrics should return 200 even when Prometheus is disabled, " \
+        "got {}".format(response.status_code)
+    # Response body should be empty (not Prometheus format)
+    assert response.text == "", \
+        "/metrics should return empty body when Prometheus is disabled"
+
+
+def test_metrics_endpoint_returns_prometheus_format_when_enabled(enable_prometheus):
+  """
+  When ENABLE_PROMETHEUS=True, /metrics returns a valid Prometheus text
+  exposition format response — contains # HELP and # TYPE lines.
+  Verifies the MultiProcessCollector endpoint is working correctly.
+  """
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    response = client.get("/metrics")
+    assert response.status_code == 200, \
+        "/metrics should return 200 when Prometheus is enabled"
+    body = response.text
+    assert "# HELP" in body, \
+        "/metrics response should contain Prometheus # HELP lines"
+    assert "# TYPE" in body, \
+        "/metrics response should contain Prometheus # TYPE lines"
+    # Verify our custom processor metrics are present
+    assert "py_vcon_server_processor" in body, \
+        "/metrics should contain py_vcon_server processor metrics"
+
+
+def test_metrics_endpoint_in_openapi_schema():
+  """
+  /metrics appears in the OpenAPI schema with the SERVER_TAG tag.
+  Verifies it is discoverable in the API docs.
+  """
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+    schema = response.json()
+    assert "/metrics" in schema["paths"], \
+        "/metrics should appear in OpenAPI schema paths"
+    metrics_get = schema["paths"]["/metrics"]["get"]
+    assert py_vcon_server.restful_api.SERVER_TAG in metrics_get["tags"], \
+        "/metrics should have SERVER_TAG '{}' in OpenAPI schema, got: {}".format(
+            py_vcon_server.restful_api.SERVER_TAG,
+            metrics_get.get("tags", []))
+
+
+# ── __main__.py helper functions ──────────────────────────────────────────────
+
+def test_setup_prometheus_multiproc_dir_creates_and_sets_env():
+  """
+  _setup_prometheus_multiproc_dir() creates a temp directory and sets
+  PROMETHEUS_MULTIPROC_DIR in os.environ.  The directory must exist.
+  The path should contain the parent PID so it is identifiable.
+  Cleans up after itself.
+  """
+  import shutil
+  from py_vcon_server.__main__ import _setup_prometheus_multiproc_dir
+
+  original = os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+  created_dir = None
+
+  try:
+    created_dir = _setup_prometheus_multiproc_dir()
+
+    assert created_dir, \
+        "_setup_prometheus_multiproc_dir() should return a non-empty path"
+    assert os.path.isdir(created_dir), \
+        "directory should exist after _setup_prometheus_multiproc_dir(): {}".format(
+            created_dir)
+    assert os.environ.get("PROMETHEUS_MULTIPROC_DIR") == created_dir, \
+        "PROMETHEUS_MULTIPROC_DIR env var should match returned path"
+    assert str(os.getpid()) in created_dir, \
+        "directory name should contain parent PID for identifiability"
+
+  finally:
+    if created_dir and os.path.isdir(created_dir):
+      shutil.rmtree(created_dir, ignore_errors=True)
+    if original is not None:
+      os.environ["PROMETHEUS_MULTIPROC_DIR"] = original
+    else:
+      os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+
+
+def test_setup_prometheus_multiproc_dir_warns_if_already_set(caplog):
+  """
+  _setup_prometheus_multiproc_dir() logs a WARNING if PROMETHEUS_MULTIPROC_DIR
+  is already set in the environment, then overrides it with a new directory.
+  """
+  import shutil
+  import logging
+  from py_vcon_server.__main__ import _setup_prometheus_multiproc_dir
+
+  original = os.environ.get("PROMETHEUS_MULTIPROC_DIR", None)
+  pre_existing = "/tmp/some_preexisting_prom_dir"
+  os.environ["PROMETHEUS_MULTIPROC_DIR"] = pre_existing
+  created_dir = None
+
+  try:
+    with caplog.at_level(logging.WARNING):
+      created_dir = _setup_prometheus_multiproc_dir()
+
+    assert any("PROMETHEUS_MULTIPROC_DIR" in record.message
+        for record in caplog.records
+        if record.levelno == logging.WARNING), \
+        "should log a WARNING when PROMETHEUS_MULTIPROC_DIR is pre-set"
+    assert os.environ.get("PROMETHEUS_MULTIPROC_DIR") == created_dir, \
+        "env var should be overridden with new directory"
+    assert created_dir != pre_existing, \
+        "new directory should differ from pre-existing value"
+
+  finally:
+    if created_dir and os.path.isdir(created_dir):
+      shutil.rmtree(created_dir, ignore_errors=True)
+    if original is not None:
+      os.environ["PROMETHEUS_MULTIPROC_DIR"] = original
+    else:
+      os.environ.pop("PROMETHEUS_MULTIPROC_DIR", None)
+
+
+def test_cleanup_prometheus_multiproc_dir_removes_directory():
+  """
+  _cleanup_prometheus_multiproc_dir() removes the directory and its contents.
+  """
+  import tempfile
+  import shutil
+  from py_vcon_server.__main__ import _cleanup_prometheus_multiproc_dir
+
+  # Create a temp dir with a file in it to simulate mmap files
+  test_dir = tempfile.mkdtemp(prefix="test_cleanup_prom_")
+  test_file = os.path.join(test_dir, "counter_12345.db")
+  with open(test_file, "w") as f:
+    f.write("fake mmap data")
+
+  assert os.path.isdir(test_dir)
+  assert os.path.isfile(test_file)
+
+  _cleanup_prometheus_multiproc_dir(test_dir)
+
+  assert not os.path.exists(test_dir), \
+      "directory should be removed by _cleanup_prometheus_multiproc_dir()"
+
+
+def test_cleanup_prometheus_multiproc_dir_handles_missing_dir():
+  """
+  _cleanup_prometheus_multiproc_dir() does not raise if the directory
+  does not exist — logs a warning instead.
+  Handles the case where cleanup is called after a crash removed the dir.
+  """
+  import logging
+  from py_vcon_server.__main__ import _cleanup_prometheus_multiproc_dir
+
+  nonexistent = "/tmp/pyvcon_prom_does_not_exist_99999"
+  assert not os.path.exists(nonexistent)
+
+  # Should not raise
+  _cleanup_prometheus_multiproc_dir(nonexistent)
+
