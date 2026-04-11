@@ -239,6 +239,23 @@ def install_instrumentation():
   # Initialize Prometheus metrics if enabled
   import py_vcon_server.settings
   if py_vcon_server.settings.ENABLE_PROMETHEUS:
+    # Ensure PROMETHEUS_MULTIPROC_DIR is set before prometheus_client
+    # is imported. __main__.py sets this before workers start. If we
+    # reach here without it set (e.g. tests, CLI), create a temp dir
+    # with a warning.
+    import os as _os
+    if not _os.environ.get("PROMETHEUS_MULTIPROC_DIR", ""):
+      import tempfile
+      _fallback_dir = tempfile.mkdtemp(prefix="pyvcon_prom_fallback_")
+      _os.environ["PROMETHEUS_MULTIPROC_DIR"] = _fallback_dir
+      logger.warning(
+          "metrics: PROMETHEUS_MULTIPROC_DIR was not set before "
+          "install_instrumentation() was called. This means the server "
+          "did not set it up via __main__.py (expected in production). "
+          "Created fallback directory: {}. This directory will NOT be "
+          "cleaned up automatically.".format(_fallback_dir)
+        )
+
     try:
       import prometheus_client
 

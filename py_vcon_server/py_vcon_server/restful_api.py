@@ -321,23 +321,58 @@ def init(lifespan=None) -> fastapi.FastAPI:
         )
       )
 
-    # Per client stats
+# Per client stats
     prometheus_instrumentor.add(http_requests_by_client())
     prometheus_instrumentor.instrument(restapi)
-    prometheus_instrumentor.expose(restapi)
+    # NOTE: do NOT call prometheus_instrumentor.expose(restapi) in
+    # multiprocess mode.  expose() uses prometheus_client.REGISTRY which
+    # is the single-process registry and only returns metrics for the one
+    # worker that handles the scrape request.  Instead we register a custom
+    # /metrics endpoint below that uses MultiProcessCollector to merge mmap
+    # files from all workers.
 
   else:
     logger.info(f"Prometheus metrics disabled ({py_vcon_server.settings.ENABLE_PROMETHEUS})")
 
+  # /metrics is registered outside the ENABLE_PROMETHEUS block so the
+  # route always exists.  When Prometheus is disabled the endpoint returns
+  # an empty response.  This avoids 404s from Prometheus scrapers when
+  # the setting is toggled.
+  @restapi.get(
+      "/metrics",
+      tags=[SERVER_TAG],
+      summary="Prometheus metrics",
+      description=(
+          "Returns Prometheus metrics in text exposition format. "
+          "In multi-worker mode, metrics are aggregated across all "
+          "worker processes via prometheus_client multiprocess mode. "
+          "Returns empty response if ENABLE_PROMETHEUS is False."
+        ),
+    )
+  async def metrics_endpoint():
+    import py_vcon_server.settings as _settings
+    if not _settings.ENABLE_PROMETHEUS:
+      return fastapi.Response(content="", media_type="text/plain")
+
+    import prometheus_client as _prom
+    import prometheus_client.multiprocess as _prom_mp
+    registry = _prom.CollectorRegistry()
+    _prom_mp.MultiProcessCollector(registry)
+    data = _prom.generate_latest(registry)
+    return fastapi.Response(
+        content=data,
+        media_type=_prom.CONTENT_TYPE_LATEST,
+      )
+
 
   @restapi.get("/diagnostics",
-    tags = [ SERVER_TAG ],
-    summary = "Get currently active processor runs",
-    description = "Returns a dict of currently running processor invocations with "
-      "processor name, vCon UUIDs, entry point, pipeline name, job ID, start time "
-      "and elapsed seconds.  Use this endpoint to diagnose blocked or long-running "
-      "processors.  This is a point-in-time snapshot — no history is retained."
-    )
+      tags = [ SERVER_TAG ],
+      summary = "Get currently active processor runs",
+      description = "Returns a dict of currently running processor invocations with "
+        "processor name, vCon UUIDs, entry point, pipeline name, job ID, start time "
+        "and elapsed seconds.  Use this endpoint to diagnose blocked or long-running "
+        "processors.  This is a point-in-time snapshot — no history is retained."
+      )
   async def get_diagnostics():
     import time
     import py_vcon_server.metrics

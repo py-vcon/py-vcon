@@ -1,10 +1,67 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+import os
+import shutil
+import tempfile
 import urllib
 import uvicorn
 from . import settings, logging_utils
 from py_vcon_server import Server
 
 logger = logging_utils.init_logger(__name__)
+
+
+def _setup_prometheus_multiproc_dir() -> str:
+  """
+  Create and register a per-instance PROMETHEUS_MULTIPROC_DIR.
+
+  Must be called in the parent process before any workers are forked/spawned
+  so that the directory path is inherited by all workers via os.environ.
+  Each worker's prometheus_client will write its mmap files here;
+  MultiProcessCollector reads and merges them at /metrics scrape time.
+
+  Returns the path of the created directory so the caller can clean it up.
+
+  Warns loudly if PROMETHEUS_MULTIPROC_DIR is already set — this indicates
+  either a manual override by an operator (unsupported, risk of sharing data
+  between instances) or a previous run that did not clean up.
+  """
+  existing = os.environ.get("PROMETHEUS_MULTIPROC_DIR", "")
+  if existing:
+    logger.warning(
+        "PROMETHEUS_MULTIPROC_DIR is already set to '{}' in the environment. "
+        "This value will be overridden. "
+        "This variable is managed by py_vcon_server and should not be set "
+        "manually. If multiple server instances share this directory, metrics "
+        "will be incorrect and stale data from crashed instances may persist. "
+        "Ensure no other server instance is using this directory.".format(existing)
+      )
+
+  prom_dir = tempfile.mkdtemp(prefix="pyvcon_prom_{}_".format(os.getpid()))
+  os.environ["PROMETHEUS_MULTIPROC_DIR"] = prom_dir
+  logger.info(
+      "Prometheus multiprocess directory created: {} "
+      "(will be removed on clean shutdown)".format(prom_dir)
+    )
+  return prom_dir
+
+
+def _cleanup_prometheus_multiproc_dir(prom_dir: str) -> None:
+  """
+  Remove the PROMETHEUS_MULTIPROC_DIR created by _setup_prometheus_multiproc_dir.
+
+  Called after all workers have exited.  prometheus_client does not remove
+  its own mmap files on shutdown — without this cleanup, stale counter and
+  histogram files from this run would be included in metrics for the next run.
+  """
+  try:
+    shutil.rmtree(prom_dir)
+    logger.info("Prometheus multiprocess directory removed: {}".format(prom_dir))
+  except Exception as e:
+    logger.warning(
+        "Failed to remove Prometheus multiprocess directory {}: {}. "
+        "Stale mmap files may affect metrics on next server start.".format(
+            prom_dir, e)
+      )
 
 
 def main():
@@ -21,15 +78,23 @@ def main():
       loop="asyncio",
       host=host_ip,
       port=port_num,
-  )
+    )
   server = Server(config=config)
 
-  if settings.NUM_RESTAPI_WORKERS > 1:
-    from uvicorn.supervisors import Multiprocess
-    sock = config.bind_socket()
-    Multiprocess(config, target=server.run, sockets=[sock]).run()
-  else:
-    server.run()
+  prom_dir = None
+  if settings.ENABLE_PROMETHEUS:
+    prom_dir = _setup_prometheus_multiproc_dir()
+
+  try:
+    if settings.NUM_RESTAPI_WORKERS > 1:
+      from uvicorn.supervisors import Multiprocess
+      sock = config.bind_socket()
+      Multiprocess(config, target=server.run, sockets=[sock]).run()
+    else:
+      server.run()
+  finally:
+    if prom_dir:
+      _cleanup_prometheus_multiproc_dir(prom_dir)
 
 
 if __name__ == "__main__":
