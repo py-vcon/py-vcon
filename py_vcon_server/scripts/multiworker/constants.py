@@ -5,6 +5,23 @@ multiworker/constants.py — Shared constants and pipeline definitions.
 
 import os
 
+# ── Stage registry ────────────────────────────────────────────────────────────
+# Maps stage number to short name.  Used by Results for readable output and
+# by the CLI --stages / --skip arguments (both numbers and names accepted).
+
+STAGE_NAMES = {
+  1: "startup",
+  2: "worker_count",
+  3: "blocking",
+  4: "pipeline_job",
+  5: "concurrent",
+  6: "sigint_shutdown",
+  7: "prometheus",
+}
+
+# Reverse map: name -> number, for CLI parsing
+STAGE_NUMBERS = {v: k for k, v in STAGE_NAMES.items()}
+
 # ── Stage 4/5 constants ───────────────────────────────────────────────────────
 
 QUEUE_NAME       = "mw_test_queue"
@@ -34,6 +51,10 @@ SIGINT_QUEUE            = "mw_sigint_queue"
 SIGINT_MARKER           = "SIGINT_SHUTDOWN_OK"
 SIGINT_JOB_SLEEP        = 4.0  # job sleeps this long — must still be running when SIGINT fires
 SIGINT_SHUTDOWN_TIMEOUT = 35   # max seconds for server to exit after SIGINT
+
+# ── Stage 7 constants ─────────────────────────────────────────────────────────
+
+PROM_VCON_UUID  = "01855517-mult-prom7s-test-77776666acbe"
 
 # ── Pipeline definitions ──────────────────────────────────────────────────────
 
