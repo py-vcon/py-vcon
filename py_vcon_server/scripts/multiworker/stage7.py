@@ -87,7 +87,7 @@ def stage7_prometheus(
 
   try:
     # ── Wait for server ready ────────────────────────────────────────────────
-    deadline = time.time() + STARTUP_TIMEOUT
+    deadline = time.time() + PROM_STARTUP_TIMEOUT
     ready = False
     while time.time() < deadline:
       if prom_proc.poll() is not None:
@@ -102,10 +102,26 @@ def stage7_prometheus(
         pass
       time.sleep(0.5)
 
-    if not ready:
+      if not ready:
+      # Print tail of prom log to help diagnose startup failure
+      prom_log_file.flush()
+      try:
+        with open(prom_log_path, "r") as lf:
+          lines = lf.readlines()
+          tail = lines[-30:] if len(lines) > 30 else lines
+          print("  Last {} lines of prom log:".format(len(tail)))
+          for line in tail:
+            print("    {}".format(line.rstrip()))
+      except Exception as read_err:
+        print("  Could not read prom log: {}".format(read_err))
+      # Also check if the process exited and capture return code
+      rc = prom_proc.poll()
+      print("  Prometheus server process exit code: {}".format(
+          rc if rc is not None else "still running"))
       results.record(7, "Prometheus server started", False,
-          "Did not become ready within {}s".format(STARTUP_TIMEOUT))
+          "Did not become ready within {}s".format(PROM_STARTUP_TIMEOUT))
       return False
+
     results.record(7, "Prometheus server started", True,
         "port={}".format(prom_port))
 
