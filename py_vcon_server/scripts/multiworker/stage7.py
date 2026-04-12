@@ -102,7 +102,7 @@ def stage7_prometheus(
         pass
       time.sleep(0.5)
 
-      if not ready:
+    if not ready:
       # Print tail of prom log to help diagnose startup failure
       prom_log_file.flush()
       try:
