@@ -252,17 +252,6 @@ def main():
       print()
       print("Stage 2 (worker_count) — SKIPPED")
 
-    # Stage 7: Prometheus multiprocess aggregation.
-    # Runs here — before Stages 3/4/5 add load — because Stage 7 starts
-    # a second server on port+1 while the main server is running.  Running
-    # early minimises total process count on slow CI runners.
-    # Must still run before Stage 6 since Stage 6 terminates the main server.
-    if should_run(7):
-      stage7_prometheus(results, base_url, env, num_workers)
-    else:
-      print()
-      print("Stage 7 (prometheus) — SKIPPED")
-
     # Stage 3: Blocking isolation
     if should_run(3):
       stage3_blocking_isolation(results, base_url, BLOCK_SECONDS)
@@ -287,6 +276,17 @@ def main():
     else:
       print()
       print("Stage 5 (concurrent) — SKIPPED")
+
+    # Stage 7: Prometheus multiprocess aggregation.
+    # Runs here — before Stages 3/4/5 add load — because Stage 7 starts
+    # a second server on port+1 while the main server is running.  Running
+    # early minimises total process count on slow CI runners.
+    # Must still run before Stage 6 since Stage 6 terminates the main server.
+    if should_run(7):
+      stage7_prometheus(results, base_url, env, num_workers)
+    else:
+      print()
+      print("Stage 7 (prometheus) — SKIPPED")
 
     # Stage 6: SIGINT graceful shutdown (multi-worker only).
     # Must be last — terminates the main server.
