@@ -160,6 +160,7 @@ jobs:
           MULTIWORKER_STARTUP_TIMEOUT: "60"
           MULTIWORKER_JOB_POLL_TIMEOUT: "60"
           MULTIWORKER_BLOCK_WAIT: "5.0"
+          MULTIWORKER_PROM_STARTUP_TIMEOUT: "120"
 
         run: |
           cd py_vcon_server

@@ -40,6 +40,13 @@ BLOCK_SECONDS    = 8     # how long timeout_test_sleep_sync blocks
 HEALTH_TIMEOUT    = 3.0  # health check must respond within this many seconds
 # seconds to wait for server to become ready
 STARTUP_TIMEOUT   = int(os.environ.get("MULTIWORKER_STARTUP_TIMEOUT", "30"))
+# seconds to wait for the Stage 7 Prometheus test server to become ready.
+# Separate from STARTUP_TIMEOUT since Stage 7 starts a second server while
+# the main server is running, increasing resource pressure on slow CI runners.
+PROM_STARTUP_TIMEOUT = int(os.environ.get(
+    "MULTIWORKER_PROM_STARTUP_TIMEOUT",
+    str(STARTUP_TIMEOUT)
+  ))
 # max seconds to wait for a single job to complete
 JOB_POLL_TIMEOUT  = int(os.environ.get("MULTIWORKER_JOB_POLL_TIMEOUT", "30"))
 JOB_POLL_INTERVAL = 0.5  # seconds between job completion polls

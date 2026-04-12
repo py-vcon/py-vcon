@@ -20,6 +20,7 @@ import httpx
 
 from multiworker.constants import (
   STARTUP_TIMEOUT,
+  PROM_STARTUP_TIMEOUT,
   PROM_VCON_UUID,
 )
 from multiworker.helpers import get, make_test_vcon_dict
