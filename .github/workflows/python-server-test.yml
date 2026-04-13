@@ -128,6 +128,11 @@ jobs:
             echo "Python 3.8 patching"
             pip3 uninstall --yes cryptography
             pip3 install 'cryptography<45.0.0'
+            # prometheus-fastapi-instrumentator >= 6.0 uses Python 3.9+
+            # type annotation syntax (list[str] etc) which crashes on import
+            # under Python 3.8 with TypeError: type object is not subscriptable.
+            # Pin to last 5.x release which supports Python 3.8.
+            pip3 install 'prometheus_fastapi_instrumentator<6.0.0'`
           else
             echo "no version specific python patching"
           fi
