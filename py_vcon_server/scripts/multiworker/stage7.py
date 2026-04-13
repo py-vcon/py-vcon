@@ -114,10 +114,19 @@ def stage7_prometheus(
                              "CRITICAL", "Address already in use")
           )]
         if important:
-          print("  ERROR/exception lines from prom log ({} found):".format(
-              len(important)))
-          for line in important[:20]:
-            print("    {}".format(line.rstrip()))
+          # Print lines around each important line for traceback context
+          important_indices = {i for i, l in enumerate(lines) if any(
+              k in l for k in ("ERROR", "Traceback", "Error", "Exception",
+                               "CRITICAL", "Address already in use")
+            )}
+          context_indices = set()
+          for idx in important_indices:
+            for j in range(max(0, idx - 2), min(len(lines), idx + 5)):
+              context_indices.add(j)
+          print("  ERROR/exception lines from prom log (with context):".format())
+          for idx in sorted(context_indices)[:60]:
+            print("    {:4d}: {}".format(idx, lines[idx].rstrip()))
+
         # Then print the last 50 lines for full context
         tail = lines[-50:] if len(lines) > 50 else lines
         print("  Last {} lines of prom log:".format(len(tail)))
