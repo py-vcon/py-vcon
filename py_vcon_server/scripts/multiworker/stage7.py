@@ -108,12 +108,24 @@ def stage7_prometheus(
       try:
         with open(prom_log_path, "r") as lf:
           lines = lf.readlines()
-          tail = lines[-30:] if len(lines) > 30 else lines
-          print("  Last {} lines of prom log:".format(len(tail)))
-          for line in tail:
+        # Print ERROR/WARNING/Traceback lines first — these reveal the cause
+        important = [l for l in lines if any(
+            k in l for k in ("ERROR", "Traceback", "Error", "Exception",
+                             "CRITICAL", "Address already in use")
+          )]
+        if important:
+          print("  ERROR/exception lines from prom log ({} found):".format(
+              len(important)))
+          for line in important[:20]:
             print("    {}".format(line.rstrip()))
+        # Then print the last 50 lines for full context
+        tail = lines[-50:] if len(lines) > 50 else lines
+        print("  Last {} lines of prom log:".format(len(tail)))
+        for line in tail:
+          print("    {}".format(line.rstrip()))
       except Exception as read_err:
         print("  Could not read prom log: {}".format(read_err))
+
       # Also check if the process exited and capture return code
       rc = prom_proc.poll()
       print("  Prometheus server process exit code: {}".format(
