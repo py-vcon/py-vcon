@@ -132,7 +132,7 @@ jobs:
             # type annotation syntax (list[str] etc) which crashes on import
             # under Python 3.8 with TypeError: type object is not subscriptable.
             # Pin to last 5.x release which supports Python 3.8.
-            pip3 install 'prometheus_fastapi_instrumentator<6.0.0'`
+            pip3 install 'prometheus_fastapi_instrumentator<6.0.0'
           else
             echo "no version specific python patching"
           fi
