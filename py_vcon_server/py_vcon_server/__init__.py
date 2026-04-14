@@ -108,7 +108,7 @@ async def heartbeat_loop() -> None:
       break
     except Exception as e:
       logger.warning("Heartbeat update failed: {}".format(e))
-      # Continue — transient Redis failures should not kill the heartbeat
+      # Continue - transient Redis failures should not kill the heartbeat
 
 
 def _uvicorn_install_signal_handlers_needs_fix() -> bool:
@@ -165,7 +165,7 @@ class Server(uvicorn.Server):
             )
 
       except RuntimeError:
-          # No running loop — fall back to signal.signal() (Windows or
+          # No running loop - fall back to signal.signal() (Windows or
           # contexts where the loop hasn't started yet)
           for sig in (signal.SIGINT, signal.SIGTERM):
               signal.signal(sig, self.handle_exit)
@@ -182,7 +182,7 @@ class Server(uvicorn.Server):
       return
 
     logger.info(
-        "Shutdown signal {} received — starting graceful drain, "
+        "Shutdown signal {} received - starting graceful drain, "
         "socket remains open for {} during drain".format(
             sig, ", ".join(sorted(EXEMPT_SHUTDOWN_PATHS))
           )
@@ -191,7 +191,7 @@ class Server(uvicorn.Server):
     SHUTDOWN_REQUESTED = True
     BACKGROUND_JOBS_RUNNING = False
     self._drain_requested = True
-    # Do NOT call super().handle_exit() — that sets should_exit=True
+    # Do NOT call super().handle_exit() - that sets should_exit=True
     # and causes uvicorn to close the socket before drain completes.
 
   async def on_tick(self, counter: int) -> bool:
@@ -203,7 +203,7 @@ class Server(uvicorn.Server):
       if active == 0 and bg_done:
         logger.info(
             "Drain complete (active_requests={}, background_job=done) "
-            "— handing shutdown to uvicorn".format(active)
+            "- handing shutdown to uvicorn".format(active)
           )
         self._drain_requested = False
         self.should_exit = True
@@ -264,6 +264,9 @@ async def lifespan(app: fastapi.FastAPI):
   # Install processor instrumentation (must be after plugin loading, before jobs start)
   py_vcon_server.metrics.install_instrumentation()
 
+  # Initialize cross-worker diagnostics shared memory (no-op if single-worker)
+  py_vcon_server.metrics.init_diagnostics_shm()
+
   # Start heartbeat task
   if py_vcon_server.settings.HEARTBEAT_PERIOD > 0:
     HEARTBEAT_RUNNING = True
@@ -316,6 +319,9 @@ async def lifespan(app: fastapi.FastAPI):
     py_vcon_server.pipeline.PIPELINE_DB = None
 
   vcon.filter_plugins.FilterPluginRegistry.shutdown_plugins()
+
+  # Shut down cross-worker diagnostics shared memory
+  py_vcon_server.metrics.shutdown_diagnostics_shm()
 
   # Stop heartbeat just before unregistering
   HEARTBEAT_RUNNING = False

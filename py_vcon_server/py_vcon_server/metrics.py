@@ -24,7 +24,7 @@ Usage:
 
 No-op behaviour:
   If install_instrumentation() is never called (e.g. CLI, unit tests),
-  all processors use the no-op decorator — zero overhead, no imports
+  all processors use the no-op decorator - zero overhead, no imports
   of prometheus_client.
 
   If install_instrumentation() is called but ENABLE_PROMETHEUS=False,
@@ -32,6 +32,9 @@ No-op behaviour:
   no Prometheus metrics are created.
 """
 
+import json
+import os
+import struct
 import time
 import uuid
 import functools
@@ -40,7 +43,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# ── Active runs registry ──────────────────────────────────────────────────────
+# ------ Active runs registry -------------------------------------------------
 # key:   run_id (str uuid)
 # value: dict with keys:
 #   processor_name  (str)
@@ -50,21 +53,425 @@ logger = logging.getLogger(__name__)
 #   job_id          (str)
 #   start_time      (float, epoch seconds)
 #
-# elapsed_seconds is NOT stored here — it is computed at query time
+# elapsed_seconds is NOT stored here - it is computed at query time
 # in the /diagnostics endpoint so the value is always current.
 ACTIVE_RUNS: typing.Dict[str, dict] = {}
 
-# ── Prometheus metric objects ─────────────────────────────────────────────────
+# ------ Prometheus metric objects --------------------------------------------
 # All None until install_instrumentation() is called with ENABLE_PROMETHEUS=True.
 _processor_active_gauge:    typing.Any = None  # prometheus_client.Gauge
 _processor_duration_hist:   typing.Any = None  # prometheus_client.Histogram
 _background_job_heartbeat:  typing.Any = None  # prometheus_client.Gauge
 
-# ── Instrumentation state ─────────────────────────────────────────────────────
+# ------ Instrumentation state ------------------------------------------------
 _INSTRUMENTATION_INSTALLED = False
 
+# ------ Shared memory diagnostics state --------------------------------------
+# Set by init_diagnostics_shm() at lifespan startup when PYVCON_DIAG_SHM
+# env var is present (multi-worker mode).  None in single-worker mode.
+_diag_shm: typing.Any = None              # SharedMemory handle
+_diag_slot_index: typing.Union[int, None] = None  # this worker's slot
+_diag_num_slots: int = 0                   # total slots (= NUM_RESTAPI_WORKERS)
+_diag_worker_key: str = ""                 # cached worker_key for slot payloads
+_slot_cache: typing.Dict[int, dict] = {}   # per-slot cache for stale fallback
 
-# ── Decorator identity check ──────────────────────────────────────────────────
+# ------ Shared memory layout constants ---------------------------------------
+# Matches the layout proven in scripts/test_shared_memory_poc.py.
+#
+# Segment layout:
+#   Bytes 0-7:   header region (slot claim counter uint32 + reserved)
+#   Bytes 8+:    N slots, each DIAG_SLOT_SIZE bytes
+#
+# Per-slot layout:
+#   Bytes 0-3:   generation counter (uint32, little-endian)
+#                even = stable/readable, odd = write in progress
+#   Bytes 4-7:   payload length (uint32, little-endian)
+#   Bytes 8+:    JSON payload (UTF-8), zero-padded
+#
+DIAG_SLOT_SIZE        = 64 * 1024   # 64 KB per worker
+DIAG_SLOT_HEADER_SIZE = 8           # 4 bytes generation + 4 bytes length
+DIAG_MAX_PAYLOAD_SIZE = DIAG_SLOT_SIZE - DIAG_SLOT_HEADER_SIZE
+DIAG_HEADER_REGION_SIZE = 8         # segment header: claim counter + reserved
+
+
+# ------ Shared memory slot functions -----------------------------------------
+# These are direct copies of the functions proven in
+# scripts/test_shared_memory_poc.py, kept self-contained in metrics.py
+# to avoid import dependencies.
+
+def slot_offset(slot_index: int) -> int:
+  """ Return byte offset of slot_index in shared memory """
+  return DIAG_HEADER_REGION_SIZE + (slot_index * DIAG_SLOT_SIZE)
+
+
+def slot_write(shm, slot_index: int, data: dict) -> None:
+  """
+  Write data dict to slot using generation counter protocol.
+  Increments counter to odd before write, even after.
+  Single writer per slot --- no write-write races by design.
+  """
+  offset = slot_offset(slot_index)
+  payload = json.dumps(data).encode("utf-8")
+  if len(payload) > DIAG_MAX_PAYLOAD_SIZE:
+    raise ValueError("Payload too large: {} > {}".format(
+        len(payload), DIAG_MAX_PAYLOAD_SIZE))
+
+  buf = shm.buf
+
+  # Increment to odd --- signals write in progress to readers
+  gen = struct.unpack_from("<I", buf, offset)[0]
+  gen_odd = (gen & ~1) + 1   # round down to even, add 1 to make odd
+  struct.pack_into("<I", buf, offset, gen_odd)
+
+  # Write payload length and data
+  struct.pack_into("<I", buf, offset + 4, len(payload))
+  buf[offset + DIAG_SLOT_HEADER_SIZE:
+      offset + DIAG_SLOT_HEADER_SIZE + len(payload)] = payload
+
+  # Increment to next even --- signals write complete
+  struct.pack_into("<I", buf, offset, gen_odd + 1)
+
+
+def slot_read(shm, slot_index: int, max_retries: int = 100) -> tuple:
+  """
+  Read data dict from slot using generation counter protocol.
+  Returns (data_dict, retry_count).
+  Retries if a write is in progress or generation changed mid-read.
+  Returns ({}, 0) if slot not yet written.
+  Raises RuntimeError if max_retries exceeded.
+  Raises json.JSONDecodeError if payload is corrupt.
+  """
+  offset = slot_offset(slot_index)
+  buf = shm.buf
+  retries = 0
+
+  for attempt in range(max_retries):
+    gen_before = struct.unpack_from("<I", buf, offset)[0]
+
+    # Odd generation means write in progress --- spin
+    if gen_before & 1:
+      retries += 1
+      time.sleep(0.000001)
+      continue
+
+    length = struct.unpack_from("<I", buf, offset + 4)[0]
+
+    if length == 0:
+      return ({}, retries)  # slot not yet written
+
+    payload_bytes = bytes(
+        buf[offset + DIAG_SLOT_HEADER_SIZE:
+            offset + DIAG_SLOT_HEADER_SIZE + length]
+      )
+
+    gen_after = struct.unpack_from("<I", buf, offset)[0]
+
+    if gen_before == gen_after:
+      # Generation stable across read --- data is consistent
+      return (json.loads(payload_bytes.decode("utf-8")), retries)
+
+    # Generation changed mid-read --- retry
+    retries += 1
+    time.sleep(0.000001)
+
+  raise RuntimeError(
+      "slot_read: exceeded max_retries ({}) on slot {}".format(
+          max_retries, slot_index)
+    )
+
+
+def claim_slot(shm) -> tuple:
+  """
+  Claim the next available slot index using fcntl.lockf for mutual exclusion.
+  Safe across processes on both x86 and ARM.
+  Called once per worker at startup --- not on the hot path.
+  Returns (slot_index, was_contended).
+
+  Note: uses shm._fd which is a CPython implementation detail available
+  on Linux and macOS.
+  """
+  import fcntl
+
+  fd = shm._fd
+  was_contended = False
+
+  try:
+    fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+  except BlockingIOError:
+    was_contended = True
+    fcntl.lockf(fd, fcntl.LOCK_EX)
+
+  try:
+    slot_index = struct.unpack_from("<I", shm.buf, 0)[0]
+    struct.pack_into("<I", shm.buf, 0, slot_index + 1)
+  finally:
+    fcntl.lockf(fd, fcntl.LOCK_UN)
+
+  return slot_index, was_contended
+
+
+# ------ Shared memory sync (hot path) ----------------------------------------
+
+def _sync_slot() -> None:
+  """
+  Write current ACTIVE_RUNS to this worker's shared memory slot.
+  Called synchronously from _instrumented_decorator on every
+  ACTIVE_RUNS mutation.  No-op when shared memory is not initialized.
+
+  If the payload exceeds DIAG_MAX_PAYLOAD_SIZE, truncates intelligently:
+  keeps the oldest runs (most likely to be stuck) and includes _truncated
+  metadata in the slot payload.
+  """
+  if _diag_shm is None:
+    return
+
+  data = {
+      "worker_key": _diag_worker_key,
+      "last_updated": time.time(),
+      "active_runs": dict(ACTIVE_RUNS),
+  }
+
+  payload = json.dumps(data).encode("utf-8")
+
+  if len(payload) <= DIAG_MAX_PAYLOAD_SIZE:
+    slot_write(_diag_shm, _diag_slot_index, data)
+    return
+
+  # ------ Truncation path (error --- should be extremely rare) ---------------
+  full_size = len(payload)
+  total_runs = len(ACTIVE_RUNS)
+
+  # Sort by start_time ascending --- keep oldest (most likely stuck)
+  sorted_runs = sorted(
+      ACTIVE_RUNS.items(),
+      key=lambda item: item[1].get("start_time", 0)
+    )
+
+  # Build truncated payload incrementally
+  truncated_runs = {}
+  for run_id, run in sorted_runs:
+    candidate = {
+        "worker_key": _diag_worker_key,
+        "last_updated": data["last_updated"],
+        "active_runs": dict(truncated_runs),
+        "_truncated": {
+            "total_runs": total_runs,
+            "included_runs": len(truncated_runs) + 1,
+            "dropped_runs": total_runs - len(truncated_runs) - 1,
+            "full_payload_bytes": full_size,
+            "max_payload_bytes": DIAG_MAX_PAYLOAD_SIZE,
+        },
+    }
+    candidate["active_runs"][run_id] = run
+    test_payload = json.dumps(candidate).encode("utf-8")
+    if len(test_payload) > DIAG_MAX_PAYLOAD_SIZE:
+      break
+    truncated_runs[run_id] = run
+
+  data["active_runs"] = truncated_runs
+  data["_truncated"] = {
+      "total_runs": total_runs,
+      "included_runs": len(truncated_runs),
+      "dropped_runs": total_runs - len(truncated_runs),
+      "full_payload_bytes": full_size,
+      "max_payload_bytes": DIAG_MAX_PAYLOAD_SIZE,
+  }
+
+  try:
+    slot_write(_diag_shm, _diag_slot_index, data)
+  except ValueError:
+    logger.error(
+        "metrics: diagnostics slot envelope exceeds max payload "
+        "for slot {}".format(_diag_slot_index)
+      )
+    return
+
+  logger.error(
+      "metrics: diagnostics payload truncated for slot {}: "
+      "{} runs total, {} included, {} dropped "
+      "(payload {} bytes > {} max)".format(
+          _diag_slot_index, total_runs,
+          len(truncated_runs),
+          total_runs - len(truncated_runs),
+          full_size, DIAG_MAX_PAYLOAD_SIZE)
+    )
+
+
+# ------ Shared memory read (query path) --------------------------------------
+
+def read_all_slots():
+  """
+  Read all shared memory slots and merge active_runs dicts.
+  Returns a dict with:
+    - "active_runs": merged dict of all active runs across all workers
+    - "_diagnostics_meta": (only if errors or truncation) slot-level issues
+  Returns None if shared memory is not initialized (signals fallback
+  to local ACTIVE_RUNS).
+  """
+  if _diag_shm is None:
+    return None
+
+  merged_runs = {}
+  slot_errors = {}
+  truncated_slots = {}
+
+  for i in range(_diag_num_slots):
+    try:
+      slot_data, retries = slot_read(_diag_shm, i, max_retries=100)
+      if slot_data:
+        # Update cache on successful read
+        _slot_cache[i] = slot_data
+        merged_runs.update(slot_data.get("active_runs", {}))
+        # Check for truncation metadata
+        trunc = slot_data.get("_truncated")
+        if trunc:
+          truncated_slots[str(i)] = trunc
+
+    except (RuntimeError, json.JSONDecodeError) as e:
+      # Fall back to cached data for this slot
+      logger.warning(
+          "metrics: slot_read failed for slot {}: {}".format(i, e)
+        )
+      cached = _slot_cache.get(i)
+      if cached:
+        merged_runs.update(cached.get("active_runs", {}))
+        slot_errors[str(i)] = {
+            "error": str(e),
+            "stale_data": True,
+            "worker_key": cached.get("worker_key", "unknown"),
+        }
+      else:
+        slot_errors[str(i)] = {
+            "error": str(e),
+            "stale_data": False,
+            "worker_key": "unknown",
+        }
+
+  result = {"active_runs": merged_runs}
+
+  # Only include _diagnostics_meta if there are issues
+  if slot_errors or truncated_slots:
+    meta = {"slot_count": _diag_num_slots, "slots_read": _diag_num_slots}
+    if slot_errors:
+      meta["slot_errors"] = slot_errors
+    if truncated_slots:
+      meta["truncated_slots"] = truncated_slots
+    result["_diagnostics_meta"] = meta
+
+  return result
+
+
+# ------ Shared memory lifecycle ----------------------------------------------
+
+def init_diagnostics_shm() -> None:
+  """
+  Attach to the shared memory segment allocated by __main__.py and
+  claim a slot.  No-op if PYVCON_DIAG_SHM env var is not set.
+  Called from lifespan startup.
+  """
+  global _diag_shm, _diag_slot_index, _diag_num_slots, _diag_worker_key
+
+  shm_name = os.environ.get("PYVCON_DIAG_SHM", "")
+  if not shm_name:
+    logger.debug("metrics: PYVCON_DIAG_SHM not set, "
+        "diagnostics will use local ACTIVE_RUNS only")
+    return
+
+  num_slots_str = os.environ.get("PYVCON_DIAG_NUM_SLOTS", "0")
+  try:
+    num_slots = int(num_slots_str)
+  except ValueError:
+    logger.error("metrics: PYVCON_DIAG_NUM_SLOTS invalid: {}".format(
+        num_slots_str))
+    return
+
+  if num_slots <= 0:
+    logger.error("metrics: PYVCON_DIAG_NUM_SLOTS must be > 0, got {}".format(
+        num_slots))
+    return
+
+  try:
+    from multiprocessing.shared_memory import SharedMemory
+    shm = SharedMemory(name=shm_name, create=False)
+  except Exception as e:
+    logger.error(
+        "metrics: failed to attach to shared memory '{}': {}".format(
+            shm_name, e)
+      )
+    return
+
+  try:
+    slot_index, was_contended = claim_slot(shm)
+  except Exception as e:
+    logger.error("metrics: failed to claim diagnostics slot: {}".format(e))
+    shm.close()
+    return
+
+  # Build worker_key --- use SERVER_STATE if available, else fallback
+  try:
+    import py_vcon_server.states
+    if py_vcon_server.states.SERVER_STATE is not None:
+      worker_key = py_vcon_server.states.SERVER_STATE.worker_key()
+    else:
+      worker_key = "unknown:{}".format(os.getpid())
+  except Exception:
+    worker_key = "unknown:{}".format(os.getpid())
+
+  _diag_shm = shm
+  _diag_slot_index = slot_index
+  _diag_num_slots = num_slots
+  _diag_worker_key = worker_key
+
+  # Write initial idle state
+  _sync_slot()
+
+  logger.info(
+      "metrics: diagnostics shared memory initialized "
+      "shm={} slot={}/{} worker_key={} contended={}".format(
+          shm_name, slot_index, num_slots, worker_key, was_contended)
+    )
+
+
+def shutdown_diagnostics_shm() -> None:
+  """
+  Write a final idle state to this worker's slot and close the
+  shared memory handle.  Does not unlink --- the parent process does that.
+  Called from lifespan shutdown.
+  """
+  global _diag_shm, _diag_slot_index, _diag_num_slots, _diag_worker_key
+
+  if _diag_shm is None:
+    return
+
+  # Write final idle state so /diagnostics does not show stale runs
+  try:
+    slot_write(_diag_shm, _diag_slot_index, {
+        "worker_key": _diag_worker_key,
+        "last_updated": time.time(),
+        "active_runs": {},
+      })
+  except Exception as e:
+    logger.warning(
+        "metrics: failed to write final idle state to slot {}: {}".format(
+            _diag_slot_index, e)
+      )
+
+  try:
+    _diag_shm.close()
+  except Exception as e:
+    logger.warning(
+        "metrics: failed to close diagnostics shared memory: {}".format(e)
+      )
+
+  _diag_shm = None
+  _diag_slot_index = None
+  _diag_num_slots = 0
+  _diag_worker_key = ""
+  _slot_cache.clear()
+  logger.info("metrics: diagnostics shared memory shut down")
+
+
+# ------ Decorator identity check ---------------------------------------------
 
 def is_instrumented(process_method) -> bool:
   """
@@ -79,18 +486,18 @@ def is_instrumented(process_method) -> bool:
   return getattr(process_method, "__instrumentation_decorator__", None) is _instrumented_decorator
 
 
-# ── No-op decorator ───────────────────────────────────────────────────────────
+# ------ No-op decorator ------------------------------------------------------
 
 def _noop_decorator(func):
   """
-  Identity decorator — returns func unchanged.
+  Identity decorator - returns func unchanged.
   Applied by register() when instrumentation is not yet installed,
   so that get_instrumentation_decorator() always returns a callable.
   """
   return func
 
 
-# ── Instrumented decorator ────────────────────────────────────────────────────
+# ------ Instrumented decorator -----------------------------------------------
 
 def _instrumented_decorator(func):
   """
@@ -114,7 +521,7 @@ def _instrumented_decorator(func):
     pipeline_name = context.get(_proc.RUN_CONTEXT_PIPELINE_NAME, "")
     job_id = context.get(_proc.RUN_CONTEXT_JOB_ID, "")
 
-    # Collect vCon UUIDs — best effort, don't let failures affect processing
+    # Collect vCon UUIDs - best effort, don't let failures affect processing
     vcon_uuids = []
     try:
       for i in range(processor_input.num_vcons()):
@@ -136,7 +543,14 @@ def _instrumented_decorator(func):
         "start_time":     time.time(),
       }
 
+    # Sync to shared memory slot (no-op in single-worker mode)
+    try:
+      _sync_slot()
+    except Exception as e:
+      logger.debug("metrics: _sync_slot failed on run start: {}".format(e))
+
     # Prometheus active gauge increment
+
     if _processor_active_gauge is not None:
       try:
         _processor_active_gauge.labels(
@@ -165,6 +579,12 @@ def _instrumented_decorator(func):
 
       # Remove from ACTIVE_RUNS
       ACTIVE_RUNS.pop(run_id, None)
+
+      # Sync to shared memory slot (no-op in single-worker mode)
+      try:
+        _sync_slot()
+      except Exception as e:
+        logger.debug("metrics: _sync_slot failed on run end: {}".format(e))
 
       # Prometheus active gauge decrement
       if _processor_active_gauge is not None:
@@ -197,7 +617,7 @@ def _instrumented_decorator(func):
   return wrapper
 
 
-# ── Public API ────────────────────────────────────────────────────────────────
+# ------ Public API -----------------------------------------------------------
 
 def get_instrumentation_decorator():
   """
@@ -220,7 +640,7 @@ def install_instrumentation():
 
   Must be called at server lifespan startup, after plugin loading
   (so all processors are registered) and before the first processor
-  call.  Safe to call multiple times — subsequent calls are no-ops.
+  call.  Safe to call multiple times - subsequent calls are no-ops.
 
   Effects:
     1. Sets _INSTRUMENTATION_INSTALLED = True so get_instrumentation_decorator()

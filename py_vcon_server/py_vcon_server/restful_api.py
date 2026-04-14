@@ -370,18 +370,34 @@ def init(lifespan=None) -> fastapi.FastAPI:
       summary = "Get currently active processor runs",
       description = "Returns a dict of currently running processor invocations with "
         "processor name, vCon UUIDs, entry point, pipeline name, job ID, start time "
-        "and elapsed seconds.  Use this endpoint to diagnose blocked or long-running "
-        "processors.  This is a point-in-time snapshot — no history is retained."
+        "and elapsed seconds.  In multi-worker mode, aggregates runs from all workers "
+        "via shared memory.  Use this endpoint to diagnose blocked or long-running "
+        "processors.  This is a point-in-time snapshot - no history is retained."
       )
   async def get_diagnostics():
     import time
     import py_vcon_server.metrics
     now = time.time()
-    result = {}
-    for run_id, run in py_vcon_server.metrics.ACTIVE_RUNS.items():
-      result[run_id] = dict(run)
-      result[run_id]["elapsed_seconds"] = now - run["start_time"]
-    return result
+
+    merged = py_vcon_server.metrics.read_all_slots()
+    if merged is not None:
+      # Multi-worker mode: merged contains active_runs from all workers
+      result = {}
+      for run_id, run in merged.get("active_runs", {}).items():
+        result[run_id] = dict(run)
+        result[run_id]["elapsed_seconds"] = now - run.get("start_time", now)
+      # Pass through _diagnostics_meta if present (errors, truncation)
+      meta = merged.get("_diagnostics_meta")
+      if meta:
+        result["_diagnostics_meta"] = meta
+      return result
+    else:
+      # Single-worker fallback: use local ACTIVE_RUNS
+      result = {}
+      for run_id, run in py_vcon_server.metrics.ACTIVE_RUNS.items():
+        result[run_id] = dict(run)
+        result[run_id]["elapsed_seconds"] = now - run["start_time"]
+      return result
 
 
   return(restapi)

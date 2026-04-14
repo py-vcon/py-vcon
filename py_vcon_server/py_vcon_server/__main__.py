@@ -1,6 +1,8 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import os
+import secrets
 import shutil
+import sys
 import tempfile
 import urllib
 import uvicorn
@@ -21,7 +23,7 @@ def _setup_prometheus_multiproc_dir() -> str:
 
   Returns the path of the created directory so the caller can clean it up.
 
-  Warns loudly if PROMETHEUS_MULTIPROC_DIR is already set — this indicates
+  Warns loudly if PROMETHEUS_MULTIPROC_DIR is already set - this indicates
   either a manual override by an operator (unsupported, risk of sharing data
   between instances) or a previous run that did not clean up.
   """
@@ -50,7 +52,7 @@ def _cleanup_prometheus_multiproc_dir(prom_dir: str) -> None:
   Remove the PROMETHEUS_MULTIPROC_DIR created by _setup_prometheus_multiproc_dir.
 
   Called after all workers have exited.  prometheus_client does not remove
-  its own mmap files on shutdown — without this cleanup, stale counter and
+  its own mmap files on shutdown - without this cleanup, stale counter and
   histogram files from this run would be included in metrics for the next run.
   """
   try:
@@ -62,6 +64,97 @@ def _cleanup_prometheus_multiproc_dir(prom_dir: str) -> None:
         "Stale mmap files may affect metrics on next server start.".format(
             prom_dir, e)
       )
+
+
+def _check_shared_memory_support() -> None:
+  """
+  Verify that the shared memory slot claim mechanism is supported
+  on this platform.  Raises RuntimeError with a clear explanation
+  if not.
+
+  Requirements:
+    - POSIX platform (Linux, macOS) - fcntl required for slot claim
+    - CPython implementation - shm._fd required for fcntl locking
+    - Not Windows - fcntl does not exist on Windows
+  """
+  if sys.platform == "win32":
+    raise RuntimeError(
+        "Cross-worker /diagnostics aggregation is not supported on Windows. "
+        "Windows does not provide fcntl, which is required for safe shared "
+        "memory slot assignment across worker processes. "
+        "Set NUM_RESTAPI_WORKERS=1 to run without cross-worker aggregation."
+      )
+
+  try:
+    import fcntl
+  except ImportError:
+    raise RuntimeError(
+        "Cross-worker /diagnostics aggregation requires the fcntl module "
+        "which is not available on this platform ({}). "
+        "Set NUM_RESTAPI_WORKERS=1 to run without cross-worker aggregation.".format(
+            sys.platform)
+      )
+
+  # Verify shm._fd is available (CPython implementation detail)
+  from multiprocessing.shared_memory import SharedMemory
+  test_shm = SharedMemory(create=True, size=64)
+  try:
+    if not hasattr(test_shm, "_fd"):
+      raise RuntimeError(
+          "Cross-worker /diagnostics aggregation requires CPython. "
+          "SharedMemory._fd is not available on this Python implementation "
+          "({}). Set NUM_RESTAPI_WORKERS=1 to run without cross-worker "
+          "aggregation.".format(sys.implementation.name)
+        )
+  finally:
+    test_shm.close()
+    test_shm.unlink()
+
+
+def _setup_diagnostics_shm(num_workers: int):
+  """
+  Allocate a shared memory segment for cross-worker /diagnostics
+  aggregation.  Must be called in the parent process before workers
+  are forked so the segment name is inherited via env var.
+
+  Sets PYVCON_DIAG_SHM and PYVCON_DIAG_NUM_SLOTS in the environment.
+
+  Returns the SharedMemory object so the caller can clean it up.
+  """
+  from multiprocessing.shared_memory import SharedMemory
+  from py_vcon_server.metrics import DIAG_HEADER_REGION_SIZE, DIAG_SLOT_SIZE
+
+  total_size = DIAG_HEADER_REGION_SIZE + (num_workers * DIAG_SLOT_SIZE)
+  shm = SharedMemory(create=True, size=total_size)
+  shm.buf[:total_size] = b'\x00' * total_size
+
+  os.environ["PYVCON_DIAG_SHM"] = shm.name
+  os.environ["PYVCON_DIAG_NUM_SLOTS"] = str(num_workers)
+
+  logger.info(
+      "Diagnostics shared memory allocated: name={} size={}KB slots={}".format(
+          shm.name, total_size // 1024, num_workers)
+    )
+  return shm
+
+
+def _cleanup_diagnostics_shm(shm) -> None:
+  """
+  Close and unlink the diagnostics shared memory segment.
+  Called after all workers have exited.
+  """
+  try:
+    name = shm.name
+    shm.close()
+    shm.unlink()
+    logger.info("Diagnostics shared memory removed: {}".format(name))
+  except Exception as e:
+    logger.warning(
+        "Failed to remove diagnostics shared memory: {}".format(e)
+      )
+  finally:
+    os.environ.pop("PYVCON_DIAG_SHM", None)
+    os.environ.pop("PYVCON_DIAG_NUM_SLOTS", None)
 
 
 def main():
@@ -85,6 +178,16 @@ def main():
   if settings.ENABLE_PROMETHEUS:
     prom_dir = _setup_prometheus_multiproc_dir()
 
+  diag_shm = None
+  if settings.NUM_RESTAPI_WORKERS > 1:
+    try:
+      _check_shared_memory_support()
+      diag_shm = _setup_diagnostics_shm(settings.NUM_RESTAPI_WORKERS)
+    except RuntimeError as e:
+      logger.warning(
+          "Cross-worker /diagnostics disabled: {}".format(e)
+        )
+
   try:
     if settings.NUM_RESTAPI_WORKERS > 1:
       from uvicorn.supervisors import Multiprocess
@@ -93,9 +196,10 @@ def main():
     else:
       server.run()
   finally:
+    if diag_shm:
+      _cleanup_diagnostics_shm(diag_shm)
     if prom_dir:
       _cleanup_prometheus_multiproc_dir(prom_dir)
-
 
 if __name__ == "__main__":
   main()
