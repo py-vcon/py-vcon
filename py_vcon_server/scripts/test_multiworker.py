@@ -59,6 +59,7 @@ from multiworker.stage4 import stage4_pipeline_job
 from multiworker.stage5 import stage5_concurrent_jobs
 from multiworker.stage6 import stage6_sigint_shutdown
 from multiworker.stage7 import stage7_prometheus
+from multiworker.stage8 import stage8_diagnostics_multiworker
 
 
 def print_stage_table():
@@ -74,6 +75,8 @@ def print_stage_table():
     5: "Two concurrent jobs complete faster than 2x sequential time (workers > 1 only)",
     6: "SIGINT graceful shutdown — drain, 503, Redis cleanup (workers > 1 only)",
     7: "Prometheus multiprocess metric aggregation (self-contained server)",
+    8: "Cross-worker /diagnostics aggregation via shared memory",
+
   }
   print("  {:<4}  {:<20}  {}".format("Num", "Name", "Description"))
   print("  {:<4}  {:<20}  {}".format("---", "----", "-----------"))
@@ -277,6 +280,7 @@ def main():
       print()
       print("Stage 5 (concurrent) — SKIPPED")
 
+
     # Stage 7: Prometheus multiprocess aggregation.
     # Runs here — before Stages 3/4/5 add load — because Stage 7 starts
     # a second server on port+1 while the main server is running.  Running
@@ -287,6 +291,20 @@ def main():
     else:
       print()
       print("Stage 7 (prometheus) — SKIPPED")
+
+
+    # Stage 8: Cross-worker /diagnostics aggregation.
+    # Uses the main server's shared memory -- must run before Stage 6.
+    if should_run(8):
+      if multi_worker:
+        stage8_diagnostics_multiworker(results, base_url, num_workers)
+      else:
+        print()
+        print("Stage 8 (diagnostics_multiworker) -- SKIPPED (workers=1)")
+    else:
+      print()
+      print("Stage 8 (diagnostics_multiworker) -- SKIPPED")
+
 
     # Stage 6: SIGINT graceful shutdown (multi-worker only).
     # Must be last — terminates the main server.

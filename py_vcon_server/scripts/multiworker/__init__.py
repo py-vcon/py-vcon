@@ -12,4 +12,7 @@ Modules:
   stage4     — Background pipeline job
   stage5     — Concurrent jobs
   stage6     — SIGINT graceful shutdown
+  stage7     -- Prometheus multiprocess aggregation
+  stage8     -- Cross-worker /diagnostics aggregation
+
 """

@@ -17,6 +17,7 @@ STAGE_NAMES = {
   5: "concurrent",
   6: "sigint_shutdown",
   7: "prometheus",
+  8: "diagnostics_multiworker",
 }
 
 # Reverse map: name -> number, for CLI parsing
@@ -62,6 +63,10 @@ SIGINT_SHUTDOWN_TIMEOUT = 35   # max seconds for server to exit after SIGINT
 # ── Stage 7 constants ─────────────────────────────────────────────────────────
 
 PROM_VCON_UUID  = "01855517-mult-prom7s-test-77776666acbe"
+
+# -- Stage 8 constants ---------------------------------------------------------
+
+DIAG_VCON_UUID  = "01855517-mult-diag8s-test-77776666acbe"
 
 # ── Pipeline definitions ──────────────────────────────────────────────────────
 
