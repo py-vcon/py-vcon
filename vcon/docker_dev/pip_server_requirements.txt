@@ -14,5 +14,6 @@ smtpdfix
 uvicorn
 # Optional stuff
 prometheus_client
-prometheus_fastapi_instrumentator
+prometheus_fastapi_instrumentator<6.0.0; python_version < "3.9"
+prometheus_fastapi_instrumentator; python_version >= "3.9"
 
