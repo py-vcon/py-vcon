@@ -1,5 +1,6 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Whisper transcriptiont FilterPlugin implentation """
+import asyncio
 import os
 import sys
 import typing
@@ -11,6 +12,7 @@ import vcon.filter_plugins
 
 logger = vcon.build_logger(__name__)
 
+# TODO: test whisperX as alterative for diarization
 try:
   import stable_whisper
 except Exception as e:
@@ -197,7 +199,12 @@ class Whisper(vcon.filter_plugins.FilterPlugin):
                       whisper_options[key] = field_value[1]
                   logger.debug("providing whisper options: {}".format(whisper_options))
 
-                  transcript = model.transcribe(temp_audio_file.name, **whisper_options)
+                  loop = asyncio.get_running_loop()
+                  transcript = await loop.run_in_executor(
+                      None,
+                      lambda: model.transcribe(temp_audio_file.name, **whisper_options)
+                    )
+
                   logger.debug("whisper transcript type: {}".format(type(transcript)))
                   # Newer version of whisper returns object instead of dict
                   if(not isinstance(transcript, dict)):
