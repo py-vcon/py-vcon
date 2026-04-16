@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Vcon module providing frameword for filter plugins which take a Von in and provide a Vcon output """
 from __future__ import annotations
 import importlib
@@ -18,7 +18,7 @@ import vcon.pydantic_utils
 # This creates a circular dependency which we avoid by importing annotations
 # above and importing vcon only if typing.TYPE_CHECKING
 if typing.TYPE_CHECKING:
-  from vcon import Vcon
+  from vcon import Vcon # pragma: no cover
 
 # This is cloned from vcon package as we cannot import vcon here due to
 # cyclical import.
@@ -27,7 +27,7 @@ def build_logger(name : str) -> logging.Logger:
 
   log_config_filename = "./logging.conf"
   if(os.path.isfile(log_config_filename)):
-    logging.config.fileConfig(log_config_filename)
+    logging.config.fileConfig(log_config_filename) # pragma: no cover
     #print("got logging config", file=sys.stderr)
   else:
     logger.setLevel(logging.DEBUG)
