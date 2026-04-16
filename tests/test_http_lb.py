@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
 Unit tests for vcon.http_lb – HTTP load balancing and failover utilities.
 """
@@ -375,6 +375,30 @@ class TestPostResolvedHost:
                 path="/nope",
                 body=b"x",
             )
+
+
+    async def test_sni_origin_sets_host_header(
+        self, httpserver: pytest_httpserver.HTTPServer
+      ):
+        """
+        When origin differs from host, the Host header should reflect
+        the origin hostname, not the raw IP.
+        """
+        httpserver.expect_request(
+            "/test", method="POST",
+            headers={"Host": "myserver.example.com"},
+        ).respond_with_json({"sni": "ok"})
+
+        resp = await HttpLb.post_resolved_host(
+            scheme="http",
+            host=httpserver.host,
+            port=httpserver.port,
+            path="/test",
+            body={"x": 1},
+            content_type="application/json",
+            origin="myserver.example.com",
+        )
+        assert resp.status_code == 200
 
 
 # ===================================================================

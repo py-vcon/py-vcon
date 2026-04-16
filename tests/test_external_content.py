@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
 Unit tests for external content such as recording, attachments which are stored
 as URLs with a signature for the content stored else where.  Using
@@ -13,6 +13,8 @@ import vcon.security
 import hsslms
 import hashlib
 import jose.utils
+import warnings
+import pytest_httpserver
 
 call_data = {
       "epoch" : "1652552179",
@@ -235,3 +237,59 @@ def test_external_recording_sha_512(two_party_tel_vcon : vcon.Vcon) -> None:
   except vcon.InvalidVconHash as invalid_error:
     # Expect to get this exception
     pass
+
+@pytest.mark.asyncio
+async def test_get_external_recording_http_error(
+  two_party_tel_vcon: vcon.Vcon,
+  httpserver: pytest_httpserver.HTTPServer
+  ) -> None:
+  """ Test that get_dialog_external_recording raises on non-2xx response """
+  httpserver.expect_request("/rec.wav").respond_with_data(
+    "not found", status=404
+    )
+  url = "http://{}:{}/rec.wav".format(httpserver.host, httpserver.port)
+  data = os.urandom(256)
+  two_party_tel_vcon.add_dialog_external_recording(
+    data,
+    call_data["rfc2822"],
+    call_data["duration"],
+    0,
+    url,
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV,
+    "rec.wav"
+    )
+  with pytest.raises(Exception, match="404"):
+    await two_party_tel_vcon.get_dialog_external_recording(0)
+
+
+@pytest.mark.asyncio
+async def test_get_external_recording_timeout_deprecated(
+  two_party_tel_vcon: vcon.Vcon,
+  httpserver: pytest_httpserver.HTTPServer
+  ) -> None:
+  """ Test that get_kwargs 'timeout' key issues a DeprecationWarning """
+  data = os.urandom(256)
+  httpserver.expect_request("/rec.wav").respond_with_data(
+    data, status=200, content_type=vcon.Vcon.MEDIATYPE_AUDIO_WAV
+    )
+  url = "http://{}:{}/rec.wav".format(httpserver.host, httpserver.port)
+  two_party_tel_vcon.add_dialog_external_recording(
+    data,
+    call_data["rfc2822"],
+    call_data["duration"],
+    0,
+    url,
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV,
+    "rec.wav"
+    )
+  with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    body = await two_party_tel_vcon.get_dialog_external_recording(
+      0, get_kwargs={"timeout": 20}
+      )
+  assert len(body) == len(data)
+  assert any(
+    issubclass(w.category, DeprecationWarning) and "timeout" in str(w.message)
+    for w in caught
+    )
+
