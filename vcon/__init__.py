@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
 Module for creating and modifying vCon conversation containers.
 see https:/vcon.dev
@@ -26,7 +26,6 @@ import email
 import pathlib
 import jq
 import uuid6
-import requests
 import pythonjsonlogger.jsonlogger
 import vcon.utils
 import vcon.security
@@ -1282,23 +1281,44 @@ class Vcon():
     Parameters:  
       **dialog_index** (int) - index into the Vcon.dialog array indicating
         which external recording is to be retrieved and verified.  
-      **get_kwargs** (dict) - kwargs passed to **requests.get** method
-        defaults to {"timeout": = 20} seconds
+      **get_kwargs** (dict, optional) - optional keyword arguments:
+          ``connect_timeout`` (float) - TCP/TLS connection timeout
+              (default: 5 s).
+          ``read_timeout`` (float) - time to wait for response data
+              (default: 20 s).
+          ``timeout`` (float) - **deprecated**, use ``read_timeout``
+              instead.  If provided, its value is used as
+              ``read_timeout`` and a DeprecationWarning is issued.
 
     Returns:  
       verified content/bytes for the recording
     """
-    # Get body from URL using requests
-    url = self.dialog[dialog_index]["url"]
+    from vcon.http_lb import HttpLb
+
     if(get_kwargs is None):
-      get_kwargs = {"timeout": 20}
-    req = requests.get(url, **get_kwargs)
-    if(not(200 <= req.status_code < 300)):
+      get_kwargs = {}
+
+    # Support legacy "timeout" key with a deprecation warning
+    if("timeout" in get_kwargs):
+      warnings.warn(
+        "get_kwargs key 'timeout' is deprecated; use 'read_timeout' instead",
+        DeprecationWarning,
+        stacklevel=2
+        )
+      get_kwargs.setdefault("read_timeout", get_kwargs.pop("timeout"))
+
+    url = self.dialog[dialog_index]["url"]
+    resp = await HttpLb.get(
+      url,
+      connect_timeout=get_kwargs.get("connect_timeout", None),
+      read_timeout=get_kwargs.get("read_timeout", 20.0),
+      )
+    if(not(200 <= resp.status_code < 300)):
       raise Exception("get of {} resulted in error: {}".format(
         url,
-        req.status_code
+        resp.status_code
         ))
-    body = req.content
+    body = resp.content
 
     # verify the body
     self.verify_dialog_external_recording(dialog_index, body)
