@@ -177,10 +177,10 @@ class PipelineDb():
       # Expected, just testing that JSON command is supported on Redis server
       pass
 
-    except redis.exceptions.ResponseError as command_error:
+    except redis.exceptions.ResponseError as command_error: # pragma: no cover
       logger.critical("Redis server does not support JSON commands.  Redis stack server required")
       raise command_error
-    except Exception as unknown_exception:
+    except Exception as unknown_exception: # pragma: no cover
       logger.critical("Redis server test failed with exception type: {}".format(
         type(unknown_exception)))
       raise unknown_exception
@@ -249,18 +249,18 @@ class PipelineDb():
              exception PipelineNotFound if name does not exist
     """
     redis_con = self._redis_mgr.get_client()
-    if(VERBOSE):
+    if(VERBOSE): # pragma: no cover
       logger.debug("getting pipeline: {} redis con: {} pid: {}".format(name, redis_con, os.getpid()))
     try:
       pipeline_dict = await redis_con.json().get(PIPELINE_NAME_PREFIX + name, "$")
-      if(VERBOSE):
+      if(VERBOSE): # pragma: no cover
         logger.debug("returned from getting pipeline: {}".format(name))
     except Exception as e:
       logger.debug("pipeline redis get exception: {} type: {}".format(e, type(e)))
       raise e
 
     if(pipeline_dict is None):
-      if(VERBOSE):
+      if(VERBOSE): # pragma: no cover
         logger.debug("pipeline: {} not found".format(name))
       raise PipelineNotFound("Pipeline {} not found".format(name))
 
@@ -393,7 +393,8 @@ class PipelineRunner():
       # correct type (e.g. FilterPluginOptions).
       formatted_options = processor_input.format_parameters_to_options(vcon.pydantic_utils.get_dict(processor_options))
       processor_type_options = processor.processor_options_class()(** formatted_options)
-      if(processor_type_options.should_process is None):
+      if(processor_type_options.should_process is None): # pragma: no cover
+        # Should not get here as pydantic cheching should prevent it
         raise Exception("pipeline {} processor: {} options should_process not set".format(
           self._pipeline_name,
           processor_name
@@ -509,7 +510,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         await self.job_exception(job_def)
 
 
-    elif(VERBOSE):
+    elif(VERBOSE): # pragma: no cover
       logger.debug("no job")
 
     return(job_id)
@@ -552,13 +553,13 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     # Check for updates to server queue config every self._queue_check_time seconds
     now = time.time()
     if(now - self._last_queue_check > self._queue_check_time):
-      if(VERBOSE):
+      if(VERBOSE): # pragma: no cover
         logger.debug("checking server job queue updates")
       if(self._queue_iterator.check_update()):
         logger.debug("updated job queue sequence")
       self._last_queue_check = now
     queue_cycle_count = self._queue_iterator.get_cycle_count()
-    if(VERBOSE):
+    if(VERBOSE):# pragma: no cover
       logger.debug("got job queue cycle count: {}".format(queue_cycle_count))
     queues_checked = 0
 
@@ -567,7 +568,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       # get server's next queue from list (considering weights)
       queues_checked += 1
       queue_name = self._queue_iterator.get_next_queue()
-      if(VERBOSE):
+      if(VERBOSE): # pragma: no cover
         logger.debug("attempting schedule queue: {}".format(queue_name))
       # TODO: we can do some optimization here and skip repeated weighted queues
       # i.e. those with weight greter than 1 will be repeated, if we just checked
@@ -583,7 +584,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
         # see what else is running
         # for task in asyncio.all_tasks():
         #   logger.debug("running task: {}".format(task))
-        if(VERBOSE):
+        if(VERBOSE): # pragma: no cover
           logger.debug("getting pipeline def")
         pipe_def = await self._pipeline_db.get_pipeline(queue_name)
         if(pipe_def is None):
@@ -594,7 +595,7 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
 
       except py_vcon_server.pipeline.PipelineNotFound:
         # TODO: this message should be throttled for some period or number of times
-        if(VERBOSE):
+        if(VERBOSE): # pragma: no cover
           logger.warning("no definition for pipeline: {}".format(queue_name))
         # nothing to do for this queue
         continue
@@ -618,14 +619,14 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
       except py_vcon_server.queue.EmptyJobQueue:
         # No jobs in queue, go to next queue
         # TODO: This will be too noisy, disable it after debugging
-        if(VERBOSE):
+        if(VERBOSE): # pragma: no cover
           logger.debug("queue: {} is emtpy".format(queue_name))
         continue
 
       except py_vcon_server.queue.QueueDoesNotExist:
         # TODO: throttle down the logging of repeated messages or create
         # a queue black list for some period of time
-        if(VERBOSE):
+        if(VERBOSE): # pragma: no cover
           logger.warning("queue: {} does not exist".format(queue_name))
         continue
 
@@ -797,7 +798,8 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     removed_job = await self._job_queue.remove_in_progress_job(job_id)
     if(removed_job.get("id", None) == job_id):
       logger.debug("job: {} removed from in progress list".format(job_id))
-    else:
+    else: # pragma: no cover
+      # Should not get here unless something really bad has happened with DB/state
       logger.warning("attempt to remove job: {} from in progress list yielded: {}".format(
           job_id,
           removed_job
@@ -905,7 +907,8 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
     await self._job_queue.remove_in_progress_job(job_id)
 
 
-class PipelineManager():
+# This is an interface, so no real test coverage
+class PipelineManager(): # pragma: no cover
   """ Manager for a sequence of **VconProcessor**s """
   def __init__(self):
     pass
@@ -914,7 +917,7 @@ class PipelineManager():
     self,
     processor_name: str,
     processor_options: py_vcon_server.processor.VconProcessorOptions):
-    raise Excepiton("Not implemented")
+    raise Exception("Not implemented")
 
 
   def loads(self, pipeline_json: str):
