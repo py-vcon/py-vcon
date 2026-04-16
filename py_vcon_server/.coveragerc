@@ -1,8 +1,27 @@
 [run]
 # HTML for human reading and XML for badge output option:
 #    pytest --cov=py_vcon_server --cov-report html:coverage_py_vcon_server  --cov-report xml  -v -rP tests
+#    mv .coverage .coverage.unittests
+#    COVERAGE_PROCESS_START=$(pwd)/.coveragerc MULTIWORKER_STARTUP_TIMEOUT=120 MULTIWORKER_JOB_POLL_TIMEOUT=60 python3 scripts/test_multiworker.py --workers 2
+#    coverage combine
+#    coverage html -d coverage_py_vcon_server
+#    coverage xml
 # For badge:
 #    genbadge coverage -i coverage.xml
+#
+# Top 10 overall
+# python3 scripts/coverage_uncovered.py coverage.xml
+# 
+# Focus on metrics/diagnostics/restful_api
+# python3 scripts/coverage_uncovered.py coverage.xml --filter metrics
+# python3 scripts/coverage_uncovered.py coverage.xml --filter restful_api
+# python3 scripts/coverage_uncovered.py coverage.xml --filter __main__
+# 
+# Top 20
+# python3 scripts/coverage_uncovered.py coverage.xml --top 20
+
+source = py_vcon_server
+parallel = true
 omit = 
   # Not testabe in unit test, gets tested 100% every startup
   py_vcon_server/__main__.py
@@ -10,4 +29,7 @@ omit =
   py_vcon_server/processor_addons/__init__.py
   # Not used currently:
   py_vcon_server/job_worker_pool.py
+
+[report]
+include = py_vcon_server/*
 
