@@ -899,3 +899,280 @@ async def test_pipeline_runner_timeout(make_2_party_tel_vcon: vcon.Vcon):
   finally:
     await vs.shutdown()
 
+
+# ---------------------------------------------------------------------------
+# PipelineDb not-implemented stubs
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_pipeline_db_set_pipeline_options_not_implemented():
+  """set_pipeline_options raises Exception as it is not yet implemented"""
+  try:
+    await PIPELINE_DB.set_pipeline_options(
+      "some_pipe",
+      py_vcon_server.pipeline.PipelineOptions(timeout=10)
+    )
+    raise Exception("Expected not implemented exception")
+  except Exception as e:
+    assert "not implemented" in str(e)
+
+
+@pytest.mark.asyncio
+async def test_pipeline_db_insert_pipeline_processor_not_implemented():
+  """insert_pipeline_processor raises Exception as it is not yet implemented"""
+  proc = py_vcon_server.pipeline.PipelineProcessor(
+    processor_name="jq",
+    processor_options={}
+  )
+  try:
+    await PIPELINE_DB.insert_pipeline_processor("some_pipe", proc)
+    raise Exception("Expected not implemented exception")
+  except Exception as e:
+    assert "not implemented" in str(e)
+
+
+@pytest.mark.asyncio
+async def test_pipeline_db_delete_pipeline_processor_not_implemented():
+  """delete_pipeline_processor raises Exception as it is not yet implemented"""
+  try:
+    await PIPELINE_DB.delete_pipeline_processor("some_pipe", 0)
+    raise Exception("Expected not implemented exception")
+  except Exception as e:
+    assert "not implemented" in str(e)
+
+
+# ---------------------------------------------------------------------------
+# PipelineJobHandler.do_job error branches
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_do_job_missing_pipeline_raises():
+  """do_job raises when job definition has no pipeline key"""
+  job_def = {
+    "id": "test-job-1",
+    "queue": "test_queue",
+    "job": {"job_type": "vcon_uuid", "vcon_uuid": []},
+    # no "pipeline" key
+  }
+  try:
+    await py_vcon_server.pipeline.PipelineJobHandler.do_job(job_def)
+    raise Exception("Expected exception for missing pipeline")
+  except Exception as e:
+    assert "no pipeline definition" in str(e)
+
+
+@pytest.mark.asyncio
+async def test_do_job_missing_queue_job_raises():
+  """do_job raises when job definition has no job key"""
+  job_def = {
+    "id": "test-job-2",
+    "queue": "test_queue",
+    "pipeline": {
+      "pipeline_options": {"timeout": 10, "save_vcons": False},
+      "processors": []
+    },
+    # no "job" key
+  }
+  try:
+    await py_vcon_server.pipeline.PipelineJobHandler.do_job(job_def)
+    raise Exception("Expected exception for missing job")
+  except Exception as e:
+    assert "no queue job definition" in str(e)
+
+
+@pytest.mark.asyncio
+async def test_do_job_missing_job_type_raises():
+  """do_job raises when the queue job has no job_type"""
+  job_def = {
+    "id": "test-job-3",
+    "queue": "test_queue",
+    "pipeline": {
+      "pipeline_options": {"timeout": 10, "save_vcons": False},
+      "processors": []
+    },
+    "job": {
+      # no "job_type" key
+      "vcon_uuid": []
+    }
+  }
+  try:
+    await py_vcon_server.pipeline.PipelineJobHandler.do_job(job_def)
+    raise Exception("Expected exception for missing job_type")
+  except Exception as e:
+    assert "no queue job type" in str(e)
+
+
+@pytest.mark.asyncio
+async def test_do_job_unsupported_job_type_raises():
+  """do_job raises when the queue job has an unsupported job_type"""
+  job_def = {
+    "id": "test-job-4",
+    "queue": "test_queue",
+    "pipeline": {
+      "pipeline_options": {"timeout": 10, "save_vcons": False},
+      "processors": []
+    },
+    "job": {
+      "job_type": "unsupported_type"
+    }
+  }
+  try:
+    await py_vcon_server.pipeline.PipelineJobHandler.do_job(job_def)
+    raise Exception("Expected exception for unsupported job_type")
+  except Exception as e:
+    assert "unsupported queue job type" in str(e)
+
+
+# ---------------------------------------------------------------------------
+# PipelineJobHandler.job_finished and job_exception branches
+# These require a PipelineJobHandler instance with a live JobQueue.
+# ---------------------------------------------------------------------------
+
+@pytest_asyncio.fixture
+async def pipeline_job_handler():
+  """Fixture providing an initialised PipelineJobHandler"""
+  import py_vcon_server.queue
+  from py_vcon_server.settings import PIPELINE_DB_URL, QUEUE_DB_URL
+  handler = py_vcon_server.pipeline.PipelineJobHandler(
+    QUEUE_DB_URL,
+    PIPELINE_DB_URL,
+    "test_server_key"
+  )
+  await handler._init_databases()
+  yield handler
+
+  # Clean up test queue
+  try:
+    await handler._job_queue.delete_queue(TEST_JOB_QUEUE_NAME)
+  except py_vcon_server.queue.QueueDoesNotExist:
+    pass
+
+  await handler.done()
+
+
+TEST_JOB_QUEUE_NAME = "test_pipeline_job_handler_queue"
+
+
+async def _push_job_to_in_progress(job_queue, queue_name, vcon_uuid):
+  """
+  Helper: create queue, push a job, pop it to in-progress.
+  Returns the in-progress job dict (which contains the real job id).
+  """
+  try:
+    await job_queue.create_new_queue(queue_name)
+  except py_vcon_server.queue.QueueAlreadyExists:
+    pass
+
+  await job_queue.push_vcon_uuid_queue_job(queue_name, [vcon_uuid])
+  in_progress_job = await job_queue.pop_queued_job(queue_name, "test_server_key")
+  return in_progress_job
+
+
+@pytest.mark.asyncio
+async def test_job_finished_no_pipeline_def(pipeline_job_handler):
+  """job_finished logs error but does not raise when pipeline key is absent"""
+  job_queue = pipeline_job_handler._job_queue
+  in_progress_job = await _push_job_to_in_progress(
+    job_queue, TEST_JOB_QUEUE_NAME, "fake-uuid-finished-1"
+  )
+  results = {
+    "id": in_progress_job["id"],
+    "job": {"job_type": "vcon_uuid", "vcon_uuid": ["fake-uuid-finished-1"]},
+    "queue": TEST_JOB_QUEUE_NAME,
+    # no "pipeline" key — exercises the no-pipeline-def branch
+  }
+  await pipeline_job_handler.job_finished(results)
+
+
+@pytest.mark.asyncio
+async def test_job_finished_no_success_queue(pipeline_job_handler):
+  """job_finished with empty success_queue logs info but does not raise"""
+  job_queue = pipeline_job_handler._job_queue
+  in_progress_job = await _push_job_to_in_progress(
+    job_queue, TEST_JOB_QUEUE_NAME, "fake-uuid-finished-2"
+  )
+  results = {
+    "id": in_progress_job["id"],
+    "job": {"job_type": "vcon_uuid", "vcon_uuid": ["fake-uuid-finished-2"]},
+    "queue": TEST_JOB_QUEUE_NAME,
+    "pipeline": {
+      "pipeline_options": {
+        "success_queue": "",  # empty — exercises the no-success-queue branch
+        "failure_queue": ""
+      }
+    }
+  }
+  await pipeline_job_handler.job_finished(results)
+
+
+@pytest.mark.asyncio
+async def test_job_exception_no_pipeline_def(pipeline_job_handler):
+  """job_exception logs error but does not raise when pipeline key is absent"""
+  job_queue = pipeline_job_handler._job_queue
+  in_progress_job = await _push_job_to_in_progress(
+    job_queue, TEST_JOB_QUEUE_NAME, "fake-uuid-exception-1"
+  )
+  results = {
+    "id": in_progress_job["id"],
+    "job": {"job_type": "vcon_uuid", "vcon_uuid": ["fake-uuid-exception-1"]},
+    "queue": TEST_JOB_QUEUE_NAME,
+    # no "pipeline" key — exercises the no-pipeline-def branch
+  }
+  await pipeline_job_handler.job_exception(results)
+
+
+@pytest.mark.asyncio
+async def test_job_exception_no_failure_queue(pipeline_job_handler):
+  """job_exception with empty failure_queue logs info but does not raise"""
+  job_queue = pipeline_job_handler._job_queue
+  in_progress_job = await _push_job_to_in_progress(
+    job_queue, TEST_JOB_QUEUE_NAME, "fake-uuid-exception-2"
+  )
+  results = {
+    "id": in_progress_job["id"],
+    "job": {"job_type": "vcon_uuid", "vcon_uuid": ["fake-uuid-exception-2"]},
+    "queue": TEST_JOB_QUEUE_NAME,
+    "pipeline": {
+      "pipeline_options": {
+        "failure_queue": "",  # empty — exercises the no-failure-queue branch
+        "success_queue": ""
+      }
+    }
+  }
+  await pipeline_job_handler.job_exception(results)
+
+
+@pytest.mark.asyncio
+async def test_job_canceled(pipeline_job_handler):
+  """job_canceled calls requeue_in_progress_job without raising"""
+  # Push a fake in-progress job first so requeue has something to work with
+  import py_vcon_server.queue
+  job_queue = pipeline_job_handler._job_queue
+  queue_name = "test_cancel_queue"
+
+  # Ensure queue exists
+  try:
+    await job_queue.create_new_queue(queue_name)
+  except py_vcon_server.queue.QueueAlreadyExists:
+    pass
+
+  try:
+    # Push a job and move it to in-progress so requeue works
+    await job_queue.push_vcon_uuid_queue_job(
+      queue_name,
+      ["fake-cancel-uuid"],
+      queue_name,
+      "test-cancel-1"
+    )
+    popped = await job_queue.pop_queued_job(queue_name, "test_server_key")
+    job_id = popped["id"]
+
+    results = {"id": job_id}
+    await pipeline_job_handler.job_canceled(results)
+
+  finally:
+    try:
+      await job_queue.delete_queue(queue_name)
+    except Exception:
+      pass
+
