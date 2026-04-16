@@ -121,6 +121,10 @@ class TestParse:
         )
         assert r.path == "/path?key=val&other=2"
 
+    def test_empty_host_segment_ignored(self):
+        """Trailing comma or double comma should not produce empty host entries."""
+        r = HttpLb.parse_url("http://host1:8000,,host2:8001/path")
+        assert r.host_ports == [("host1", 8000), ("host2", 8001)]
 
 # ===================================================================
 # HttpLb.build_timeout
@@ -1186,7 +1190,6 @@ class TestGet:
             resp = await HttpLb.get(url=url, client=client)
         assert resp.status_code == 200
 
-
 # ===================================================================
 # HttpLb.put
 # ===================================================================
@@ -1438,5 +1441,19 @@ class TestRequest:
             connect_timeout=1.0,
             eager_resolve=False,
         )
+        assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
+class TestRequestMethod:
+    async def test_request_delete(
+        self, httpserver: pytest_httpserver.HTTPServer
+    ):
+        httpserver.expect_request(
+            "/resource/1", method="DELETE",
+        ).respond_with_json({"deleted": True})
+
+        url = "http://{}:{}/resource/1".format(httpserver.host, httpserver.port)
+        resp = await HttpLb.request("DELETE", url)
         assert resp.status_code == 200
 
