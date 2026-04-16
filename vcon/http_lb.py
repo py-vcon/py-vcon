@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
 HTTP load balancing and failover utilities.
 
@@ -452,6 +452,7 @@ class HttpLb:
         write_timeout: typing.Optional[float] = None,
         pool_timeout: typing.Optional[float] = None,
         client: typing.Optional[httpx.AsyncClient] = None,
+        origin: typing.Optional[str] = None,
         ) -> httpx.Response:
         """
         Send an HTTP request to a single, already-resolved host.
@@ -478,6 +479,11 @@ class HttpLb:
           **pool_timeout** (float, optional): pool wait timeout.
           **client** (httpx.AsyncClient, optional): shared client for
               connection pooling.
+          **origin** (str, optional): original hostname before DNS
+              resolution.  When *host* is a raw IP and *scheme* is
+              ``"https"``, this is passed as the TLS SNI hostname so
+              that certificate validation uses the correct name rather
+              than the IP address.
 
         Returns:
           ``httpx.Response``
@@ -507,12 +513,18 @@ class HttpLb:
             "follow_redirects": follow_redirects,
         }
 
+        sni_host = origin if (origin and origin != host) else None
+        if sni_host and scheme == "https":
+            kwargs["extensions"] = {"sni_hostname": sni_host}
+
         # Headers – merge content_type into caller-supplied headers.
         merged_headers: typing.Dict[str, str] = {}
         if headers:
             merged_headers.update(headers)
         if content_type is not None:
             merged_headers["Content-Type"] = content_type
+        if sni_host:
+            merged_headers.setdefault("Host", sni_host)
         if merged_headers:
             kwargs["headers"] = merged_headers
 
@@ -562,6 +574,7 @@ class HttpLb:
         write_timeout: typing.Optional[float] = None,
         pool_timeout: typing.Optional[float] = None,
         client: typing.Optional[httpx.AsyncClient] = None,
+        origin: typing.Optional[str] = None
         ) -> httpx.Response:
         """
         HTTP POST to a single, already-resolved host.
@@ -576,6 +589,7 @@ class HttpLb:
             connect_timeout=connect_timeout, read_timeout=read_timeout,
             write_timeout=write_timeout, pool_timeout=pool_timeout,
             client=client,
+            origin=origin
         )
 
     # -----------------------------------------------------------------
@@ -683,6 +697,7 @@ class HttpLb:
                     write_timeout=write_timeout,
                     pool_timeout=pool_timeout,
                     client=client,
+                    origin=addr.origin
                 )
                 if resp.status_code in RETRYABLE_STATUS_CODES:
                     msg = "{} {}:{}{} returned retryable status {}".format(
