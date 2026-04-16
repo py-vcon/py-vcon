@@ -1,8 +1,8 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ FilterPlugin to fix post recording info """
 import typing
 import pydantic
-import requests
+import vcon.http_lb
 import vcon
 import vcon.filter_plugins
 
@@ -103,15 +103,14 @@ class FixRecordingDialog(vcon.filter_plugins.FilterPlugin):
 
         # Get the recording content
         if("url" in dialog and dialog["url"] != ""):
-          # Get body from URL using requests
+          # Get body from URL
           url = dialog["url"]
           # TODO: this should be configurable
-          get_kwargs = {"timeout": 20}
-          req = requests.get(url, **get_kwargs)
-          if(not(200 <= req.status_code < 300)):
-            logger.warning(f"get of {url} for dialog: {dialog_index} resulted in error: {req.status_code}")
+          resp = await vcon.http_lb.HttpLb.get(url, read_timeout=20.0)
+          if(not(200 <= resp.status_code < 300)):
+            logger.warning(f"get of {url} for dialog: {dialog_index} resulted in error: {resp.status_code}")
             continue
-          body = req.content
+          body = resp.content
 
           # Calc the hash
           # TODO: make hash configureable
