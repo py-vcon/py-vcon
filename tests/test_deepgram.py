@@ -6,6 +6,7 @@ import datetime
 import json
 import vcon
 import vcon.filter_plugins
+import vcon.filter_plugins.impl.deepgram
 import pytest
 
 
@@ -316,3 +317,26 @@ def test_deepgram_transcript_accessor_no_match():
   text_list = accessor.get_text()
   assert(text_list == [])
 
+
+@pytest.mark.asyncio
+async def test_deepgram_options_override():
+  """ Test that model, language and deepgram_key option overrides are passed through """
+  in_vcon = vcon.Vcon()
+  in_vcon.set_uuid("tests.python-vcon.org")
+  in_vcon.set_party_parameter("tel", "+1234567890")
+
+  with open("examples/test.vcon", "r") as vcon_file:
+    in_vcon.load(vcon_file)
+
+  deepgram_key = os.getenv("DEEPGRAM_KEY", None)
+  options = vcon.filter_plugins.impl.deepgram.DeepgramOptions(
+    model = "nova-2",
+    language = "en",
+    deepgram_key = deepgram_key
+    )
+
+  analysis_count = len(in_vcon.analysis)
+  out_vcon = await in_vcon.deepgram(options)
+  assert(len(out_vcon.analysis) == analysis_count + 1)
+  assert(out_vcon.analysis[analysis_count]["vendor"] == "deepgram")
+  assert(out_vcon.analysis[analysis_count]["product"] == "transcription")
