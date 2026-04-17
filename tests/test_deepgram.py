@@ -340,3 +340,33 @@ async def test_deepgram_options_override():
   assert(len(out_vcon.analysis) == analysis_count + 1)
   assert(out_vcon.analysis[analysis_count]["vendor"] == "deepgram")
   assert(out_vcon.analysis[analysis_count]["product"] == "transcription")
+
+
+@pytest.mark.asyncio
+async def test_deepgram_no_key_in_options():
+  """ Test that filter returns early when key is not set in init or options """
+  import vcon.filter_plugins.impl.deepgram
+  plugin = vcon.filter_plugins.impl.deepgram.Deepgram(
+    vcon.filter_plugins.impl.deepgram.DeepgramInitOptions(deepgram_key="")
+    )
+  in_vcon = vcon.Vcon()
+  in_vcon.set_party_parameter("tel", "+1234567890")
+  in_vcon.add_dialog_inline_text("hello", "2023-08-31T18:26:36.987+00:00", 0, [0], "text/plain")
+  options = vcon.filter_plugins.impl.deepgram.DeepgramOptions(deepgram_key="")
+  out_vcon = await plugin.filter(in_vcon, options)
+  assert(len(out_vcon.analysis) == 0)
+
+
+@pytest.mark.asyncio
+async def test_deepgram_dialog_is_none():
+  """ Test that filter returns early when dialog is None """
+  import vcon.filter_plugins.impl.deepgram
+  plugin = vcon.filter_plugins.impl.deepgram.Deepgram(
+    vcon.filter_plugins.impl.deepgram.DeepgramInitOptions(deepgram_key="test_key")
+    )
+  in_vcon = vcon.Vcon()
+  in_vcon._vcon_dict[vcon.Vcon.DIALOG] = None
+  options = vcon.filter_plugins.impl.deepgram.DeepgramOptions()
+  out_vcon = await plugin.filter(in_vcon, options)
+  assert(out_vcon is in_vcon)
+
