@@ -49,6 +49,22 @@ class DeepgramOptions(
   https://developers.deepgram.com/reference/pre-recorded
   """
 
+  model: str = pydantic.Field(
+    title = "Deepgram transcription model",
+    description = "Deepgram model name to use for transcription. See https://developers.deepgram.com/docs/models",
+    default = "nova-3",
+    examples = ["nova-3", "nova-2", "nova-2-phonecall", "nova-2-meeting", "nova-2-medical", "base"]
+    )
+
+  deepgram_key: typing.Union[str, None] = pydantic.Field(
+    title = "Deepgram API key override",
+    description = """
+Override the Deepgram API key set in DeepgramInitOptions.
+If None or empty, the key from DeepgramInitOptions is used.
+""",
+    default = None
+    )
+
 
 class Deepgram(vcon.filter_plugins.FilterPlugin):
   """
@@ -91,7 +107,8 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
   async def request_transcribe(
     self,
     recording_data: typing.Dict[str, typing.Any],
-    transcribe_options: typing.Dict[str, typing.Any]
+    transcribe_options: typing.Dict[str, typing.Any],
+    deepgram_key: str
     ) -> typing.Dict[str, typing.Any]:
     """ synchronous post of deepgram transcrtion request """
     url = "https://api.deepgram.com/v1/listen?" + urllib.parse.urlencode(transcribe_options)
@@ -101,7 +118,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
       content_type = recording_data["mediatype"],
       headers = {
         "accept": "application/json",
-        "Authorization": "Token " + self._init_options.deepgram_key
+        "Authorization": "Token " + deepgram_key
         },
       read_timeout = 200.0
       )
@@ -135,6 +152,9 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     Returns:
       the modified Vcon with added transcript analysis objects for the recording dialogs.
     """
+    if(not isinstance(options, DeepgramOptions)):
+      options = DeepgramOptions(**options.dict())
+
     out_vcon = in_vcon
 
     if(in_vcon.dialog is None):
@@ -150,8 +170,10 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     if(len(dialog_indices) == 0):
       return(out_vcon)
 
-    if(self._init_options.deepgram_key is None or
-       self._init_options.deepgram_key == ""):
+    deepgram_key = options.deepgram_key
+    if(deepgram_key is None or len(deepgram_key) == 0):
+      deepgram_key = self._init_options.deepgram_key
+    if(deepgram_key is None or len(deepgram_key) == 0):
       logger.warning("Deepgram.filter: deepgram_key is not set, no transcription performed")
       return(out_vcon)
 
@@ -161,8 +183,8 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
 
     # TODO add some of these to DeepgramOptions
     transcribe_options = {
-      'language': 'en',
-      'model': 'nova-3',  # should make this an option: nova-2, nova-2-phonecall, nova-2-meeting, nova-2-medical
+      'language': options.language,
+      'model': options.model,
       'punctuate': 'true',
       'smart_format': 'true',
       'multichannel': 'true',
@@ -223,7 +245,8 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
 
           transcript_dict = await self.request_transcribe(
             recording_data,
-            transcribe_options
+            transcribe_options,
+            deepgram_key
             )
 
           # For now make synch.
