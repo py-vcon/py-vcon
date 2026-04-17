@@ -3,15 +3,16 @@
 import typing
 import json
 import logging
+import urllib.parse
 import pydantic
-import requests
+import vcon.http_lb
 import tenacity
 import vcon.filter_plugins
 #import deepgram
 
 logger = vcon.build_logger(__name__)
 
-DEEPGRAM_RETRY_EXCEPTIONS = (requests.exceptions.ReadTimeout)
+DEEPGRAM_RETRY_EXCEPTIONS = vcon.http_lb.RETRYABLE_EXCEPTIONS
 
 class DeepgramInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
@@ -87,30 +88,22 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
       before = tenacity.before_log(logger, logging.DEBUG),
       after = tenacity.after_log(logger, logging.DEBUG)
     )
-  def request_transcribe(
+  async def request_transcribe(
     self,
     recording_data: typing.Dict[str, typing.Any],
     transcribe_options: typing.Dict[str, typing.Any]
     ) -> typing.Dict[str, typing.Any]:
     """ synchronous post of deepgram transcrtion request """
-    url = "https://api.deepgram.com/v1/listen"
-    headers = {
-      "accept": "application/json",
-      "content-type": recording_data["mediatype"],
-      "Authorization": "Token " + self._init_options.deepgram_key
-      }
-    # Should make this a parameter
-    requests_options = {
-      "timeout": 200
-      }
-
-    response = requests.post(
+    url = "https://api.deepgram.com/v1/listen?" + urllib.parse.urlencode(transcribe_options)
+    response = await vcon.http_lb.HttpLb.post(
       url,
-      params = transcribe_options,
-      #json = recording_data,
-      data = recording_data["buffer"],
-      headers = headers,
-      **requests_options
+      body = recording_data["buffer"],
+      content_type = recording_data["mediatype"],
+      headers = {
+        "accept": "application/json",
+        "Authorization": "Token " + self._init_options.deepgram_key
+        },
+      read_timeout = 200.0
       )
 
     if(response.status_code >= 300):
@@ -228,7 +221,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
             "mediatype": dialog["mediatype"]
             }
 
-          transcript_dict = self.request_transcribe(
+          transcript_dict = await self.request_transcribe(
             recording_data,
             transcribe_options
             )
