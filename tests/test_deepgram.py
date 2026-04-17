@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Deepgram transcription plugin unit test """
 
 import os
@@ -210,3 +210,109 @@ async def test_deepgram_no_dialog():
   assert(len(in_vcon.dialog) == 0)
   out_vcon = await in_vcon.deepgram(options)
   assert(len(out_vcon.analysis)  == 0)
+
+def test_deepgram_init_no_key():
+  """ Test Deepgram plugin instantiation with no key logs warning """
+  import vcon.filter_plugins.impl.deepgram
+  plugin = vcon.filter_plugins.impl.deepgram.Deepgram(
+    vcon.filter_plugins.impl.deepgram.DeepgramInitOptions(deepgram_key="")
+    )
+  assert(plugin.deepgram_client is None)
+
+
+@pytest.mark.asyncio
+async def test_deepgram_malformed_wav_header():
+  """ Test Deepgram plugin logs warning for malformed WAV header and raises on bad response """
+  in_vcon = vcon.Vcon()
+  in_vcon.set_uuid("tests.python-vcon.org")
+  in_vcon.set_party_parameter("tel", "+1234567890")
+
+  # 24 bytes of junk — enough to parse header fields but not a valid WAV
+  bad_wav = b'\x00' * 24
+
+  in_vcon.add_dialog_inline_recording(
+    bad_wav,
+    "2023-08-31T18:26:36.987+00:00",
+    0,
+    [0],
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV
+    )
+
+  options = vcon.filter_plugins.TranscribeOptions()
+  with pytest.raises(Exception, match="failed: 400"):
+    await in_vcon.deepgram(options)
+
+
+def test_deepgram_transcript_accessor_non_diarized():
+  """ Test DeepgramTranscriptAccessor with non-diarized (no paragraphs) transcript """
+  import vcon.filter_plugins.deepgram
+
+  dialog_dict = {
+    "type": "recording",
+    "start": "2023-08-31T18:26:36.987+00:00",
+    "parties": [0, 1]
+  }
+
+  analysis_dict = {
+    "type": "transcript",
+    "vendor": "deepgram",
+    "product": "transcription",
+    "schema": "deepgram_prerecorded",
+    "encoding": "json",
+    "dialog": 0,
+    "body": {
+      "results": {
+        "channels": [
+          {
+            "alternatives": [
+              {
+                "transcript": "Hello how are you",
+                "words": [
+                  {"word": "Hello", "start": 0.1, "end": 0.5},
+                  {"word": "you", "start": 1.0, "end": 1.3}
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+
+  accessor = vcon.filter_plugins.deepgram.DeepgramTranscriptAccessor(
+    dialog_dict,
+    analysis_dict
+    )
+  text_list = accessor.get_text()
+  assert(len(text_list) == 1)
+  assert(text_list[0]["text"] == "Hello how are you")
+  assert(text_list[0]["parties"] == [0, 1])
+
+
+def test_deepgram_transcript_accessor_no_match():
+  """ Test DeepgramTranscriptAccessor returns empty list when analysis does not match """
+  import vcon.filter_plugins.deepgram
+
+  dialog_dict = {
+    "type": "recording",
+    "start": "2023-08-31T18:26:36.987+00:00",
+    "parties": [0, 1]
+  }
+
+  analysis_dict = {
+    "type": "transcript",
+    "vendor": "other_vendor",
+    "product": "transcription",
+    "schema": "deepgram_prerecorded",
+    "encoding": "json",
+    "dialog": 0,
+    "body": {}
+  }
+
+  accessor = vcon.filter_plugins.deepgram.DeepgramTranscriptAccessor(
+    dialog_dict,
+    analysis_dict
+    )
+  text_list = accessor.get_text()
+  assert(text_list == [])
+
