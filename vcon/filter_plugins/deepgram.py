@@ -63,11 +63,12 @@ class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
               text_list.append(text_dict)
 
         else:
+          text_dict = {}
           text_dict["parties"] = self._dialog_dict["parties"]
-          text_dict["text"] = self._analysis_dict["body"]["results"]["channels"][channel_index]["alteratives"]["transcript"]
-          relative_start = self._analysis_dict["body"]["channels"][channel_index]["alteratives"]["words"][0]["start"]
+          text_dict["text"] = self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["transcript"]
+          relative_start = self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["words"][0]["start"]
           text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()
-          relative_end = self._analysis_dict["body"]["channels"][channel_index]["alternatives"]["words"][-1]["end"]
+          relative_end = self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["words"][-1]["end"]
           text_dict["duration"] = relative_end - relative_start
           text_list.append(text_dict)
 
