@@ -157,9 +157,6 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
 
     out_vcon = in_vcon
 
-    if(in_vcon.dialog is None):
-      return(out_vcon)
-
     dialog_indices = self.slice_indices(
       options.input_dialogs,
       len(in_vcon.dialog),
