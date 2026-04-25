@@ -168,7 +168,7 @@ jobs:
 
         run: |
           cd py_vcon_server
-          python3 scripts/test_multiworker.py --workers 2 --skip 7
+          python3 scripts/test_multiworker.py --workers 2
 
       # Stage 7 (prometheus) runs in a separate step with --stages 1,7 so it
       # has the runner's full resources.  Stage 7 starts a second server on
