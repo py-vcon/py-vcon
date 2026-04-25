@@ -1,4 +1,5 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+import os
 import sys
 import time
 import signal
@@ -30,7 +31,7 @@ try:
 except ValueError:
   pass  # uvloop already patched this loop; nest_asyncio not needed
 
-__version__ = "0.5.11"
+__version__ = "0.5.15"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
@@ -100,7 +101,10 @@ async def heartbeat_loop() -> None:
       if not HEARTBEAT_RUNNING:
         break
       if py_vcon_server.states.SERVER_STATE:
-        await py_vcon_server.states.SERVER_STATE.update_heartbeat()
+        await py_vcon_server.states.SERVER_STATE.update_worker_state()
+        if os.environ.get("PYVCON_MASTER_PID", "") == "":
+          await py_vcon_server.states.SERVER_STATE.update_server_heartbeat()
+
         if VERBOSE:
           logger.debug("Heartbeat updated")
     except asyncio.CancelledError:
@@ -254,7 +258,17 @@ async def lifespan(app: fastapi.FastAPI):
     # extra time for processes to get started
     time.sleep(5.0)
 
-  await py_vcon_server.states.SERVER_STATE.starting()
+  is_worker = os.environ.get("PYVCON_MASTER_PID", "") != ""
+  if is_worker:
+    await py_vcon_server.states.SERVER_STATE.register_worker()
+  else:
+    if py_vcon_server.settings.NUM_RESTAPI_WORKERS > 1:
+      logger.warning(
+          "lifespan: NUM_RESTAPI_WORKERS > 1 but PYVCON_MASTER_PID not set "
+          "-- server entry not registered by master"
+        )
+    await py_vcon_server.states.SERVER_STATE.register_server()
+    await py_vcon_server.states.SERVER_STATE.register_worker()
 
   py_vcon_server.db.VCON_STORAGE = py_vcon_server.db.VconStorage.instantiate(py_vcon_server.settings.VCON_STORAGE_URL)
   py_vcon_server.queue.JOB_QUEUE = py_vcon_server.queue.JobQueue(py_vcon_server.settings.QUEUE_DB_URL)
@@ -267,63 +281,33 @@ async def lifespan(app: fastapi.FastAPI):
   # Initialize cross-worker diagnostics shared memory (no-op if single-worker)
   py_vcon_server.metrics.init_diagnostics_shm()
 
-  # Start heartbeat task
+  # all should be up at this point
+  if is_worker:
+    await py_vcon_server.states.SERVER_STATE.worker_running()
+  else:
+    await py_vcon_server.states.SERVER_STATE.server_running()
+    await py_vcon_server.states.SERVER_STATE.worker_running()
+
   if py_vcon_server.settings.HEARTBEAT_PERIOD > 0:
     HEARTBEAT_RUNNING = True
     HEARTBEAT_TASK = asyncio.create_task(heartbeat_loop())
-    logger.info("Heartbeat started (period: {}s)".format(py_vcon_server.settings.HEARTBEAT_PERIOD))
+    logger.info("Heartbeat started (period: {}s)".format(
+        py_vcon_server.settings.HEARTBEAT_PERIOD))
 
   # Start background jobs
-  if(py_vcon_server.settings.RUN_BACKGROUND_JOBS):
+  if py_vcon_server.settings.RUN_BACKGROUND_JOBS:
     BACKGROUND_JOBS_RUNNING = True
     BACKGROUND_JOB_TASK = asyncio.create_task(run_background_jobs(JOB_INTERFACE))
 
-  await py_vcon_server.states.SERVER_STATE.running()
   logger.info("event startup completed")
 
   yield  # Application runs here
 
-  # ===== SHUTDOWN =====
+# ===== SHUTDOWN =====
   logger.info("event shutdown")
-
   SHUTDOWN_REQUESTED = True
 
-  await py_vcon_server.states.SERVER_STATE.shutting_down()
-
-  if(JOB_MANAGER):
-    await JOB_MANAGER.finish()
-    JOB_MANAGER = None
-
-  # Stop pulling new background jobs; allow current job to complete
-  if(BACKGROUND_JOBS_RUNNING):
-    BACKGROUND_JOBS_RUNNING = False
-  if(BACKGROUND_JOB_TASK):
-    logger.debug("waiting for background job to complete")
-    await BACKGROUND_JOB_TASK
-    logger.debug("background job completed")
-    BACKGROUND_JOB_TASK = None
-  if(JOB_INTERFACE):
-    await JOB_INTERFACE.done()
-    JOB_INTERFACE = None
-
-  if(py_vcon_server.db.VCON_STORAGE):
-    await py_vcon_server.db.VCON_STORAGE.shutdown()
-    py_vcon_server.db.VCON_STORAGE = None
-
-  if(py_vcon_server.queue.JOB_QUEUE):
-    await py_vcon_server.queue.JOB_QUEUE.shutdown()
-    py_vcon_server.queue.JOB_QUEUE = None
-
-  if(py_vcon_server.pipeline.PIPELINE_DB):
-    await py_vcon_server.pipeline.PIPELINE_DB.shutdown()
-    py_vcon_server.pipeline.PIPELINE_DB = None
-
-  vcon.filter_plugins.FilterPluginRegistry.shutdown_plugins()
-
-  # Shut down cross-worker diagnostics shared memory
-  py_vcon_server.metrics.shutdown_diagnostics_shm()
-
-  # Stop heartbeat just before unregistering
+  # Stop heartbeat before state transition
   HEARTBEAT_RUNNING = False
   if HEARTBEAT_TASK:
     HEARTBEAT_TASK.cancel()
@@ -333,7 +317,53 @@ async def lifespan(app: fastapi.FastAPI):
       pass
     HEARTBEAT_TASK = None
 
-  await py_vcon_server.states.SERVER_STATE.unregister()
+  # State transition to shutting_down
+  if is_worker:
+    await py_vcon_server.states.SERVER_STATE.worker_shutting_down()
+  else:
+    await py_vcon_server.states.SERVER_STATE.server_shutting_down()
+    await py_vcon_server.states.SERVER_STATE.worker_shutting_down()
+
+  if JOB_MANAGER:
+    await JOB_MANAGER.finish()
+    JOB_MANAGER = None
+
+  if BACKGROUND_JOBS_RUNNING:
+    BACKGROUND_JOBS_RUNNING = False
+  if BACKGROUND_JOB_TASK:
+    logger.debug("waiting for background job to complete")
+    await BACKGROUND_JOB_TASK
+    logger.debug("background job completed")
+    BACKGROUND_JOB_TASK = None
+  if JOB_INTERFACE:
+    await JOB_INTERFACE.done()
+    JOB_INTERFACE = None
+
+  if py_vcon_server.db.VCON_STORAGE:
+    await py_vcon_server.db.VCON_STORAGE.shutdown()
+    py_vcon_server.db.VCON_STORAGE = None
+
+  if py_vcon_server.queue.JOB_QUEUE:
+    await py_vcon_server.queue.JOB_QUEUE.shutdown()
+    py_vcon_server.queue.JOB_QUEUE = None
+
+  if py_vcon_server.pipeline.PIPELINE_DB:
+    await py_vcon_server.pipeline.PIPELINE_DB.shutdown()
+    py_vcon_server.pipeline.PIPELINE_DB = None
+
+  vcon.filter_plugins.FilterPluginRegistry.shutdown_plugins()
+
+  py_vcon_server.metrics.shutdown_diagnostics_shm()
+
+  # Unregister after all shutdown work complete
+  if is_worker:
+    await py_vcon_server.states.SERVER_STATE.unregister_worker()
+    await py_vcon_server.states.SERVER_STATE.shutdown_redis()
+  else:
+    await py_vcon_server.states.SERVER_STATE.unregister_worker()
+    await py_vcon_server.states.SERVER_STATE.unregister_server()
+    await py_vcon_server.states.SERVER_STATE.shutdown_redis()
+
   py_vcon_server.states.SERVER_STATE = None
 
   logger.info("event shutdown completed")

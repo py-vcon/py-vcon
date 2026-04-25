@@ -5,6 +5,9 @@ import shutil
 import sys
 import tempfile
 import urllib
+import asyncio
+import time
+import threading
 import uvicorn
 from . import settings, logging_utils
 from py_vcon_server import Server
@@ -55,6 +58,7 @@ def _cleanup_prometheus_multiproc_dir(prom_dir: str) -> None:
   its own mmap files on shutdown - without this cleanup, stale counter and
   histogram files from this run would be included in metrics for the next run.
   """
+  logger.info("_cleanup_prometheus_multiproc_dir called with: {}".format(prom_dir))
   try:
     shutil.rmtree(prom_dir)
     logger.info("Prometheus multiprocess directory removed: {}".format(prom_dir))
@@ -157,6 +161,82 @@ def _cleanup_diagnostics_shm(shm) -> None:
     os.environ.pop("PYVCON_DIAG_NUM_SLOTS", None)
 
 
+def _setup_server_state(num_workers: int) -> "py_vcon_server.states.ServerState":
+  """
+  Construct a ServerState for the master process, set PYVCON_MASTER_PID
+  and PYVCON_SERVER_START_TIME in the environment so spawned workers can
+  share the same server_key, and write the server entry to Redis.
+  Must be called before workers are spawned.
+  Returns the ServerState so the caller can deregister on exit.
+  """
+  import py_vcon_server.states
+  os.environ.pop("PYVCON_MASTER_PID", None)
+  os.environ.pop("PYVCON_SERVER_START_TIME", None)
+  os.environ["PYVCON_MASTER_PID"] = str(os.getpid())
+  master_state = py_vcon_server.states.ServerState(
+      settings.REST_URL,
+      settings.STATE_DB_URL,
+      settings.LAUNCH_ADMIN_API,
+      settings.LAUNCH_VCON_API,
+      num_workers
+    )
+  os.environ["PYVCON_SERVER_START_TIME"] = str(master_state.start_time())
+  asyncio.run(master_state.register_server())
+  logger.info("Master server state registered: {}".format(
+      master_state.server_key()))
+  return master_state
+
+
+def _cleanup_server_state(master_state, heartbeat_thread) -> None:
+  """
+  Stop heartbeat, transition to shutting_down, deregister the server
+  entry from Redis and clean up env vars.
+  Called after all workers have exited.
+  """
+  try:
+    if heartbeat_thread is not None:
+      heartbeat_thread.stop()
+      heartbeat_thread.join(timeout=10.0)
+    asyncio.run(master_state.server_shutting_down())
+    asyncio.run(master_state.unregister_server())
+    logger.info("Master server state deregistered")
+  except Exception as e:
+    logger.warning("Failed to deregister server state: {}".format(e))
+  finally:
+    asyncio.run(master_state.shutdown_redis())
+    os.environ.pop("PYVCON_MASTER_PID", None)
+    os.environ.pop("PYVCON_SERVER_START_TIME", None)
+
+
+class _MasterHeartbeatThread(threading.Thread):
+  """
+  Daemon thread that periodically updates the server entry heartbeat
+  in Redis.  Runs only in multi-worker mode where the master process
+  cannot use an async event loop (Multiprocess.run() blocks).
+  """
+
+  def __init__(self, master_state, period):
+    super().__init__(daemon=True)
+    self._master_state = master_state
+    self._period = period
+    self._stop_event = threading.Event()
+
+  def run(self):
+    # asyncio.run() creates and destroys an event loop on each tick.
+    # At the default HEARTBEAT_PERIOD of 60s this is negligible.
+    # If the period were reduced significantly, consider creating
+    # a single event loop in run() and using loop.run_until_complete()
+    # on each tick instead.
+    while not self._stop_event.wait(self._period):
+      try:
+        asyncio.run(self._master_state.update_server_heartbeat())
+      except Exception as e:
+        logger.warning("Master heartbeat update failed: {}".format(e))
+
+  def stop(self):
+    self._stop_event.set()
+
+
 def main():
   "Start the vCon server with Uvicorn (multi-worker capable)"
   url_parser = urllib.parse.urlparse(settings.REST_URL)
@@ -179,6 +259,8 @@ def main():
     prom_dir = _setup_prometheus_multiproc_dir()
 
   diag_shm = None
+  master_state = None
+  heartbeat_thread = None
   if settings.NUM_RESTAPI_WORKERS > 1:
     try:
       _check_shared_memory_support()
@@ -187,19 +269,31 @@ def main():
       logger.warning(
           "Cross-worker /diagnostics disabled: {}".format(e)
         )
+    master_state = _setup_server_state(settings.NUM_RESTAPI_WORKERS)
 
   try:
     if settings.NUM_RESTAPI_WORKERS > 1:
+      asyncio.run(master_state.server_running())
+      if settings.HEARTBEAT_PERIOD > 0:
+        heartbeat_thread = _MasterHeartbeatThread(
+            master_state, settings.HEARTBEAT_PERIOD
+          )
+        heartbeat_thread.start()
+        logger.info("Master heartbeat started (period: {}s)".format(
+            settings.HEARTBEAT_PERIOD))
       from uvicorn.supervisors import Multiprocess
       sock = config.bind_socket()
       Multiprocess(config, target=server.run, sockets=[sock]).run()
     else:
       server.run()
   finally:
+    if master_state:
+      _cleanup_server_state(master_state, heartbeat_thread)
     if diag_shm:
       _cleanup_diagnostics_shm(diag_shm)
     if prom_dir:
       _cleanup_prometheus_multiproc_dir(prom_dir)
+
 
 if __name__ == "__main__":
   main()

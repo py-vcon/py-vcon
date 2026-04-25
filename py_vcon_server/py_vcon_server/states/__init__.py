@@ -75,13 +75,17 @@ class ServerState:
     self._redis_mgr.create_pool()
     logger.debug("ServerState RedisMgr pool created")
 
-    self._pid = os.getpid()
+    # Master start time gets set in the parent/master, workers get it from env
+    master_pid_str = os.environ.get("PYVCON_MASTER_PID", "")
+    self._pid = int(master_pid_str) if master_pid_str != "" else os.getpid()
+    master_start_str = os.environ.get("PYVCON_SERVER_START_TIME", "")
+    self._start_time = float(master_start_str) if master_start_str != "" else time.time()
     url_parser = urllib.parse.urlparse(rest_uri)
     self._host = url_parser.hostname
     self._port = url_parser.port
-    self._start_time = time.time()
     self._num_workers = num_workers
     self._state = self._states[1]  # starting_up
+    self._last_heartbeat = time.time()
 
     # Register Lua scripts
     redis_con = self._redis_mgr.get_client()
@@ -107,10 +111,10 @@ class ServerState:
       )
 
     # -- lua_update_server_state ------------------------------------------
-    # Read-modify-write: update only the "state" field in the server blob.
+    # Read-modify-write: update "state" and "last_heartbeat" in the server blob.
     # If the entry does not exist, returns -1 (caller should use register()).
     # KEYS = [ SERVER_HASH_KEY ]
-    # ARGV = [ server_key, new_state ]
+    # ARGV = [ server_key, new_state, last_heartbeat ]
     lua_update_server_state = """
     local existing = redis.call("HGET", KEYS[1], ARGV[1])
     if not existing then
@@ -118,6 +122,7 @@ class ServerState:
     end
     local server = cjson.decode(existing)
     server["state"] = ARGV[2]
+    server["last_heartbeat"] = tonumber(ARGV[3])
     redis.call("HSET", KEYS[1], ARGV[1], cjson.encode(server))
     return 1
     """
@@ -138,8 +143,8 @@ class ServerState:
         lua_unregister_worker
       )
 
-    # -- lua_deregister_or_delete_server ---------------------------------
-    # Shared script for graceful deregister and DevOps force-delete.
+    # -- lua_unregister_or_delete_server ---------------------------------
+    # Shared script for graceful unregister and DevOps force-delete.
     #
     # KEYS = [ SERVER_HASH_KEY, SERVER_WORKER_HASH_KEY ]
     # ARGV = [ server_key, SERVER_WORKERS_SET_PREFIX, force ]
@@ -151,7 +156,7 @@ class ServerState:
     #   status -1  : blocked -- workers still registered (force=0 only)
     #   status -2  : server not found
     #   worker_count: number of workers present at time of call
-    lua_deregister_or_delete_server = """
+    lua_unregister_or_delete_server = """
     local workers_set_key = ARGV[2] .. ARGV[1]
     local worker_keys = redis.call("SMEMBERS", workers_set_key)
     local worker_count = #worker_keys
@@ -184,8 +189,8 @@ class ServerState:
     ret[2] = worker_count
     return ret
     """
-    self._do_lua_deregister_or_delete_server = redis_con.register_script(
-        lua_deregister_or_delete_server
+    self._do_lua_unregister_or_delete_server = redis_con.register_script(
+        lua_unregister_or_delete_server
       )
 
     # -- lua_get_server_states --------------------------------------------
@@ -273,6 +278,8 @@ class ServerState:
     server_dict["num_workers"] = self._num_workers
     server_dict["num_restapi_workers"] = py_vcon_server.settings.NUM_RESTAPI_WORKERS
     server_dict["state"] = self._state
+    server_dict["last_heartbeat"] = self._last_heartbeat
+
     settings = {}
     for setting_name in py_vcon_server.settings.STATE_SETTINGS:
       settings[setting_name] = getattr(
@@ -329,29 +336,9 @@ class ServerState:
     await self._do_lua_register_worker(keys=keys, args=args)
 
 
-  async def register(self, may_exist: bool = False) -> None:
+  async def update_worker_state(self) -> None:
     """
-    Backward-compatible register: writes both server and worker entries.
-    Used in single-process mode where lifespan calls this directly.
-    In multi-worker mode, register_server() and register_worker() are
-    called separately.
-    """
-    if not may_exist:
-      # Check if server key already exists -- should not occur on first register
-      redis_con = self._redis_mgr.get_client()
-      existing = await redis_con.hget(SERVER_HASH_KEY, self.server_key())
-      if existing is not None and existing != "":
-        logger.error("Server {} already exists in servers hash".format(
-            self.server_key()
-          ))
-
-    await self.register_server()
-    await self.register_worker()
-
-
-  async def update_worker_heartbeat(self) -> None:
-    """
-    Update only this worker's heartbeat entry.
+    Update only this worker's state, including heartbeat entry.
     Direct HSET -- single command, no Lua overhead.
     Called on every heartbeat tick.
     """
@@ -368,56 +355,62 @@ class ServerState:
       )
 
 
-  async def update_heartbeat(self) -> None:
-    """
-    Backward-compatible heartbeat update.
-    Now delegates to update_worker_heartbeat() -- does NOT rewrite
-    the full server entry on every tick.
-    """
-    await self.update_worker_heartbeat()
-
-
-  async def _update_state(self, new_state: str) -> None:
-    """
-    Update only the state field in the server entry.
-    Uses Lua read-modify-write to avoid overwriting other fields.
-    Also updates the worker entry state.
-    """
-    self._state = new_state
-
-    # Update server entry state field via Lua
+  async def server_running(self) -> None:
+    """ Update server entry state to running. Master process only. """
+    self._state = self._states[2]
+    self._last_heartbeat = time.time()
     keys = [SERVER_HASH_KEY]
-    args = [self.server_key(), new_state]
+    args = [self.server_key(), self._state, self._last_heartbeat]
     result = await self._do_lua_update_server_state(keys=keys, args=args)
     if result == -1:
       logger.warning(
-          "update_state: server entry not found for key: {}".format(
+          "server_running: server entry not found for key: {}".format(
               self.server_key()
             )
         )
 
-    # Update worker entry with new state and fresh heartbeat
-    await self.update_worker_heartbeat()
+
+  async def update_server_heartbeat(self) -> None:
+    """ Update last_heartbeat and state in the server entry. Master process only. """
+    self._last_heartbeat = time.time()
+    keys = [SERVER_HASH_KEY]
+    args = [self.server_key(), self._state, self._last_heartbeat]
+    result = await self._do_lua_update_server_state(keys=keys, args=args)
+    if result == -1:
+      logger.warning(
+          "update_server_heartbeat: server entry not found for key: {}".format(
+              self.server_key()
+            )
+        )
 
 
-  async def starting(self) -> None:
-    """
-    Transition to starting_up state and write both server and worker entries.
-    Must be called before running() or shutting_down() since it creates
-    the server entry for the first time (register() equivalent).
-    """
-    self._state = self._states[1]  # starting_up
-    await self.register(may_exist=True)
+  async def server_shutting_down(self) -> None:
+    """ Update server entry state to shutting_down. Master process only. """
+    self._state = self._states[3]
+    self._last_heartbeat = time.time()
+    keys = [SERVER_HASH_KEY]
+    args = [self.server_key(), self._state, self._last_heartbeat]
+    result = await self._do_lua_update_server_state(keys=keys, args=args)
+    if result == -1:
+      logger.warning(
+          "server_shutting_down: server entry not found for key: {}".format(
+              self.server_key()
+            )
+        )
 
 
-  async def running(self) -> None:
-    await self._update_state(self._states[2])  # running
+  async def worker_running(self) -> None:
+    """ Update worker entry state to running. Worker process only. """
+    self._state = self._states[2]
+    await self.update_worker_state()
 
 
-  async def shutting_down(self) -> None:
-    await self._update_state(self._states[3])  # shutting_down
+  async def worker_shutting_down(self) -> None:
+    """ Update worker entry state to shutting_down. Worker process only. """
+    self._state = self._states[3]
+    await self.update_worker_state()
 
-
+  
   async def unregister_worker(self) -> None:
     """
     Atomically remove this worker from the server's worker set and
@@ -431,7 +424,7 @@ class ServerState:
     await self._do_lua_unregister_worker(keys=keys, args=args)
 
 
-  async def deregister_server(self) -> None:
+  async def unregister_server(self) -> None:
     """
     Graceful server shutdown: remove the server entry.
     If workers are still registered (unexpected at graceful shutdown),
@@ -441,7 +434,7 @@ class ServerState:
     """
     keys = [SERVER_HASH_KEY, SERVER_WORKER_HASH_KEY]
     args = [self.server_key(), SERVER_WORKERS_SET_PREFIX, "0"]
-    result = await self._do_lua_deregister_or_delete_server(
+    result = await self._do_lua_unregister_or_delete_server(
         keys=keys, args=args
       )
     status = result[0]
@@ -449,7 +442,7 @@ class ServerState:
 
     if status == -1:
       logger.warning(
-          "deregister_server: {} worker(s) still registered at shutdown "
+          "unregister_server: {} worker(s) still registered at shutdown "
           "for server {}  -- leaving stale entries in Redis as evidence".format(
               worker_count, self.server_key()
             )
@@ -457,26 +450,11 @@ class ServerState:
     elif status == -2:
       # Entry already gone -- warn but don't raise during graceful shutdown
       logger.warning(
-          "deregister_server: server entry not found for key: {} "
+          "unregister_server: server entry not found for key: {} "
           "(may have been cleaned up already)".format(self.server_key())
         )
     else:
-      logger.info("deregistered server: {}".format(self.server_key()))
-
-
-  async def unregister(self) -> None:
-    """
-    Full graceful unregister: remove worker entry then server entry.
-    Shuts down the Redis pool after cleanup.
-    """
-    await self.unregister_worker()
-    await self.deregister_server()
-
-    if self._redis_mgr is not None:
-      await self._redis_mgr.shutdown_pool()
-      self._redis_mgr = None
-
-    logger.info("Server state unregistered")
+      logger.info("unregistered server: {}".format(self.server_key()))
 
 
   async def get_server_state(self) -> typing.Dict[str, typing.Any]:
@@ -520,7 +498,7 @@ class ServerState:
     """
     keys = [SERVER_HASH_KEY, SERVER_WORKER_HASH_KEY]
     args = [server_key, SERVER_WORKERS_SET_PREFIX, "1"]
-    result = await self._do_lua_deregister_or_delete_server(
+    result = await self._do_lua_unregister_or_delete_server(
         keys=keys, args=args
       )
     status = result[0]
@@ -548,3 +526,11 @@ class ServerState:
   def start_time(self) -> float:
     """ Return the start time (epoch seconds) for the server """
     return self._start_time
+
+
+  async def shutdown_redis(self) -> None:
+    """ Shutdown the Redis connection pool. Called after all unregister operations are complete. """
+    if self._redis_mgr is not None:
+      await self._redis_mgr.shutdown_pool()
+      self._redis_mgr = None
+
