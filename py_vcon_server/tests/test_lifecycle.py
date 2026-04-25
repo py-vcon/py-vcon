@@ -391,7 +391,7 @@ async def test_get_server_states_empty():
   """
   import py_vcon_server.db.redis.redis_mgr as redis_mgr_mod
 
-  # Build a ServerState but do NOT call register() / starting()
+  # Build a ServerState but do NOT call register_server() / register_worker()
   # so no entry exists in Redis for its key.
   ss = py_vcon_server.states.ServerState(
       py_vcon_server.settings.REST_URL,
@@ -413,17 +413,17 @@ async def test_get_server_states_empty():
     assert ss.server_key() not in result, \
         "Unregistered server key should not appear in get_server_states()"
   finally:
-    await ss._redis_mgr.shutdown_pool()
+    await ss.shutdown_redis()
 
 
 # ============================================================
-#  Test: deregister_server warns when entry already gone
+#  Test: unregister_server warns when entry already gone
 # ============================================================
 
 @pytest.mark.asyncio
-async def test_deregister_server_already_gone_does_not_raise():
+async def test_unregister_server_already_gone_does_not_raise():
   """
-  deregister_server() should log a warning but NOT raise when the
+  register_server() should log a warning but NOT raise when the
   server entry has already been removed from Redis.
   Exercises states/__init__.py lines 341-343 (status == -2 path).
   """
@@ -440,15 +440,15 @@ async def test_deregister_server_already_gone_does_not_raise():
         py_vcon_server.states.SERVER_HASH_KEY, ss.server_key()
       )
 
-    # deregister_server() must not raise even though the entry is gone
-    await ss.deregister_server()  # should only log a warning
+    # unregister_server() must not raise even though the entry is gone
+    await ss.unregister_server()  # should only log a warning
   finally:
     # Clean up any worker debris
     try:
       await ss.unregister_worker()
     except Exception:
       pass
-    await ss._redis_mgr.shutdown_pool()
+    await ss.shutdown_redis()
 
 
 # ============================================================
@@ -498,21 +498,21 @@ async def test_get_server_states_unregistered_key_absent():
     assert ss.server_key() not in result, \
         "Unregistered server key must not appear in get_server_states()"
   finally:
-    await ss._redis_mgr.shutdown_pool()
+    await ss.shutdown_redis()
 
 
 # ============================================================
-#  Test: deregister_server does not raise when entry already gone
+#  Test: unregister_server does not raise when entry already gone
 # ============================================================
 
 @pytest.mark.asyncio
-async def test_deregister_server_already_gone_does_not_raise():
+async def test_unregister_server_already_gone_does_not_raise():
   """
-  deregister_server() must log a warning but NOT raise when the
+  unregister_server() must log a warning but NOT raise when the
   server entry is already absent from Redis.
   Exercises states/__init__.py lines 341-343 (status == -2 path).
   This is the normal path for workers 2..N in a multi-worker
-  SIGINT shutdown — the first worker to call deregister_server()
+  SIGINT shutdown — the first worker to call unregister_server()
   deletes the entry; the rest must not crash.
   """
   ss = py_vcon_server.states.ServerState(
@@ -529,14 +529,14 @@ async def test_deregister_server_already_gone_does_not_raise():
         ss.server_key()
       )
     # Must not raise — only logs a warning
-    await ss.deregister_server()
+    await ss.unregister_server()
   finally:
     # Clean up any worker set debris
     try:
       await ss.unregister_worker()
     except Exception:
       pass
-    await ss._redis_mgr.shutdown_pool()
+    await ss.shutdown_redis()
 
 
 # ============================================================
