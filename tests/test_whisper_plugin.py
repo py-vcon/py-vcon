@@ -140,7 +140,7 @@ async def test_whisper_transcribe_external_dialog():
   assert(len(in_vcon.dialog) > 0)
 
   analysis_count = len(in_vcon.analysis)
-  out_vcon = await in_vcon.transcribe(options)
+  out_vcon = await in_vcon.whisper(options)
   assert(len(out_vcon.analysis) == analysis_count + 3) # Whisper transcript, srt file and ass file
   #print(json.dumps(out_vcon.analysis[0], indent=2))
 

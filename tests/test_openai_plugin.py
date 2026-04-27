@@ -306,7 +306,7 @@ async def test_5_openai_triggers_transcribe():
     raise e
 
   after_analysis_count = len(out_vcon.analysis)
-  assert(after_analysis_count == 4) # transcription and openai summary
+  assert(after_analysis_count == 2) # transcription and openai summary
 
   # Check stats on input to model:
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion").plugin()
@@ -317,20 +317,20 @@ async def test_5_openai_triggers_transcribe():
   assert(plugin.last_stats['num_dialog_list'] == 1)
   assert(plugin.last_stats['num_transcribe_analysis'] == 1)
 
-  assert((after_analysis_count - original_analysis_count) == 4)
-  assert(out_vcon.analysis[original_analysis_count + 3]["type"] == "summary")
-  assert(out_vcon.analysis[original_analysis_count + 3]["dialog"] == 0)
-  assert(out_vcon.analysis[original_analysis_count + 3]["vendor"] == "openai")
-  assert(out_vcon.analysis[original_analysis_count + 3]["product"] == "ChatCompletion")
-  assert(out_vcon.analysis[original_analysis_count + 3]["schema"] == "chat_completion_object")
-  assert(out_vcon.analysis[original_analysis_count + 3]["prompt"] == "Summarize the transcript in these messages.")
-  assert(out_vcon.analysis[original_analysis_count + 3].get("mimetype", None) is None)
-  assert(out_vcon.analysis[original_analysis_count + 3]["mediatype"] == vcon.Vcon.MEDIATYPE_JSON)
-  assert(out_vcon.analysis[original_analysis_count + 3]["encoding"] == "json")
-  assert(isinstance(out_vcon.analysis[original_analysis_count + 3]["body"], dict))
-  assert(isinstance(out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"], str))
-  assert(len(out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"]) > 80)
-  assert(out_vcon.analysis[original_analysis_count + 3]["model"] == TEST_CHAT_MODEL)
-  print("Response: " + out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"])
+  assert((after_analysis_count - original_analysis_count) == 2)
+  assert(out_vcon.analysis[original_analysis_count + 1]["type"] == "summary")
+  assert(out_vcon.analysis[original_analysis_count + 1]["dialog"] == 0)
+  assert(out_vcon.analysis[original_analysis_count + 1]["vendor"] == "openai")
+  assert(out_vcon.analysis[original_analysis_count + 1]["product"] == "ChatCompletion")
+  assert(out_vcon.analysis[original_analysis_count + 1]["schema"] == "chat_completion_object")
+  assert(out_vcon.analysis[original_analysis_count + 1]["prompt"] == "Summarize the transcript in these messages.")
+  assert(out_vcon.analysis[original_analysis_count + 1].get("mimetype", None) is None)
+  assert(out_vcon.analysis[original_analysis_count + 1]["mediatype"] == vcon.Vcon.MEDIATYPE_JSON)
+  assert(out_vcon.analysis[original_analysis_count + 1]["encoding"] == "json")
+  assert(isinstance(out_vcon.analysis[original_analysis_count + 1]["body"], dict))
+  assert(isinstance(out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"], str))
+  assert(len(out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"]) > 80)
+  assert(out_vcon.analysis[original_analysis_count + 1]["model"] == TEST_CHAT_MODEL)
+  print("Response: " + out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"])
 
 

@@ -97,8 +97,8 @@ async def test_registry():
   assert(plugin_openai_chat is not None)
   assert(plugin_openai_chat.import_plugin({"openai_api_key": "abc"}))
 
-  # Verify whisper is the default transcribe type filter plugin
-  assert(vcon.filter_plugins.FilterPluginRegistry.get_type_default_name("transcribe") == "whisper")
+  # Verify Deepgram is the default transcribe type filter plugin
+  assert(vcon.filter_plugins.FilterPluginRegistry.get_type_default_name("transcribe") == "deepgram")
 
   in_vcon = vcon.Vcon()
   options = vcon.filter_plugins.FilterPluginOptions()
