@@ -107,7 +107,9 @@ async def test_filter(capsys):
 
 
   assert(len(out_vcon.dialog) == 1)
-  assert(len(out_vcon.analysis) == 3)
+  # Deepgram is now the default transcriber
+  assert(len(out_vcon.analysis) == 1)
+  #assert(len(out_vcon.analysis) == 3)
 
 
 @pytest.mark.asyncio
