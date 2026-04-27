@@ -229,7 +229,7 @@ class Stage:
 
     diagnostics_ok = False
     diagnostics_showed_job = False
-    diag_deadline = time.time() + SIGINT_JOB_SLEEP + 2.0
+    diag_deadline = sigint_time + SIGINT_JOB_SLEEP + 5.0
     while time.time() < diag_deadline:
       if context.server_manager.poll() is not None:
         break
