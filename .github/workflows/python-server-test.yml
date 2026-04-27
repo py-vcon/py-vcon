@@ -175,25 +175,6 @@ jobs:
           cd py_vcon_server
           python3 scripts/test_multiworker.py --workers 2
 
-      # Stage 7 (prometheus) runs in a separate step with --stages 1,7 so it
-      # has the runner's full resources.  Stage 7 starts a second server on
-      # port+1 while the main server is running — when both servers share the
-      # runner with the other stages (blocking requests, background jobs, SIGINT
-      # handling), the combined process load causes Stage 7's server to miss its
-      # startup timeout and Stage 3's health check to time out on slow runners.
-      # Isolating Stage 7 to its own step eliminates the resource contention.
-      - name: Run Prometheus multiprocess integration test
-        env:
-          VCON_STORAGE_URL: redis://localhost
-          REST_URL: http://localhost:8000
-          PYTHONPATH: ${{ github.workspace }}/py_vcon_server
-          MULTIWORKER_STARTUP_TIMEOUT: "120"
-          MULTIWORKER_PROM_STARTUP_TIMEOUT: "120"
-
-        run: |
-          cd py_vcon_server
-          python3 scripts/test_multiworker.py --workers 2
-
       - name: get pip freeze config for successful run
 
         run: |
