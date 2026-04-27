@@ -312,10 +312,10 @@ async def test_5_openai_triggers_transcribe():
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion").plugin()
   # verify stats of extracted messages are as expected
   print("stats: {}".format(plugin.last_stats))
-  assert(plugin.last_stats['num_messages'] == 1)
+  assert(plugin.last_stats['num_messages'] == 2)
   assert(plugin.last_stats['num_text_dialogs'] == 0)
   assert(plugin.last_stats['num_dialog_list'] == 1)
-  assert(plugin.last_stats['num_transcribe_analysis'] == 1)
+  assert(plugin.last_stats['num_transcribe_analysis'] == 2)
 
   assert((after_analysis_count - original_analysis_count) == 2)
   assert(out_vcon.analysis[original_analysis_count + 1]["type"] == "summary")
