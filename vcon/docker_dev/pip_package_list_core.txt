@@ -1,0 +1,24 @@
+# runtime dependencies for python-vcon-minimum:
+
+cbor2
+cryptography >= 37, < 45.0.0 ; python_version < "3.9"
+cryptography >= 37 ; python_version >= "3.9"
+hsslms
+jq
+pydantic
+# 3.4.x caused some problems with REAND_bytes
+python-jose !=3.4.*
+python-dateutil
+pytz
+regex
+sox
+uuid6
+python-json-logger
+python-multipart
+
+# http_lb dependencies
+httpx
+
+# vcon.utils dependencies
+ffmpeg-python
+

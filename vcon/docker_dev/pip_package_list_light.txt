@@ -1,0 +1,6 @@
+# runtime dependencies for python-vcon-light-plugins
+# (in addition to python-vcon-minimum dependencies):
+
+openai
+tenacity
+

@@ -1,32 +1,7 @@
-# runtime dependencies:
-
-# Deepgram 3+ uses match statement which does not run on python < 3.10
-#deepgram-sdk < 3 ; python_version < "3.10"
-#deepgram-sdk >= 3 ; python_version >= "3.10"
-# Using deepgram RESTful API directly to avoid version changes.
-cbor2
-cryptography >= 37, < 45.0.0 ; python_version < "3.9"
-cryptography >= 37 ; python_version >= "3.9"
-hsslms
-jq
-openai
-pydantic
-# 3.4.x caused some problems with REAND_bytes
-python-jose !=3.4.*
-python-dateutil
-pytz
-regex
-sox
-tenacity
-uuid6
-python-json-logger
-python-multipart
-
-# module http_lb dependencies
-httpx
+# runtime dependencies for python-vcon (full)
+# (in addition to python-vcon-light-plugins dependencies):
 
 # whisper dependencies
-ffmpeg-python
 more-itertools
 tqdm
 transformers
