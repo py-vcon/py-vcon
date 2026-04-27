@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Whisper audio transcription filter plugin registration """
 import datetime
 import vcon.filter_plugins
@@ -14,9 +14,6 @@ vcon.filter_plugins.FilterPluginRegistry.register(
   "OpenAI Whisper implemented transcription of audio dialog recordings using model size: \"base\"",
   init_options
   )
-
-# Make this the default transcribe type filter plugin
-vcon.filter_plugins.FilterPluginRegistry.set_type_default_name("transcribe", "whisper")
 
 # Implement an accessor for the Whisper transcription format
 class WhisperTranscriptAccessor(vcon.accessors.TranscriptAccessor):

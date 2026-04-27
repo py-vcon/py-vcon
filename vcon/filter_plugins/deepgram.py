@@ -17,6 +17,9 @@ vcon.filter_plugins.FilterPluginRegistry.register(
   init_options
   )
 
+# Make deepgram the default transcribe type filter plugin
+vcon.filter_plugins.FilterPluginRegistry.set_type_default_name("transcribe", "deepgram")
+
 # Implement an accessor for the Deepgram transcription format
 class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
   def get_text(self):
