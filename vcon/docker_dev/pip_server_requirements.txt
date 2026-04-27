@@ -7,7 +7,7 @@ packaging
 pkgutil-resolve-name
 psutil
 pydantic
-python-vcon >= 0.6.9
+python-vcon >= 0.6.10
 redis
 setuptools
 smtpdfix
