@@ -144,7 +144,7 @@ jobs:
           #rm -f dist/*
           #python -m build
           scripts/build_packages.sh
-          pip3 install dist/python_vcon*.tar.gz dist/python-vcon*.tar.gz
+          pip3 install dist/python[_,-]vcon*.tar.gz
           pip install --no-cache-dir -r vcon/docker_dev/pip_server_requirements.txt
           pip freeze | grep stable
           pip freeze | grep whisper
