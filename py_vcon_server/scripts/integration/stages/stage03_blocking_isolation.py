@@ -13,11 +13,12 @@ import time
 
 import httpx
 
-from integration.constants import HEALTH_TIMEOUT, VCON_UUID
+from integration.constants import VCON_UUID
 from integration.helpers import make_test_vcon_dict
 
 # Stage-specific constants
 BLOCK_SECONDS = 8
+HEALTH_CHECK_TIMEOUT = float(os.environ.get("INTEGRATION_HEALTH_CHECK_TIMEOUT", "5.0"))
 
 
 class Stage:
@@ -62,7 +63,8 @@ class Stage:
     health_start = time.time()
     try:
       with httpx.Client(base_url=context.base_url) as client:
-        r = client.get("/docs", timeout=HEALTH_TIMEOUT)
+        r = client.get("/docs", timeout=HEALTH_CHECK_TIMEOUT)
+
         health_elapsed = time.time() - health_start
         health_result["status"] = r.status_code
         health_result["elapsed"] = health_elapsed
