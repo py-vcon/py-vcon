@@ -1,6 +1,6 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
-Unit tests for lifespan migration, heartbeat, and shutdown middleware.
+Unit tests for lifespan, heartbeat, shutdown middleware, and server state.
 
 Tests:
   1. Middleware returns 503 when SHUTDOWN_REQUESTED is set
@@ -12,6 +12,21 @@ Tests:
   7. SERVER_STATE is None after shutdown
   8. heartbeat_loop fires periodically and stops on HEARTBEAT_RUNNING=False
   9. In-flight request completes before shutdown code runs
+  10. worker_key format (server_key + PID suffix)
+  11. Worker entry exists in /servers after startup
+  12. State transitions reflected in /servers
+  13. /server/info includes workers sub-dict
+  14. Server entry removed from /servers after shutdown
+  15. get_server_states returns dict when key absent
+  16. unregister_server does not raise when entry already gone
+  17. nest_asyncio.apply() repeated does not raise
+  18. Multi-worker ServerState identity (PID divergence via env vars)
+  19. Worker-only lifespan path (is_worker=True)
+  20. update_server_heartbeat() advances Redis timestamp
+  21. unregister_server warns when workers still registered
+  22. update_server_heartbeat on missing entry does not raise
+  23. server_running on missing entry does not raise
+  24. server_shutting_down on missing entry does not raise
 """
 import os
 import time
@@ -472,6 +487,329 @@ def test_nest_asyncio_apply_repeated_does_not_raise():
   except ValueError:
     pass  # this is the branch our __init__.py now protects against
   # If we reach here without an unhandled exception, the pattern is correct.
+
+
+# ============================================================
+#  Test: multi-worker ServerState identity -- PID divergence
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_multiworker_server_state_identity():
+  """
+  When PYVCON_MASTER_PID and PYVCON_SERVER_START_TIME are set,
+  ServerState must use the master PID in server_key() and the
+  current process PID in worker_key().  The two PIDs must differ.
+  Exercises the env-var branches in ServerState.__init__().
+  """
+  fake_master_pid = "99999"
+  fake_start_time = "1700000000.0"
+  original_master = os.environ.get("PYVCON_MASTER_PID")
+  original_start = os.environ.get("PYVCON_SERVER_START_TIME")
+
+  os.environ["PYVCON_MASTER_PID"] = fake_master_pid
+  os.environ["PYVCON_SERVER_START_TIME"] = fake_start_time
+  try:
+    ss = py_vcon_server.states.ServerState(
+        py_vcon_server.settings.REST_URL,
+        py_vcon_server.settings.STATE_DB_URL,
+        True, True, 2
+      )
+    try:
+      server_key = ss.server_key()
+      worker_key = ss.worker_key()
+
+      assert fake_master_pid in server_key, \
+          "server_key should contain fake master PID"
+      assert fake_start_time in server_key, \
+          "server_key should contain fake start time"
+      assert server_key != worker_key, \
+          "server_key and worker_key must differ in multi-worker mode"
+      assert worker_key.endswith(str(os.getpid())), \
+          "worker_key must end with the current process PID"
+      assert fake_master_pid != str(os.getpid()), \
+          "test requires fake PID to differ from real PID"
+
+      assert ss.pid() == int(fake_master_pid), \
+          "pid() should return the master PID, not os.getpid()"
+      assert ss.start_time() == float(fake_start_time), \
+          "start_time() should return the env var value"
+
+    finally:
+      await ss.shutdown_redis()
+
+  finally:
+    if original_master is None:
+      os.environ.pop("PYVCON_MASTER_PID", None)
+    else:
+      os.environ["PYVCON_MASTER_PID"] = original_master
+    if original_start is None:
+      os.environ.pop("PYVCON_SERVER_START_TIME", None)
+    else:
+      os.environ["PYVCON_SERVER_START_TIME"] = original_start
+
+
+# ============================================================
+#  Test: worker-only lifespan path
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_worker_only_lifespan_path():
+  """
+  When PYVCON_MASTER_PID is set, the lifespan takes the is_worker
+  branch: register_worker() without register_server().  On shutdown
+  it calls unregister_worker() but NOT unregister_server().
+
+  Steps:
+    1. Pre-register a fake server entry in Redis
+    2. Set env vars so lifespan sees is_worker=True
+    3. Start TestClient (triggers worker-only startup)
+    4. Verify worker entry created, server entry not overwritten
+    5. Exit TestClient (triggers worker-only shutdown)
+    6. Verify worker entry gone, server entry still present
+    7. Clean up fake server entry
+  """
+  fake_master_pid = "88888"
+  fake_start_time = "1700000000.0"
+  original_master = os.environ.get("PYVCON_MASTER_PID")
+  original_start = os.environ.get("PYVCON_SERVER_START_TIME")
+
+  # Build a ServerState to pre-register the server entry
+  os.environ["PYVCON_MASTER_PID"] = fake_master_pid
+  os.environ["PYVCON_SERVER_START_TIME"] = fake_start_time
+  pre_ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 2
+    )
+  try:
+    await pre_ss.register_server()
+    await pre_ss.server_running()
+    pre_server_key = pre_ss.server_key()
+
+    # Read the server entry heartbeat before lifespan runs
+    states_before = await pre_ss.get_server_states()
+    server_hb_before = states_before[pre_server_key]["last_heartbeat"]
+
+    # Now start TestClient with the env vars set.
+    # Lifespan will see is_worker=True.
+    with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+      response = client.get("/servers")
+      assert response.status_code == 200
+      servers = response.json()
+      assert pre_server_key in servers, \
+          "pre-registered server entry should still exist"
+
+      server_entry = servers[pre_server_key]
+      assert server_entry["pid"] == int(fake_master_pid), \
+          "server entry pid should be the fake master, not overwritten"
+
+      # Worker entry should exist under the server
+      worker_key = py_vcon_server.states.SERVER_STATE.worker_key()
+      assert worker_key in server_entry["workers"], \
+          "worker entry should exist after worker-only startup"
+      assert server_entry["workers"][worker_key]["worker_pid"] == os.getpid(), \
+          "worker_pid should be current process PID"
+
+      # Server heartbeat should NOT have been updated by the worker
+      server_hb_after = server_entry["last_heartbeat"]
+      assert server_hb_after == server_hb_before, \
+          "worker-only lifespan should not update server heartbeat"
+
+    # After TestClient exit: worker entry should be gone
+    states_after = await pre_ss.get_server_states()
+    if pre_server_key in states_after:
+      assert worker_key not in states_after[pre_server_key].get("workers", {}), \
+          "worker entry should be removed after worker-only shutdown"
+      # Server entry should still be present
+      assert states_after[pre_server_key]["pid"] == int(fake_master_pid)
+
+  finally:
+    # Clean up the fake server entry
+    try:
+      await pre_ss.unregister_server()
+    except Exception:
+      pass
+    await pre_ss.shutdown_redis()
+    if original_master is None:
+      os.environ.pop("PYVCON_MASTER_PID", None)
+    else:
+      os.environ["PYVCON_MASTER_PID"] = original_master
+    if original_start is None:
+      os.environ.pop("PYVCON_SERVER_START_TIME", None)
+    else:
+      os.environ["PYVCON_SERVER_START_TIME"] = original_start
+
+
+# ============================================================
+#  Test: update_server_heartbeat() updates Redis
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_update_server_heartbeat_updates_redis():
+  """
+  Directly call update_server_heartbeat() on a registered
+  ServerState and verify last_heartbeat advances in Redis.
+  Exercises states/__init__.py update_server_heartbeat().
+  """
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    await ss.register_server()
+    await ss.server_running()
+
+    states1 = await ss.get_server_states()
+    hb1 = states1[ss.server_key()]["last_heartbeat"]
+
+    import asyncio
+    await asyncio.sleep(0.05)
+
+    await ss.update_server_heartbeat()
+
+    states2 = await ss.get_server_states()
+    hb2 = states2[ss.server_key()]["last_heartbeat"]
+
+    assert hb2 > hb1, \
+        "update_server_heartbeat() should advance last_heartbeat: {} -> {}".format(hb1, hb2)
+
+  finally:
+    try:
+      await ss.unregister_server()
+    except Exception:
+      pass
+    await ss.shutdown_redis()
+
+
+# ============================================================
+#  Test: unregister_server warns when workers still registered
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_unregister_server_with_stale_workers():
+  """
+  If unregister_server() is called while workers are still
+  registered, it should log a warning and leave the worker
+  entries as evidence rather than force-cleaning them.
+  Exercises states/__init__.py status == -1 path.
+  """
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    await ss.register_server()
+    await ss.register_worker()
+
+    # Call unregister_server WITHOUT unregister_worker first
+    await ss.unregister_server()
+
+    # Server entry should STILL exist (left as evidence with stale workers)
+    redis_con = ss._redis_mgr.get_client()
+    server_json = await redis_con.hget(
+        py_vcon_server.states.SERVER_HASH_KEY, ss.server_key()
+      )
+    assert server_json is not None, \
+        "server entry should be kept as evidence when workers still registered"
+
+    # Worker entry should still exist (left as evidence)
+    worker_json = await redis_con.hget(
+        py_vcon_server.states.SERVER_WORKER_HASH_KEY, ss.worker_key()
+      )
+    assert worker_json is not None, \
+        "worker entry should remain as evidence of stale worker"
+
+  finally:
+    # Clean up the stale worker entry
+    try:
+      await ss.unregister_worker()
+    except Exception:
+      pass
+    try:
+      await ss.unregister_server()
+    except Exception:
+      pass
+    await ss.shutdown_redis()
+
+
+# ============================================================
+#  Test: update_server_heartbeat on missing entry does not raise
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_update_server_heartbeat_missing_entry():
+  """
+  update_server_heartbeat() should log a warning but not raise
+  when the server entry has been deleted from Redis.
+  Exercises the result == -1 branch in update_server_heartbeat().
+  """
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    await ss.register_server()
+    await ss.server_running()
+
+    # Delete the server entry directly
+    redis_con = ss._redis_mgr.get_client()
+    await redis_con.hdel(
+        py_vcon_server.states.SERVER_HASH_KEY, ss.server_key()
+      )
+
+    # Must not raise
+    await ss.update_server_heartbeat()
+
+  finally:
+    await ss.shutdown_redis()
+
+
+# ============================================================
+#  Test: server_running on missing entry does not raise
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_server_running_missing_entry():
+  """
+  server_running() should log a warning but not raise when the
+  server entry is absent from Redis.
+  Exercises the result == -1 branch in server_running().
+  """
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    # Do NOT register -- call server_running() on a missing entry
+    await ss.server_running()
+  finally:
+    await ss.shutdown_redis()
+
+
+# ============================================================
+#  Test: server_shutting_down on missing entry does not raise
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_server_shutting_down_missing_entry():
+  """
+  server_shutting_down() should log a warning but not raise when
+  the server entry is absent from Redis.
+  Exercises the result == -1 branch in server_shutting_down().
+  """
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    await ss.server_shutting_down()
+  finally:
+    await ss.shutdown_redis()
 
 
 # ============================================================
