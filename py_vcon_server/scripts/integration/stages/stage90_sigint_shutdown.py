@@ -368,6 +368,37 @@ class Stage:
           context.results.record(self.name,
               "Redis clean after shutdown", False, str(e))
 
+        # -- 90c2: worker hash has no entries for old server ----
+        try:
+          import redis
+          import urllib.parse
+          redis_url = context.env.get(
+              "VCON_STORAGE_URL", "redis://localhost"
+            )
+          parsed = urllib.parse.urlparse(redis_url)
+          r_client = redis.Redis(
+              host=parsed.hostname or "localhost",
+              port=parsed.port or 6379,
+              decode_responses=True
+            )
+          worker_keys = r_client.hkeys("server_worker_states")
+          stale_workers = [
+              k for k in worker_keys if old_pid_str in k
+            ]
+          workers_clean = len(stale_workers) == 0
+          context.results.record(self.name,
+              "Worker hash clean after shutdown",
+              workers_clean,
+              "No stale worker entries for PID {}".format(
+                  server_proc_pid)
+              if workers_clean else
+              "Stale worker entries: {}".format(stale_workers))
+          r_client.close()
+        except Exception as e:
+          context.results.record(self.name,
+              "Worker hash clean after shutdown",
+              False, str(e))
+
         # -- 90a: In-flight job completed --------------------------------------
         try:
           r = get(client, "/vcon/{}".format(SIGINT_UUID))
