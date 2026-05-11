@@ -109,11 +109,13 @@ def preflight_checks(base_url, vcon_storage_url):
     return False
 
   # Check port is free
-  port = int(urllib.parse.urlparse(base_url).port or 8000)
-  if not port_is_free(port):
+  parsed_url = urllib.parse.urlparse(base_url)
+  port = int(parsed_url.port or 8000)
+  host = parsed_url.hostname or "localhost"
+  if not port_is_free(port, host):
     print("ERROR: port {} already in use.".format(port))
     print("  Kill the occupying process before running integration tests.")
-    ok = False
+    return False
 
   # Check Redis is reachable
   try:
