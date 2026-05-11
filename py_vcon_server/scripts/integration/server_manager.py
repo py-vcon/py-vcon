@@ -52,7 +52,8 @@ class ServerManager:
     Start the py_vcon_server subprocess and wait for it to become healthy.
     Returns True if the server is healthy within STARTUP_TIMEOUT.
     """
-    if not port_is_free(self._port):
+    host = urllib.parse.urlparse(self.base_url).hostname or "localhost"
+    if not port_is_free(self._port, host):
       print("  ERROR: port {} already in use before server start".format(
           self._port))
       return False
