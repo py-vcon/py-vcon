@@ -1,8 +1,8 @@
 [run]
 # HTML for human reading and XML for badge output option:
-#    pytest --cov=py_vcon_server --cov-report html:coverage_py_vcon_server  --cov-report xml  -v -rP tests
+#    pytest --cov=py_vcon_server --cov-report html:coverage_py_vcon_server  --cov-report xml --cov-report=term -v -rP tests
 #    mv .coverage .coverage.unittests
-#    COVERAGE_PROCESS_START=$(pwd)/.coveragerc MULTIWORKER_STARTUP_TIMEOUT=120 MULTIWORKER_JOB_POLL_TIMEOUT=60 python3 scripts/test_multiworker.py --workers 2
+#    COVERAGE_PROCESS_START=$(pwd)/.coveragerc MULTIWORKER_STARTUP_TIMEOUT=120 MULTIWORKER_JOB_POLL_TIMEOUT=60 python3 scripts/test_integration.py --workers 2
 #    coverage combine
 #    coverage html -d coverage_py_vcon_server
 #    coverage xml
