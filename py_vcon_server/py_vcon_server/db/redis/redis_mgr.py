@@ -257,12 +257,10 @@ class RedisMgr():
       self.log_pool_stats()
       
       # Shutdown based on mode
-      if self._mode == 'sentinel' and self._sentinel:
-        # Close sentinel connections
-        await self._sentinel.close()
+      if self._mode == 'sentinel':
         self._sentinel = None
         self._master_name = None
-      
+
       # Disconnect the pool
       tmp_pool = self._redis_pool
       self._redis_pool = None
