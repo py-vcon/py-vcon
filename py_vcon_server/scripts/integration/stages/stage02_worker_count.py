@@ -5,7 +5,7 @@ integration/stages/stage02_worker_count.py
 Verifies that the correct number of uvicorn worker processes are
 running as children of the parent py_vcon_server process.
 """
-
+import os
 import time
 
 import psutil
@@ -94,30 +94,35 @@ class Stage:
               "server pid={} master pid={}".format(server_pid, master_pid)
             )
 
-          # 02d: each worker_pid is a child of master
-          all_workers_valid = True
+          # 02d: each worker_pid is a child of master.
+          # Do not break on first failure -- collect every worker's status
+          # so the diagnostic shows the full picture.  When any worker fails
+          # the check, dump a comprehensive snapshot to aid root-cause
+          # analysis across Python versions where this test flakes.
+          bad_pid_workers = []   # list of (wk, wpid, reason)
           for wk, wv in workers.items():
             wpid = wv.get("worker_pid")
             if wpid not in child_pids:
-              all_workers_valid = False
-              context.results.record(
-                  self.name,
-                  "worker pid is child of master",
-                  False,
-                  "worker_pid {} not in child PIDs {}".format(
-                      wpid, child_pids)
+              bad_pid_workers.append(
+                  (wk, wpid, "worker_pid not in initial child set")
                 )
-              break
-            if not wk.endswith(str(wpid)):
-              all_workers_valid = False
-              context.results.record(
-                  self.name,
-                  "worker key ends with worker pid",
-                  False,
-                  "key {} does not end with pid {}".format(wk, wpid)
+            elif not wk.endswith(str(wpid)):
+              bad_pid_workers.append(
+                  (wk, wpid, "worker_key suffix does not match worker_pid")
                 )
-              break
-          if all_workers_valid:
+
+          if bad_pid_workers:
+            diag = self._collect_diagnostics(
+                context, master_pid, child_pids, workers, bad_pid_workers,
+                client
+              )
+            context.results.record(
+                self.name,
+                "worker pid is child of master",
+                False,
+                diag
+              )
+          else:
             context.results.record(
                 self.name,
                 "all worker pids are children of master",
@@ -144,4 +149,136 @@ class Stage:
         )
 
     return passed
+
+
+def _collect_diagnostics(
+      self, context, master_pid, initial_child_pids,
+      workers, bad_pid_workers, http_client
+    ):
+    """ Build a multi-line diagnostic string for a stage02 failure.
+    Captures process tree snapshots, per-PID metadata for the offending
+    worker_pids, a re-poll of /server/info, and grepped lines from the
+    server log file.
+    """
+    lines = []
+    lines.append("worker pid is child of master -- FAILED")
+    lines.append("master_pid = {}".format(master_pid))
+    lines.append("initial child_pids (recursive=False) = {}".format(
+        sorted(initial_child_pids)
+      ))
+
+    # Re-snapshot children NOW (after HTTP polling).  The original snapshot
+    # was taken before /server/info polling; if the child set has drifted
+    # the difference between then and now is the smoking gun.
+    try:
+      parent = psutil.Process(master_pid)
+      now_children = parent.children(recursive=False)
+      now_child_pids = sorted(c.pid for c in now_children)
+      lines.append("current child_pids (recursive=False) = {}".format(
+          now_child_pids
+        ))
+      now_descendants = parent.children(recursive=True)
+      now_descendant_pids = sorted(c.pid for c in now_descendants)
+      lines.append("current descendant_pids (recursive=True) = {}".format(
+          now_descendant_pids
+        ))
+      try:
+        lines.append("master create_time = {} status = {}".format(
+            parent.create_time(), parent.status()
+          ))
+      except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+        lines.append("master process metadata unavailable: {}".format(e))
+    except psutil.NoSuchProcess:
+      lines.append("master process disappeared during diagnostics")
+
+    # Workers reported by /server/info
+    lines.append("/server/info workers (worker_key -> worker_pid):")
+    for wk, wv in workers.items():
+      lines.append("  {} -> worker_pid={}".format(wk, wv.get("worker_pid")))
+
+    # Re-poll /server/info to see if state has drifted since the check
+    try:
+      r2 = http_client.get("/server/info", timeout=10.0)
+      if r2.status_code == 200:
+        info2 = r2.json()
+        workers2 = info2.get("workers", {})
+        lines.append("/server/info re-poll workers (worker_key -> worker_pid):")
+        for wk, wv in workers2.items():
+          lines.append("  {} -> worker_pid={}".format(
+              wk, wv.get("worker_pid")
+            ))
+      else:
+        lines.append("/server/info re-poll status = {}".format(
+            r2.status_code
+          ))
+    except Exception as e:
+      lines.append("/server/info re-poll error: {}".format(e))
+
+    # Per-offending-PID introspection
+    lines.append("offending worker entries:")
+    for wk, wpid, reason in bad_pid_workers:
+      lines.append("  worker_key = {}".format(wk))
+      lines.append("    reason = {}".format(reason))
+      lines.append("    worker_pid = {}".format(wpid))
+      try:
+        proc = psutil.Process(wpid)
+        try:
+          ppid = proc.ppid()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+          ppid = "unavailable"
+        try:
+          ctime = proc.create_time()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+          ctime = "unavailable"
+        try:
+          status = proc.status()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+          status = "unavailable"
+        try:
+          cmdline = " ".join(proc.cmdline())
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+          cmdline = "unavailable"
+        lines.append(
+            "    proc: ppid={} create_time={} status={} cmdline={}".format(
+                ppid, ctime, status, cmdline
+              )
+          )
+        lines.append("    is_child_of_master = {}".format(
+            ppid == master_pid
+          ))
+      except psutil.NoSuchProcess:
+        lines.append("    proc: NoSuchProcess (worker_pid {} not running)".format(
+            wpid
+          ))
+
+    # Grep the server log
+    try:
+      log_path = context.server_manager.log_path()
+    except Exception:
+      log_path = None
+    if log_path and os.path.isfile(log_path):
+      lines.append("server log excerpt ({}):".format(log_path))
+      grep_terms = [
+          "register_worker", "unregister_worker",
+          "Started parent process", "Started server process",
+          "Starting worker", "Stopping worker", "Booting worker",
+          "Worker exited", "worker exited",
+          "register_server", "unregister_server",
+          "lifespan", "PYVCON_MASTER_PID",
+        ]
+      for wk, wpid, _ in bad_pid_workers:
+        grep_terms.append(str(wpid))
+      try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+          for line in f:
+            for term in grep_terms:
+              if term in line:
+                lines.append("  {}".format(line.rstrip()))
+                break
+      except Exception as e:
+        lines.append("  log read error: {}".format(e))
+    else:
+      lines.append("server log path not available")
+
+    return "\n".join(lines)
 
