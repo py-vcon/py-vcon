@@ -1140,6 +1140,14 @@ class VconProcessorRegistry():
               self._class_name
               )) from e
 
+
+          except Exception as init_error:
+            logger.error("Error instantiating VconProcessor: {} class: {}".format(
+              self._name,
+              self._class_name
+              ))
+            logger.exception(init_error)
+
         except AttributeError as ae:
           raise ae
 
@@ -1160,8 +1168,8 @@ class VconProcessorRegistry():
           logger.info("importing: {} for registering VconProcessor: {}".format(
             self._module_name,
             self._name))
-          self._module = importlib.import_module(self._module_name)
           self._module_load_attempted = True
+          self._module = importlib.import_module(self._module_name)
           self._module_not_found = False
           loaded = True
 
@@ -1172,6 +1180,14 @@ class VconProcessorRegistry():
             ))
           logger.exception(mod_error)
           self._module_not_found = True
+
+        except Exception as mod_error:
+          logger.error("Error loading module: {} for VconProcessor: {}".format(
+            self._module_name,
+            self._name
+            ))
+          logger.exception(mod_error)
+          loaded = False
 
       return(loaded)
 
