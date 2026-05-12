@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit test for OpenAI filter plugins """
 import os
 import json
@@ -333,4 +333,81 @@ async def test_5_openai_triggers_transcribe():
   assert(out_vcon.analysis[original_analysis_count + 1]["model"] == TEST_CHAT_MODEL)
   print("Response: " + out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"])
 
+
+def test_init_no_key():
+  """ Construction with an empty openai_api_key must not raise.
+      The OpenAIClient should mark key_set False and skip creating
+      the inner AsyncOpenAI client.
+  """
+  init_options_dict = { "openai_api_key": "" }
+
+  completion_init = vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions(
+      **init_options_dict
+    )
+  completion_plugin = vcon.filter_plugins.impl.openai.OpenAICompletion(completion_init)
+  assert(completion_plugin.client.key_set == False)
+  assert(hasattr(completion_plugin.client, "client") == False)
+
+  chat_init = vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions(
+      **init_options_dict
+    )
+  chat_plugin = vcon.filter_plugins.impl.openai.OpenAIChatCompletion(chat_init)
+  assert(chat_plugin.client.key_set == False)
+  assert(hasattr(chat_plugin.client, "client") == False)
+
+
+@pytest.mark.asyncio
+async def test_filter_no_key_raises_openai_completion():
+  """ OpenAICompletion.filter must raise OpenAIKeyNotSet when constructed
+      with no api key.
+  """
+  init_options = vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions(
+      openai_api_key = ""
+    )
+  plugin = vcon.filter_plugins.impl.openai.OpenAICompletion(init_options)
+
+  in_vcon = vcon.Vcon()
+  in_vcon.add_dialog_inline_text(
+      "Hello, this is a test.",
+      "2024-03-06T20:07:43+00:00",
+      5.0,
+      0,
+      vcon.Vcon.MEDIATYPE_TEXT_PLAIN
+    )
+
+  options = vcon.filter_plugins.impl.openai.OpenAICompletionOptions()
+
+  try:
+    await plugin.filter(in_vcon, options)
+    raise Exception("filter should have raised OpenAIKeyNotSet")
+  except vcon.filter_plugins.impl.openai.OpenAIKeyNotSet:
+    pass
+
+
+@pytest.mark.asyncio
+async def test_filter_no_key_raises_openai_chat_completion():
+  """ OpenAIChatCompletion.filter must raise OpenAIKeyNotSet when constructed
+      with no api key.
+  """
+  init_options = vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions(
+      openai_api_key = ""
+    )
+  plugin = vcon.filter_plugins.impl.openai.OpenAIChatCompletion(init_options)
+
+  in_vcon = vcon.Vcon()
+  in_vcon.add_dialog_inline_text(
+      "Hello, this is a test.",
+      "2024-03-06T20:07:43+00:00",
+      5.0,
+      0,
+      vcon.Vcon.MEDIATYPE_TEXT_PLAIN
+    )
+
+  options = vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions()
+
+  try:
+    await plugin.filter(in_vcon, options)
+    raise Exception("filter should have raised OpenAIKeyNotSet")
+  except vcon.filter_plugins.impl.openai.OpenAIKeyNotSet:
+    pass
 
