@@ -8,11 +8,21 @@ import pydantic
 import vcon.http_lb
 import tenacity
 import vcon.filter_plugins
+import vcon.pydantic_utils
 #import deepgram
 
 logger = vcon.build_logger(__name__)
 
-DEEPGRAM_RETRY_EXCEPTIONS = vcon.http_lb.RETRYABLE_EXCEPTIONS
+class DeepgramRetryableHttpError(Exception):
+  """
+  Raised for Deepgram HTTP responses which should be retried at the
+  HTTP layer (currently only 404).  See request_transcribe and the
+  test_deepgram_bogus_model / test_deepgram_bogus_language contract
+  tests for the rationale.
+  """
+  pass
+
+DEEPGRAM_RETRY_EXCEPTIONS = vcon.http_lb.RETRYABLE_EXCEPTIONS + (DeepgramRetryableHttpError,)
 
 class DeepgramInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
@@ -93,14 +103,28 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     #else:
     #  self.deepgram_client = deepgram.Deepgram(init_options.deepgram_key)
 
-
-
-
+  # Retry policy notes:
+  #
+  # Deepgram occasionally emits HTTP 404 for transient server-side
+  # routing/load issues rather than 503.  Observed body for that case:
+  #   {"err_code":"Not Found","err_msg":"Failed to handle request.",...}
+  # By contrast, real user-misconfig errors come back with distinct
+  # codes (confirmed by contract tests in tests/test_deepgram.py):
+  #   - bogus model    -> 403 INSUFFICIENT_PERMISSIONS
+  #   - bogus language -> 400 Bad Request
+  # Both are non-retryable.  Therefore we treat 404 as retryable.
+  #
+  # Attempts budget is 7 (down from 16): pipeline-recovery latency is
+  # operationally more expensive than a delayed pipeline, but a 16-
+  # attempt budget with up-to-90s exponential backoff could exceed an
+  # hour wall-clock for large recordings (200s read timeout per
+  # attempt).  7 attempts caps worst-case backoff at 63s while still
+  # giving real transient failures multiple chances.
   @tenacity.retry(
       #retry=retry_if_exception_type((openai.error.APIError, openai.error.APIConnectionError, openai.error.RateLimitError, openai.error.ServiceUnavailableError, openai.error.Timeout)), 
       retry = tenacity.retry_if_exception_type(DEEPGRAM_RETRY_EXCEPTIONS),
       wait = tenacity.wait_random_exponential(multiplier = 1, max = 90),
-      stop = tenacity.stop_after_attempt(16),
+      stop = tenacity.stop_after_attempt(7),
       before = tenacity.before_log(logger, logging.DEBUG),
       after = tenacity.after_log(logger, logging.DEBUG)
     )
@@ -130,6 +154,11 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
         response.status_code,
         response.content
         ))
+      if(response.status_code == 404):
+        raise DeepgramRetryableHttpError("request to Deepgram options: {} failed: {}".format(
+          transcribe_options,
+          response.status_code
+          ))
       raise Exception("request to Deepgram options: {} failed: {}".format(
         transcribe_options,
         response.status_code
@@ -153,7 +182,7 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
       the modified Vcon with added transcript analysis objects for the recording dialogs.
     """
     if(not isinstance(options, DeepgramOptions)):
-      options = DeepgramOptions(**options.dict())
+      options = DeepgramOptions(**vcon.pydantic_utils.get_dict(options, exclude_none = False))
 
     out_vcon = in_vcon
 
