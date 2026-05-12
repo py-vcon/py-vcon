@@ -20,6 +20,10 @@ if(OPENAI_MAJOR_VERSION < 1):
 else:
   OPENAI_RETRY_EXCEPTIONS = (openai.APITimeoutError)
 
+class OpenAIKeyNotSet(Exception):
+  """ Raised when an OpenAI FilterPlugin is invoked without an API key set """
+
+
 class OpenAICompletionInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
   title = "OpenAI/ChatGPT Completion **FilterPlugin** intialization object"
@@ -240,9 +244,10 @@ class OpenAIClient():
     if(OPENAI_MAJOR_VERSION < 1):
       openai.api_key = init_options.openai_api_key
     else:
-      self.client = openai.AsyncOpenAI(
-          api_key = init_options.openai_api_key
-        )
+      if(self.key_set):
+        self.client = openai.AsyncOpenAI(
+            api_key = init_options.openai_api_key
+          )
 
 
   async def completions(
@@ -442,8 +447,9 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       return(out_vcon)
 
     if(not self.client.key_set):
-      logger.warning("OpenAICompletion.filter: OpenAI API key is not set, no filtering performed")
-      return(out_vcon)
+      message = "OpenAICompletion.filter: OPENAI_API_KEY is not set"
+      logger.error(message)
+      raise OpenAIKeyNotSet(message)
 
     for dialog_index in dialog_indices:
       this_dialog_texts = await in_vcon.get_dialog_text(
@@ -473,7 +479,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
 
   def __del__(self):
     """ Close down OpenAI client if created. """
-    if(self.client):
+    if(hasattr(self, "client") and self.client):
       logger.debug("OpenAICompletion closing OpenAIClient")
       self.client.close()
       self.client = None
@@ -591,6 +597,11 @@ class OpenAIChatCompletion(OpenAICompletion):
       len(in_vcon.dialog),
       "OpenaiChatCompletionOptions.input_dialogs"
       )
+
+    if(not self.client.key_set):
+      message = "OpenAIChatCompletion.filter: OPENAI_API_KEY is not set"
+      logger.error(message)
+      raise OpenAIKeyNotSet(message)
 
     dialog_text: typing.List[typing.Dict[str, str]] = []
     # Loop through the text dialogs and add them to the list
@@ -757,7 +768,7 @@ class OpenAIChatCompletion(OpenAICompletion):
 
   def __del__(self):
     """ Close down OpenAI client if created. """
-    if(self.client):
+    if(hasattr(self, "client") and self.client):
       logger.debug("OpenAIChatCompletion closing OpenAIClient")
       self.client.close()
       self.client = None
