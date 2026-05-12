@@ -370,3 +370,115 @@ async def test_deepgram_dialog_is_none():
   out_vcon = await plugin.filter(in_vcon, options)
   assert(out_vcon is in_vcon)
 
+@pytest.mark.asyncio
+async def test_deepgram_bogus_model(caplog):
+  """
+  Probe Deepgram's response to a misconfigured model name.
+
+  Purpose: confirm Deepgram returns a non-404 status code for user
+  misconfiguration (model name).  Our retry policy treats 404 as
+  transient (Deepgram's internal failures are emitted as 404 per
+  observed CI logs); if Deepgram ever starts returning 404 for bad
+  model names this test will fail and force us to revisit.
+
+  Skipped when DEEPGRAM_KEY is not set; a real key is required to
+  exercise Deepgram's request validation path.
+  """
+  import logging
+
+  deepgram_key = os.getenv("DEEPGRAM_KEY", None)
+  if(deepgram_key is None or deepgram_key == ""):
+    pytest.skip("DEEPGRAM_KEY not set; cannot probe Deepgram response")
+
+  in_vcon = vcon.Vcon()
+  in_vcon.set_uuid("tests.python-vcon.org")
+  in_vcon.set_party_parameter("tel", "+1234567890")
+
+  file_path = "py_vcon_server/tests/hello.wav"
+  with open(file_path, "rb") as file_handle:
+    body_bytes = file_handle.read()
+
+  in_vcon.add_dialog_inline_recording(
+    body_bytes,
+    "2023-08-31T18:26:36.987+00:00",
+    0,
+    [0],
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV
+    )
+
+  options = vcon.filter_plugins.TranscribeOptions()
+  # bogus model name; Deepgram should reject as a config error
+  options.model = "nova-bogus-99"
+
+  caplog.set_level(logging.WARNING, logger="vcon.filter_plugins.impl.deepgram")
+
+  with pytest.raises(Exception, match="failed: 403") as exc_info:
+    await in_vcon.deepgram(options)
+
+  # Log the captured warning body for visibility in CI output
+  print("bogus model exception: {}".format(str(exc_info.value)))
+  for record in caplog.records:
+    if(record.name == "vcon.filter_plugins.impl.deepgram"):
+      print("bogus model warning: {}".format(record.getMessage()))
+
+  # Hard contract: Deepgram returns 403 for an unrecognized/unauthorized
+  # model name (observed err_code INSUFFICIENT_PERMISSIONS).  Critically,
+  # this is NOT 404 -- the Deepgram filter's retry policy treats 404 as
+  # a transient server-side failure.  If Deepgram ever starts emitting
+  # 404 for bad model names, this assertion fails and forces a review
+  # of the retry policy in vcon/filter_plugins/impl/deepgram.py.
+  assert("failed: 403" in str(exc_info.value))
+
+@pytest.mark.asyncio
+async def test_deepgram_bogus_language(caplog):
+  """
+  Probe Deepgram's response to a misconfigured language code.
+
+  Purpose: confirm Deepgram returns a non-404 status code for user
+  misconfiguration (language code).  Companion to
+  test_deepgram_bogus_model; see that test's docstring for rationale.
+
+  Skipped when DEEPGRAM_KEY is not set.
+  """
+  import logging
+
+  deepgram_key = os.getenv("DEEPGRAM_KEY", None)
+  if(deepgram_key is None or deepgram_key == ""):
+    pytest.skip("DEEPGRAM_KEY not set; cannot probe Deepgram response")
+
+  in_vcon = vcon.Vcon()
+  in_vcon.set_uuid("tests.python-vcon.org")
+  in_vcon.set_party_parameter("tel", "+1234567890")
+
+  file_path = "py_vcon_server/tests/hello.wav"
+  with open(file_path, "rb") as file_handle:
+    body_bytes = file_handle.read()
+
+  in_vcon.add_dialog_inline_recording(
+    body_bytes,
+    "2023-08-31T18:26:36.987+00:00",
+    0,
+    [0],
+    vcon.Vcon.MEDIATYPE_AUDIO_WAV
+    )
+
+  options = vcon.filter_plugins.TranscribeOptions()
+  # bogus language code; "zz" is not an assigned ISO 639-1 code
+  options.language = "zz"
+
+  caplog.set_level(logging.WARNING, logger="vcon.filter_plugins.impl.deepgram")
+
+  with pytest.raises(Exception, match="failed: 400") as exc_info:
+    await in_vcon.deepgram(options)
+
+  print("bogus language exception: {}".format(str(exc_info.value)))
+  for record in caplog.records:
+    if(record.name == "vcon.filter_plugins.impl.deepgram"):
+      print("bogus language warning: {}".format(record.getMessage()))
+
+  # Hard contract: Deepgram returns 400 Bad Request for an unrecognized
+  # language code (observed err_msg "No such model/language/tier
+  # combination found.").  Critically, this is NOT 404 -- see retry
+  # policy in vcon/filter_plugins/impl/deepgram.py.
+  assert("failed: 400" in str(exc_info.value))
+
