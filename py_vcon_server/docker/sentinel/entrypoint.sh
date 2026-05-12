@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (C) 2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 # Entrypoint for the Redis Sentinel test cluster container.
 # Starts one Redis master, one replica and three Sentinel processes,
 # all on non-standard ports, then waits for any child to exit.
@@ -21,6 +21,7 @@ SENTINEL_QUORUM=2
 DOWN_AFTER_MS=5000
 FAILOVER_TIMEOUT_MS=10000
 PARALLEL_SYNCS=1
+REJSON_MODULE=/opt/redis-stack/lib/rejson.so
 
 CONFIG_DIR=/tmp/redis-sentinel-test
 
@@ -31,6 +32,7 @@ redis-server \
   --port ${MASTER_PORT} \
   --daemonize no \
   --loglevel notice \
+  --loadmodule ${REJSON_MODULE} \
   &
 MASTER_PID=$!
 
@@ -43,6 +45,7 @@ redis-server \
   --daemonize no \
   --loglevel notice \
   --replicaof 127.0.0.1 ${MASTER_PORT} \
+  --loadmodule ${REJSON_MODULE} \
   &
 REPLICA_PID=$!
 
