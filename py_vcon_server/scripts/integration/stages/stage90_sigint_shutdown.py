@@ -226,41 +226,121 @@ class Stage:
         "middleware could respond")
 
     # -- 90d: /diagnostics accessible during drain window ----------------------
+    # Track every poll's result so we have a timeline if the check fails.
 
     diagnostics_ok = False
     diagnostics_showed_job = False
     diag_deadline = sigint_time + SIGINT_JOB_SLEEP + 5.0
+    diag_poll_log = []   # list of (elapsed_since_sigint, status, processor_names_or_error)
+    server_exit_observed_at = None
     while time.time() < diag_deadline:
       if context.server_manager.poll() is not None:
+        server_exit_observed_at = time.time() - sigint_time
         break
+      poll_elapsed = time.time() - sigint_time
       try:
         with httpx.Client(base_url=context.base_url) as hc:
           r = hc.get("/diagnostics", timeout=1.0)
           if r.status_code == 200:
             diagnostics_ok = True
             diag_data = r.json()
+            proc_names = [
+                run.get("processor_name") for run in diag_data.values()
+              ]
+            diag_poll_log.append(
+                (poll_elapsed, 200, proc_names)
+              )
             if any(
-                run.get("processor_name") == "timeout_test_sleep_async"
-                for run in diag_data.values()
+                p == "timeout_test_sleep_async" for p in proc_names
               ):
               diagnostics_showed_job = True
               break
-      except Exception:
-        pass
+          else:
+            diag_poll_log.append(
+                (poll_elapsed, r.status_code, None)
+              )
+      except Exception as e:
+        diag_poll_log.append(
+            (poll_elapsed, "error", "{}: {}".format(type(e).__name__, e))
+          )
       time.sleep(0.1)
 
     context.results.record(self.name,
         "/diagnostics accessible during shutdown",
         diagnostics_ok,
-        "/diagnostics returned 200 during drain window"
+      "/diagnostics returned 200 during drain window"
         if diagnostics_ok else
         "/diagnostics was not reachable during drain window")
+
+    if diagnostics_showed_job:
+      job_detail = "timeout_test_sleep_async visible"
+    else:
+      # Build a diagnostic timeline of every poll result.
+      lines = ["Job not visible -- timeline of /diagnostics polls:"]
+      lines.append(
+          "  SIGINT sent at t=0, SIGINT_JOB_SLEEP={}s, poll window={}s".format(
+              SIGINT_JOB_SLEEP, SIGINT_JOB_SLEEP + 5.0
+            )
+        )
+      if server_exit_observed_at is not None:
+        lines.append(
+            "  server exit observed at t={:.2f}s".format(
+                server_exit_observed_at
+              )
+          )
+      lines.append("  total polls: {}".format(len(diag_poll_log)))
+      empty_200_count = sum(
+          1 for (_, status, names) in diag_poll_log
+          if status == 200 and names == []
+        )
+      nonempty_200_count = sum(
+          1 for (_, status, names) in diag_poll_log
+          if status == 200 and names not in ([], None)
+        )
+      error_count = sum(
+          1 for (_, status, _) in diag_poll_log if status == "error"
+        )
+      lines.append(
+          "  polls returning 200 with empty processor list: {}".format(
+              empty_200_count
+            )
+        )
+      lines.append(
+          "  polls returning 200 with non-empty processor list: {}".format(
+              nonempty_200_count
+            )
+        )
+      lines.append("  polls returning error: {}".format(error_count))
+      # Show first 10, last 10, and any nonempty-list polls
+      shown = set()
+      lines.append("  poll details (first 10):")
+      for i, (t, status, names) in enumerate(diag_poll_log[:10]):
+        lines.append(
+            "    t={:.2f}s status={} names={}".format(t, status, names)
+          )
+        shown.add(i)
+      for i, (t, status, names) in enumerate(diag_poll_log):
+        if status == 200 and names not in ([], None) and i not in shown:
+          lines.append(
+              "    t={:.2f}s status={} names={}".format(t, status, names)
+            )
+          shown.add(i)
+      if len(diag_poll_log) > 10:
+        lines.append("  poll details (last 10):")
+        for i in range(max(0, len(diag_poll_log) - 10), len(diag_poll_log)):
+          if i not in shown:
+            t, status, names = diag_poll_log[i]
+            lines.append(
+                "    t={:.2f}s status={} names={}".format(t, status, names)
+              )
+      job_detail = "\n".join(lines)
+
     context.results.record(self.name,
         "/diagnostics shows in-flight job during shutdown",
         diagnostics_showed_job,
         "timeout_test_sleep_async visible"
         if diagnostics_showed_job else
-        "Job not visible -- may have completed before poll")
+        job_detail)
 
     # -- Wait for server to exit -----------------------------------------------
 

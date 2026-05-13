@@ -132,14 +132,22 @@ class Stage:
               )
 
         else:
+          # Diagnostic: the worker count never reached the expected number
+          # within the polling window.  Capture process tree + worker
+          # registration state + log to root-cause why a worker failed
+          # to register.
+          diag = self._collect_count_diagnostics(
+              context, master_pid, child_pids, workers, worker_count,
+              client
+            )
           context.results.record(
               self.name,
               "/server/info worker count matches",
               False,
-              "found {} worker entries (expected {}) after 15s polling".format(
-                  worker_count, context.num_workers)
+              diag
             )
           return passed
+
     except Exception as e:
       context.results.record(
           self.name,
@@ -268,6 +276,112 @@ def _collect_diagnostics(
         ]
       for wk, wpid, _ in bad_pid_workers:
         grep_terms.append(str(wpid))
+      try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+          for line in f:
+            for term in grep_terms:
+              if term in line:
+                lines.append("  {}".format(line.rstrip()))
+                break
+      except Exception as e:
+        lines.append("  log read error: {}".format(e))
+    else:
+      lines.append("server log path not available")
+
+    return "\n".join(lines)
+
+
+def _collect_count_diagnostics(
+      self, context, master_pid, initial_child_pids,
+      workers, worker_count, http_client
+    ):
+    """ Build a multi-line diagnostic string for a stage02 worker-count
+    failure (only N workers registered, not the expected count).
+    Captures process tree, all registered worker entries, and log lines
+    showing which workers attempted/succeeded/failed lifespan startup.
+    """
+    lines = []
+    lines.append("/server/info worker count -- FAILED")
+    lines.append("expected {} workers, found {}".format(
+        context.num_workers, worker_count
+      ))
+    lines.append("master_pid = {}".format(master_pid))
+    lines.append("initial child_pids (recursive=False) = {}".format(
+        sorted(initial_child_pids)
+      ))
+
+    # Re-snapshot OS process tree NOW to see if children are still alive
+    try:
+      parent = psutil.Process(master_pid)
+      now_children = parent.children(recursive=False)
+      lines.append("current children (recursive=False):")
+      for c in now_children:
+        try:
+          lines.append(
+              "  pid={} ppid={} status={} create_time={} cmdline={}".format(
+                  c.pid, c.ppid(), c.status(), c.create_time(),
+                  " ".join(c.cmdline())
+                )
+            )
+        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+          lines.append("  pid={} (introspection failed: {})".format(c.pid, e))
+      now_descendants = parent.children(recursive=True)
+      lines.append("current descendant_pids (recursive=True) = {}".format(
+          sorted(c.pid for c in now_descendants)
+        ))
+    except psutil.NoSuchProcess:
+      lines.append("master process disappeared during diagnostics")
+
+    # Workers that DID register
+    lines.append("/server/info workers that registered ({}):".format(
+        len(workers)
+      ))
+    for wk, wv in workers.items():
+      lines.append("  {} -> worker_pid={}".format(
+          wk, wv.get("worker_pid")
+        ))
+
+    # Re-poll /server/info one more time after a brief pause -- maybe
+    # the missing worker registered between our last poll and now
+    try:
+      time.sleep(2.0)
+      r2 = http_client.get("/server/info", timeout=10.0)
+      if r2.status_code == 200:
+        info2 = r2.json()
+        workers2 = info2.get("workers", {})
+        lines.append("/server/info re-poll after 2s ({} workers):".format(
+            len(workers2)
+          ))
+        for wk, wv in workers2.items():
+          lines.append("  {} -> worker_pid={}".format(
+              wk, wv.get("worker_pid")
+            ))
+      else:
+        lines.append("/server/info re-poll status = {}".format(
+            r2.status_code
+          ))
+    except Exception as e:
+      lines.append("/server/info re-poll error: {}".format(e))
+
+    # Grep the server log for worker lifecycle markers.  The missing
+    # worker should leave evidence of attempted startup, errors, or
+    # exit if it died before registering.
+    try:
+      log_path = context.server_manager.log_path()
+    except Exception:
+      log_path = None
+    if log_path and os.path.isfile(log_path):
+      lines.append("server log excerpt ({}):".format(log_path))
+      grep_terms = [
+          "register_worker", "unregister_worker",
+          "register_server", "unregister_server",
+          "Started parent process", "Started server process",
+          "Starting worker", "Stopping worker", "Booting worker",
+          "Worker exited", "worker exited",
+          "lifespan", "PYVCON_MASTER_PID",
+          "Application startup failed", "Application startup complete",
+          "Traceback", "Exception", "Error",
+        ]
       try:
         with open(log_path, "r", encoding="utf-8", errors="replace") as f:
           for line in f:
