@@ -197,80 +197,87 @@ class Stage:
           "Server process not found")
       return False
 
-    # -- 90b: Poll for 503 during shutdown window ------------------------------
+    # -- 90b/90d combined: poll /docs (for 503) and /diagnostics (for
+    # in-flight job) concurrently from this single loop.  Both checks
+    # need the server to be transitioning to shutdown but still reachable
+    # for /diagnostics.  Running them sequentially (as the original code
+    # did) means the 503-wait loop can consume the entire drain window
+    # before /diagnostics polling even starts -- the in-flight job then
+    # finishes before we look for it.  We poll both endpoints from the
+    # same loop iteration so both observations have an equal chance.
 
     got_503 = False
-    poll_deadline = time.time() + 15
-    while time.time() < poll_deadline:
-      if context.server_manager.poll() is not None:
-        break
-      try:
-        with httpx.Client(base_url=context.base_url) as hc:
-          r = hc.get("/docs", timeout=1.0)
-          if r.status_code == 503:
-            got_503 = True
-            break
-      except (httpx.ConnectError, httpx.RemoteProtocolError):
-        pass
-      except httpx.TimeoutException:
-        pass
-      except Exception:
-        pass
-      time.sleep(0.05)
+    diagnostics_ok = False
+    diagnostics_showed_job = False
+    diag_poll_log = []   # list of (elapsed_since_sigint, status, processor_names_or_error)
+    server_exit_observed_at = None
+    docs_503_observed_at = None
+    poll_deadline = sigint_time + SIGINT_JOB_SLEEP + 5.0
+    with httpx.Client(base_url=context.base_url) as hc:
+      while time.time() < poll_deadline:
+        if context.server_manager.poll() is not None:
+          server_exit_observed_at = time.time() - sigint_time
+          break
+        poll_elapsed = time.time() - sigint_time
+
+        # /docs probe -- looking for 503 (shutdown middleware active)
+        if not got_503:
+          try:
+            r_docs = hc.get("/docs", timeout=1.0)
+            if r_docs.status_code == 503:
+              got_503 = True
+              docs_503_observed_at = poll_elapsed
+          except (httpx.ConnectError, httpx.RemoteProtocolError,
+              httpx.TimeoutException):
+            pass
+          except Exception:
+            pass
+
+        # /diagnostics probe -- looking for the in-flight job
+        if not diagnostics_showed_job:
+          try:
+            r_diag = hc.get("/diagnostics", timeout=1.0)
+            if r_diag.status_code == 200:
+              diagnostics_ok = True
+              diag_data = r_diag.json()
+              proc_names = [
+                  run.get("processor_name") for run in diag_data.values()
+                ]
+              diag_poll_log.append(
+                  (poll_elapsed, 200, proc_names)
+                )
+              if any(
+                  p == "timeout_test_sleep_async" for p in proc_names
+                ):
+                diagnostics_showed_job = True
+            else:
+              diag_poll_log.append(
+                  (poll_elapsed, r_diag.status_code, None)
+                )
+          except Exception as e:
+            diag_poll_log.append(
+                (poll_elapsed, "error", "{}: {}".format(
+                    type(e).__name__, e))
+              )
+
+        if got_503 and diagnostics_showed_job:
+          break
+        time.sleep(0.05)
 
     context.results.record(self.name,
         "503 returned during shutdown window", got_503,
-        "Middleware correctly rejected new requests"
+        "503 first observed at t={:.2f}s".format(docs_503_observed_at)
         if got_503 else
         "Never observed 503 -- shutdown completed before "
         "middleware could respond")
 
-    # -- 90d: /diagnostics accessible during drain window ----------------------
-    # Track every poll's result so we have a timeline if the check fails.
-
-    diagnostics_ok = False
-    diagnostics_showed_job = False
-    diag_deadline = sigint_time + SIGINT_JOB_SLEEP + 5.0
-    diag_poll_log = []   # list of (elapsed_since_sigint, status, processor_names_or_error)
-    server_exit_observed_at = None
-    while time.time() < diag_deadline:
-      if context.server_manager.poll() is not None:
-        server_exit_observed_at = time.time() - sigint_time
-        break
-      poll_elapsed = time.time() - sigint_time
-      try:
-        with httpx.Client(base_url=context.base_url) as hc:
-          r = hc.get("/diagnostics", timeout=1.0)
-          if r.status_code == 200:
-            diagnostics_ok = True
-            diag_data = r.json()
-            proc_names = [
-                run.get("processor_name") for run in diag_data.values()
-              ]
-            diag_poll_log.append(
-                (poll_elapsed, 200, proc_names)
-              )
-            if any(
-                p == "timeout_test_sleep_async" for p in proc_names
-              ):
-              diagnostics_showed_job = True
-              break
-          else:
-            diag_poll_log.append(
-                (poll_elapsed, r.status_code, None)
-              )
-      except Exception as e:
-        diag_poll_log.append(
-            (poll_elapsed, "error", "{}: {}".format(type(e).__name__, e))
-          )
-      time.sleep(0.1)
-
     context.results.record(self.name,
         "/diagnostics accessible during shutdown",
         diagnostics_ok,
-      "/diagnostics returned 200 during drain window"
+        "/diagnostics returned 200 during drain window"
         if diagnostics_ok else
         "/diagnostics was not reachable during drain window")
+
 
     if diagnostics_showed_job:
       job_detail = "timeout_test_sleep_async visible"
