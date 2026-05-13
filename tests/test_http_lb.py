@@ -1457,3 +1457,55 @@ class TestRequestMethod:
         resp = await HttpLb.request("DELETE", url)
         assert resp.status_code == 200
 
+
+# ===================================================================
+# HttpLbConnectionError structured access
+# ===================================================================
+
+@pytest.mark.asyncio
+class TestHttpLbConnectionError:
+    """Verify the exception type and structured attributes."""
+
+    async def test_raises_HttpLbConnectionError_not_bare_Exception(self):
+        """All hosts failed -> raises HttpLbConnectionError specifically."""
+        from vcon.http_lb import HttpLbConnectionError
+        url = "http://127.0.0.1:1,127.0.0.1:2/vcon"
+        with pytest.raises(HttpLbConnectionError) as exc_info:
+            await HttpLb.post(
+                url=url,
+                body={"test": 1},
+                content_type="application/json",
+                connect_timeout=1.0,
+            )
+        exc = exc_info.value
+        assert exc.method == "POST"
+        assert exc.url == url
+        assert exc.attempts == 2
+        assert len(exc.attempted_hosts) == 2
+        assert len(exc.errors) == 2
+        # Each attempted_hosts entry includes host:port
+        for h in exc.attempted_hosts:
+            assert ":1" in h or ":2" in h
+
+    async def test_HttpLbConnectionError_in_RETRYABLE_EXCEPTIONS(self):
+        """Regression guard: tenacity retry policies depending on
+        RETRYABLE_EXCEPTIONS rely on HttpLbConnectionError being included."""
+        from vcon.http_lb import HttpLbConnectionError, RETRYABLE_EXCEPTIONS
+        assert HttpLbConnectionError in RETRYABLE_EXCEPTIONS
+
+    async def test_HttpLbConnectionError_message_preserves_format(self):
+        """Backward-compat: log message still contains 'All hosts failed' and 'attempted N'."""
+        from vcon.http_lb import HttpLbConnectionError
+        url = "http://127.0.0.1:1,127.0.0.1:2/vcon"
+        with pytest.raises(HttpLbConnectionError) as exc_info:
+            await HttpLb.post(
+                url=url,
+                body={"test": 1},
+                content_type="application/json",
+                connect_timeout=1.0,
+            )
+        msg = str(exc_info.value)
+        assert "All hosts failed" in msg
+        assert "attempted 2" in msg
+
+
