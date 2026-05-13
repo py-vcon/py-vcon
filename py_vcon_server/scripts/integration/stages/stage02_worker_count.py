@@ -264,25 +264,78 @@ class Stage:
       log_path = context.server_manager.log_path()
     except Exception:
       log_path = None
+
     if log_path and os.path.isfile(log_path):
-      lines.append("server log excerpt ({}):".format(log_path))
-      grep_terms = [
+      try:
+        log_size = os.path.getsize(log_path)
+      except OSError:
+        log_size = -1
+      lines.append("server log ({}, size={} bytes):".format(
+          log_path, log_size
+        ))
+
+      # Grep terms (case-insensitive) -- captures matches anywhere in
+      # the log, including before the tail window.  Useful for early
+      # warnings/errors that get pushed out of the tail.
+      grep_terms_lower = [
+          "warning", "failed", "failure", "error",
+          "traceback", "exception",
           "register_worker", "unregister_worker",
-          "Started parent process", "Started server process",
-          "Starting worker", "Stopping worker", "Booting worker",
-          "Worker exited", "worker exited",
           "register_server", "unregister_server",
-          "lifespan", "PYVCON_MASTER_PID",
+          "started parent process", "started server process",
+          "booting worker", "worker exited",
+          "application startup failed",
+          "application startup complete",
+          "lifespan", "pyvcon_master_pid",
+          "sigsegv", "sigkill", "killed", "oom",
+          "cannot", "unable",
         ]
-      for wk, wpid, _ in bad_pid_workers:
-        grep_terms.append(str(wpid))
       try:
         with open(log_path, "r", encoding="utf-8", errors="replace") as f:
-          for line in f:
-            for term in grep_terms:
-              if term in line:
-                lines.append("  {}".format(line.rstrip()))
-                break
+          all_lines = f.readlines()
+
+        # Grep summary: every line matching any term, case-insensitive.
+        match_indices = []
+        for idx, line in enumerate(all_lines):
+          line_lower = line.lower()
+          for term in grep_terms_lower:
+            if term in line_lower:
+              match_indices.append(idx)
+              break
+
+        tail_count = 300
+        tail_start = max(0, len(all_lines) - tail_count)
+
+        # Only report matches that fall BEFORE the tail window
+        # (matches within the tail will be shown by the tail dump).
+        early_matches = [i for i in match_indices if i < tail_start]
+        if early_matches:
+          lines.append("  grep matches before tail window ({} hits):".format(
+              len(early_matches)
+            ))
+          for idx in early_matches:
+            lines.append("    [line {}] {}".format(
+                idx + 1, all_lines[idx].rstrip()
+              ))
+        elif match_indices:
+          lines.append(
+              "  (all {} grep matches fall within tail window below)".format(
+                  len(match_indices)
+                )
+            )
+        else:
+          lines.append("  (no grep matches in log)")
+
+        # Tail dump: last N lines verbatim.
+        if tail_start > 0:
+          lines.append("  ... ({} earlier lines omitted) ...".format(
+              tail_start
+            ))
+        lines.append("  --- tail (last {} lines) ---".format(
+            len(all_lines) - tail_start
+          ))
+        for line in all_lines[tail_start:]:
+          lines.append("  {}".format(line.rstrip()))
       except Exception as e:
         lines.append("  log read error: {}".format(e))
     else:
@@ -370,25 +423,78 @@ class Stage:
       log_path = context.server_manager.log_path()
     except Exception:
       log_path = None
+
     if log_path and os.path.isfile(log_path):
-      lines.append("server log excerpt ({}):".format(log_path))
-      grep_terms = [
+      try:
+        log_size = os.path.getsize(log_path)
+      except OSError:
+        log_size = -1
+      lines.append("server log ({}, size={} bytes):".format(
+          log_path, log_size
+        ))
+
+      # Grep terms (case-insensitive) -- captures matches anywhere in
+      # the log, including before the tail window.  Useful for early
+      # warnings/errors that get pushed out of the tail.
+      grep_terms_lower = [
+          "warning", "failed", "failure", "error",
+          "traceback", "exception",
           "register_worker", "unregister_worker",
           "register_server", "unregister_server",
-          "Started parent process", "Started server process",
-          "Starting worker", "Stopping worker", "Booting worker",
-          "Worker exited", "worker exited",
-          "lifespan", "PYVCON_MASTER_PID",
-          "Application startup failed", "Application startup complete",
-          "Traceback", "Exception", "Error",
+          "started parent process", "started server process",
+          "booting worker", "worker exited",
+          "application startup failed",
+          "application startup complete",
+          "lifespan", "pyvcon_master_pid",
+          "sigsegv", "sigkill", "killed", "oom",
+          "cannot", "unable",
         ]
       try:
         with open(log_path, "r", encoding="utf-8", errors="replace") as f:
-          for line in f:
-            for term in grep_terms:
-              if term in line:
-                lines.append("  {}".format(line.rstrip()))
-                break
+          all_lines = f.readlines()
+
+        # Grep summary: every line matching any term, case-insensitive.
+        match_indices = []
+        for idx, line in enumerate(all_lines):
+          line_lower = line.lower()
+          for term in grep_terms_lower:
+            if term in line_lower:
+              match_indices.append(idx)
+              break
+
+        tail_count = 300
+        tail_start = max(0, len(all_lines) - tail_count)
+
+        # Only report matches that fall BEFORE the tail window
+        # (matches within the tail will be shown by the tail dump).
+        early_matches = [i for i in match_indices if i < tail_start]
+        if early_matches:
+          lines.append("  grep matches before tail window ({} hits):".format(
+              len(early_matches)
+            ))
+          for idx in early_matches:
+            lines.append("    [line {}] {}".format(
+                idx + 1, all_lines[idx].rstrip()
+              ))
+        elif match_indices:
+          lines.append(
+              "  (all {} grep matches fall within tail window below)".format(
+                  len(match_indices)
+                )
+            )
+        else:
+          lines.append("  (no grep matches in log)")
+
+        # Tail dump: last N lines verbatim.
+        if tail_start > 0:
+          lines.append("  ... ({} earlier lines omitted) ...".format(
+              tail_start
+            ))
+        lines.append("  --- tail (last {} lines) ---".format(
+            len(all_lines) - tail_start
+          ))
+        for line in all_lines[tail_start:]:
+          lines.append("  {}".format(line.rstrip()))
       except Exception as e:
         lines.append("  log read error: {}".format(e))
     else:

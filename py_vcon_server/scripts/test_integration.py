@@ -153,6 +153,7 @@ def build_env(base_url, num_workers):
   env["REST_URL"] = base_url
   env["NUM_RESTAPI_WORKERS"] = str(num_workers)
   env["RUN_BACKGROUND_JOBS"] = "True"
+  env["PYTHONUNBUFFERED"] = "1"
 
   # Ensure test_processors_always is in PLUGIN_PATHS
   plugin_paths = env.get("PLUGIN_PATHS", "")
