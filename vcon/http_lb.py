@@ -45,6 +45,57 @@ logger = logging.getLogger(__name__)
 # worth retrying on a different host.
 RETRYABLE_STATUS_CODES = frozenset({502, 503, 504})
 
+
+class HttpLbConnectionError(Exception):
+    """All resolved addresses failed with connection-level errors.
+
+    Carries structured information about the failed attempt for
+    programmatic access by callers (e.g. retry policies, error
+    reporting).  The string form of the exception preserves the
+    same human-readable message format as before so log output
+    and substring-matching tests are unaffected.
+
+    Attributes:
+      method: HTTP method (e.g. "POST").
+      url: original URL passed to HttpLb.
+      attempts: number of addresses attempted.
+      attempted_hosts: list of "host(ip):port" labels that were
+          tried, in attempt order.
+      errors: list of error-message strings, one per attempted
+          address, parallel to attempted_hosts.
+    """
+
+    def __init__(
+        self,
+        method: str,
+        url: str,
+        attempts: int,
+        attempted_hosts: typing.List[str],
+        errors: typing.List[str],
+        ) -> None:
+        self.method = method
+        self.url = url
+        self.attempts = attempts
+        self.attempted_hosts = list(attempted_hosts)
+        self.errors = list(errors)
+        super().__init__(self._format_message())
+
+    def _format_message(self) -> str:
+        if not self.errors:
+            details = "(no resolved addresses)"
+        else:
+            details = "\n  ".join(self.errors)
+        return (
+            "All hosts failed for {method} {url} "
+            "(attempted {n}).  Errors:\n  {details}".format(
+                method=self.method,
+                url=self.url,
+                n=self.attempts,
+                details=details,
+            )
+        )
+
+
 # Exception types that indicate connection-level failures worth retrying.
 RETRYABLE_EXCEPTIONS = (
     httpx.ConnectError,
@@ -55,6 +106,7 @@ RETRYABLE_EXCEPTIONS = (
     ConnectionRefusedError,
     ConnectionResetError,
     OSError,
+    HttpLbConnectionError,
 )
 
 
@@ -651,7 +703,9 @@ class HttpLb:
           ``httpx.Response`` from the first successful attempt.
 
         Raises:
-          ``Exception`` if all attempts fail.
+          ``HttpLbConnectionError`` if all attempts fail.  Carries
+          ``method``, ``url``, ``attempts``, ``attempted_hosts``, and
+          ``errors`` attributes for programmatic access.
         """
         parsed = HttpLb.parse_url(url)
 
@@ -669,6 +723,7 @@ class HttpLb:
         random.shuffle(shuffled)
 
         errors: typing.List[str] = []
+        attempted_hosts: typing.List[str] = []
         attempts = 0
 
         def _format_host(addr: ResolvedAddress) -> str:
@@ -706,6 +761,7 @@ class HttpLb:
                     )
                     logger.warning(msg)
                     errors.append(msg)
+                    attempted_hosts.append("{}:{}".format(host_label, addr.port))
                     return None
                 return resp
 
@@ -715,6 +771,7 @@ class HttpLb:
                 )
                 logger.warning(msg)
                 errors.append(msg)
+                attempted_hosts.append("{}:{}".format(host_label, addr.port))
                 return None
 
         if eager_resolve:
@@ -735,17 +792,12 @@ class HttpLb:
                 if resp is not None:
                     return resp
 
-        raise Exception(
-            "All hosts failed for {method} {url} "
-            "(attempted {n}).  Errors:\n  {details}".format(
-                method=method,
-                url=url,
-                n=attempts,
-                details=(
-                    "\n  ".join(errors) if errors
-                    else "(no resolved addresses)"
-                ),
-            )
+        raise HttpLbConnectionError(
+            method=method,
+            url=url,
+            attempts=attempts,
+            attempted_hosts=attempted_hosts,
+            errors=errors,
         )
 
     @staticmethod
