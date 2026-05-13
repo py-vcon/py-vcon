@@ -159,7 +159,7 @@ class Stage:
     return passed
 
 
-def _collect_diagnostics(
+  def _collect_diagnostics(
       self, context, master_pid, initial_child_pids,
       workers, bad_pid_workers, http_client
     ):
@@ -291,7 +291,7 @@ def _collect_diagnostics(
     return "\n".join(lines)
 
 
-def _collect_count_diagnostics(
+  def _collect_count_diagnostics(
       self, context, master_pid, initial_child_pids,
       workers, worker_count, http_client
     ):
@@ -396,3 +396,7 @@ def _collect_count_diagnostics(
 
     return "\n".join(lines)
 
+assert hasattr(Stage, "_collect_diagnostics"), \
+    "internal: _collect_diagnostics must be a method of Stage"
+assert hasattr(Stage, "_collect_count_diagnostics"), \
+    "internal: _collect_count_diagnostics must be a method of Stage"
