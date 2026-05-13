@@ -162,6 +162,28 @@ jobs:
           # Run all Vcon server package unit tests
           (cd py_vcon_server; pytest -v -rP tests)
 
+      - name: Build sentinel test cluster image
+        run: |
+          cd py_vcon_server && docker build -t py_vcon_sentinel:test docker/sentinel/
+
+      - name: Start sentinel test cluster
+        run: |
+          cd py_vcon_server && bash scripts/start_sentinel.sh
+
+      - name: Run sentinel tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DEEPGRAM_KEY: ${{ secrets.DEEPGRAM_KEY }}
+          PYTHONPATH: tests/processors
+          VCON_STORAGE_URL: sentinel://localhost:26399,localhost:26400,localhost:26401/mymaster?db=0
+        run: |
+          cd py_vcon_server && pytest -v -rP tests/test_redis_sentinel.py
+
+      - name: Stop sentinel test cluster
+        if: always()
+        run: |
+          cd py_vcon_server && bash scripts/stop_sentinel.sh
+
       - name: Run multi-worker integration tests
         env:
           VCON_STORAGE_URL: redis://localhost
