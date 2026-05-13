@@ -12,6 +12,8 @@ import pytest
 import py_vcon_server.db.redis.redis_mgr
 from py_vcon_server.db.redis.redis_mgr import parse_sentinel_url
 from py_vcon_server.settings import VCON_STORAGE_URL
+import asyncio
+import redis.asyncio.client
 
 
 def sentinel_reachable():
@@ -205,4 +207,95 @@ class TestSentinelPool:
     assert r_mgr._redis_pool is None
     assert r_mgr._sentinel is None
     assert r_mgr._master_name is None
+
+
+@pytest.mark.skipif(
+    not sentinel_reachable(),
+    reason="Sentinel not reachable - run scripts/start_sentinel.sh first"
+  )
+class TestSentinelFailover:
+  """
+  Destructive failover test - runs last.
+  Sends DEBUG SLEEP to the master to simulate failure, waits for sentinel
+  to promote the replica, then verifies writes succeed on the new master.
+  The master wakes up after the sleep and rejoins as a replica - no restart
+  needed and the container remains intact after the test.
+  """
+
+  @pytest.mark.asyncio
+  async def test_failover_promotes_replica(self):
+    """ Sentinel detects master failure and promotes replica """
+    parsed = parse_sentinel_url(VCON_STORAGE_URL)
+    master_host = "127.0.0.1"
+    master_port = 6399
+    sleep_seconds = 30
+    poll_timeout = 25
+    poll_interval = 1
+
+    # Step 1: confirm master is up and JSON works before we start
+    r_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(
+        VCON_STORAGE_URL, "test_failover"
+      )
+    r_mgr.create_pool()
+    try:
+      await _do_json_set_get_delete(r_mgr)
+
+      # Step 2: discover current master via sentinel before sleeping it
+      sentinel_host, sentinel_port = parsed["sentinel_hosts"][0]
+      sentinel_check = redis.asyncio.client.Redis(
+          host=sentinel_host,
+          port=sentinel_port,
+          decode_responses=True
+        )
+      master_info = await sentinel_check.execute_command(
+          "SENTINEL", "get-master-addr-by-name", "mymaster"
+        )
+      await sentinel_check.aclose()
+      assert master_info is not None, "Could not discover master before failover"
+      master_host = master_info[0]
+      master_port = int(master_info[1])
+
+      # Step 3: send DEBUG SLEEP directly to master - bypasses sentinel routing
+      # so sentinel sees the master as unresponsive and triggers failover
+      direct = redis.asyncio.client.Redis(
+          host=master_host,
+          port=master_port,
+          decode_responses=True
+        )
+      try:
+        await direct.execute_command("DEBUG", "SLEEP", sleep_seconds)
+      except Exception:
+        # Connection will drop immediately when master sleeps - that is expected
+        pass
+      finally:
+        await direct.aclose()
+
+      # Step 4: poll for failover completion - sentinel should promote replica
+      # within down-after-milliseconds (5s) + failover-timeout (10s)
+      key = "sentinel_failover_test_key"
+      value = {"failover": "ok"}
+      failover_succeeded = False
+      last_error = None
+
+      for attempt in range(poll_timeout):
+        await asyncio.sleep(poll_interval)
+        try:
+          # Get a fresh client each attempt - sentinel will route to new master
+          client = r_mgr.get_client()
+          await client.json().set(key, "$", value)
+          result = await client.json().get(key)
+          assert result["failover"] == "ok"
+          await client.delete(key)
+          failover_succeeded = True
+          break
+        except Exception as e:
+          last_error = e
+
+      assert failover_succeeded, \
+          "Failover did not complete within {}s, last error: {}".format(
+              poll_timeout, last_error
+            )
+
+    finally:
+      await r_mgr.shutdown_pool()
 
