@@ -204,3 +204,86 @@ async def test_registration_class_init_raises():
     # _module_not_found is False.
     assert("not instantiated for name" in str(not_inst))
 
+
+@pytest.mark.asyncio
+async def test_scanner_handles_registration_file_top_level_import_failure(caplog):
+  """
+  db.import_bindings() must not propagate exceptions raised by a registration
+  file's own top-level import statements.  Mirrors the production failure of
+  py_vcon_server/processor/whisper_base.py when stable_whisper is uninstalled:
+
+    1. Scanner iterates py_vcon_server/processor/*.py
+    2. Hits whisper_base.py
+    3. whisper_base.py line "import py_vcon_server.processor.builtin.whisper"
+       raises ModuleNotFoundError because vcon.filter_plugins.impl.whisper
+       re-raises after "import stable_whisper" fails
+    4. The exception must not propagate out of import_bindings()
+    5. The scanner must log an ERROR identifying the failed module
+    6. Subsequent registration files in the same directory must still load
+
+  Whether the registration file is well-written or not, other plugins that
+  load successfully must not be blocked by another developer's broken plugin.
+  """
+  import os
+  import logging
+  import py_vcon_server.db
+
+  fixtures_dir = os.path.join(
+      os.path.dirname(os.path.abspath(__file__)),
+      "scanner_fixtures"
+      )
+
+  with caplog.at_level(logging.ERROR):
+    py_vcon_server.db.import_bindings(
+        [fixtures_dir],
+        "",
+        "scanner_test",
+        try_all = True
+        )
+
+  assert("scanner_good_registration" in
+      py_vcon_server.processor.VCON_PROCESSOR_REGISTRY)
+
+  assert("scanner_unreachable_registration" not in
+      py_vcon_server.processor.VCON_PROCESSOR_REGISTRY)
+
+  error_messages = [r.message for r in caplog.records
+      if r.levelno == logging.ERROR]
+  assert(any("scanner_bad_reg" in m for m in error_messages))
+
+
+@pytest.mark.asyncio
+async def test_scanner_default_behavior_raises_on_failure(caplog):
+  """
+  Regression guard: db.import_bindings() with try_all unset (default False)
+  must propagate exceptions from failed module imports.  This is the
+  behavior infrastructure scans (e.g. DB bindings) depend on -- a broken
+  DB binding must not be silently skipped.
+
+  Companion test to test_scanner_handles_registration_file_top_level_import_failure,
+  which verifies the try_all=True path.
+  """
+  import os
+  import logging
+  import py_vcon_server.db
+
+  fixtures_dir = os.path.join(
+      os.path.dirname(os.path.abspath(__file__)),
+      "scanner_fixtures"
+      )
+
+  with caplog.at_level(logging.ERROR):
+    try:
+      py_vcon_server.db.import_bindings(
+          [fixtures_dir],
+          "",
+          "scanner_test_strict"
+          )
+      raise Exception("import_bindings should have raised with try_all default")
+    except ModuleNotFoundError:
+      pass
+
+  error_messages = [r.message for r in caplog.records
+      if r.levelno == logging.ERROR]
+  assert(any("scanner_bad_reg" in m for m in error_messages))
+

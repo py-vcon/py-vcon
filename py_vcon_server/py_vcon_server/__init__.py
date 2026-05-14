@@ -63,7 +63,8 @@ for path in py_vcon_server.settings.PLUGIN_PATHS:
     py_vcon_server.db.import_bindings(
       [path],
       "", # module prefix, allowing anything
-      "site" # label
+      "site", # label
+        try_all = True
       )
 
 # The following imports depend upon the DB binding.
@@ -79,7 +80,8 @@ logger.debug("loading VconProcessors from: {} with prefix: {}".format(
 py_vcon_server.db.import_bindings(
   py_vcon_server.processor.__path__, # path
   py_vcon_server.processor.__name__ + ".", # binding module name prefix
-  "VconProcessor" # label
+  "VconProcessor", # label
+  try_all = True
   )
 
 # Load any separately installed addon VconProcessor binding
@@ -88,7 +90,8 @@ logger.debug("Looking for addon processors in: {}".format(addons_path))
 py_vcon_server.db.import_bindings(
   [addons_path],
   "", # module prefix, allowing anything
-  "addons" # label
+  "addons", # label
+  try_all = True
   )
 
 

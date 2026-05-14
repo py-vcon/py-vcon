@@ -15,8 +15,27 @@ class VconNotFound(Exception):
   """ Rasied when the vCon for the given UUID does not exist """
 
 
-def import_bindings(path: typing.List[str], module_prefix: str, label: str):
-  """ Import the modules and interface registrations """
+def import_bindings(
+    path: typing.List[str],
+    module_prefix: str,
+    label: str,
+    try_all: bool = False
+  ):
+  """ Import the modules and interface registrations.
+
+  Parameters:
+    path: directory path(s) to scan for modules.
+    module_prefix: full dotted module name prefix.  Pass empty string when
+      the modules in path are not part of a known package (e.g. PLUGIN_PATHS).
+    label: short tag included in log messages to identify the caller.
+    try_all: when True, exceptions raised by importing a module are logged
+      at ERROR level and iteration continues with the next module.  When
+      False (the default), the exception is logged at ERROR level and
+      then re-raised, aborting the scan.  Set True for plugin-style scans
+      where one broken plugin must not block the others.  Set False (or
+      omit) for infrastructure scans where any failure should abort
+      startup.
+  """
   for finder, module_name, is_package in pkgutil.iter_modules(
       path,
       module_prefix
@@ -28,23 +47,33 @@ def import_bindings(path: typing.List[str], module_prefix: str, label: str):
     # the path is in PYTHONPATH.  We import by the local (unqualified) name
     # and then register the result under the full prefixed module_name so
     # that subsequent imports of that name resolve to the same object.
-    if module_prefix:
-      # The module is part of a known package (e.g. py_vcon_server.processor.jq).
-      # importlib.import_module can resolve it by its full name directly.
-      importlib.import_module(module_name)
-    else:
-      # No prefix: the module lives at finder.path but has no parent package
-      # on sys.path (e.g. PLUGIN_PATHS entries).  Temporarily add the path
-      # so importlib can find it, then register it under its full name.
-      local_name = module_name
-      orig_sys_path = sys.path[:]
-      try:
-        if finder.path not in sys.path:
-          sys.path.append(finder.path)
-        mod = importlib.import_module(local_name)
-        sys.modules[module_name] = mod
-      finally:
-        sys.path[:] = orig_sys_path
+    try:
+      if module_prefix:
+        # The module is part of a known package (e.g. py_vcon_server.processor.jq).
+        # importlib.import_module can resolve it by its full name directly.
+        importlib.import_module(module_name)
+      else:
+        # No prefix: the module lives at finder.path but has no parent package
+        # on sys.path (e.g. PLUGIN_PATHS entries).  Temporarily add the path
+        # so importlib can find it, then register it under its full name.
+        local_name = module_name
+        orig_sys_path = sys.path[:]
+        try:
+          if finder.path not in sys.path:
+            sys.path.append(finder.path)
+          mod = importlib.import_module(local_name)
+          sys.modules[module_name] = mod
+        finally:
+          sys.path[:] = orig_sys_path
+    except Exception as load_error:
+      logger.error(
+          "{} module load failed: module: {} path: {} module_prefix: {!r}: {}".format(
+            label, module_name, path, module_prefix, load_error
+          ))
+      logger.exception(load_error)
+      if not try_all:
+        raise
+
 
 # Should this be a class or global methods??
 class VconStorage():
