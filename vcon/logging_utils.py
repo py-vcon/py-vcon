@@ -21,19 +21,22 @@ import pythonjsonlogger.json
 def build_logger(name):
   logger = logging.getLogger(name)
 
-  if not logger.handlers:
-    logger.setLevel(logging.DEBUG)
+  if logger.handlers:
+    return logger
 
-    # Output to stdout WILL BREAK the Vcon CLI.
-    # MUST use stderr.
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(logging.DEBUG)
-    formatter = pythonjsonlogger.json.JsonFormatter(
-        "%(process)d %(levelname)s %(message)s %(pathname)s %(module)s %(lineno)d",
-        timestamp=True
-      )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.propagate = False
+  logger.setLevel(logging.DEBUG)
+
+  # Output to stdout WILL BREAK the Vcon CLI.
+  # MUST use stderr.
+  handler = logging.StreamHandler(sys.stderr)
+  handler.setLevel(logging.DEBUG)
+  formatter = pythonjsonlogger.json.JsonFormatter(
+      "%(process)d %(levelname)s %(message)s %(pathname)s %(module)s %(lineno)d",
+      timestamp=True
+    )
+  handler.setFormatter(formatter)
+  logger.addHandler(handler)
+  logger.propagate = False
 
   return logger
+

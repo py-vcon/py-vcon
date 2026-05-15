@@ -1,7 +1,6 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import os
 import multiprocessing
-from pathlib import Path
 
 VCON_STORAGE_URL = os.getenv("VCON_STORAGE_URL", "redis://localhost")
 QUEUE_DB_URL = os.getenv("QUEUE_DB__URL", VCON_STORAGE_URL)
@@ -10,7 +9,6 @@ STATE_DB_URL = os.getenv("STATE_DB_URL", VCON_STORAGE_URL)
 REST_URL = os.getenv("REST_URL", "http://localhost:8000")
 PROXY_PATH = os.getenv("PROXY_PATH", None)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
-LOGGING_CONFIG_FILE = os.getenv("LOGGING_CONFIG_FILE", Path(__file__).parent / 'logging.conf')
 LAUNCH_VCON_API = os.getenv("LAUNCH_VCON_API", True)
 LAUNCH_ADMIN_API = os.getenv("LAUNCH_ADMIN_API", True)
 DEFAULT_PROCESSOR_TIMEOUT = float(os.getenv("DEFAULT_PROCESSOR_TIMEOUT", 300.0))
@@ -72,7 +70,7 @@ for token in queue_tokens:
     WORK_QUEUES[name] = {"weight": weight}
 
 STATE_SETTINGS = []
-state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, PROXY_PATH, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES, HEARTBEAT_PERIOD, DEFAULT_PROCESSOR_TIMEOUT").strip()
+state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, PROXY_PATH, INSTANCE_ID, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES, HEARTBEAT_PERIOD, DEFAULT_PROCESSOR_TIMEOUT").strip()
 if(state_settings_list != ""):
   STATE_SETTINGS = state_settings_list.split(", ")
 
@@ -83,4 +81,8 @@ if(isinstance(ENABLE_PROMETHEUS, str)):
     ENABLE_PROMETHEUS = True
   else:
     ENABLE_PROMETHEUS = False
+
+INSTANCE_ID = os.getenv("INSTANCE_ID", "")
+
+SERVICE_NAME = "py_vcon_server"
 
