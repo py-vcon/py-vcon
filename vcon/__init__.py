@@ -31,7 +31,7 @@ import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
 
-__version__ = "0.6.11"
+__version__ = "0.6.12"
 
 
 # TODO:  remove this and reference vcon.build_logger directly in vcon.* modules
