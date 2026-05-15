@@ -12,7 +12,6 @@ import sys
 import os
 import copy
 import logging
-import logging.config
 import enum
 import jose.constants
 import cbor2
@@ -26,7 +25,7 @@ import email
 import pathlib
 import jq
 import uuid6
-import pythonjsonlogger.jsonlogger
+import vcon.logging_utils
 import vcon.utils
 import vcon.security
 import vcon.filter_plugins
@@ -34,27 +33,12 @@ import vcon.accessors
 
 __version__ = "0.6.11"
 
-def build_logger(name : str) -> logging.Logger:
-  logger = logging.getLogger(name)
 
-  log_config_filename = "./logging.conf"
-  if(os.path.isfile(log_config_filename)):
-    logging.config.fileConfig(log_config_filename)
-    #print("got logging config", file=sys.stderr)
-  else:
-    logger.setLevel(logging.DEBUG)
-
-    # Output to stdout WILL BREAK the Vcon CLI.
-    # MUST use stderr.
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(logging.DEBUG)
-    formatter = pythonjsonlogger.jsonlogger.JsonFormatter( "%(timestamp)s %(levelname)s %(message)s ", timestamp=True)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-  return(logger)
+# TODO:  remove this and reference vcon.build_logger directly in vcon.* modules
+build_logger = vcon.logging_utils.build_logger
 
 logger = build_logger(__name__)
+
 
 # TODO: this should be a setting
 # Max payload sizes for JWE and JWS.  Default is now 250000

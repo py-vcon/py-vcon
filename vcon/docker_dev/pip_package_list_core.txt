@@ -13,7 +13,7 @@ pytz
 regex
 sox
 uuid6
-python-json-logger
+python-json-logger >= 3.0
 python-multipart
 
 # http_lb dependencies

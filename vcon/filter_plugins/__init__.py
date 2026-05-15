@@ -10,7 +10,7 @@ import traceback
 import operator
 import logging
 import pydantic
-import pythonjsonlogger.jsonlogger
+import vcon.logging_utils
 import vcon.pydantic_utils
 
 
@@ -20,27 +20,8 @@ import vcon.pydantic_utils
 if typing.TYPE_CHECKING:
   from vcon import Vcon # pragma: no cover
 
-# This is cloned from vcon package as we cannot import vcon here due to
-# cyclical import.
-def build_logger(name : str) -> logging.Logger:
-  logger = logging.getLogger(name)
-
-  log_config_filename = "./logging.conf"
-  if(os.path.isfile(log_config_filename)):
-    logging.config.fileConfig(log_config_filename) # pragma: no cover
-    #print("got logging config", file=sys.stderr)
-  else:
-    logger.setLevel(logging.DEBUG)
-
-    # Output to stdout WILL BREAK the Vcon CLI.
-    # MUST use stderr.
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(logging.DEBUG)
-    formatter = pythonjsonlogger.jsonlogger.JsonFormatter( "%(timestamp)s %(levelname)s %(message)s ", timestamp=True)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-  return(logger)
+# TODO:  remove this and reference vcon.logging_utils directly in plugins
+build_logger = vcon.logging_utils.build_logger
 
 logger = build_logger(__name__)
 
