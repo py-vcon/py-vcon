@@ -30,7 +30,7 @@ Architecture (low to high):
 """
 
 import asyncio
-import logging
+import vcon.logging_utils
 import random
 import re
 import socket
@@ -38,7 +38,7 @@ import typing
 
 import httpx
 
-logger = logging.getLogger(__name__)
+logger = vcon.logging_utils.build_logger(__name__)
 
 
 # HTTP status codes that suggest the *specific server* is unhealthy;
