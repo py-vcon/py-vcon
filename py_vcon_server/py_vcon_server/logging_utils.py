@@ -54,30 +54,53 @@ def init_logger(name):
   Use as:
     logger.debug("foo: {}".format(foo))
     logger.exception("exception: {}".format(e))
+
+  Behavior: installs a single JSON handler on the py_vcon_server
+  package root logger on first call.  Subsequent calls for child
+  module names return their logger; records propagate up to the
+  package root handler.  Skips the root logger when walking
+  ancestors so that pytest's caplog handlers do not suppress our
+  own handler setup.
   """
   logger = logging.getLogger(name)
 
-  if not logger.handlers:
-    level = getattr(logging, py_vcon_server.settings.LOG_LEVEL.upper(), logging.DEBUG)
-    logger.setLevel(level)
+  # If this logger already has its own handler, return as-is.
+  if logger.handlers:
+    return logger
 
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(level)
-    handler.addFilter(_ServiceFilter())
+  # Walk up named ancestors (skip the root logger).  If any named
+  # ancestor has a handler, records will propagate there.  Skip
+  # the root logger because pytest, logging.basicConfig, and
+  # similar framework code attach handlers there that should not
+  # suppress our own handler installation.
+  ancestor = logger.parent
+  while ancestor is not None and ancestor.name != "root":
+    if ancestor.handlers:
+      # A named ancestor (e.g. py_vcon_server) already has the
+      # handler.  Still ensure vcon's handlers carry the service
+      # filter -- safe to call repeatedly.
+      _attach_service_filter_to_handlers("vcon")
+      _attach_service_filter_to_handlers("vcon.filter_plugins")
+      return logger
+    ancestor = ancestor.parent
 
-    formatter = pythonjsonlogger.json.JsonFormatter(
-        "%(process)d %(levelname)s %(message)s %(pathname)s %(module)s %(lineno)d",
-        timestamp=True
-      )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.propagate = False
+  # No named ancestor has a handler -- install one on this logger.
+  level = getattr(logging, py_vcon_server.settings.LOG_LEVEL.upper(), logging.DEBUG)
+  logger.setLevel(level)
+
+  handler = logging.StreamHandler(sys.stdout)
+  handler.setLevel(level)
+  handler.addFilter(_ServiceFilter())
+
+  formatter = pythonjsonlogger.json.JsonFormatter(
+      "%(process)d %(levelname)s %(message)s %(pathname)s %(module)s %(lineno)d",
+      timestamp=True
+    )
+  handler.setFormatter(formatter)
+  logger.addHandler(handler)
 
   # Stamp service/instance_id onto records emitted through the vcon
-  # library's own handlers.  vcon and vcon.filter_plugins each set up
-  # their own handler with propagate=False, so records emitted there
-  # never reach this server's handler.  Adding the filter to those
-  # handlers is the only way to label those records.
+  # library's own handlers.
   _attach_service_filter_to_handlers("vcon")
   _attach_service_filter_to_handlers("vcon.filter_plugins")
 
