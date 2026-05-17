@@ -26,18 +26,19 @@ import pathlib
 import jq
 import uuid6
 import vcon.logging_utils
+# TODO:  remove this and reference vcon.build_logger directly in vcon.* modules
+build_logger = vcon.logging_utils.build_logger
+
+# This must occur before importing any other vcon modules that setup logging
+logger = build_logger(__name__)
+
+
 import vcon.utils
 import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
 
 __version__ = "0.6.12"
-
-
-# TODO:  remove this and reference vcon.build_logger directly in vcon.* modules
-build_logger = vcon.logging_utils.build_logger
-
-logger = build_logger(__name__)
 
 
 # TODO: this should be a setting
