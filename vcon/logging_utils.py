@@ -21,9 +21,25 @@ import pythonjsonlogger.json
 def build_logger(name):
   logger = logging.getLogger(name)
 
+  # If this logger already has its own handler, return as-is.
   if logger.handlers:
     return logger
 
+  # Walk up named ancestors (skip the root logger).  If any named
+  # ancestor has a handler, a service has taken responsibility for
+  # routing our records -- do not add our own handler.  We skip the
+  # root logger because pytest, logging.basicConfig, and similar
+  # framework code attach handlers there that should not suppress
+  # vcon's own handler.
+  ancestor = logger.parent
+  while ancestor is not None and ancestor.name != "root":
+    if ancestor.handlers:
+      return logger
+    ancestor = ancestor.parent
+
+  # No handler anywhere in the chain -- set one up on this logger.
+  # Standalone case (vcon CLI, vcon unit tests, or filter_plugins
+  # initialized before the vcon package root).
   logger.setLevel(logging.DEBUG)
 
   # Output to stdout WILL BREAK the Vcon CLI.
@@ -36,7 +52,6 @@ def build_logger(name):
     )
   handler.setFormatter(formatter)
   logger.addHandler(handler)
-  logger.propagate = False
 
   return logger
 
