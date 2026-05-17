@@ -38,7 +38,7 @@ import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
 
-__version__ = "0.6.12"
+__version__ = "0.6.14"
 
 
 # TODO: this should be a setting
