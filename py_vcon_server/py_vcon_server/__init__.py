@@ -1,6 +1,14 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import os
 import sys
+
+# Pre-install a handler on the vcon logger BEFORE vcon is imported
+# so that vcon's import-time plugin registration messages carry
+# service and instance_id.  vcon's build_logger sees our handler
+# and skips its own setup.
+from py_vcon_server.logging_utils import install_vcon_handler
+install_vcon_handler()
+
 import time
 import signal
 import uvicorn
@@ -12,19 +20,23 @@ import vcon
 sys.path.append("..")
 
 import py_vcon_server.settings
-import py_vcon_server.db
-import py_vcon_server.states
-import py_vcon_server.queue
-import py_vcon_server.metrics
 from py_vcon_server.logging_utils import init_logger
 import logging
-import nest_asyncio
-
-VERBOSE = False
 
 logger = init_logger(__name__)
 logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
+
+import nest_asyncio
+
+import py_vcon_server.db
+import py_vcon_server.states
+import py_vcon_server.queue
+import py_vcon_server.metrics
+
+
+VERBOSE = False
+
 
 try:
   nest_asyncio.apply()

@@ -24,6 +24,32 @@ class _ServiceFilter(logging.Filter):
     return True
 
 
+def install_vcon_handler():
+  """
+  Pre-install a JSON StreamHandler with _ServiceFilter on the vcon
+  logger BEFORE vcon is imported.
+
+  vcon's build_logger checks 'if logger.handlers' and returns early
+  when a handler is already present, so vcon's import-time plugin
+  registration messages emit through OUR handler -- carrying the
+  service and instance_id fields.
+
+  Must be called before 'import vcon' anywhere in the process.
+  """
+  vcon_logger = logging.getLogger("vcon")
+  if vcon_logger.handlers:
+    return
+  vcon_logger.setLevel(logging.DEBUG)
+  handler = logging.StreamHandler(sys.stdout)
+  handler.setLevel(logging.DEBUG)
+  handler.addFilter(_ServiceFilter())
+  formatter = pythonjsonlogger.json.JsonFormatter(
+      "%(process)d %(levelname)s %(message)s %(pathname)s %(module)s %(lineno)d",
+      timestamp=True
+    )
+  handler.setFormatter(formatter)
+  vcon_logger.addHandler(handler)
+
 
 def _attach_service_filter_to_handlers(logger_name):
   """
