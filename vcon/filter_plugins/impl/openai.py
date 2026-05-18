@@ -311,9 +311,19 @@ class OpenAIClient():
 
   def close(self):
     if(hasattr(self, "client")):
-      logger.debug("closing OpenAI client")
-      self.client.close()
-      self.client = None
+        logger.debug("closing OpenAI client")
+        result = self.client.close()
+        # Newer openAI is async, need to see which form
+        if inspect.isawaitable(result):
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    loop.create_task(result)
+                else:
+                    loop.run_until_complete(result)
+            except Exception:
+                pass
+        self.client = None
     else:
       logger.debug("None OpenAI client")
 
