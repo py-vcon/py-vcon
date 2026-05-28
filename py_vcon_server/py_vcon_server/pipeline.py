@@ -25,6 +25,29 @@ VCON_STORAGE = None
 JOB_QUEUE = None
 
 
+# Pipeline scope context parameters, available in format_options of every
+# processor run within a pipeline.  Values are resolved at substitution time
+# from the VconProcessorIO run context (see _RUN_CONTEXT_TO_TEMPLATE_NAME in
+# py_vcon_server.processor).
+PIPELINE_CONTEXT_PARAMETERS: typing.Dict[str, typing.Dict[str, typing.Any]] = {
+    "PIPELINE_NAME": {
+        "default":     "",
+        "description": "Name of the pipeline currently running",
+        "title":       "Pipeline Name",
+      },
+    "PIPELINE_JOB_ID": {
+        "default":     "",
+        "description": "Job ID assigned when this run was queued (empty for direct REST calls)",
+        "title":       "Pipeline Job ID",
+      },
+    "ENTRY_POINT": {
+        "default":     "",
+        "description": "How this run was started: /process, /processIO, /pipeline/run, /pipeline/run/uuid, or background",
+        "title":       "Entry Point",
+      },
+  }
+
+
 class PipelineNotFound(Exception):
   """ Raised when Pipeline not found in the DB """
 
@@ -391,7 +414,16 @@ class PipelineRunner():
       # Recaste options to proper type
       # This becomes important when the options has multiple inheretance to get the
       # correct type (e.g. FilterPluginOptions).
-      formatted_options = processor_input.format_parameters_to_options(vcon.pydantic_utils.get_dict(processor_options))
+      merged_context = {}
+      merged_context.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+      merged_context.update(PIPELINE_CONTEXT_PARAMETERS)
+      # TODO: merge server scope context parameters when server scope is implemented
+      merged_context.update(processor.context_parameters)
+      formatted_options = processor_input.format_parameters_to_options(
+          vcon.pydantic_utils.get_dict(processor_options),
+          merged_context,
+          processor_name,
+          )
       processor_type_options = processor.processor_options_class()(** formatted_options)
       if(processor_type_options.should_process is None): # pragma: no cover
         # Should not get here as pydantic cheching should prevent it

@@ -10,6 +10,7 @@ import fastapi
 import fastapi.responses
 import py_vcon_server.db
 import py_vcon_server.processor
+import py_vcon_server.pipeline
 import py_vcon_server.logging_utils
 import vcon
 import vcon.utils
@@ -203,7 +204,16 @@ def init(restapi):
           })
 
         # format_options for dynamic options
-        formatted_options_dict = processor_input.format_parameters_to_options(vcon.pydantic_utils.get_dict(options))
+        merged_context = {}
+        merged_context.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+        merged_context.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
+        # TODO: merge server scope context parameters when server scope is implemented
+        merged_context.update(processor_inst.context_parameters)
+        formatted_options_dict = processor_input.format_parameters_to_options(
+            vcon.pydantic_utils.get_dict(options),
+            merged_context,
+            processor_name_from_path,
+            )
         processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
 
         logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
@@ -338,7 +348,16 @@ def init(restapi):
             processor_io.set_parameter(parameter_name, parameter_value)
 
         # format_options for dynamic options
-        formatted_options_dict = processor_io.format_parameters_to_options(processor_input_dict["processor_options"])
+        merged_context = {}
+        merged_context.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+        merged_context.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
+        # TODO: merge server scope context parameters when server scope is implemented
+        merged_context.update(processor_inst.context_parameters)
+        formatted_options_dict = processor_io.format_parameters_to_options(
+            processor_input_dict["processor_options"],
+            merged_context,
+            processor_name_from_path,
+            )
         processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
 
         logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
