@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit tests for VconProcessorIO """
 
 import asyncio
@@ -167,14 +167,14 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
 
   try:
     # format_options references undefined key foo
-    rw_io_object.format_parameters_to_options({"format_options": {"foo2": "ddd {foo} ggg"}})
+    rw_io_object.format_parameters_to_options({"format_options": {"foo2": "ddd {foo} ggg"}}, {}, "test_processor")
     raise Exception("Should have rasied exception for undefined parameter foo")
   except py_vcon_server.processor.ParameterNotFound:
     pass
 
   try:
     # passing in wrong type
-    rw_io_object.format_parameters_to_options([])
+    rw_io_object.format_parameters_to_options([], {}, "test_processor")
     raise Exception("Should have rasied exception for invalid type (list)")
   except Exception:
     pass
@@ -197,7 +197,7 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
     }
   generic_options = py_vcon_server.processor.VconProcessorOptions(format_options = format_options)
 
-  formated_options = rw_io_object.format_parameters_to_options(generic_options)
+  formated_options = rw_io_object.format_parameters_to_options(generic_options, {}, "test_processor")
   assert(isinstance(formated_options, py_vcon_server.processor.VconProcessorOptions))
   assert(isinstance(formated_options.input_vcon_index, int))
   assert(formated_options.input_vcon_index == 5)

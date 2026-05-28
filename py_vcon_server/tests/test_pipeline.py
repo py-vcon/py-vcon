@@ -716,7 +716,7 @@ async def test_pipeline_conditional(make_inline_audio_vcon: vcon.Vcon):
     )
   io_object = py_vcon_server.processor.VconProcessorIO(None)
   io_object.set_parameter("has_dialogs", "false")
-  formatted_options = io_object.format_parameters_to_options(generic_options)
+  formatted_options = io_object.format_parameters_to_options(generic_options, {}, "set_parameters")
   assert(formatted_options.should_process is False)
 
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
@@ -1458,4 +1458,83 @@ async def test_pipeline_runner_timeout_fires(make_2_party_tel_vcon):
 
   finally:
     await vs.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_pipeline_context_parameters_both_run_endpoints(make_inline_audio_vcon: vcon.Vcon):
+  """
+  Exercise the /pipeline/{name}/run and /pipeline/{name}/run/{uuid} entry
+  points WRT context parameters.  A single jinja_report processor resolves
+  VCON_UUID, PROCESSOR_NAME, PIPELINE_NAME and ENTRY_POINT via format_options
+  and writes the result to the report_output parameter, which is read back
+  from the returned pipeline output.  ENTRY_POINT differs between the two
+  endpoints: /pipeline/run for the body endpoint and /pipeline/run/uuid for
+  the stored UUID endpoint.
+  """
+  pipe_name = "test_context_param_pipe"
+
+  pipe_def = {
+      "pipeline_options": {
+          "timeout": 30,
+          "save_vcons": False
+        },
+      "processors": [
+          {
+              "processor_name": "jinja_report",
+              "processor_options": {
+                  "template": "placeholder",
+                  "format_options": {
+                      "template": "uuid={VCON_UUID}|proc={PROCESSOR_NAME}"
+                        "|pipe={PIPELINE_NAME}|entry={ENTRY_POINT}"
+                    }
+                }
+            }
+        ]
+    }
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    # Define the pipeline
+    put_response = client.put(
+        "/pipeline/{}".format(pipe_name),
+        json = pipe_def,
+        params = {"validate_processor_options": True}
+      )
+    assert(put_response.status_code == 204)
+
+    # Endpoint 1: vCon in request body -> ENTRY_POINT == /pipeline/run
+    post_response = client.post(
+        "/pipeline/{}/run".format(pipe_name),
+        json = make_inline_audio_vcon.dumpd(),
+        params = {"save_vcons": False, "return_results": True},
+        headers = {"accept": "application/json"}
+      )
+    assert(post_response.status_code == 200)
+    body_out = post_response.json()
+    body_result = body_out["parameters"]["report_output"]
+    assert("uuid={}".format(make_inline_audio_vcon.uuid) in body_result)
+    assert("proc=jinja_report" in body_result)
+    assert("pipe={}".format(pipe_name) in body_result)
+    assert("entry=/pipeline/run" in body_result)
+
+    # Store the vCon for the UUID endpoint
+    set_response = client.post("/vcon", json = make_inline_audio_vcon.dumpd())
+    assert(set_response.status_code == 204)
+
+    # Endpoint 2: vCon in storage by UUID -> ENTRY_POINT == /pipeline/run/uuid
+    post_response = client.post(
+        "/pipeline/{}/run/{}".format(pipe_name, UUID),
+        params = {"save_vcons": False, "return_results": True},
+        headers = {"accept": "application/json"}
+      )
+    assert(post_response.status_code == 200)
+    uuid_out = post_response.json()
+    uuid_result = uuid_out["parameters"]["report_output"]
+    assert("uuid={}".format(UUID) in uuid_result)
+    assert("proc=jinja_report" in uuid_result)
+    assert("pipe={}".format(pipe_name) in uuid_result)
+    assert("entry=/pipeline/run/uuid" in uuid_result)
+
+    # Cleanup
+    client.delete("/vcon/{}".format(UUID))
+    client.delete("/pipeline/{}".format(pipe_name))
 

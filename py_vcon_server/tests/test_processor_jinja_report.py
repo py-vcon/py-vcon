@@ -473,7 +473,7 @@ async def test_jinja_report_format_options():
         }
     }
 
-  formatted_options = proc_input.format_parameters_to_options(jinja_options)
+  formatted_options = proc_input.format_parameters_to_options(jinja_options, {}, "jinja_report")
   formatted_options = jinja_proc_inst.processor_options_class()(**formatted_options)
 
   proc_output = await jinja_proc_inst.process(proc_input, formatted_options)
@@ -503,7 +503,10 @@ async def test_jinja_report_proc_api():
       }
 
     jinja_options = {
-        "template": "UUID: {{ vcons[0].uuid }}, Dialogs: {{ vcons[0].dialog | length }}"
+        "template": "placeholder",
+        "format_options": {
+            "template": "uuid={VCON_UUID}|proc={PROCESSOR_NAME}|entry={ENTRY_POINT}|dialogs={{{{ vcons[0].dialog | length }}}}"
+          }
       }
 
     post_response = client.post("/process/{}/jinja_report".format(UUID),
@@ -515,8 +518,10 @@ async def test_jinja_report_proc_api():
 
     assert("report_output" in proc_io_out["parameters"])
     result = proc_io_out["parameters"]["report_output"]
-    assert(UUID in result)
-    assert("Dialogs: 1" in result)
+    assert("uuid={}".format(UUID) in result)
+    assert("proc=jinja_report" in result)
+    assert("entry=/process" in result)
+    assert("dialogs=1" in result)
 
     # Cleanup
     delete_response = client.delete("/vcon/{}".format(UUID))
@@ -601,7 +606,10 @@ async def test_jinja_report_processio_api():
               }
           },
         "processor_options": {
-            "template": "UUID: {{ vcons[0].uuid }}, Prior: {{ parameters.prior_step_value }}"
+            "template": "placeholder",
+            "format_options": {
+                "template": "uuid={VCON_UUID}|proc={PROCESSOR_NAME}|entry={ENTRY_POINT}|prior={{{{ parameters.prior_step_value }}}}"
+              }
           }
       }
 
@@ -614,8 +622,10 @@ async def test_jinja_report_processio_api():
 
     assert("report_output" in proc_io_out["parameters"])
     result = proc_io_out["parameters"]["report_output"]
-    assert(UUID in result)
-    assert("Prior: hello" in result)
+    assert("uuid={}".format(UUID) in result)
+    assert("proc=jinja_report" in result)
+    assert("entry=/processIO" in result)
+    assert("prior=hello" in result)
 
 # ============================================================
 #  Test: RESTful API - /processIO/jinja_report format_options
