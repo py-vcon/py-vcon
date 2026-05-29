@@ -354,3 +354,17 @@ def test_wrong_type_raises():
     raise Exception("expected exception for invalid type")
   except Exception:
     pass
+
+def test_pass2_swallows_malformed_template():
+  """ Pass-2 dry run swallows IndexError/ValueError from malformed templates """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  options = {"format_options": {
+      "a": "{missing}",
+      "b": "{0}"
+    }}
+  try:
+    io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+    raise Exception("expected ParameterNotFound")
+  except py_vcon_server.processor.ParameterNotFound:
+    pass
+
