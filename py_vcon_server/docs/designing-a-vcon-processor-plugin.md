@@ -269,6 +269,8 @@ Dependencies: `py-vcon-server` and `jinja2`.
 | `label` | str | "" |
 | `notes` | str | "" |
 
+Note: `format_options` accepts both user-defined `lower_case` parameter names and system-provided `UPPER_CASE` context parameter names.  See [Context Parameters](context_parameters.md) for the complete list of context parameters available across all scopes.
+
 ### New fields on JinjaReportOptions
 
 | Field | Type | Default | Example |

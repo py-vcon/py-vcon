@@ -91,6 +91,74 @@ processor:
     injected from pipeline parameters?
   * **`label`** and **`notes`** — documentation only, no action needed.
 
+#### 1.2.5 Decide on Context Parameters
+
+After defining the regular options, decide whether this processor needs to
+declare any **context parameters** of its own.
+
+Context parameters are system-provided values available for substitution in
+`format_options` templates.  The framework already provides base, server,
+and pipeline scopes covering processor name, timestamp, vCon UUID, pipeline
+name, job ID, entry point, server identity and version (see
+[Context Parameters](context_parameters.md) for the full list).  A
+processor declares its own **processor scope** additions only when it can
+expose a value that only it knows, produced by its own work or its
+position in the run, that a downstream processor's `format_options` would
+usefully reference.
+
+Ask the developer:
+
+  * Does this processor produce or hold a value that is not already
+    available in base/server/pipeline scope?
+  * Would a downstream processor want to reference that value in a
+    `format_options` template?
+
+If both answers are yes, declare a processor-scope addition.  If not, do
+not declare any - the inherited base/server/pipeline scopes are already
+available to every processor.
+
+When declaring additions, follow these conventions:
+
+  * Use **UPPER_CASE** names to distinguish from user-defined lower_case
+    parameters.
+  * Declare them as a class-level `context_parameters` dict on the
+    `VconProcessor` subclass:
+
+```python
+class MyProcessor(py_vcon_server.processor.VconProcessor):
+
+    context_parameters = {
+        "MY_NAME": {
+            "default":     "",
+            "description": "what this value represents",
+            "title":       "My Name",
+          },
+      }
+```
+
+  * Defaults are used when nothing else supplies the value.  If the
+    processor needs to inject a live value (computed during `process()`)
+    rather than rely on the default, call
+    `format_parameters_to_options` with a `context` kwarg from inside
+    `process()`:
+
+```python
+formatted = processor_input.format_parameters_to_options(
+    options,
+    self_or_call_site_merged_context_parameters,
+    processor_name,
+    context = {"MY_NAME": live_value},
+  )
+```
+
+The call-site merge order (base -> server -> pipeline -> processor) means
+a processor's declared default for an UPPER_CASE name overrides the same
+name in a higher scope.  At value-resolution time the order is:
+`context` kwarg wins over auto-resolved system values which win over
+declared defaults.  See [Context Parameters](context_parameters.md) for
+details.
+
+
 #### 1.3 Define the Data Flow
 
 Discuss:

@@ -34,6 +34,7 @@ If that is not the case, you may want to start with [what is a vCon](../README.m
   + [Pipeline Processing](#pipeline-processing)
     + [Simple Pipeline Example](#simple-pipeline-example)
     + [Advanced Pipeline Example](#advanced-pipeline-example)
+    + [Using Context Parameters](#using-context-parameters)
     + [Conditional Processing and Job Queuing Pipeline Example](#conditional-processing-and-job-queuing-pipeline-example)
   + [vCon Processor Plugins](#vcon-processor-plugins)
   + [Access Control](#access-control)
@@ -95,11 +96,14 @@ The Python vCon server an be thought of as the aggregation of the following high
 
 ## Terms
  * **vCon processor** - a **VconProcessor** is an abstract interface for plugins to process or perform operations on one or more vCons.  A **VconProcessor** takes a **ProcessorIO** object and **ProcessorOptions** as input and returns a **VconProcessor** as output.  The **VconProcessor** contains or references the vCons for the input or output to the **VconProcessor**.
+* **VconProcessorIO** - the input and output container passed between **VconProcessors** in a **VconPipeline**.  A **VconProcessorIO** carries zero or more vCons, a **parameters** dict for user-defined values that flow from one processor to the next, and a run context dict used by the framework for instrumentation and **context parameters** resolution.
+ * **parameters** - a key/value dict within a **VconProcessorIO** that processors read and write via `set_parameter()` and `get_parameter()`.  Parameters are user-defined values produced by earlier processors (e.g. via the **set_parameters** or **jq** processors) and consumed by later processors, typically through the **format_options** field of **VconProcessorOptions** which substitutes `{name}` placeholders with parameter values.  By convention parameter names use **lower_case** to distinguish them from **context parameters**.
+ * **context parameters** - system-provided values available for substitution in a processor's **format_options** templates, complementing user-defined **parameters**.  Context parameters are organized into scopes (base, server, pipeline, and processor) and use **UPPER_CASE** names by convention (e.g. `PIPELINE_NAME`, `VCON_UUID`, `PROCESSOR_NAME`).  See [Context Parameters](docs/context_parameters.md) for the complete list and usage.
  * **pipeline** - a **VconPipeline** is an ordered set of operations or **VconProcessors** and their **ProcessorOptions** to be performed on the one or more vCons contained in a **ProcessorIO**.  The definition of a **VconProcessor** (its **PipelineOptions** and the list of names of **VconProcessors** and their input **ProcessorOptions**) is saved using a unique name in the **PipelineDB**.  A **ProcessorIO** is provided as input to the first **VconProcessor** in the **VconPipeline**, its output **ProcessorIO** is then passed as input to the next **VconProcessor** in the **VconPipeline**, continuing to the end of the list of **VconProcessors** in the **VconPipeline**.  A **VconPipeline** can be run either directly via the **vCon RESTful API** or in the **Pipeline Server**.
  * **pipeline server** - the pipeline server runs **VconPipeline**s in batch.  Jobs to be run through a **VconPipeline** are added to a **JobQueue** via the **vCon RESTful API**.  The pipeline server is configured with a set of queues to tend.   The pipeline server pulls jobs one at time from the **JobQueue**, retrieves the definition for the **VconPipeline** for that **JobQueue** and assigns the job and **VconPipeline** to a pipeline worker (OS process) to run the pipeline and its processors and optionally commit the result in the **VconStorage** after successfully running all of the pipeline processors.
  * **queue job** - a queue job is the definition of a job to run in a **Pipeline Server**.  It is typically a list of one or more references (vCon UUID) to vCon to be used as input to the beginning of the set of **VconProcessors** in a **VconPipeline**.
  * **job queue** - short for **pipeline job queue**
- * **pileline job queue** - a queue of jobs to be run on the **pipeline server**.  The job to be run, is defined by the **pipeline definition** having the same name as the **job queue**.
+ * **pipeline job queue** - a queue of jobs to be run on the **pipeline server**.  The job to be run, is defined by the **pipeline definition** having the same name as the **job queue**.
  * **in progress jobs** - the **pipeline server** pops a job out of the the **pipeline job queue** to dispatch it to a worker to process the **pipeline definition**.  While the worker is working on the pipeline, the job is put into the **in process jobs** list.  After the job is completed, the job is then removed from the **in process jobs** list.  If the job was canceled, the job is pushed back to the front of the job queue from which it was removed.  If the job failed, the job is added to the failure queue if provided in the pipeline definition.
  * **pipeline worker** - thread or process in which the pipeline job is run.
  * **job scheduler** - dispatcher that pulls jobs to be run on a server and assigns the job to a pipeline worker.
@@ -245,6 +249,19 @@ It does the following:
   * run the **openai_chat_completion** processor with notes prompt (line 29)
   * run the **jq** processor with queries on vCon (line 37)
   * run the **send_email** processor with parameters message content (line 50)
+
+### Using Context Parameters
+
+The advanced pipeline example above demonstrates two kinds of `format_options` substitution working side by side in the `send_email` processor:
+
+  * **User-defined parameters** (lower_case): `{date}`, `{summary}`, `{attendees}`, `{notes}`, `{action_items}` are set earlier in the pipeline by the `jq` processor and consumed by `send_email`.
+  * **Context parameters** (UPPER_CASE): `{PIPELINE_NAME}` is provided by the framework when the pipeline runs and identifies which pipeline produced the email.
+
+The case convention - UPPER_CASE for context parameters, lower_case for user parameters - avoids name collisions and makes templates easier to read at a glance.
+
+Context parameters cover values the framework knows about the execution environment: the current processor, the vCon UUID, the time, the pipeline name and job ID, the server identity, the entry point that started the run, and so on.  Individual processors may also declare their own context parameters.
+
+See [Context Parameters](docs/context_parameters.md) for the complete list across all four scopes (base, server, pipeline, processor) and details on each name.
 
 ### Conditional Processing and Job Queuing Pipeline Example
 
