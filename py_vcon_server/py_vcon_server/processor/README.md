@@ -9,6 +9,10 @@
  + [Introduction](#introduction)
  + [Processor Classes](#processors)
    * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
+   * [timeout_processors.SleepAsyncProcessor](#timeout_processorssleepasyncprocessor)
+   * [timeout_processors.SleepSyncProcessor](#timeout_processorssleepsyncprocessor)
+   * [timeout_processors.SuccessProcessor](#timeout_processorssuccessprocessor)
+   * [timeout_processors.ExceptionProcessor](#timeout_processorsexceptionprocessor)
    * [py_vcon_server.processor.builtin.create_amended.Amended](#py_vcon_serverprocessorbuiltincreate_amendedamended)
    * [py_vcon_server.processor.builtin.decrypt.Decrypt](#py_vcon_serverprocessorbuiltindecryptdecrypt)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
@@ -27,6 +31,10 @@
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
    * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
+   * [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+   * [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+   * [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+   * [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginInitOptions](#py_vcon_serverprocessorbuiltincreate_amendedamendedfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
@@ -45,6 +53,10 @@
 
  + [Processor Options Classes](#processor-options-classes)
    * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
+   * [timeout_processors.SleepAsyncOptions](#timeout_processorssleepasyncoptions)
+   * [timeout_processors.SleepSyncOptions](#timeout_processorssleepsyncoptions)
+   * [timeout_processors.SuccessOptions](#timeout_processorssuccessoptions)
+   * [timeout_processors.ExceptionOptions](#timeout_processorsexceptionoptions)
    * [py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginOptions](#py_vcon_serverprocessorbuiltincreate_amendedamendedfilterpluginoptions)
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
@@ -227,6 +239,24 @@ Methods:
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
+## timeout_processors.ExceptionProcessor
+
+ - **Name:** timeout_test_exception
+ - **Version:** 0.0.1
+ - **Summary:** Exception Processor
+
+Raises an exception for testing error handling
+ - **Initialization options Object:** [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+ - **Processing options Object:** [timeout_processors.ExceptionOptions](#timeout_processorsexceptionoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: ExceptionOptions)
+
+
 ## py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialog
 
  - **Name:** fix_recording_dialog
@@ -379,6 +409,60 @@ Methods:
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
+## timeout_processors.SleepAsyncProcessor
+
+ - **Name:** timeout_test_sleep_async
+ - **Version:** 0.0.1
+ - **Summary:** Async Sleep Processor
+
+Sleeps asynchronously for testing timeouts
+ - **Initialization options Object:** [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+ - **Processing options Object:** [timeout_processors.SleepAsyncOptions](#timeout_processorssleepasyncoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SleepAsyncOptions)
+
+
+## timeout_processors.SleepSyncProcessor
+
+ - **Name:** timeout_test_sleep_sync
+ - **Version:** 0.0.1
+ - **Summary:** Sync Sleep Processor
+
+Sleeps synchronously for testing blocking behavior
+ - **Initialization options Object:** [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+ - **Processing options Object:** [timeout_processors.SleepSyncOptions](#timeout_processorssleepsyncoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SleepSyncOptions)
+
+
+## timeout_processors.SuccessProcessor
+
+ - **Name:** timeout_test_success
+ - **Version:** 0.0.1
+ - **Summary:** Success Processor
+
+Returns immediately for testing normal operation
+ - **Initialization options Object:** [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+ - **Processing options Object:** [timeout_processors.SuccessOptions](#timeout_processorssuccessoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SuccessOptions)
+
+
 ## py_vcon_server.processor.builtin.text_pii_redactor.TextPiiRedactor
 
  - **Name:** text_pii_redactor
@@ -529,7 +613,7 @@ example:
 default: None
 
 
-## py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogInitOptions
+## timeout_processors.FixRecordingDialogInitOptions
 
  - **Summary:** Initialization options for fix recording info filter_plugin
 
@@ -538,7 +622,7 @@ initialization class for VconProcessor wrapper for FixRecordingDialog **FilterPl
 ### Fields
 none
 
-## py_vcon_server.processor.builtin.jq.OpenAiChatCompletionInitOptions
+## py_vcon_server.processor.builtin.fix_recording_dialog.OpenAiChatCompletionInitOptions
 
  - **Summary:** OpenAI/ChatGPT Completion **FilterPlugin** intialization object
 
@@ -560,7 +644,7 @@ examples: ['sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu']
 default: None
 
 
-## py_vcon_server.processor.builtin.jinja_report.SignFilterPluginInitOptions
+## py_vcon_server.processor.builtin.jq.SignFilterPluginInitOptions
 
  - **Summary:** JWS signing of vCon **FilterPlugin** intialization object
 
@@ -589,7 +673,7 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.openai.VerifyFilterPluginInitOptions
+## py_vcon_server.processor.builtin.jinja_report.VerifyFilterPluginInitOptions
 
  - **Summary:** JWS verification of vCon **FilterPlugin** intialization object
 
@@ -611,7 +695,7 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.queue_job.WhisperInitOptions
+## py_vcon_server.processor.builtin.openai.WhisperInitOptions
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
@@ -677,7 +761,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -726,7 +830,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -795,7 +919,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -837,6 +981,25 @@ examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
 default: 0:
 
+##### model (str)
+Deepgram transcription model
+Deepgram model name to use for transcription. See https://developers.deepgram.com/docs/models
+
+examples: ['nova-3', 'nova-2', 'nova-2-phonecall', 'nova-2-meeting', 'nova-2-medical', 'base']
+
+default: "nova-3"
+
+##### deepgram_key (typing.Union[str, NoneType])
+Deepgram API key override
+
+Override the Deepgram API key set in DeepgramInitOptions.
+If None or empty, the key from DeepgramInitOptions is used.
+
+
+example:
+
+default: None
+
 ##### label (str)
 processor documentation label
 Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
@@ -871,7 +1034,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -930,11 +1113,108 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
 default: {}
+
+
+## timeout_processors.ExceptionOptions
+
+ - **Summary:** ExceptionOptions
+
+Options for ExceptionProcessor.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
+
+example:
+
+default: {}
+
+##### message (str)
+exception message
+Message for the exception to raise
+
+example:
+
+default: "Test exception"
 
 
 ## py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogOptions
@@ -998,7 +1278,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1049,7 +1349,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1118,7 +1438,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1236,7 +1576,7 @@ your license/API key using the following:
 
 examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
 
-default: "gpt-4.1-nano-2025-04-14"
+default: "gpt-4o-mini"
 
 ##### prompt (str)
 the prompt or question to ask about the transcription/text
@@ -1350,7 +1690,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1401,7 +1761,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1467,7 +1847,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1624,7 +2024,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1702,7 +2122,250 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
+
+example:
+
+default: {}
+
+
+## timeout_processors.SleepAsyncOptions
+
+ - **Summary:** SleepAsyncOptions
+
+Options for SleepAsyncProcessor.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
+
+example:
+
+default: {}
+
+##### sleep_seconds (float)
+seconds to sleep
+Number of seconds to sleep asynchronously
+
+example:
+
+default: 1.0
+
+
+## timeout_processors.SleepSyncOptions
+
+ - **Summary:** SleepSyncOptions
+
+Options for SleepSyncProcessor.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
+
+example:
+
+default: {}
+
+##### sleep_seconds (float)
+seconds to sleep
+Number of seconds to sleep synchronously
+
+example:
+
+default: 1.0
+
+
+## timeout_processors.SuccessOptions
+
+ - **Summary:** SuccessOptions
+
+Options for SuccessProcessor.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1795,7 +2458,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1857,7 +2540,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
@@ -1948,7 +2651,27 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+Dictionary of option field names to template strings.
+    
+        The template string value replaces the field's original value after
+        substituting {parameter_name} placeholders with values from
+        VconProcessorIO.get_parameter().
+        
+        Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+        with the value of VconProcessorIO.get_parameter('bar').
+
+        Templates may also reference context parameters provided by the
+        system.  Context parameters are organized into scopes - server,
+        pipeline, and processor - that are merged before substitution.  By
+        convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+        NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+        distinguish them from user-defined pipeline parameters, which should
+        use lower_case names.  Individual processors may declare additional
+        context parameters; see the documentation of the specific processor
+        for the names it provides.
+        See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+        for the complete list of context parameters across all scopes.
+        
 
 example:
 
