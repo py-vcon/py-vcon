@@ -422,7 +422,7 @@ def test_filter_plugin_base_filter_raises():
     await plugin.filter(in_vcon, options)
 
   try:
-    asyncio.get_event_loop().run_until_complete(run())
+    asyncio.run(run())
     raise Exception("Expected FilterPluginNotImplemented")
   except vcon.filter_plugins.FilterPluginNotImplemented:
     pass
