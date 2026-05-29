@@ -243,12 +243,12 @@ A more advanced example of a pipeline definition can be found at the following l
 This pipeline is defined to run 6 processors on the vCon input.
 It does the following:
 
-  * run the **deepgram** transcription processor (line 9)
-  * run the **openai_chat_completion** processor with default summary prompt (line 16)
-  * run the **openai_chat_completion** processor with action items prompt (line 21)
-  * run the **openai_chat_completion** processor with notes prompt (line 29)
-  * run the **jq** processor with queries on vCon (line 37)
-  * run the **send_email** processor with parameters message content (line 50)
+  * run the **deepgram** transcription processor (line 11)
+  * run the **openai_chat_completion** processor with default summary prompt (line 17)
+  * run the **openai_chat_completion** processor with action items prompt (line 23)
+  * run the **openai_chat_completion** processor with notes prompt (line 31)
+  * run the **jq** processor with queries on vCon (line 39)
+  * run the **send_email** processor with parameters message content (line 52)
 
 ### Using Context Parameters
 
