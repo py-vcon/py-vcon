@@ -416,8 +416,8 @@ class PipelineRunner():
       # correct type (e.g. FilterPluginOptions).
       merged_context = {}
       merged_context.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+      merged_context.update(py_vcon_server.processor.SERVER_CONTEXT_PARAMETERS)
       merged_context.update(PIPELINE_CONTEXT_PARAMETERS)
-      # TODO: merge server scope context parameters when server scope is implemented
       merged_context.update(processor.context_parameters)
       formatted_options = processor_input.format_parameters_to_options(
           vcon.pydantic_utils.get_dict(processor_options),

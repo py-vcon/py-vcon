@@ -6,7 +6,7 @@ import typing
 import copy
 import time
 import datetime
-import datetime
+import urllib.parse
 import asyncio
 import importlib
 import pydantic
@@ -773,13 +773,15 @@ class VconProcessorIO():
     # Capture once per call
     now = datetime.datetime.now(datetime.timezone.utc)
 
-    # Auto resolved system context values
+    # Auto resolved system context values: base scope (per call) + server
+    # scope (resolved once, cached).
     auto_values: typing.Dict[str, typing.Any] = {
         "PROCESSOR_NAME": processor_name,
         "TIMESTAMP":      now.isoformat(),
         "NDATE":          now.strftime("%Y%m%d"),
         "VCON_UUID":      self._resolve_vcon_uuid(options),
       }
+    auto_values.update(_get_server_context_values())
 
     # Map run context (lower case) to template UPPER_CASE names
     run_ctx = self.get_run_context()
@@ -1142,7 +1144,13 @@ class VconProcessor():
 
   def __del__(self):
     """ Teardown/uninitialization method for the VconProcessor """
-    logger.debug("deleting {}".format(self.__class__.__name__))
+    # logger may be None during interpreter shutdown when module
+    # globals have been finalized; guard before use.
+    if(logger is not None):
+      try:
+        logger.debug("deleting {}".format(self.__class__.__name__))
+      except Exception:
+        pass
 
 
 # Well-known keys for VconProcessorIO.set_run_context()
@@ -1176,6 +1184,8 @@ BASE_CONTEXT_PARAMETERS: typing.Dict[str, typing.Dict[str, typing.Any]] = {
       },
   }
 
+
+
 # Map well-known run context keys (lower case, used by instrumentation and
 # metrics) to the UPPER_CASE context parameter names used in format_options.
 _RUN_CONTEXT_TO_TEMPLATE_NAME: typing.Dict[str, str] = {
@@ -1199,6 +1209,85 @@ class _MissCollector(dict):
     self.missing.add(key)
     return("")
 
+# Server scope context parameters, available in every processor's format_options.
+# Values are static for the life of the process and resolved lazily from
+# py_vcon_server.settings and the py_vcon_server / vcon package __version__
+# on first substitution to avoid circular imports at module load time.
+SERVER_CONTEXT_PARAMETERS: typing.Dict[str, typing.Dict[str, typing.Any]] = {
+    "INSTANCE_ID": {
+        "default":     "",
+        "description": "Identifier for this server instance, sourced from py_vcon_server.settings.INSTANCE_ID",
+        "title":       "Instance ID",
+      },
+    "REST_SCHEME": {
+        "default":     "",
+        "description": "Scheme parsed from py_vcon_server.settings.REST_URL (e.g. http, https)",
+        "title":       "REST Scheme",
+      },
+    "REST_HOST": {
+        "default":     "",
+        "description": "Host parsed from py_vcon_server.settings.REST_URL",
+        "title":       "REST Host",
+      },
+    "REST_PORT": {
+        "default":     "",
+        "description": "Port parsed from py_vcon_server.settings.REST_URL, as a string",
+        "title":       "REST Port",
+      },
+    "SERVER_VERSION": {
+        "default":     "",
+        "description": "py_vcon_server package __version__",
+        "title":       "Server Version",
+      },
+    "VCON_VERSION": {
+        "default":     "",
+        "description": "vcon package __version__",
+        "title":       "vCon Version",
+      },
+  }
+
+_SERVER_CONTEXT_VALUES: typing.Union[typing.Dict[str, str], None] = None
+
+
+def _resolve_server_context_values() -> typing.Dict[str, str]:
+  """
+  Compute the server scope context parameter values from settings and
+  package versions.  REST_URL is parsed once; if malformed (urlparse
+  returns an empty scheme), an ERROR is logged and the REST_* values
+  fall back to empty strings.
+  """
+  import py_vcon_server
+  import py_vcon_server.settings
+
+  parsed_scheme = ""
+  parsed_host = ""
+  parsed_port = ""
+  rest_url = py_vcon_server.settings.REST_URL
+  if(rest_url):
+    parsed = urllib.parse.urlparse(rest_url)
+    if(not parsed.scheme):
+      logger.error("REST_URL malformed, REST_* context parameters will be empty: {}".format(rest_url))
+    else:
+      parsed_scheme = parsed.scheme
+      parsed_host = parsed.hostname or ""
+      parsed_port = str(parsed.port) if(parsed.port is not None) else ""
+
+  return({
+      "INSTANCE_ID":    py_vcon_server.settings.INSTANCE_ID,
+      "REST_SCHEME":    parsed_scheme,
+      "REST_HOST":      parsed_host,
+      "REST_PORT":      parsed_port,
+      "SERVER_VERSION": getattr(py_vcon_server, "__version__", ""),
+      "VCON_VERSION":   getattr(vcon, "__version__", ""),
+    })
+
+
+def _get_server_context_values() -> typing.Dict[str, str]:
+  """ Lazy accessor for the resolved server scope context parameter values. """
+  global _SERVER_CONTEXT_VALUES
+  if(_SERVER_CONTEXT_VALUES is None):
+    _SERVER_CONTEXT_VALUES = _resolve_server_context_values()
+  return(_SERVER_CONTEXT_VALUES)
 
 def _build_parameter_error_message(
     missing_by_field: typing.Dict[str, typing.List[str]],
@@ -1547,12 +1636,13 @@ class FilterPluginProcessor(VconProcessor):
     """
     Run the indicated **Vcon** through the self._plugin_name **Vcon** **filter_plugin**
     """
-
+    # Local import to avoid module-load-time circular import between
+    # py_vcon_server.processor and py_vcon_server.pipeline.
+    import py_vcon_server.pipeline
     merged_context = {}
     merged_context.update(BASE_CONTEXT_PARAMETERS)
-    # TODO: merge pipeline and server scope context parameters here if/when
-    # FilterPluginProcessor format_options need them at this inner call.
-    # (Outer call sites already substitute pipeline/server scope before process().)
+    merged_context.update(SERVER_CONTEXT_PARAMETERS)
+    merged_context.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
     merged_context.update(self.context_parameters)
     formatted_options = processor_input.format_parameters_to_options(
         options,

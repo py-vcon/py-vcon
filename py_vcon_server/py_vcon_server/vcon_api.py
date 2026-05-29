@@ -206,8 +206,8 @@ def init(restapi):
         # format_options for dynamic options
         merged_context = {}
         merged_context.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+        merged_context.update(py_vcon_server.processor.SERVER_CONTEXT_PARAMETERS)
         merged_context.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
-        # TODO: merge server scope context parameters when server scope is implemented
         merged_context.update(processor_inst.context_parameters)
         formatted_options_dict = processor_input.format_parameters_to_options(
             vcon.pydantic_utils.get_dict(options),
@@ -350,8 +350,8 @@ def init(restapi):
         # format_options for dynamic options
         merged_context = {}
         merged_context.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+        merged_context.update(py_vcon_server.processor.SERVER_CONTEXT_PARAMETERS)
         merged_context.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
-        # TODO: merge server scope context parameters when server scope is implemented
         merged_context.update(processor_inst.context_parameters)
         formatted_options_dict = processor_io.format_parameters_to_options(
             processor_input_dict["processor_options"],
