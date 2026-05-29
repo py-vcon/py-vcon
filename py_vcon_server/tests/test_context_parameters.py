@@ -76,6 +76,65 @@ def test_pipeline_context_parameters_defined():
 
 
 # ============================================================
+#  Server scope
+# ============================================================
+
+def test_server_context_parameters_defined():
+  """ SERVER_CONTEXT_PARAMETERS declares the six server scope names """
+  server = py_vcon_server.processor.SERVER_CONTEXT_PARAMETERS
+  for name in ["INSTANCE_ID", "REST_SCHEME", "REST_HOST", "REST_PORT",
+      "SERVER_VERSION", "VCON_VERSION"]:
+    assert(name in server)
+    assert("default" in server[name])
+    assert("description" in server[name])
+    assert("title" in server[name])
+
+
+def test_server_context_values_resolve():
+  """
+  Each server scope name resolves to the value derived from settings or
+  package version.  Compares against the same sources the resolver uses
+  so this test does not depend on a specific server configuration.
+  """
+  import py_vcon_server
+  import py_vcon_server.settings
+  import urllib.parse
+
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  defs = {}
+  defs.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+  defs.update(py_vcon_server.processor.SERVER_CONTEXT_PARAMETERS)
+
+  options = {"format_options": {
+      "label": "id={INSTANCE_ID}|scheme={REST_SCHEME}|host={REST_HOST}"
+        "|port={REST_PORT}|sv={SERVER_VERSION}|vv={VCON_VERSION}"
+    }}
+  io.format_parameters_to_options_dict(options, defs, "p")
+
+  parsed = urllib.parse.urlparse(py_vcon_server.settings.REST_URL)
+  expected_scheme = parsed.scheme or ""
+  expected_host = parsed.hostname or ""
+  expected_port = str(parsed.port) if(parsed.port is not None) else ""
+
+  assert("id={}".format(py_vcon_server.settings.INSTANCE_ID) in options["label"])
+  assert("scheme={}".format(expected_scheme) in options["label"])
+  assert("host={}".format(expected_host) in options["label"])
+  assert("port={}".format(expected_port) in options["label"])
+  assert("sv={}".format(py_vcon_server.__version__) in options["label"])
+  assert("vv={}".format(vcon.__version__) in options["label"])
+
+
+def test_server_context_values_cached():
+  """
+  _get_server_context_values returns the cached dict on repeated calls
+  (same object identity).  Confirms the lazy cache is populated once.
+  """
+  v1 = py_vcon_server.processor._get_server_context_values()
+  v2 = py_vcon_server.processor._get_server_context_values()
+  assert(v1 is v2)
+
+
+# ============================================================
 #  Base scope resolution
 # ============================================================
 
@@ -367,4 +426,138 @@ def test_pass2_swallows_malformed_template():
     raise Exception("expected ParameterNotFound")
   except py_vcon_server.processor.ParameterNotFound:
     pass
+
+
+# ============================================================
+#  REST_URL parsing variants
+# ============================================================
+
+def test_server_context_values_malformed_rest_url(monkeypatch):
+  """
+  Malformed REST_URL (urlparse returns empty scheme) logs ERROR and
+  all REST_* values fall back to empty strings.
+  """
+  import py_vcon_server.settings
+
+  monkeypatch.setattr(py_vcon_server.processor, "_SERVER_CONTEXT_VALUES", None)
+  monkeypatch.setattr(py_vcon_server.settings, "REST_URL", "not a url")
+
+  values = py_vcon_server.processor._resolve_server_context_values()
+  assert(values["REST_SCHEME"] == "")
+  assert(values["REST_HOST"] == "")
+  assert(values["REST_PORT"] == "")
+
+
+def test_server_context_values_empty_rest_url(monkeypatch):
+  """
+  Empty REST_URL is silently treated as all REST_* empty (the
+  if(rest_url) guard skips parsing entirely, no error log).
+  """
+  import py_vcon_server.settings
+
+  monkeypatch.setattr(py_vcon_server.processor, "_SERVER_CONTEXT_VALUES", None)
+  monkeypatch.setattr(py_vcon_server.settings, "REST_URL", "")
+
+  values = py_vcon_server.processor._resolve_server_context_values()
+  assert(values["REST_SCHEME"] == "")
+  assert(values["REST_HOST"] == "")
+  assert(values["REST_PORT"] == "")
+
+
+def test_server_context_values_rest_url_no_port(monkeypatch):
+  """
+  REST_URL without an explicit port yields REST_PORT='' while
+  scheme and host populate normally.
+  """
+  import py_vcon_server.settings
+
+  monkeypatch.setattr(py_vcon_server.processor, "_SERVER_CONTEXT_VALUES", None)
+  monkeypatch.setattr(py_vcon_server.settings, "REST_URL", "https://example.com")
+
+  values = py_vcon_server.processor._resolve_server_context_values()
+  assert(values["REST_SCHEME"] == "https")
+  assert(values["REST_HOST"] == "example.com")
+  assert(values["REST_PORT"] == "")
+
+
+# ============================================================
+#  Recursion guard 
+# ============================================================
+
+def test_format_options_recursion_guard():
+  """
+  A 'format_options' key inside format_options is skipped by the inner
+  loop to avoid recursing into the same dict that drives substitution.
+  """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  options = {"format_options": {
+      "label":          "{PROCESSOR_NAME}",
+      "format_options": "this_should_not_be_treated_as_a_template_field"
+    }}
+  io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+  assert(options["label"] == "p")
+  assert(isinstance(options["format_options"], dict))
+  assert(options["format_options"]["format_options"] ==
+      "this_should_not_be_treated_as_a_template_field")
+
+
+# ============================================================
+#  Pass-2 swallows malformed templates 
+# ============================================================
+
+def test_pass2_swallows_malformed_template():
+  """
+  When substitution fails with KeyError, pass-2 iterates every field
+  to collect all missing names.  Malformed templates in other fields
+  (IndexError/ValueError) are swallowed so the user still gets a
+  complete missing-name list.
+  """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  options = {"format_options": {
+      "a": "{missing_name}",
+      "b": "{0}"
+    }}
+  try:
+    io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+    raise Exception("expected ParameterNotFound")
+  except py_vcon_server.processor.ParameterNotFound as e:
+    msg = str(e)
+    assert("missing_name" in msg)
+
+
+# ============================================================
+#  Precedence when a processor shadows a reserved name 
+# ============================================================
+
+def test_processor_scope_default_shadowed_by_auto_value():
+  """
+  When a processor declares a context parameter with the same
+  UPPER_CASE name as a base scope auto-resolved name (e.g.
+  PROCESSOR_NAME), the auto value still wins over the declared
+  default.  Precedence: context kwarg > auto_values > declared default.
+  """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  merged = {}
+  merged.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+  merged.update(py_vcon_server.processor.SERVER_CONTEXT_PARAMETERS)
+  merged.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
+  merged.update({
+      "PROCESSOR_NAME": {
+          "default":     "shadowed_default",
+          "description": "x",
+          "title":       "x"
+        }
+    })
+
+  options = {"format_options": {"label": "{PROCESSOR_NAME}"}}
+  io.format_parameters_to_options_dict(options, merged, "actual_name")
+  assert(options["label"] == "actual_name"), \
+      "auto_values should override declared default for PROCESSOR_NAME"
+
+  options = {"format_options": {"label": "{PROCESSOR_NAME}"}}
+  io.format_parameters_to_options_dict(
+      options, merged, "actual_name",
+      context = {"PROCESSOR_NAME": "context_wins"}
+    )
+  assert(options["label"] == "context_wins")
 

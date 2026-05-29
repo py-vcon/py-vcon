@@ -751,3 +751,96 @@ async def test_pipeline_jobber_run_one_job_metrics_with_prometheus(make_inline_a
     py_vcon_server.metrics._processor_active_gauge = None
     py_vcon_server.metrics._processor_duration_hist = None
     py_vcon_server.metrics._background_job_heartbeat = None
+
+
+@pytest.mark.asyncio
+async def test_pipeline_jobber_background_context_parameters(make_inline_audio_vcon):
+  """
+  Verify ENTRY_POINT=background and PIPELINE_JOB_ID=<job id> resolve
+  correctly when a job runs through PipelineJobHandler.run_one_job
+  (the background job code path).  Uses jinja_report rather than
+  Deepgram to avoid external service dependencies.  The pipeline and
+  queue are bound to one of the pre-configured SERVER_QUEUES entries
+  so the jobber's work-queue iterator will pick up the queued job.
+  """
+  queue_name = list(SERVER_QUEUES.keys())[1]
+  jinja_pipeline = {
+      "pipeline_options": {
+          "timeout": 30,
+          "save_vcons": True
+        },
+      "processors": [
+          {
+              "processor_name": "jinja_report",
+              "processor_options": {
+                  "template": "placeholder",
+                  "analysis_type": "ctx_param_report",
+                  "format_options": {
+                      "template": "entry={ENTRY_POINT}|job={PIPELINE_JOB_ID}|pipe={PIPELINE_NAME}"
+                    }
+                }
+            }
+        ]
+    }
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    for q in SERVER_QUEUES.keys():
+      client.delete("/queue/{}".format(q), headers={"accept": "application/json"})
+    client.delete("/pipeline/{}".format(queue_name))
+
+    jobber = py_vcon_server.pipeline.PipelineJobHandler(
+        py_vcon_server.settings.QUEUE_DB_URL,
+        py_vcon_server.settings.PIPELINE_DB_URL,
+        "unit_test_jobber_ctx"
+      )
+
+    set_response = client.put(
+        "/pipeline/{}".format(queue_name),
+        json = jinja_pipeline,
+        params = {"validate_processor_options": True}
+      )
+    assert(set_response.status_code == 204)
+    post_response = client.post(
+        "/queue/{}".format(queue_name),
+        headers = {"accept": "application/json"}
+      )
+    assert(post_response.status_code == 204)
+
+    set_response = client.post("/vcon", json = make_inline_audio_vcon.dumpd())
+    assert(set_response.status_code == 204)
+
+    queue_job = {"job_type": "vcon_uuid", "vcon_uuid": [UUID]}
+    put_response = client.put(
+        "/queue/{}".format(queue_name),
+        headers = {"accept": "application/json"},
+        json = queue_job
+      )
+    assert(put_response.status_code == 200)
+
+    job_id = await jobber.run_one_job()
+    assert(job_id is not None)
+
+    get_response = client.get("/vcon/{}".format(UUID))
+    assert(get_response.status_code == 200)
+    saved_vcon = get_response.json()
+    rendered = None
+    for analysis in saved_vcon.get("analysis", []):
+      if(analysis.get("type") == "ctx_param_report"):
+        rendered = analysis["body"]
+        break
+    assert(rendered is not None), \
+        "Expected a ctx_param_report analysis on the vCon"
+
+    assert("entry=background" in rendered), \
+        "Expected ENTRY_POINT=background, got: {}".format(rendered)
+    assert("job={}".format(job_id) in rendered), \
+        "Expected PIPELINE_JOB_ID={}, got: {}".format(job_id, rendered)
+    assert("pipe={}".format(queue_name) in rendered)
+
+    await jobber.done()
+
+    client.delete("/vcon/{}".format(UUID))
+    for q in SERVER_QUEUES.keys():
+      client.delete("/queue/{}".format(q), headers={"accept": "application/json"})
+    client.delete("/pipeline/{}".format(queue_name))
+
