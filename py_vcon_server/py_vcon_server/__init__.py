@@ -43,7 +43,7 @@ try:
 except ValueError:
   pass  # uvloop already patched this loop; nest_asyncio not needed
 
-__version__ = "0.5.19"
+__version__ = "0.5.20"
 
 JOB_INTERFACE = None
 JOB_MANAGER = None
