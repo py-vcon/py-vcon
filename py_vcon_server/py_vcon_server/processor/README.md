@@ -780,7 +780,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -850,7 +850,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -940,7 +940,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1056,7 +1056,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1136,7 +1136,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1206,7 +1206,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1303,7 +1303,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1375,7 +1375,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1465,7 +1465,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1718,7 +1718,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1790,7 +1790,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -1877,7 +1877,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -2055,7 +2055,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -2154,7 +2154,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -2224,7 +2224,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -2302,7 +2302,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -2380,7 +2380,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -2494,7 +2494,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -2577,7 +2577,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
@@ -2689,7 +2689,7 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
-See [Context Parameters](https://github.com/py-vcon/py-vcon/blob/HEAD/py_vcon_server/docs/context_parameters.md)
+See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
 
