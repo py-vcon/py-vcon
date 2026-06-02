@@ -27,6 +27,9 @@ Tests:
   22. update_server_heartbeat on missing entry does not raise
   23. server_running on missing entry does not raise
   24. server_shutting_down on missing entry does not raise
+  25. unregister_server_after_workers removes entry when workers gone
+  26. unregister_server_after_workers force-cleans and logs after timeout
+  27. unregister_server_after_workers waits then graceful-removes
 """
 import os
 import time
@@ -898,4 +901,140 @@ def test_nest_asyncio_apply_repeated_does_not_raise():
   except ValueError:
     pass  # expected — this is exactly what our guard catches
   # Reaching here without an unhandled exception confirms correctness
+
+# ============================================================
+#  Test: unregister_server_after_workers removes entry (clean)
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_unregister_server_after_workers_clean():
+  """
+  With no workers registered, unregister_server_after_workers() takes
+  the graceful path and removes the server entry immediately.
+  """
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    await ss.register_server()
+    await ss.unregister_server_after_workers(2.0, 0.1)
+
+    redis_con = ss._redis_mgr.get_client()
+    server_json = await redis_con.hget(
+        py_vcon_server.states.SERVER_HASH_KEY, ss.server_key()
+      )
+    assert server_json is None, \
+        "server entry should be removed when no workers are registered"
+  finally:
+    try:
+      await ss.unregister_server()
+    except Exception:
+      pass
+    await ss.shutdown_redis()
+
+
+# ============================================================
+#  Test: unregister_server_after_workers force-cleans on timeout
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_unregister_server_after_workers_timeout_force_cleans(caplog):
+  """
+  When a worker stays registered past the timeout (a worker killed
+  without deregistering), unregister_server_after_workers() logs an
+  error naming the stale worker and force-removes both the server entry
+  and the orphaned worker entry.  This is the leak the fix addresses.
+  """
+  import logging
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    await ss.register_server()
+    await ss.register_worker()
+
+    with caplog.at_level(logging.ERROR):
+      await ss.unregister_server_after_workers(1.0, 0.2)
+
+    assert ss.worker_key() in caplog.text, \
+        "stale worker key should be logged as evidence"
+
+    redis_con = ss._redis_mgr.get_client()
+    server_json = await redis_con.hget(
+        py_vcon_server.states.SERVER_HASH_KEY, ss.server_key()
+      )
+    assert server_json is None, \
+        "server entry should be force-removed after timeout"
+    worker_json = await redis_con.hget(
+        py_vcon_server.states.SERVER_WORKER_HASH_KEY, ss.worker_key()
+      )
+    assert worker_json is None, \
+        "orphaned worker entry should be force-cleaned after timeout"
+  finally:
+    try:
+      await ss.unregister_worker()
+    except Exception:
+      pass
+    try:
+      await ss.unregister_server()
+    except Exception:
+      pass
+    await ss.shutdown_redis()
+
+
+# ============================================================
+#  Test: unregister_server_after_workers waits then graceful
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_unregister_server_after_workers_waits_then_graceful(caplog):
+  """
+  When a worker deregisters partway through the wait, the method waits
+  (does not force-clean), then takes the graceful path once the worker
+  set is empty.  Proves the poll loop actually waits.
+  """
+  import asyncio
+  import logging
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    await ss.register_server()
+    await ss.register_worker()
+
+    async def deregister_worker_after_delay():
+      await asyncio.sleep(0.5)
+      await ss.unregister_worker()
+
+    task = asyncio.create_task(deregister_worker_after_delay())
+
+    with caplog.at_level(logging.ERROR):
+      await ss.unregister_server_after_workers(5.0, 0.1)
+    await task
+
+    assert "still registered" not in caplog.text, \
+        "should not log stale-worker error when worker deregisters in time"
+
+    redis_con = ss._redis_mgr.get_client()
+    server_json = await redis_con.hget(
+        py_vcon_server.states.SERVER_HASH_KEY, ss.server_key()
+      )
+    assert server_json is None, \
+        "server entry should be removed via graceful path after worker leaves"
+  finally:
+    try:
+      await ss.unregister_worker()
+    except Exception:
+      pass
+    try:
+      await ss.unregister_server()
+    except Exception:
+      pass
+    await ss.shutdown_redis()
 
