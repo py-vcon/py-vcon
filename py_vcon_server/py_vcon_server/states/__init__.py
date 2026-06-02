@@ -36,6 +36,7 @@ import os
 import urllib
 import time
 import typing
+import asyncio
 import json
 import vcon
 import py_vcon_server.db.redis.redis_mgr
@@ -455,6 +456,59 @@ class ServerState:
         )
     else:
       logger.info("unregistered server: {}".format(self.server_key()))
+
+
+  async def unregister_server_after_workers(
+      self,
+      worker_wait_timeout: float,
+      poll_interval: float
+    ) -> None:
+    """
+    Master graceful shutdown: wait for all workers to deregister, then
+    remove the server entry.  Polls this server's worker set until it is
+    empty or worker_wait_timeout seconds elapse, sleeping poll_interval
+    seconds between polls.
+
+    If all workers deregister in time, calls unregister_server() for a
+    clean graceful removal.  If the timeout expires with workers still
+    registered (e.g. a worker was killed without deregistering), logs one
+    error per stale worker as evidence, then force-removes the server
+    entry and any orphaned worker entries so nothing is left in Redis.
+    """
+    deadline = time.time() + worker_wait_timeout
+    while True:
+      state = await self.get_server_state()
+      workers = state.get("workers", {}) if state is not None else {}
+      if not workers:
+        break
+      if time.time() >= deadline:
+        logger.error(
+            "unregister_server_after_workers: {} worker(s) still registered "
+            "after {}s wait for server {} -- force cleaning".format(
+                len(workers), worker_wait_timeout, self.server_key()
+              )
+          )
+        for worker_key, worker in workers.items():
+          logger.error(
+              "  stale worker did not shut down: {} worker_pid={} "
+              "state={} last_heartbeat={}".format(
+                  worker_key,
+                  worker.get("worker_pid"),
+                  worker.get("state"),
+                  worker.get("last_heartbeat")
+                )
+            )
+        try:
+          await self.delete_server_state(self.server_key())
+        except ServerStateNotFound:
+          logger.warning(
+              "unregister_server_after_workers: server entry already gone "
+              "for key: {}".format(self.server_key())
+            )
+        return
+      await asyncio.sleep(poll_interval)
+
+    await self.unregister_server()
 
 
   async def get_server_state(self) -> typing.Dict[str, typing.Any]:

@@ -198,7 +198,10 @@ def _cleanup_server_state(master_state, heartbeat_thread) -> None:
       heartbeat_thread.stop()
       heartbeat_thread.join(timeout=10.0)
     asyncio.run(master_state.server_shutting_down())
-    asyncio.run(master_state.unregister_server())
+    asyncio.run(master_state.unregister_server_after_workers(
+        settings.SERVER_SHUTDOWN_WORKER_WAIT_TIMEOUT,
+        settings.SERVER_SHUTDOWN_WORKER_POLL_INTERVAL
+      ))
     logger.info("Master server state deregistered")
   except Exception as e:
     logger.warning("Failed to deregister server state: {}".format(e))
