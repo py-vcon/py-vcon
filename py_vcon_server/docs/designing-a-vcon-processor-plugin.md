@@ -303,20 +303,22 @@ Parties:
 
 ## Loading the Plugin
 
-Install the addon pip package:
+**Production (pip install):**
 ```bash
 pip install py_vcon_server.processor_addons.jinja-report
 ```
+The server discovers pip-installed addons automatically via namespace package
+merging.  No `PLUGIN_PATHS` setting is needed.
 
-The py-vcon-server automatically discovers and loads processor addons installed
-under the `py_vcon_server.processor_addons` namespace package.  No changes to
-the `PLUGIN_PATHS` environment variable are needed.
+**Development (PYTHONPATH):**
 
-In a development environment where py-vcon-server is loaded via `PYTHONPATH`
-rather than pip install, namespace package merging does not occur automatically.
-In that case you can either use `pip install --no-deps -e .` from the addon
-project directory, or add the registration module path to `PLUGIN_PATHS`:
+Set `PLUGIN_PATHS` to the absolute path of the addon's `processor_addons`
+directory:
 ```bash
-export PLUGIN_PATHS="py_vcon_server.processor_addons.jinja_report"
+export PLUGIN_PATHS="/path/to/my_addon_repo/py_vcon_server/processor_addons"
+python3 -m py_vcon_server
 ```
+`PLUGIN_PATHS` accepts a comma-separated list of directory paths, allowing
+multiple addon packages to be loaded simultaneously.  No `PYTHONPATH` changes
+are needed.
 

@@ -442,38 +442,26 @@ on PYTHONPATH and Redis running.
 
 **Mode 2: Running in the server (development)**
 
-To test the plugin in a running py-vcon-server loaded via PYTHONPATH, create
-symlinks from the addon's `processor_addons` contents into the server's
-`processor_addons` directory.  From the `py-vcon/py_vcon_server` directory:
+Set `PLUGIN_PATHS` to the addon's `processor_addons` directory and start
+the server:
 
-    ln -s /path/to/py_vcon_server_<plugin_name>/py_vcon_server/processor_addons/<plugin_name>.py \
-        py_vcon_server/processor_addons/<plugin_name>.py
-    ln -s /path/to/py_vcon_server_<plugin_name>/py_vcon_server/processor_addons/<plugin_name>_impl \
-        py_vcon_server/processor_addons/<plugin_name>_impl
-
-Then add the registration module to `PLUGIN_PATHS` and start the server:
-
-    export PLUGIN_PATHS="py_vcon_server.processor_addons.<plugin_name>"
+    export PLUGIN_PATHS="/path/to/<addon_repo>/py_vcon_server/processor_addons"
     python3 -m py_vcon_server
 
-The symlinks make the addon's files visible under the server's package
-namespace without copying.  Code changes in the addon source are reflected
-immediately (restart the server to pick them up).
-
-Remove the symlinks when done to keep the server source tree clean.
+The server scans the entire directory on startup, so adding new processors
+to the addon package requires no changes to this setting.  To load multiple
+addon packages, use a comma-separated list of directory paths.  Code changes
+in the addon source are reflected on server restart.
 
 **Mode 3: Production install (pip packages)**
 
 When both `py-vcon-server` and the addon are installed as pip packages,
-namespace package merging happens automatically:
+namespace package merging happens automatically and the server discovers
+all installed addons without any configuration:
 
     pip install py-vcon-server
-    pip install py_vcon_server.processor_addons.<plugin_name>
+    pip install <addon_package_name>
+    python3 -m py_vcon_server
 
-Add the registration module to `PLUGIN_PATHS`:
-
-    export PLUGIN_PATHS="py_vcon_server.processor_addons.<plugin_name>"
-
-Or if the addon's pip package is installed, the server will discover it
-automatically through the namespace package mechanism.
+No `PLUGIN_PATHS` setting is needed.
 
