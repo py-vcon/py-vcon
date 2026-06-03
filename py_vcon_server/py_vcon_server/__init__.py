@@ -97,10 +97,10 @@ py_vcon_server.db.import_bindings(
   )
 
 # Load any separately installed addon VconProcessor binding
-addons_path = "{}/processor_addons".format(py_vcon_server.__path__[0])
+addons_path = ["{}/processor_addons".format(p) for p in py_vcon_server.__path__]
 logger.debug("Looking for addon processors in: {}".format(addons_path))
 py_vcon_server.db.import_bindings(
-  [addons_path],
+  addons_path,
   "", # module prefix, allowing anything
   "addons", # label
   try_all = True

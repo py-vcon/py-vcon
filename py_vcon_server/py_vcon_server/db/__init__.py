@@ -1,4 +1,5 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+import os
 import sys
 import typing
 import urllib
@@ -61,6 +62,9 @@ def import_bindings(
         try:
           if finder.path not in sys.path:
             sys.path.append(finder.path)
+          import py_vcon_server.processor_addons
+          if finder.path not in py_vcon_server.processor_addons.__path__:
+            py_vcon_server.processor_addons.__path__.append(finder.path)
           mod = importlib.import_module(local_name)
           sys.modules[module_name] = mod
         finally:
