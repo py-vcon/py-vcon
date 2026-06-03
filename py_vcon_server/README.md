@@ -355,8 +355,7 @@ The environmental variable has the format of comma separated queue names, each w
 The weight specifies the number of jobs to pull from the queue before iterating to the next queue.
 Example: "a:4,b"
 (defaults to: "")
-  + **PLUGIN_PATHS** - comma separated list of absolute or relative path names from which to load plugin registrations ([filter_plugins](../README.md#adding-vcon-filter-plugins) or [vCon Processor](#extending-the-vcon-server)).
-(defaults to: "")
++ **PLUGIN_PATHS** - comma separated list of absolute directory paths to scan for addon processor registration modules.  Each path should point to a `processor_addons` directory containing registration `.py` files (e.g. `/path/to/my_addon/py_vcon_server/processor_addons`).  Used for development installs where addon packages are not installed via pip.  Not needed when addons are pip-installed (namespace package merging handles discovery automatically).
   + **CORS_ORIGINS** - comma separated list of allowed Cross-Origin Resource Sharing (CORS) hosts/origins.  When running multiple instance, your admin console will likely want to access the different py_vcon_server instance from the same console or web front end.  If you use a reverse proxy in front, the CORS polcies will likely be handled there and this setting will be unused.  However, if you do not have a reverse proxy between your application accessing multiple instances of the py_vcon_server, you may need to use this setting.  Note that every host, port and protocol (e.g. HTTP and HTTPS) combination to be allowed myst be listed.  Example: "http://192.168.0.2:8000, https://192.168.0.2:8000, http://192.168.0.2:8002, http://192.168.0.3" (defaults to: "")
 
 ## Installing and Configuring
