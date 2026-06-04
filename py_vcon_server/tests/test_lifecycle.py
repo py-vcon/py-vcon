@@ -1038,3 +1038,163 @@ async def test_unregister_server_after_workers_waits_then_graceful(caplog):
       pass
     await ss.shutdown_redis()
 
+# ============================================================
+#  Test: record_shutdown_failure annotates the server entry
+# ============================================================
+
+@pytest.mark.asyncio
+async def test_record_shutdown_failure_annotates_entry():
+  """
+  record_shutdown_failure() annotates an existing server entry with
+  state="shutdown_failed" and a shutdown_errors crumb (phase, type,
+  traceback), via a synchronous Redis client.  Other blob fields are
+  preserved.
+  """
+  ss = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 1
+    )
+  try:
+    await ss.register_server()
+
+    try:
+      raise RuntimeError("boom during shutdown")
+    except RuntimeError as e:
+      py_vcon_server.states.record_shutdown_failure(
+          py_vcon_server.settings.STATE_DB_URL,
+          ss.server_key(),
+          "server_shutting_down",
+          e
+        )
+
+    state = await ss.get_server_state()
+    assert state is not None, "server entry should still exist"
+    assert state["state"] == "shutdown_failed", \
+        "state should be flipped to shutdown_failed"
+    assert "host" in state, "existing blob fields should be preserved"
+    errors = state.get("shutdown_errors", [])
+    assert len(errors) == 1, "one crumb should be recorded"
+    crumb = errors[0]
+    assert crumb["phase"] == "server_shutting_down"
+    assert crumb["exception_type"] == "RuntimeError"
+    assert "boom during shutdown" in crumb["exception"]
+    assert "RuntimeError" in crumb["traceback"]
+  finally:
+    try:
+      await ss.delete_server_state(ss.server_key())
+    except Exception:
+      pass
+    await ss.shutdown_redis()
+
+
+# ============================================================
+#  Test: _MasterStateThread register / heartbeat / cleanup
+# ============================================================
+
+def test_master_state_thread_round_trip():
+  """
+  _MasterStateThread registers the server entry, advances the heartbeat
+  on at least one tick, and removes the entry on stop -- all on a single
+  event loop.  Verification uses a synchronous Redis client so it never
+  touches the thread's loop-bound pool.  A heartbeat tick is forced so
+  register, heartbeat, and cleanup all exercise the one loop; a
+  reintroduced second loop would fail this test.
+  """
+  import time
+  import json
+  import redis
+  from py_vcon_server.__main__ import _MasterStateThread
+
+  master_state = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 2
+    )
+  server_key = master_state.server_key()
+  sync_client = redis.Redis.from_url(
+      py_vcon_server.settings.STATE_DB_URL, decode_responses=True
+    )
+
+  thread = _MasterStateThread(master_state, 1, 5.0, 0.1)
+  try:
+    thread.start()
+    thread.wait_until_registered(10.0)
+
+    raw = sync_client.hget(
+        py_vcon_server.states.SERVER_HASH_KEY, server_key
+      )
+    assert raw is not None, "server entry should be present after registration"
+    hb1 = json.loads(raw)["last_heartbeat"]
+
+    time.sleep(1.5)
+    hb2 = json.loads(sync_client.hget(
+        py_vcon_server.states.SERVER_HASH_KEY, server_key
+      ))["last_heartbeat"]
+    assert hb2 > hb1, \
+        "heartbeat should advance on the thread's loop: {} -> {}".format(hb1, hb2)
+  finally:
+    thread.stop()
+    thread.join(timeout=20.0)
+    remaining = sync_client.hget(
+        py_vcon_server.states.SERVER_HASH_KEY, server_key
+      )
+    sync_client.close()
+    assert remaining is None, \
+        "server entry should be removed after thread shutdown"
+
+
+# ============================================================
+#  Test: _MasterStateThread records a crumb on shutdown failure
+# ============================================================
+
+def test_master_state_thread_records_crumb_on_shutdown_failure(monkeypatch):
+  """
+  If a shutdown phase raises, _MasterStateThread records a crumb on the
+  server entry (state=shutdown_failed plus a shutdown_errors entry) and
+  leaves the entry in Redis as evidence rather than losing the reason.
+  """
+  import json
+  import redis
+  from py_vcon_server.__main__ import _MasterStateThread
+
+  master_state = py_vcon_server.states.ServerState(
+      py_vcon_server.settings.REST_URL,
+      py_vcon_server.settings.STATE_DB_URL,
+      True, True, 2
+    )
+  server_key = master_state.server_key()
+
+  async def _raise_unregister(*args, **kwargs):
+    raise RuntimeError("simulated unregister failure")
+
+  monkeypatch.setattr(
+      master_state, "unregister_server_after_workers", _raise_unregister
+    )
+
+  sync_client = redis.Redis.from_url(
+      py_vcon_server.settings.STATE_DB_URL, decode_responses=True
+    )
+
+  thread = _MasterStateThread(master_state, 0, 5.0, 0.1)
+  try:
+    thread.start()
+    thread.wait_until_registered(10.0)
+    thread.stop()
+    thread.join(timeout=20.0)
+
+    raw = sync_client.hget(
+        py_vcon_server.states.SERVER_HASH_KEY, server_key
+      )
+    assert raw is not None, \
+        "server entry should remain as evidence when unregister fails"
+    blob = json.loads(raw)
+    assert blob["state"] == "shutdown_failed"
+    errors = blob.get("shutdown_errors", [])
+    assert len(errors) >= 1
+    assert errors[0]["phase"] == "unregister_server_after_workers"
+    assert "simulated unregister failure" in errors[0]["exception"]
+  finally:
+    sync_client.hdel(py_vcon_server.states.SERVER_HASH_KEY, server_key)
+    sync_client.close()
+
