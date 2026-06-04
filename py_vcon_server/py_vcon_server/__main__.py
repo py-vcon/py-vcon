@@ -163,11 +163,15 @@ def _cleanup_diagnostics_shm(shm) -> None:
 
 def _setup_server_state(num_workers: int) -> "py_vcon_server.states.ServerState":
   """
-  Construct a ServerState for the master process, set PYVCON_MASTER_PID
-  and PYVCON_SERVER_START_TIME in the environment so spawned workers can
-  share the same server_key, and write the server entry to Redis.
-  Must be called before workers are spawned.
-  Returns the ServerState so the caller can deregister on exit.
+  Construct a ServerState for the master process and set PYVCON_MASTER_PID
+  and PYVCON_SERVER_START_TIME in the environment so spawned workers share
+  the same server_key.  Must be called before workers are spawned.
+
+  The server entry is written to Redis by _MasterStateThread on its own
+  persistent event loop, NOT here -- registering here would bind the Redis
+  connection pool to a throwaway loop, after which any later use on a
+  different loop raises "got Future attached to a different loop".
+  Returns the ServerState for the master thread to register and manage.
   """
   import py_vcon_server.states
   os.environ.pop("PYVCON_MASTER_PID", None)
@@ -181,60 +185,90 @@ def _setup_server_state(num_workers: int) -> "py_vcon_server.states.ServerState"
       num_workers
     )
   os.environ["PYVCON_SERVER_START_TIME"] = str(master_state.start_time())
-  asyncio.run(master_state.register_server())
-  logger.info("Master server state registered: {}".format(
-      master_state.server_key()))
   return master_state
 
 
-def _cleanup_server_state(master_state, heartbeat_thread) -> None:
+class _MasterStateThread(threading.Thread):
   """
-  Stop heartbeat, transition to shutting_down, deregister the server
-  entry from Redis and clean up env vars.
-  Called after all workers have exited.
-  """
-  try:
-    if heartbeat_thread is not None:
-      heartbeat_thread.stop()
-      heartbeat_thread.join(timeout=10.0)
-    asyncio.run(master_state.server_shutting_down())
-    asyncio.run(master_state.unregister_server_after_workers(
-        settings.SERVER_SHUTDOWN_WORKER_WAIT_TIMEOUT,
-        settings.SERVER_SHUTDOWN_WORKER_POLL_INTERVAL
-      ))
-    logger.info("Master server state deregistered")
-  except Exception as e:
-    logger.warning("Failed to deregister server state: {}".format(e))
-  finally:
-    asyncio.run(master_state.shutdown_redis())
-    os.environ.pop("PYVCON_MASTER_PID", None)
-    os.environ.pop("PYVCON_SERVER_START_TIME", None)
+  Daemon thread that owns a single asyncio event loop for the master
+  process server state.  All master Redis state operations -- register,
+  periodic heartbeat, and shutdown deregister -- run on this one loop so
+  the redis.asyncio connection pool is never used across event loops
+  (which raises "got Future attached to a different loop").
 
-
-class _MasterHeartbeatThread(threading.Thread):
-  """
-  Daemon thread that periodically updates the server entry heartbeat
-  in Redis.  Runs only in multi-worker mode where the master process
-  cannot use an async event loop (Multiprocess.run() blocks).
+  Runs only in multi-worker mode, where the master process cannot use the
+  main thread's event loop because Multiprocess.run() blocks it.
   """
 
-  def __init__(self, master_state, period):
+  def __init__(self, master_state, period, worker_wait_timeout, poll_interval):
     super().__init__(daemon=True)
     self._master_state = master_state
     self._period = period
+    self._worker_wait_timeout = worker_wait_timeout
+    self._poll_interval = poll_interval
     self._stop_event = threading.Event()
+    self._registered_event = threading.Event()
 
   def run(self):
-    # asyncio.run() creates and destroys an event loop on each tick.
-    # At the default HEARTBEAT_PERIOD of 60s this is negligible.
-    # If the period were reduced significantly, consider creating
-    # a single event loop in run() and using loop.run_until_complete()
-    # on each tick instead.
-    while not self._stop_event.wait(self._period):
+    import py_vcon_server.states
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    redis_uri = settings.STATE_DB_URL
+    server_key = self._master_state.server_key()
+    try:
       try:
-        asyncio.run(self._master_state.update_server_heartbeat())
+        loop.run_until_complete(self._master_state.register_server())
+        loop.run_until_complete(self._master_state.server_running())
+        logger.info("Master server state registered: {}".format(server_key))
       except Exception as e:
-        logger.warning("Master heartbeat update failed: {}".format(e))
+        py_vcon_server.states.record_shutdown_failure(
+            redis_uri, server_key, "register", e
+          )
+        logger.warning("Master server state registration failed: {}".format(e))
+      finally:
+        self._registered_event.set()
+
+      # period <= 0 means no heartbeat ticks -- just wait for stop.
+      heartbeat_timeout = self._period if self._period > 0 else None
+      while not self._stop_event.wait(heartbeat_timeout):
+        try:
+          loop.run_until_complete(self._master_state.update_server_heartbeat())
+        except Exception as e:
+          logger.warning("Master heartbeat update failed: {}".format(e))
+
+      try:
+        loop.run_until_complete(self._master_state.server_shutting_down())
+      except Exception as e:
+        py_vcon_server.states.record_shutdown_failure(
+            redis_uri, server_key, "server_shutting_down", e
+          )
+        logger.warning("Master server_shutting_down failed: {}".format(e))
+
+      try:
+        loop.run_until_complete(
+            self._master_state.unregister_server_after_workers(
+                self._worker_wait_timeout, self._poll_interval
+              )
+          )
+        logger.info("Master server state deregistered")
+      except Exception as e:
+        py_vcon_server.states.record_shutdown_failure(
+            redis_uri, server_key, "unregister_server_after_workers", e
+          )
+        logger.warning("Master server state deregister failed: {}".format(e))
+
+      try:
+        loop.run_until_complete(self._master_state.shutdown_redis())
+      except Exception as e:
+        logger.warning("Master Redis shutdown failed: {}".format(e))
+    finally:
+      loop.close()
+
+  def wait_until_registered(self, timeout):
+    if not self._registered_event.wait(timeout):
+      logger.warning(
+          "Master state thread did not signal registration within {}s".format(
+              timeout))
 
   def stop(self):
     self._stop_event.set()
@@ -263,7 +297,7 @@ def main():
 
   diag_shm = None
   master_state = None
-  heartbeat_thread = None
+  master_thread = None
   if settings.NUM_RESTAPI_WORKERS > 1:
     try:
       _check_shared_memory_support()
@@ -276,22 +310,30 @@ def main():
 
   try:
     if settings.NUM_RESTAPI_WORKERS > 1:
-      asyncio.run(master_state.server_running())
-      if settings.HEARTBEAT_PERIOD > 0:
-        heartbeat_thread = _MasterHeartbeatThread(
-            master_state, settings.HEARTBEAT_PERIOD
-          )
-        heartbeat_thread.start()
-        logger.info("Master heartbeat started (period: {}s)".format(
-            settings.HEARTBEAT_PERIOD))
+      master_thread = _MasterStateThread(
+          master_state,
+          settings.HEARTBEAT_PERIOD,
+          settings.SERVER_SHUTDOWN_WORKER_WAIT_TIMEOUT,
+          settings.SERVER_SHUTDOWN_WORKER_POLL_INTERVAL
+        )
+      master_thread.start()
+      master_thread.wait_until_registered(30.0)
+
       from uvicorn.supervisors import Multiprocess
       sock = config.bind_socket()
       Multiprocess(config, target=server.run, sockets=[sock]).run()
     else:
       server.run()
   finally:
+    if master_thread:
+      master_thread.stop()
+      master_thread.join(
+          timeout = settings.SERVER_SHUTDOWN_WORKER_WAIT_TIMEOUT + 15.0
+        )
     if master_state:
-      _cleanup_server_state(master_state, heartbeat_thread)
+      os.environ.pop("PYVCON_MASTER_PID", None)
+      os.environ.pop("PYVCON_SERVER_START_TIME", None)
+
     if diag_shm:
       _cleanup_diagnostics_shm(diag_shm)
     if prom_dir:

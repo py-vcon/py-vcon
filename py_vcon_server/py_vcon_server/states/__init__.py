@@ -37,6 +37,7 @@ import urllib
 import time
 import typing
 import asyncio
+import traceback
 import json
 import vcon
 import py_vcon_server.db.redis.redis_mgr
@@ -56,6 +57,65 @@ SERVER_STATE = None
 
 class ServerStateNotFound(Exception):
   """ Raised when referencing a non-existing server state """
+
+
+def record_shutdown_failure(
+    redis_uri: str,
+    server_key: str,
+    phase: str,
+    exception: Exception
+  ) -> None:
+  """
+  Last-resort recorder: annotate the server entry in Redis with the
+  exception that blocked a clean shutdown so residual server state is
+  self-documenting.  Sets the entry "state" to "shutdown_failed" and
+  appends a crumb (phase, time, exception type/message, traceback) to a
+  "shutdown_errors" list on the blob, preserving all other fields.
+
+  Uses a SYNCHRONOUS Redis client on purpose: it must work even when the
+  async event loop or the async connection pool is the thing that failed.
+  Never raises -- a failure to record is logged and swallowed.
+  """
+  crumb = {
+      "phase":          phase,
+      "time":           time.time(),
+      "exception_type": type(exception).__name__,
+      "exception":      str(exception),
+      "traceback":      traceback.format_exc(),
+    }
+  try:
+    sync_client = redis.Redis.from_url(
+        redis_uri,
+        decode_responses = True,
+        socket_connect_timeout = 5.0,
+        socket_timeout = 5.0
+      )
+    try:
+      existing = sync_client.hget(SERVER_HASH_KEY, server_key)
+      if existing is None:
+        logger.warning(
+            "record_shutdown_failure: no server entry to annotate for "
+            "key: {} (phase: {})".format(server_key, phase)
+          )
+        return
+      server_dict = json.loads(existing)
+      server_dict["state"] = "shutdown_failed"
+      errors = server_dict.get("shutdown_errors", [])
+      errors.append(crumb)
+      server_dict["shutdown_errors"] = errors
+      sync_client.hset(SERVER_HASH_KEY, server_key, json.dumps(server_dict))
+      logger.error(
+          "record_shutdown_failure: recorded {} failure on server {}".format(
+              phase, server_key
+            )
+        )
+    finally:
+      sync_client.close()
+  except Exception as record_except:
+    logger.error(
+        "record_shutdown_failure: could not annotate server state {} for "
+        "phase {}: {}".format(server_key, phase, record_except)
+      )
 
 
 class ServerState:
