@@ -47,8 +47,16 @@ auto-resolved values, which win over declared defaults.
 | `PROCESSOR_NAME` | `""` | Registered name of the processor currently executing |
 | `TIMESTAMP` | `""` | ISO 8601 UTC timestamp captured at substitution time |
 | `NDATE` | `""` | UTC date in `yyyymmdd` form captured at substitution time |
+| `YEAR` | `""` | UTC year in `yyyy` form captured at substitution time |
+| `MONTH` | `""` | UTC month in `mm` (zero-padded) form captured at substitution time |
+| `DAY` | `""` | UTC day of month in `dd` (zero-padded) form captured at substitution time |
 | `VCON_UUID` | `""` | UUID of the vCon at `input_vcon_index`, or empty string if not resolvable |
 
+`YEAR`, `MONTH`, `DAY`, `NDATE`, and `TIMESTAMP` are all derived from a
+single UTC timestamp captured once per substitution call, so within one
+call they are mutually consistent and `NDATE` equals `YEAR` + `MONTH` +
+`DAY`.  Because the values are UTC, a date-partitioned key scheme such as
+`{YEAR}/{MONTH}/{DAY}/...` rolls over at UTC midnight, not local midnight.
 
 ## Server Scope
 
