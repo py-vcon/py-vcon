@@ -60,7 +60,8 @@ def merged_base_pipeline():
 def test_base_context_parameters_defined():
   """ BASE_CONTEXT_PARAMETERS declares the four base scope names """
   base = py_vcon_server.processor.BASE_CONTEXT_PARAMETERS
-  for name in ["PROCESSOR_NAME", "TIMESTAMP", "NDATE", "VCON_UUID"]:
+  for name in ["PROCESSOR_NAME", "TIMESTAMP", "NDATE", "VCON_UUID",
+      "YEAR", "MONTH", "DAY"]:
     assert(name in base)
     assert("default" in base[name])
     assert("description" in base[name])
@@ -160,6 +161,23 @@ async def test_timestamp_and_ndate_substitution(make_2_party_tel_vcon):
   io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
   datetime.datetime.fromisoformat(options["label"])
   assert(re.fullmatch(r"\d{8}", options["notes"]) is not None)
+
+
+@pytest.mark.asyncio
+async def test_year_month_day_substitution(make_2_party_tel_vcon):
+  """ YEAR/MONTH/DAY are UTC and consistent with NDATE """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  await io.add_vcon(make_2_party_tel_vcon, "fake_lock", False)
+  options = {"format_options": {
+      "label": "{YEAR}|{MONTH}|{DAY}",
+      "notes": "{NDATE}"
+    }}
+  io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+  year, month, day = options["label"].split("|")
+  assert(re.fullmatch(r"\d{4}", year) is not None)
+  assert(re.fullmatch(r"\d{2}", month) is not None)
+  assert(re.fullmatch(r"\d{2}", day) is not None)
+  assert(options["notes"] == year + month + day)
 
 
 @pytest.mark.asyncio
