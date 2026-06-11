@@ -782,6 +782,9 @@ class VconProcessorIO():
         "PROCESSOR_NAME": processor_name,
         "TIMESTAMP":      now.isoformat(),
         "NDATE":          now.strftime("%Y%m%d"),
+        "YEAR":           now.strftime("%Y"),
+        "MONTH":          now.strftime("%m"),
+        "DAY":            now.strftime("%d"),
         "VCON_UUID":      self._resolve_vcon_uuid(options),
       }
     auto_values.update(_get_server_context_values())
@@ -1179,6 +1182,21 @@ BASE_CONTEXT_PARAMETERS: typing.Dict[str, typing.Dict[str, typing.Any]] = {
         "default":     "",
         "description": "UTC date in yyyymmdd form captured at substitution time",
         "title":       "Numeric Date",
+      },
+    "YEAR": {
+        "default":     "",
+        "description": "UTC year in yyyy form captured at substitution time",
+        "title":       "Year",
+      },
+    "MONTH": {
+        "default":     "",
+        "description": "UTC month in mm form (zero padded) captured at substitution time",
+        "title":       "Month",
+      },
+    "DAY": {
+        "default":     "",
+        "description": "UTC day of month in dd form (zero padded) captured at substitution time",
+        "title":       "Day",
       },
     "VCON_UUID": {
         "default":     "",
