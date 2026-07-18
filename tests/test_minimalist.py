@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ unit tests for mimimum elements of vCon """
 
 import json
@@ -110,7 +110,7 @@ def test_dumps(two_party_tel_vcon : vcon.Vcon) -> None:
 
   vcon_dict = json.loads(vcon_json)
 
-  assert(vcon_dict[vcon.Vcon.VCON_VERSION] == "0.0.2")
+  assert(vcon.Vcon.VCON_VERSION not in vcon_dict)
   assert_dict_array_size(vcon_dict, VCON_PARTIES, 2)
   assert(vcon_dict['parties'][0]['tel'] == call_data['source'])
   assert(vcon_dict['parties'][1]['tel'] == call_data['destination'])
@@ -323,4 +323,4 @@ def test_missing_properties():
 
   minVcon.group.append({ "set": True})
   assert(len(minVcon.group) == 1)
-  assert(minVcon.dumps() == '{"vcon": "0.0.2", "uuid": "01855517-ac4e-8edf-84fd-77776666acbe", "parties": [{"set": true}], "group": [{"set": true}]}')
+  assert(minVcon.dumps() == '{"uuid": "01855517-ac4e-8edf-84fd-77776666acbe", "parties": [{"set": true}], "group": [{"set": true}]}')
