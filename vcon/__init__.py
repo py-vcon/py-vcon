@@ -1665,15 +1665,15 @@ class Vcon():
     vcon_dict = self.dumpd(False, True) # deep copy as we modify the copy and do not want this to be permient
 
     # Iterate body parameters in redacted and ammended
-    for reference in ["redacted", "ammended"]:
+    for reference in [Vcon.REDACTED, Vcon.AMENDED]:
       # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
       if(reference in vcon_dict and
-          Vcon.VconBase64Bytes.isBase64Object(vcon_dict["redacted"])
+          Vcon.VconBase64Bytes.isBase64Object(vcon_dict[Vcon.REDACTED])
         ):
         Vcon.VconBase64Bytes.objectizeBase64Object(vcon_dict["redacted"])
 
     # Iterate body parameters in objects in group, parties, dialog, attachments and analysis arrays
-    for object_array_name in ["group", "dialog", "attachemnts", "analysis"]:
+    for object_array_name in [Vcon.GROUP, Vcon.DIALOG, Vcon.ATTACHMENTS, Vcon.ANALYSIS]:
       object_array = vcon_dict.get(object_array_name, None)
       if(object_array):
         for reference_object in object_array:
