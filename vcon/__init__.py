@@ -85,6 +85,11 @@ class ExperimentalWarning(Warning):
   complient forms or parameters.  Note: these may be depricated.
   """
 
+class UnconvertedVconVersionWarning(Warning):
+  """
+  Warning for import of a vCon with a syntax version that is accepted,
+  but for which no migration or conversion is implemented.
+  """
 
 def deprecated(reason : str):
   """
@@ -132,6 +137,7 @@ def experimental(reason : str):
         category = ExperimentalWarning,
         stacklevel=2)
       warnings.simplefilter('default', ExperimentalWarning)
+      logger.warning(msg.format(func.__name__))
       return func(*args, **kwargs)
 
     return new_func
@@ -381,7 +387,13 @@ class Vcon():
     MEDIATYPE_VIDEO_MP4: ".mp4"
   }
 
-  CURRENT_VCON_VERSION = "0.0.2"
+  CURRENT_VCON_VERSION = "0.4.0"
+  # vCon syntax versions accepted on import for which a migration to the
+  # current syntax is implemented.
+  MIGRATABLE_VCON_VERSIONS = ["0.0.1", "0.0.2"]
+  # vCon syntax versions accepted on import as is.  No migration is
+  # performed and the vcon parameter is left unmodified.
+  UNCONVERTED_VCON_VERSIONS = ["0.3.0", "0.4.0"]
 
   # Dict keys
   VCON_VERSION = "vcon"
@@ -482,7 +494,6 @@ class Vcon():
     self._jwe_dict = None
 
     self._vcon_dict = {}
-    self._vcon_dict[Vcon.VCON_VERSION] = Vcon.CURRENT_VCON_VERSION
     self._vcon_dict[Vcon.GROUP] = []
     self._vcon_dict[Vcon.PARTIES] = []
     self._vcon_dict[Vcon.DIALOG] = []
@@ -1664,7 +1675,7 @@ class Vcon():
     # TODO: would be better not to deep copy the dict
     vcon_dict = self.dumpd(False, True) # deep copy as we modify the copy and do not want this to be permient
 
-    # Iterate body parameters in redacted and ammended
+    # Iterate body parameters in redacted and amended
     for reference in [Vcon.REDACTED, Vcon.AMENDED]:
       # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
       if(reference in vcon_dict and
@@ -1925,20 +1936,8 @@ class Vcon():
       ('attachments' in vcon_dict)
       ):
 
-      # validate version
-      version_string = vcon_dict.get(self.VCON_VERSION, None)
-      if(version_string is not None):
-        if(version_string not in ["0.0.1", "0.0.2"]):
-          raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
-
-        if(vcon_dict["vcon"] == "0.0.1"):
-          self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
-          vcon_dict = self._vcon_dict
-        if(vcon_dict["vcon"] == "0.0.2"):
-          self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
-
-      else:
-        self._vcon_dict = vcon_dict
+      # validate version and migrate if needed
+      self._vcon_dict = Vcon.check_and_migrate_version(vcon_dict)
 
     # Unknown
     else:
@@ -2001,8 +2000,8 @@ class Vcon():
       self._state = VconStates.ENCRYPTED
       self._jwe_dict = vcon_dict
 
-    # Unsigned vCon has to have vcon version and
-    elif((self.VCON_VERSION in vcon_dict) and (
+    # Unsigned vCon may have vcon version and
+    elif((
       # one of the following arrays
       ('parties' in vcon_dict) or
       ('dialog' in vcon_dict) or
@@ -2013,15 +2012,15 @@ class Vcon():
       # Check for CBOR tags that need to be replaced
       # This is not easily done with hooks int the CBOR parser as we need to change the body and the encoding parameters.
 
-      # Iterate body parameters in redacted and ammended
-      for reference in ["redacted", "ammended"]:
+      # Iterate body parameters in redacted and amended
+      for reference in [Vcon.REDACTED, Vcon.AMENDED]:
         # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
         if(reference in vcon_dict and
            "body" in vcon_dict[reference] and
            isinstance(vcon_dict[reference]["body"], cbor2.CBORTag)):
           raise Exception("unimplemented CBORTag for: {}".format(reference))
 
-      for object_array_name in ["group", "dialog", "attachemnts", "analysis"]:
+      for object_array_name in [Vcon.GROUP, Vcon.DIALOG, Vcon.ATTACHMENTS, Vcon.ANALYSIS]:
         object_array = vcon_dict.get(object_array_name, None)
         if(object_array):
           for reference_object in object_array:
@@ -2039,16 +2038,8 @@ class Vcon():
               reference_object["body"] = jose.utils.base64url_encode(reference_object["body"].value).decode('utf-8')
               reference_object["encoding"] = "base64url"
 
-      # validate version
-      version_string = vcon_dict.get(self.VCON_VERSION, "not set")
-      if(version_string not in ["0.0.1", "0.0.2"]):
-        raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
-
-      if(vcon_dict["vcon"] == "0.0.1"):
-        self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
-        vcon_dict = self._vcon_dict
-      if(vcon_dict["vcon"] == "0.0.2"):
-        self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
+      # validate version and migrate if needed
+      self._vcon_dict = Vcon.check_and_migrate_version(vcon_dict)
 
     # Unknown
     else:
@@ -2274,15 +2265,7 @@ class Vcon():
                 #print("verified payload: {}".format(verified_payload))
                 #print("verified payload type: {}".format(type(verified_payload)))
                 vcon_dict = json.loads(verified_payload.decode('utf-8'))
-                if("vcon" in vcon_dict):
-                  if(vcon_dict["vcon"] == "0.0.1"):
-                    self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
-                    vcon_dict = self._vcon_dict
-                  if(vcon_dict["vcon"] == "0.0.2"):
-                    self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
-                else:
-                  self._vcon_dict = vcon_dict
-
+                self._vcon_dict = Vcon.check_and_migrate_version(vcon_dict)
                 self._state = VconStates.VERIFIED
 
                 return(None)
@@ -2726,17 +2709,74 @@ class Vcon():
 
 
   @staticmethod
+  def check_and_migrate_version(vcon_dict : dict) -> dict:
+    """
+    Validate the vCon syntax version parameter and migrate the vCon to the
+    current syntax if a migration is implemented for that version.
+
+    The vcon parameter is deprecated.  A vCon with no vcon parameter is
+    assumed to be of the current syntax and is passed through unmodified.
+    A vCon of a version in UNCONVERTED_VCON_VERSIONS is passed through
+    unmodified, with its vcon parameter left as is, and a
+    UnconvertedVconVersionWarning is emitted.  A vCon of a version in
+    MIGRATABLE_VCON_VERSIONS is migrated, the migrations stack and the
+    last one removes the vcon parameter.
+
+    Parameters:
+      vcon_dict - unsigned form vCon dict to validate and migrate
+
+    Returns:
+      the vCon dict, migrated if a migration was implemented and needed
+    """
+
+    version_string = vcon_dict.get(Vcon.VCON_VERSION, None)
+
+    # vcon parameter is deprecated.  Assume current syntax.
+    if(version_string is None):
+      return(vcon_dict)
+
+    # Accepted as is.  No migration implemented, vcon parameter left alone.
+    if(version_string in Vcon.UNCONVERTED_VCON_VERSIONS):
+      warnings.simplefilter('always', UnconvertedVconVersionWarning)
+      warnings.warn(
+        "vCon syntax version: \"{}\" accepted without conversion."
+        "  No migration is implemented for this version."
+        "  Parameter names and semantics may differ from the current vCon syntax.".format(
+          version_string),
+        category = UnconvertedVconVersionWarning,
+        stacklevel = 3)
+      warnings.simplefilter('default', UnconvertedVconVersionWarning)
+      logger.warning("vCon syntax version: \"%s\" accepted without conversion", version_string)
+      return(vcon_dict)
+
+    if(version_string not in Vcon.MIGRATABLE_VCON_VERSIONS):
+      raise UnsupportedVconVersion("load of JSON vcon version: \"{}\" not supported".format(
+        version_string))
+
+    # Migrations stack.  Each sets the vcon parameter to the next version.
+    if(version_string == "0.0.1"):
+      vcon_dict = Vcon.migrate_0_0_1_vcon(vcon_dict)
+    if(vcon_dict.get(Vcon.VCON_VERSION, None) == "0.0.2"):
+      vcon_dict = Vcon.migrate_0_0_2_vcon(vcon_dict)
+
+    return(vcon_dict)
+
+
+  @staticmethod
   def migrate_0_0_2_vcon(old_vcon : dict) -> dict:
     """
     Migrate/translate an an older deprecated vCon to the current version.
 
     Parameters:
-      old_vcon old format 0.0.1 vCon
+      old_vcon old format 0.0.2 vCon
 
     Returns:
       the modified old_vcon in the new format
     """
 
+    # This is the last migration in the chain.  The vcon parameter is
+    # deprecated, so remove it rather than set it to a newer version.
+    old_vcon.pop(Vcon.VCON_VERSION, None)
     return(old_vcon)
 
 
