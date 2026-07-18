@@ -1916,25 +1916,29 @@ class Vcon():
       self._state = VconStates.ENCRYPTED
       self._jwe_dict = vcon_dict
 
-    # Unsigned vCon has to have vcon version and
-    elif((self.VCON_VERSION in vcon_dict) and (
+    # Unsigned vCon may have vcon version and
+    elif(
       # one of the following arrays
       ('parties' in vcon_dict) or
       ('dialog' in vcon_dict) or
       ('analysis' in vcon_dict) or
       ('attachments' in vcon_dict)
-      )):
+      ):
 
       # validate version
-      version_string = vcon_dict.get(self.VCON_VERSION, "not set")
-      if(version_string not in ["0.0.1", "0.0.2"]):
-        raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
+      version_string = vcon_dict.get(self.VCON_VERSION, None)
+      if(version_string is not None):
+        if(version_string not in ["0.0.1", "0.0.2"]):
+          raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
 
-      if(vcon_dict["vcon"] == "0.0.1"):
-        self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
-        vcon_dict = self._vcon_dict
-      if(vcon_dict["vcon"] == "0.0.2"):
-        self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
+        if(vcon_dict["vcon"] == "0.0.1"):
+          self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+          vcon_dict = self._vcon_dict
+        if(vcon_dict["vcon"] == "0.0.2"):
+          self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
+
+      else:
+        self._vcon_dict = vcon_dict
 
     # Unknown
     else:
@@ -2270,11 +2274,14 @@ class Vcon():
                 #print("verified payload: {}".format(verified_payload))
                 #print("verified payload type: {}".format(type(verified_payload)))
                 vcon_dict = json.loads(verified_payload.decode('utf-8'))
-                if(vcon_dict["vcon"] == "0.0.1"):
-                  self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
-                  vcon_dict = self._vcon_dict
-                if(vcon_dict["vcon"] == "0.0.2"):
-                  self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
+                if("vcon" in vcon_dict):
+                  if(vcon_dict["vcon"] == "0.0.1"):
+                    self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
+                    vcon_dict = self._vcon_dict
+                  if(vcon_dict["vcon"] == "0.0.2"):
+                    self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
+                else:
+                  self._vcon_dict = vcon_dict
 
                 self._state = VconStates.VERIFIED
 
