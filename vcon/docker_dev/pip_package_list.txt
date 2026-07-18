@@ -15,7 +15,7 @@ stable-ts > 2
 # redaction dependencies
 # Python 3.12 no longer includes setuptools.
 # dataprofiler uses setuptools.  So we need to explicitly install it.
-setuptools
+setuptools < 81
 pandas
 tensorflow
 scikit-learn
