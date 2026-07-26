@@ -35,6 +35,11 @@ The following categories of methods are implemented on the Vcon class.
    * [add_group_object](#add_group_object)
    * [set_amended](#set_amended)
    * [set_redacted](#set_redacted)
+ * Methods to access or modify Vcon Meta Data
+   * [add_parameter_extension](#add_parameter_extension)
+   * [set_created_at](#set_created_at)
+   * [set_subject](#set_subject)
+   * [set_uuid](#set_uuid)
  * Methods to access or modify Vcon Party objects
    * [add_party](#add_party)
    * [find_parties_by_parameter](#find_parties_by_parameter)
@@ -56,10 +61,6 @@ The following categories of methods are implemented on the Vcon class.
  * Methods to perform operations on Vcon's
    * [filter](#filter)
    * [jq](#jq)
- * Methods to access or modify Vcon Meta Data
-   * [set_created_at](#set_created_at)
-   * [set_subject](#set_subject)
-   * [set_uuid](#set_uuid)
  * Methods to sign or verify a signed Vcon
    * [sign](#sign)
    * [verify](#verify)
@@ -450,6 +451,82 @@ Returns:  None
 
 
 
+## Methods to access or modify Vcon Meta Data
+
+
+### add_parameter_extension
+
+**add_parameter_extension**(self, path: 'str', parameter_name: 'str') -> 'typing.Union[str, None]'
+
+
+Add the name of the vCon extension which defines the given parameter to
+this vCon's extensions parameter.
+
+Has no effect if the parameter is defined by the core vCon schema.  Logs a
+warning and has no effect if the parameter name is not registered.
+
+Parameters:  
+  **path** (String) - dot separated path to the Object containing the
+              parameter.  See **Vcon.get_parameter_extension**.  
+  **parameter_name** (String) - name of the parameter in the Object at the
+              given path.
+
+Returns:  
+  the same value as **Vcon.get_parameter_extension**
+
+Raises ValueError if the path is not a registered Object path.
+
+
+
+### set_created_at
+
+**set_created_at**(self, create_date: 'typing.Union[int, float, str, None]') -> 'None'
+
+
+Set the Vcon creation date.
+
+Parameters:  
+**create_date** (typing.Union[int, float, str, None]) - epoch time as int or float,
+  date string as RFC3339 or RFC822 format.
+  passing a value of None will use the current time.
+
+Returns: None
+
+
+
+### set_subject
+
+**set_subject**(self, subject: 'str') -> 'None'
+
+
+Set the subject parameter of the vCon.
+
+Parameters:  
+  **subject** - String value to assign to the vCon subject parameter.
+
+Returns: None
+
+
+
+### set_uuid
+
+**set_uuid**(self, domain_name: 'str', replace: 'bool' = False) -> 'str'
+
+
+Generate a UUID for this vCon and set the parameter
+
+Parameters:  
+  **domain_name**: a DNS domain name string, should generally be a fully qualified host
+      name.
+
+Returns:  
+  UUID version 8 string
+  (vCon uuid parameter is also set)
+
+
+
+
+
 ## Methods to access or modify Vcon Party objects
 
 
@@ -462,7 +539,7 @@ Add a new party to the vCon Parties Object array.
 
 Parameters:  
   **party_dict** (dict) - dict representing the parameter name and value pairs
-              Dict key must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]
+              Unregistered parameter names are allowed and log a warning.
 
 Returns:  
 int: if success, positive int index of party in list
@@ -498,7 +575,7 @@ add a new party to the vCon Parties Object array.
 
 Parameters:  
   **parameter_name** (String) - name of the Party Object parameter to be set.
-              Must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]  
+              Unregistered parameter names are allowed and log a warning.
   **parameter_value** (String) - new value to set for the named parameter  
   **party_index** (int) - index of party to set tel url on
               (-1 indicates a new party should be added)  
@@ -818,58 +895,6 @@ turns:
 if query is a str, a list containing the query result is returned  
 if query is a dict, a dict with keys corresponding to the input query where
 the values are the query result.
-
-
-
-
-## Methods to access or modify Vcon Meta Data
-
-
-### set_created_at
-
-**set_created_at**(self, create_date: 'typing.Union[int, float, str, None]') -> 'None'
-
-
-Set the Vcon creation date.
-
-Parameters:  
-**create_date** (typing.Union[int, float, str, None]) - epoch time as int or float,
-  date string as RFC3339 or RFC822 format.
-  passing a value of None will use the current time.
-
-Returns: None
-
-
-
-### set_subject
-
-**set_subject**(self, subject: 'str') -> 'None'
-
-
-Set the subject parameter of the vCon.
-
-Parameters:  
-  **subject** - String value to assign to the vCon subject parameter.
-
-Returns: None
-
-
-
-### set_uuid
-
-**set_uuid**(self, domain_name: 'str', replace: 'bool' = False) -> 'str'
-
-
-Generate a UUID for this vCon and set the parameter
-
-Parameters:  
-  **domain_name**: a DNS domain name string, should generally be a fully qualified host
-      name.
-
-Returns:  
-  UUID version 8 string
-  (vCon uuid parameter is also set)
-
 
 
 
