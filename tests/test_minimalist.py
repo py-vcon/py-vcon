@@ -26,28 +26,22 @@ def assert_vcon_array_size(vCon : vcon.Vcon, list_name : str, size : int) -> Non
   assert_dict_array_size(vCon._vcon_dict, list_name, size)
 
 def test_party_parameters(empty_vcon : vcon.Vcon):
-  try:
-    empty_vcon.set_party_parameter("foo", "bar")
-    Exception("Should not allow setting of foo parameter on a Party")
 
-  except AttributeError as e:
-    pass
-
-  assert(len(empty_vcon.parties) == 0)
-
-  try:
-    empty_vcon.add_party({"tel": "1234", "foo": "bar"})
-    raise Exception("should not get her, bad party parameter")
-  except AttributeError as e:
-    pass
-
-  assert(len(empty_vcon.parties) == 0)
-
-  empty_vcon.add_party({"tel": "1234", "name": "Alice"})
+  party_index = empty_vcon.set_party_parameter("foo", "bar")
+  assert(party_index == 0)
   assert(len(empty_vcon.parties) == 1)
-  assert(empty_vcon.parties[0]["tel"] == "1234")
-  assert(empty_vcon.parties[0]["name"] == "Alice")
+  assert(empty_vcon.parties[0]["foo"] == "bar")
+  assert(vcon.Vcon.EXTENSIONS not in empty_vcon._vcon_dict)
 
+
+  party_index = empty_vcon.add_party({"tel": "1234", "foo": "bar"})
+  assert(party_index == 1)
+  assert(len(empty_vcon.parties) == 2)
+  assert(empty_vcon.parties[1]["foo"] == "bar")
+  empty_vcon.add_party({"tel": "1234", "name": "Alice"})
+  assert(len(empty_vcon.parties) == 3)
+  assert(empty_vcon.parties[2]["tel"] == "1234")
+  assert(empty_vcon.parties[2]["name"] == "Alice")
 
 def test_party_tel(empty_vcon : vcon.Vcon):
   """ Test adding first party with a tel url to create simple vCon """
