@@ -37,6 +37,7 @@ import vcon.utils
 import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
+import vcon.parameter_registry
 
 __version__ = "0.6.14"
 
@@ -228,6 +229,55 @@ def tag_vcon_references(func):
   return(func)
 
 
+# Note: __iadd__ and __imul__ are deliberately excluded.  VconAttribute.__set__
+# raises, so an in place operator can never complete, and including them would
+# leave the mutation applied to the vCon before the assignment raises.
+_LIST_MUTATOR_NAMES = (
+  "append",
+  "extend",
+  "insert",
+  "remove",
+  "pop",
+  "clear",
+  "sort",
+  "reverse",
+  "__setitem__",
+  "__delitem__"
+  )
+
+
+def _make_write_back_method(base_type, method_name):
+  """ build a mutator which writes a plain container back into the vCon dict """
+  def write_back_method(self, *args, **kwargs):
+    result = getattr(base_type, method_name)(self, *args, **kwargs)
+    self._vcon_dict[self._key] = base_type(self)
+    return(result)
+
+  write_back_method.__name__ = method_name
+  return(write_back_method)
+
+
+def _make_write_back_type(type_name, base_type, mutator_names):
+  """
+  Build a container type which adds itself to the vCon dict when it is
+  first modified.  This allows an attribute to return an empty container
+  without adding an empty container to the vCon.
+  """
+  def write_back_init(self, vcon_dict, key, initial = ()):
+    base_type.__init__(self, initial)
+    self._vcon_dict = vcon_dict
+    self._key = key
+
+  namespace = {"__init__": write_back_init}
+  for mutator_name in mutator_names:
+    namespace[mutator_name] = _make_write_back_method(base_type, mutator_name)
+
+  return(type(type_name, (base_type,), namespace))
+
+
+_WriteBackList = _make_write_back_type("_WriteBackList", list, _LIST_MUTATOR_NAMES)
+
+
 class VconAttribute:
   """ descriptor base class for attributes in vcon """
   def __init__(self, doc : typing.Union[str, None] = None):
@@ -309,6 +359,24 @@ class VconDictList(VconAttribute):
     if(got_value is None):
       got_value = []
       instance_object._vcon_dict[self.name] = got_value
+
+    return(got_value)
+
+
+class VconStringList(VconAttribute):
+  """ descriptor for Lists of strings in vcon """
+
+  def __init__(self, doc : typing.Union[str, None] = None):
+    super().__init__(doc = doc)
+    self._type_name = "StringList"
+
+  def __get__(self, instance_object, class_type = None):
+    got_value = super().__get__(instance_object, class_type)
+
+    # Always return a list to avoid having to test for null and empty.
+    # The returned list adds itself to the vCon only if it is modified.
+    if(got_value is None):
+      got_value = _WriteBackList(instance_object._vcon_dict, self.name)
 
     return(got_value)
 
@@ -397,6 +465,8 @@ class Vcon():
 
   # Dict keys
   VCON_VERSION = "vcon"
+  EXTENSIONS = "extensions"
+  CRITICAL = "critical"
   UUID = "uuid"
   SUBJECT = "subject"
   REDACTED = "redacted"
@@ -408,9 +478,16 @@ class Vcon():
   ATTACHMENTS = "attachments"
   CREATED_AT = "created_at"
 
-  PARTIES_OBJECT_STRING_PARAMETERS = ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone", "role", "extension"]
+  PARAMETER_CORE = vcon.parameter_registry.PARAMETER_CORE
+
+  PARTIES_OBJECT_STRING_PARAMETERS = vcon.parameter_registry.get_path_parameter_names("parties")
 
   vcon = VconString(doc = "vCon version string attribute")
+
+  extensions = VconStringList(doc = "List of names of the vCon extensions used by this vCon")
+
+  critical = VconStringList(doc = "List of names of the vCon extensions which a consumer must support to process this vCon")
+
   uuid = VconUuid(doc = "vCon UUID string attribute")
   created_at = VconString(doc = "vCon creation date string attribute")
   subject = VconString(doc = "vCon subject string attribute")
@@ -500,7 +577,6 @@ class Vcon():
     self._vcon_dict[Vcon.ANALYSIS] = []
     self._vcon_dict[Vcon.ATTACHMENTS] = []
     self._vcon_dict[Vcon.CREATED_AT] = vcon.utils.cannonize_date(datetime.datetime.utcnow())
-    self._vcon_dict[Vcon.REDACTED] = {}
 
 
   # TODO: use mediatypes package instead
@@ -624,7 +700,7 @@ class Vcon():
 
     Parameters:  
       **parameter_name** (String) - name of the Party Object parameter to be set.
-                  Must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]  
+                  Unregistered parameter names are allowed and log a warning.
       **parameter_value** (String) - new value to set for the named parameter  
       **party_index** (int) - index of party to set tel url on
                   (-1 indicates a new party should be added)  
@@ -635,10 +711,7 @@ class Vcon():
 
     self._attempting_modify()
 
-    if(parameter_name not in Vcon.PARTIES_OBJECT_STRING_PARAMETERS):
-      raise AttributeError(
-        "Not supported: setting of Parties Object parameter: {}.  Must be one of the following:  {}".
-        format(parameter_name, Vcon.PARTIES_OBJECT_STRING_PARAMETERS))
+    self.add_parameter_extension("parties", parameter_name)
 
     party_index = self.__add_new_party(party_index)
 
@@ -655,16 +728,15 @@ class Vcon():
 
     Parameters:  
       **party_dict** (dict) - dict representing the parameter name and value pairs
-                  Dict key must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]
+                  Unregistered parameter names are allowed and log a warning.
 
     Returns:  
     int: if success, positive int index of party in list
     """
     self._attempting_modify()
     for key in party_dict.keys():
-      if(key not in Vcon.PARTIES_OBJECT_STRING_PARAMETERS):
-        raise AttributeError(f"Not supported: setting of Parties Object parameter: {key}." +
-          f"  Must be one of the following:  {Vcon.PARTIES_OBJECT_STRING_PARAMETERS}")
+      self.add_parameter_extension("parties", key)
+
     # TODO parameter specific validation
     self._vcon_dict[Vcon.PARTIES].append(party_dict)
     party_index = len(self._vcon_dict[Vcon.PARTIES]) - 1
@@ -1181,7 +1253,14 @@ class Vcon():
 
     if (body):
       if(sign_type == "LM-OTS"):
-        logger.warning("Warning: \"LM-OTS\" may be depricated")
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn(
+          "sign_type \"LM-OTS\" is deprecated; use \"SHA-512\" instead",
+          category = DeprecationWarning,
+          stacklevel = 2)
+        warnings.simplefilter('default', DeprecationWarning)
+        logger.warning("sign_type \"LM-OTS\" is deprecated; use \"SHA-512\" instead")
+
         key, signature = vcon.security.lm_one_time_signature(body)
         new_dialog['key'] = key
         new_dialog['signature'] = signature
@@ -1345,6 +1424,7 @@ class Vcon():
     self._attempting_modify()
 
     dialog_index = self.__add_new_dialog(dialog_index)
+    self.add_parameter_extension("dialog", parameter_name)
 
     # TODO parameter specific validation
     self._vcon_dict[Vcon.DIALOG][dialog_index][parameter_name] = parameter_value
@@ -1427,6 +1507,7 @@ class Vcon():
       analysis_element["schema"] = schema
 
     for param, value in optional_parameters.items():
+      self.add_parameter_extension("analysis", param)
       analysis_element[param] = value
 
     if(self.analysis is None):
@@ -1472,6 +1553,7 @@ class Vcon():
       analysis_element["schema"] = schema
 
     for parameter_name, value in optional_parameters.items():
+      self.add_parameter_extension("analysis", parameter_name)
       analysis_element[parameter_name] = value
 
     if(self.analysis is None):
@@ -2605,6 +2687,85 @@ class Vcon():
     self._vcon_dict[Vcon.GROUP].append(new_child)
 
     return(group_len)
+
+
+  @staticmethod
+  def get_parameter_extension(
+    path : str,
+    parameter_name : str
+    ) -> typing.Union[str, None]:
+    """
+    Get the vCon extension which defines the given parameter name at the
+    given Object path.
+
+    Parameters:  
+      **path** (String) - dot separated path to the Object containing the
+                  parameter.  Each segment is the parameter name of the Object
+                  in its parent.  The empty string is the top level vCon Object.
+                  For example: "", "parties", "dialog", "parties.civicaddress",
+                  "dialog.party_history".  
+      **parameter_name** (String) - name of the parameter in the Object at the
+                  given path.
+
+    Returns:  
+      **Vcon.PARAMETER_CORE** if defined by the core vCon schema, the extension
+      name token as it is to appear in the vCon extensions parameter if defined
+      by an extension, or None if the name is not registered at the given path.
+
+    Raises ValueError if the path is not a registered Object path.
+    """
+    return(vcon.parameter_registry.get_parameter_extension(path, parameter_name))
+
+
+  @tag_meta
+  def add_parameter_extension(
+    self,
+    path : str,
+    parameter_name : str
+    ) -> typing.Union[str, None]:
+    """
+    Add the name of the vCon extension which defines the given parameter to
+    this vCon's extensions parameter.
+
+    Has no effect if the parameter is defined by the core vCon schema.  Logs a
+    warning and has no effect if the parameter name is not registered.
+
+    Parameters:  
+      **path** (String) - dot separated path to the Object containing the
+                  parameter.  See **Vcon.get_parameter_extension**.  
+      **parameter_name** (String) - name of the parameter in the Object at the
+                  given path.
+
+    Returns:  
+      the same value as **Vcon.get_parameter_extension**
+
+    Raises ValueError if the path is not a registered Object path.
+    """
+    definer = Vcon.get_parameter_extension(path, parameter_name)
+
+    if(definer is None):
+      logger.warning(
+        "parameter name: \"%s\" at Object path: \"%s\" is not defined by the"
+        " core vCon schema or any known vCon extension",
+        parameter_name,
+        path
+        )
+      return(None)
+
+    if(definer == Vcon.PARAMETER_CORE):
+      return(definer)
+
+    self._attempting_modify()
+
+    extensions = self._vcon_dict.get(Vcon.EXTENSIONS, None)
+    if(extensions is None):
+      extensions = []
+      self._vcon_dict[Vcon.EXTENSIONS] = extensions
+
+    if(definer not in extensions):
+      extensions.append(definer)
+
+    return(definer)
 
 
   @staticmethod
