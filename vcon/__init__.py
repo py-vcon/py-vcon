@@ -571,7 +571,6 @@ class Vcon():
     self._jwe_dict = None
 
     self._vcon_dict = {}
-    self._vcon_dict[Vcon.GROUP] = []
     self._vcon_dict[Vcon.PARTIES] = []
     self._vcon_dict[Vcon.DIALOG] = []
     self._vcon_dict[Vcon.ANALYSIS] = []
@@ -2683,8 +2682,9 @@ class Vcon():
     new_child = {}
     new_child["uuid"] = uuid
 
-    group_len = len(self._vcon_dict[Vcon.GROUP])
-    self._vcon_dict[Vcon.GROUP].append(new_child)
+    group_list = self._vcon_dict.setdefault(Vcon.GROUP, [])
+    group_len = len(group_list)
+    group_list.append(new_child)
 
     return(group_len)
 
