@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Vcon serialization tests """
 
 import pytest
@@ -44,4 +44,24 @@ def test_loads() -> None:
   except vcon.InvalidVconJson as e:
     # expected
     pass
+
+def test_group_absent_by_default() -> None:
+  a_vcon = vcon.Vcon()
+  a_vcon.set_uuid("py-vcon.dev")
+
+  # Must check the dict before reading the group attribute, as
+  # VconDictList currently inserts an empty list on read.
+  assert(vcon.Vcon.GROUP not in a_vcon._vcon_dict)
+  assert(vcon.Vcon.GROUP not in a_vcon.dumpd())
+  assert(vcon.Vcon.GROUP not in a_vcon.dumps())
+
+
+def test_add_group_object_creates_group() -> None:
+  a_vcon = vcon.Vcon()
+  a_vcon.set_uuid("py-vcon.dev")
+  group_index = a_vcon.add_group_object("fake-uuid-1234")
+
+  assert(group_index == 0)
+  assert(a_vcon.group[0]["uuid"] == "fake-uuid-1234")
+  assert(vcon.Vcon.GROUP in a_vcon.dumpd())
 
