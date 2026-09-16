@@ -114,5 +114,5 @@ To create a new vCon and add dialogs and attachments from a Zoom meeting recordi
 
 To create a new vCon and add dialogs and attachments from a Google Meet recording:
 
-    vcon -n add in-meet 'tests/google_meet/test meeting (2023-09-06 20:27 GMT-4) (18af10d0)' 
+    vcon -n add in-meet 'tests/google_meet/test meeting (2023-09-06 20_27 GMT-4) (18af10d0)' 
 

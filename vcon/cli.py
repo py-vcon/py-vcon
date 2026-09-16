@@ -358,6 +358,8 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
     name_parts_dict = re_results.groupdict()
     meeting_name = name_parts_dict["meeting"]
     meeting_date = name_parts_dict["date"]
+    # ':' is not allowed in Windows file names, so the time may be HH_MM
+    meeting_date = meeting_date.replace("_", ":")
     # Massage the date into RFC3339 format
     # hour offset must be 2 digits
     if(meeting_date[-2:-1] == "-"):
