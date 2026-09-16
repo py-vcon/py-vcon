@@ -421,3 +421,6 @@ if(py_vcon_server.settings.LAUNCH_ADMIN_API):
 if(py_vcon_server.settings.LAUNCH_VCON_API):
   py_vcon_server.vcon_api.init(restapi)
 
+# Enable entry points added by addon packages
+py_vcon_server.restful_api.init_api_extensions(restapi)
+

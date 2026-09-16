@@ -85,6 +85,36 @@ class InternalErrorResponse(fastapi.responses.JSONResponse):
       )
 
 
+# Functions registered by addon packages to add their own entry points
+# to the RESTful API.  Addons are loaded before the FastAPI app is created,
+# so they register an init function here which gets called with the app.
+_API_EXTENSIONS: typing.List[typing.Callable[[fastapi.FastAPI], None]] = []
+
+
+def register_api_extension(init_function: typing.Callable[[fastapi.FastAPI], None]) -> None:
+  """
+  Register a function to be called with the FastAPI app after the core
+  entry points have been initialized.  Typically called from an addon
+  module at import time.
+  """
+  if(init_function not in _API_EXTENSIONS):
+    _API_EXTENSIONS.append(init_function)
+
+
+def init_api_extensions(restapi: fastapi.FastAPI) -> None:
+  """ Call all of the registered API extension init functions """
+  for init_function in _API_EXTENSIONS:
+    try:
+      logger.info("initializing API extension: {}.{}".format(
+          init_function.__module__,
+          init_function.__name__
+        ))
+      init_function(restapi)
+    except Exception as ext_error:
+      logger.error("API extension init failed: {}".format(init_function))
+      logger.exception(ext_error)
+
+
 def log_exception(exception: Exception):
   """ General exception logger for APIs """
   # Brief:
