@@ -290,6 +290,63 @@ def test_deepgram_transcript_accessor_non_diarized():
   assert(text_list[0]["parties"] == [0, 1])
 
 
+def test_deepgram_transcript_accessor_multichannel_parties():
+  """ Multichannel transcript text is attributed to the party(s) on each channel per dialog parties """
+  import vcon.filter_plugins.deepgram
+
+  def channel(text, start):
+    return({"alternatives": [{
+        "transcript": text,
+        "words": [{"word": "x", "start": start, "end": start + 1.0}],
+        "paragraphs": {"paragraphs": [{"speaker": 0, "start": start, "end": start + 1.0,
+          "sentences": [{"text": text, "start": start, "end": start + 1.0}]}]}
+      }]})
+
+  dialog_dict = {
+    "type": "recording",
+    "start": "2023-08-31T18:26:36.987+00:00",
+    # channel 0: party 1, channel 1: parties 2 and 3 mixed
+    "parties": [1, [2, 3]]
+  }
+  analysis_dict = {
+    "type": "transcript", "vendor": "deepgram", "product": "transcription",
+    "schema": "deepgram_prerecorded", "encoding": "json", "dialog": 0,
+    "body": {"results": {"channels": [channel("Hello", 0.5), channel("Hi there", 2.0)]}}
+  }
+
+  accessor = vcon.filter_plugins.deepgram.DeepgramTranscriptAccessor(dialog_dict, analysis_dict)
+  text_list = accessor.get_text()
+  assert([(t["parties"], t["text"]) for t in text_list] == [(1, "Hello"), ([2, 3], "Hi there")])
+
+  # without paragraphs (not diarized)
+  for c in analysis_dict["body"]["results"]["channels"]:
+    del c["alternatives"][0]["paragraphs"]
+  text_list = accessor.get_text()
+  assert([(t["parties"], t["text"]) for t in text_list] == [(1, "Hello"), ([2, 3], "Hi there")])
+
+  # dialog parties without an entry for a channel falls back to the channel index
+  dialog_dict["parties"] = [1]
+  text_list = accessor.get_text()
+  assert([t["parties"] for t in text_list] == [1, 1])
+
+
+@pytest.mark.asyncio
+async def test_get_dialog_text_text_dialog_without_duration():
+  """ duration is optional for text dialogs; parties is provided as for transcripts """
+  text_vcon = vcon.Vcon()
+  text_vcon.set_party_parameter("name", "Alice")
+  text_vcon.set_party_parameter("name", "Bob")
+  text_vcon.add_dialog_inline_text("hi Bob", "2023-08-31T18:26:36.987+00:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  del text_vcon.dialog[0]["duration"]
+
+  texts = await text_vcon.get_dialog_text(0)
+  assert(len(texts) == 1)
+  assert(texts[0]["text"] == "hi Bob")
+  assert(texts[0]["duration"] is None)
+  assert(texts[0]["party"] == 0)
+  assert(texts[0]["parties"] == 0)
+
+
 def test_deepgram_transcript_accessor_no_match():
   """ Test DeepgramTranscriptAccessor returns empty list when analysis does not match """
   import vcon.filter_plugins.deepgram

@@ -22,6 +22,17 @@ vcon.filter_plugins.FilterPluginRegistry.set_type_default_name("transcribe", "de
 
 # Implement an accessor for the Deepgram transcription format
 class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
+  def channel_parties(self, channel_index: int):
+    """
+    Party index(es) recorded on the given channel of a multichannel recording.
+    The dialog parties array has an entry per channel.  Falls back to the channel
+    index if the dialog parties do not provide an entry for the channel.
+    """
+    parties = self._dialog_dict.get("parties", None)
+    if(isinstance(parties, list) and channel_index < len(parties) and parties[channel_index] is not None):
+      return(parties[channel_index])
+    return(channel_index)
+
   def get_text(self):
     """
     Get speaker, text and time stamps for Deepgram transcript.
@@ -55,8 +66,8 @@ class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
               if(num_channels == 1):
                 text_dict["parties"] = paragraph["speaker"]
               else:
-                # use the channel index if multichannel
-                text_dict["parties"] = channel_index
+                # use the party(s) recorded on this channel if multichannel
+                text_dict["parties"] = self.channel_parties(channel_index)
               relative_start = sentence["start"]
               text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()
               relative_end = sentence["end"]
@@ -67,7 +78,10 @@ class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
 
         else:
           text_dict = {}
-          text_dict["parties"] = self._dialog_dict["parties"]
+          if(num_channels == 1):
+            text_dict["parties"] = self._dialog_dict["parties"]
+          else:
+            text_dict["parties"] = self.channel_parties(channel_index)
           text_dict["text"] = self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["transcript"]
           relative_start = self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["words"][0]["start"]
           text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()

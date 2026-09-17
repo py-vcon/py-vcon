@@ -1046,8 +1046,12 @@ class Vcon():
           text_dict["party"] = dialog["parties"][0]
         elif(isinstance(dialog["parties"], int)):
           text_dict["party"] = dialog["parties"]
+        # transcript accessors and their consumers use "parties"
+        if("party" in text_dict):
+          text_dict["parties"] = text_dict["party"]
       text_dict["start"] = dialog["start"]
-      text_dict["duration"] = dialog["duration"]
+      # duration is optional (e.g. typing time is often not known)
+      text_dict["duration"] = dialog.get("duration", None)
 
       if(dialog["mediatype"].lower() == vcon.Vcon.MEDIATYPE_TEXT_PLAIN):
         text_dict["text"] = dialog["body"]
