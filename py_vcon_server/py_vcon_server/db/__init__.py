@@ -160,16 +160,6 @@ class VconStorage():
     raise Exception("jq_query not implemented")
 
 
-  @staticmethod
-  async def json_path_query(vcon_uuid : str, json_path_query_string : str) -> str:
-    """
-    Apply the given JsonPath query on the Vcon from storage given its UUID as the key.
-
-    Returns: json path query in the form of a string
-    """
-    raise Exception("json_path_query not implemented")
-
-
   async def delete(self, vcon_uuid : str) -> None:
     """ Delete the Vcon from storage identified by its UUID as the key """
     raise Exception("delete not implemented")

@@ -95,18 +95,6 @@ class RedisVconStorage(py_vcon_server.db.VconStorage):
     return(query_result)
 
 
-  async def json_path_query(self, vcon_uuid : str, json_path_query_string : str) -> list:
-    """ Get the JSON path query results for the given **Vcon** """
-    redis_con = self._redis_mgr.get_client()
-
-    query_list = await redis_con.json().get("vcon:{}".format(vcon_uuid), json_path_query_string)
-
-    if(query_list is None):
-      raise py_vcon_server.db.VconNotFound("vCon not found for UUID: {}".format(vcon_uuid))
-
-    return(query_list)
-
-
   async def delete(self, vcon_uuid : str) -> None:
     """ Delete the Vcon with the given UUID """
 

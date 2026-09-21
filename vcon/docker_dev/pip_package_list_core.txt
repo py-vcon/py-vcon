@@ -5,6 +5,8 @@ cryptography >= 37, < 45.0.0 ; python_version < "3.9"
 cryptography >= 37 ; python_version >= "3.9"
 hsslms
 jq
+# JSONPath (RFC 9535) for Vcon.jsonpath
+jsonpath-rfc9535
 pydantic
 # 3.4.x caused some problems with REAND_bytes
 python-jose !=3.4.*

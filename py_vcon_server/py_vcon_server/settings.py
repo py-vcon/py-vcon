@@ -1,4 +1,5 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 import os
 import multiprocessing
 
@@ -40,6 +41,14 @@ if(not isinstance(NUM_WORKERS, int)):
   NUM_WORKERS = 0
 
 PLUGIN_PATHS = os.getenv("PLUGIN_PATHS", "").split(",")
+
+# Trusted Certificate Authority certificates used to verify signed (JWS) vCons
+# read from storage, comma separated.  An entry may be a certificate file, a
+# directory of *.pem and *.crt files, or an inline PEM.  When none are set, the
+# content of a signed vCon cannot be read (see py_vcon_server.certs).
+VCON_CA_CERT_PEMS = [entry.strip()
+    for entry in os.getenv("VCON_CA_CERT_PEMS", "").split(",")
+    if(entry.strip() != "")]
 
 CORS_ORIGINS = []
 cors_origins_string = os.getenv("CORS_ORIGINS", "").strip()

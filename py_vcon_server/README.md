@@ -357,6 +357,14 @@ Example: "a:4,b"
 (defaults to: "")
 + **PLUGIN_PATHS** - comma separated list of absolute directory paths to scan for addon processor registration modules.  Each path should point to a `processor_addons` directory containing registration `.py` files (e.g. `/path/to/my_addon/py_vcon_server/processor_addons`).  Used for development installs where addon packages are not installed via pip.  Not needed when addons are pip-installed (namespace package merging handles discovery automatically).
   + **CORS_ORIGINS** - comma separated list of allowed Cross-Origin Resource Sharing (CORS) hosts/origins.  When running multiple instance, your admin console will likely want to access the different py_vcon_server instance from the same console or web front end.  If you use a reverse proxy in front, the CORS polcies will likely be handled there and this setting will be unused.  However, if you do not have a reverse proxy between your application accessing multiple instances of the py_vcon_server, you may need to use this setting.  Note that every host, port and protocol (e.g. HTTP and HTTPS) combination to be allowed myst be listed.  Example: "http://192.168.0.2:8000, https://192.168.0.2:8000, http://192.168.0.2:8002, http://192.168.0.3" (defaults to: "")
++ **VCON_CA_CERT_PEMS** - comma separated list of trusted Certificate Authority certificates, used to verify a signed (JWS) vCon read from storage so that its content can be read.
+A signed vCon is verified before it is queried by the GET /vcon/{uuid}/jq and GET /vcon/{uuid}/jsonpath [vCon Storage CRUD RESTful API](https://raw.githack.com/py-vcon/py-vcon/main/py_vcon_server/docs/swagger.html#/vCon%3A%20Storage%20CRUD).
+Verification requires that one of the certificates in the vCon's JWS x5c certificate chain was issued by one of these CAs.
+When no CA certificates are set, the content of a signed vCon cannot be read and those entry points return a 422 error saying so; an unsigned vCon is unaffected.
+Each entry may be a certificate file, a directory containing `*.pem` and `*.crt` certificate files, or an inline PEM.
+A directory is read when a vCon is verified rather than at startup, so a certificate added to or rotated in it takes effect without restarting the server.
+Example: "/etc/vcon/ca-certs" or "/etc/vcon/root-ca.crt, /etc/vcon/partner-ca.crt"
+(defaults to: "")
 
 ## Installing and Configuring
 

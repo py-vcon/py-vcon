@@ -1,4 +1,5 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 """
 Module for creating and modifying vCon conversation containers.
 see https:/vcon.dev
@@ -24,6 +25,7 @@ import datetime
 import email
 import pathlib
 import jq
+import jsonpath_rfc9535
 import uuid6
 import vcon.logging_utils
 # TODO:  remove this and reference vcon.build_logger directly in vcon.* modules
@@ -2492,9 +2494,58 @@ class Vcon():
 
 
   @tag_operation
+  def jsonpath(
+    self,
+    query: typing.Union[str, dict[str, str]],
+    signed: bool = True
+    ) -> typing.Union[list[typing.Any], dict[str, list[typing.Any]]]:
+    """
+    Perform JSONPath queries (RFC 9535) on the Vcon JSON
+
+    Parameters:  
+    **query** (Union[str, dict[str, str]]) - query(s) to be performed on this Vcon
+      **query** can be a single JSONPath query string or a dict containing a named set
+      where the values are query strings.  
+    **signed** (bool) - for a signed or verified vCon, which form to query:
+      True (default) queries the JWS form, where the content is in the **payload**;
+      False queries the vCon content itself.  No effect on an unsigned vCon.
+
+    Returns:  
+      if query is a str, a list of the values of the nodes the query selects  
+      if query is a dict, a dict with keys corresponding to the input query where
+      the values are the lists of selected values.
+
+    Raises jsonpath_rfc9535.JSONPathError (JSONPathSyntaxError for a malformed query).
+    """
+    if(self._state in [VconStates.UNVERIFIED, VconStates.DECRYPTED]):
+      raise InvalidVconState("Vcon state: {} cannot read parameters".format(self._state))
+
+    vcon_dict = self.dumpd(signed = signed)
+    if(isinstance(query, str)):
+      return(jsonpath_rfc9535.find(query, vcon_dict).values())
+
+    results = {}
+    for query_name, query_string in query.items():
+      results[query_name] = jsonpath_rfc9535.find(query_string, vcon_dict).values()
+
+    return(results)
+
+
+  @property
+  def state(self) -> VconStates:
+    """
+    The form this Vcon is currently in: UNSIGNED, SIGNED, UNVERIFIED (signed,
+    read from storage or the wire and not yet verified), VERIFIED, ENCRYPTED or
+    DECRYPTED.  Which operations and attributes are allowed depends upon it.
+    """
+    return(self._state)
+
+
+  @tag_operation
   def jq(
     self,
-    query: typing.Union[str, dict[str, str]]
+    query: typing.Union[str, dict[str, str]],
+    signed: bool = True
     ) -> typing.Union[list[str], dict[str, any]]:
     """
     Perform jq syle queries on the Vcon JSON
@@ -2502,7 +2553,10 @@ class Vcon():
     Parameters:  
     **query** (Union[str, dict[str, str]]) - query(s) to be performed on this Vcon
       **query** can be a single query string or a dict containing a names set where
-      the values are query strings.
+      the values are query strings.  
+    **signed** (bool) - for a signed or verified vCon, which form to query:
+      True (default) queries the JWS form, where the content is in the **payload**;
+      False queries the vCon content itself.  No effect on an unsigned vCon.
 
   Returns:  
     if query is a str, a list containing the query result is returned  
@@ -2515,11 +2569,11 @@ class Vcon():
     if(isinstance(query, str)):
       compiled_query = jq.compile(query)
 
-      return(compiled_query.input_value(self.dumpd()).all())
+      return(compiled_query.input_value(self.dumpd(signed = signed)).all())
 
     else:
       results = {}
-      vcon_dict = self.dumpd()
+      vcon_dict = self.dumpd(signed = signed)
       for query_name, query_string in query.items():
         compiled_query = jq.compile(query_string)
         results[query_name] = compiled_query.input_value(vcon_dict).all()[0]

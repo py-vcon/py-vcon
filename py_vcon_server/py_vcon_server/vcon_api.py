@@ -1,4 +1,5 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 """ Implementation of the Vcon API entry points """
 
 import os
@@ -8,7 +9,9 @@ import asyncio
 import pydantic
 import fastapi
 import fastapi.responses
+import jsonpath_rfc9535
 import py_vcon_server.db
+import py_vcon_server.certs
 import py_vcon_server.processor
 import py_vcon_server.pipeline
 import py_vcon_server.logging_utils
@@ -113,16 +116,26 @@ def init(restapi):
     """
     Apply the given jq transform to the vCon identified by the given UUID and return the results.
 
+    A signed vCon is verified with the trusted CA certificates (VCON_CA_CERT_PEMS
+    setting) so that its content can be queried.  If it cannot be verified, or the
+    vCon is encrypted, its content cannot be read and an error is returned.
+
     Returns: list - containing jq tranform of the vCon.
     """
     try:
       logger.info("vcon UID: {} jq transform string: {}".format(vcon_uuid, jq_transform))
-      transform_result = await py_vcon_server.db.VCON_STORAGE.jq_query(vcon_uuid, jq_transform)
+      a_vcon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
+      py_vcon_server.certs.verify_for_read(a_vcon)
+      # query the vCon content, not the JWS envelope of a signed vCon
+      transform_result = a_vcon.jq(jq_transform, signed = False)
       logger.debug("jq  transform result: {}".format(transform_result))
 
     except py_vcon_server.db.VconNotFound as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
+
+    except py_vcon_server.certs.VconNotReadable as e:
+      return(py_vcon_server.restful_api.ValidationError(str(e)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -135,19 +148,33 @@ def init(restapi):
     tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def get_vcon_jsonpath_query(vcon_uuid: str, path_string: str):
     """
-    Apply the given JSONpath query to the vCon idntified by the given UUID.
+    Apply the given JSONPath query (RFC 9535) to the vCon identified by the given UUID.
 
-    Returns: list - the JSONpath query results
+    A signed vCon is verified with the trusted CA certificates (VCON_CA_CERT_PEMS
+    setting) so that its content can be queried.  If it cannot be verified, or the
+    vCon is encrypted, its content cannot be read and an error is returned.
+
+    Returns: list - the values of the nodes the query selects
     """
 
     try:
       logger.info("vcon UID: {} jsonpath query string: {}".format(vcon_uuid, path_string))
-      query_result = await py_vcon_server.db.VCON_STORAGE.json_path_query(vcon_uuid, path_string)
+      a_vcon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
+      py_vcon_server.certs.verify_for_read(a_vcon)
+      # query the vCon content, not the JWS envelope of a signed vCon
+      query_result = a_vcon.jsonpath(path_string, signed = False)
       logger.debug("jsonpath query result: {}".format(query_result))
 
     except py_vcon_server.db.VconNotFound as e:
       py_vcon_server.restful_api.log_exception(e)
       return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
+
+    except py_vcon_server.certs.VconNotReadable as e:
+      return(py_vcon_server.restful_api.ValidationError(str(e)))
+
+    except jsonpath_rfc9535.JSONPathError as e:
+      return(py_vcon_server.restful_api.ValidationError(
+          "path_string: {} is not a valid JSONPath (RFC 9535) query: {}".format(path_string, e)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
