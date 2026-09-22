@@ -61,6 +61,7 @@ The following categories of methods are implemented on the Vcon class.
  * Methods to perform operations on Vcon's
    * [filter](#filter)
    * [jq](#jq)
+   * [jsonpath](#jsonpath)
  * Methods to sign or verify a signed Vcon
    * [sign](#sign)
    * [verify](#verify)
@@ -886,6 +887,10 @@ Returns:
 
 Perform jq syle queries on the Vcon JSON
 
+The query runs on the vCon content, whether the vCon is unsigned, signed or
+verified.  A signed vCon read back from storage must be verified first, and an
+encrypted one decrypted and verified.
+
 Parameters:  
 **query** (Union[str, dict[str, str]]) - query(s) to be performed on this Vcon
   **query** can be a single query string or a dict containing a names set where
@@ -895,6 +900,31 @@ turns:
 if query is a str, a list containing the query result is returned  
 if query is a dict, a dict with keys corresponding to the input query where
 the values are the query result.
+
+
+
+### jsonpath
+
+**jsonpath**(self, query: 'typing.Union[str, dict[str, str]]') -> 'typing.Union[list[typing.Any], dict[str, list[typing.Any]]]'
+
+
+Perform JSONPath queries (RFC 9535) on the Vcon JSON
+
+The query runs on the vCon content, whether the vCon is unsigned, signed or
+verified.  A signed vCon read back from storage must be verified first, and an
+encrypted one decrypted and verified.
+
+Parameters:  
+**query** (Union[str, dict[str, str]]) - query(s) to be performed on this Vcon
+  **query** can be a single JSONPath query string or a dict containing a named set
+  where the values are query strings.
+
+Returns:  
+  if query is a str, a list of the values of the nodes the query selects  
+  if query is a dict, a dict with keys corresponding to the input query where
+  the values are the lists of selected values.
+
+Raises jsonpath_rfc9535.JSONPathError (JSONPathSyntaxError for a malformed query).
 
 
 

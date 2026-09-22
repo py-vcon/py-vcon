@@ -1,6 +1,13 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit test for Vcon.jq method """
+import pytest
+import vcon
 from tests.common_utils import call_data , empty_vcon, two_party_tel_vcon
+
+CA_CERT = "certs/fake_ca_root.crt"
+GROUP_CERT = "certs/fake_grp.crt"
+GROUP_PRIVATE_KEY = "certs/fake_grp.key"
+DIVISION_CERT = "certs/fake_div.crt"
 
 def test_jq_str(two_party_tel_vcon):
   a_vcon = two_party_tel_vcon
@@ -35,3 +42,27 @@ def test_jq_dict(two_party_tel_vcon):
   assert(result_dict["num_analysis"] == 0)
   assert(result_dict["subject"] is None)
 
+
+def test_jq_signed(two_party_tel_vcon):
+  """ A signed vCon is queried on its content, like attribute access, not its JWS form """
+  a_vcon = two_party_tel_vcon
+  a_vcon.set_uuid("py-vcon.org")
+  a_vcon.sign(GROUP_PRIVATE_KEY, [GROUP_CERT, DIVISION_CERT, CA_CERT])
+
+  assert(a_vcon.jq(".parties[0].tel")[0] == call_data['source'])
+  assert(a_vcon.jq(".parties | length")[0] == 2)
+  # the JWS members are not part of the content
+  assert(a_vcon.jq(".signatures")[0] is None)
+
+  # read back, a signed vCon cannot be queried until it is verified
+  unverified = vcon.Vcon()
+  unverified.loadd(a_vcon.dumpd())
+  with pytest.raises(vcon.InvalidVconState):
+    unverified.jq(".parties")
+  unverified.verify([CA_CERT])
+  assert(unverified.jq(".parties[0].tel")[0] == call_data['source'])
+
+  # an encrypted vCon cannot be queried at all
+  a_vcon.encrypt(GROUP_CERT)
+  with pytest.raises(vcon.InvalidVconState):
+    a_vcon.jq(".parties")

@@ -126,8 +126,7 @@ def init(restapi):
       logger.info("vcon UID: {} jq transform string: {}".format(vcon_uuid, jq_transform))
       a_vcon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
       py_vcon_server.certs.verify_for_read(a_vcon)
-      # query the vCon content, not the JWS envelope of a signed vCon
-      transform_result = a_vcon.jq(jq_transform, signed = False)
+      transform_result = a_vcon.jq(jq_transform)
       logger.debug("jq  transform result: {}".format(transform_result))
 
     except py_vcon_server.db.VconNotFound as e:
@@ -161,8 +160,7 @@ def init(restapi):
       logger.info("vcon UID: {} jsonpath query string: {}".format(vcon_uuid, path_string))
       a_vcon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
       py_vcon_server.certs.verify_for_read(a_vcon)
-      # query the vCon content, not the JWS envelope of a signed vCon
-      query_result = a_vcon.jsonpath(path_string, signed = False)
+      query_result = a_vcon.jsonpath(path_string)
       logger.debug("jsonpath query result: {}".format(query_result))
 
     except py_vcon_server.db.VconNotFound as e:

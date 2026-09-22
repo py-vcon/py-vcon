@@ -51,20 +51,25 @@ def test_jsonpath_syntax_error(two_party_tel_vcon):
 
 
 def test_jsonpath_signed(two_party_tel_vcon):
-  """ signed = False queries the content of a signed vCon rather than the JWS form """
+  """ A signed vCon is queried on its content, like attribute access, not its JWS form """
   a_vcon = two_party_tel_vcon
   a_vcon.set_uuid("py-vcon.org")
   a_vcon.sign(GROUP_PRIVATE_KEY, [GROUP_CERT, DIVISION_CERT, CA_CERT])
 
-  # the JWS form: the content is inside the payload
-  assert(a_vcon.jsonpath("$.parties") == [])
-  assert(len(a_vcon.jsonpath("$.signatures")) == 1)
-  assert(a_vcon.jsonpath("$.parties[0].tel", signed = False) == [call_data['source']])
+  assert(a_vcon.jsonpath("$.parties[0].tel") == [call_data['source']])
+  assert(a_vcon.jsonpath("$.parties[0].tel") == [a_vcon.parties[0]["tel"]])
+  # the JWS members are not part of the content
+  assert(a_vcon.jsonpath("$.signatures") == [])
 
   # read back, a signed vCon cannot be queried until it is verified
   unverified = vcon.Vcon()
   unverified.loadd(a_vcon.dumpd())
   with pytest.raises(vcon.InvalidVconState):
-    unverified.jsonpath("$.parties", signed = False)
+    unverified.jsonpath("$.parties")
   unverified.verify([CA_CERT])
-  assert(unverified.jsonpath("$.parties[0].tel", signed = False) == [call_data['source']])
+  assert(unverified.jsonpath("$.parties[0].tel") == [call_data['source']])
+
+  # an encrypted vCon cannot be queried at all
+  a_vcon.encrypt(GROUP_CERT)
+  with pytest.raises(vcon.InvalidVconState):
+    a_vcon.jsonpath("$.parties")
