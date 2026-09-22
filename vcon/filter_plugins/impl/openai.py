@@ -1,4 +1,5 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 """ OpenAI FilterPlugin implentation """
 import typing
 import asyncio
@@ -334,23 +335,72 @@ class OpenAIClient():
 
     return(chat_completion_result)
 
+  async def aclose(self):
+    """
+    Close the client of the running event loop, from that loop.
+
+    Connections can only be closed on the loop that opened them, so this has to
+    be awaited on that loop while it is still running.  Anything that uses more
+    than one event loop (successive asyncio.run() calls, or a test framework
+    giving each test its own loop) should await this before a loop ends.  A
+    client left behind is closed by the OpenAI SDK's __del__ on whatever loop
+    is running when it is garbage collected, which fails with "Event loop is
+    closed" and is reported by asyncio as an unretrieved task exception.
+    """
+    client = getattr(self, "client", None)
+    if(client is None):
+      return
+
+    logger.debug("closing OpenAI client for this event loop")
+    self.client = None
+    self._client_loop = None
+    result = client.close()
+    if(inspect.isawaitable(result)):
+      await result
+
+
   def close(self):
-    if(getattr(self, "client", None) is not None):
-        logger.debug("closing OpenAI client")
-        result = self.client.close()
-        # Newer openAI is async, need to see which form
-        if inspect.isawaitable(result):
-            try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    loop.create_task(result)
-                else:
-                    loop.run_until_complete(result)
-            except Exception:
-                pass
-        self.client = None
-    else:
+    """
+    Release the client, from outside a coroutine.  Prefer aclose() when there
+    is a running event loop: connections can only be closed on the loop that
+    opened them, so a client whose loop has gone is dropped without closing
+    (the connections went with the loop).
+    """
+    client = getattr(self, "client", None)
+    if(client is None):
       logger.debug("None OpenAI client")
+      return
+
+    logger.debug("closing OpenAI client")
+    self.client = None
+    loop_ref = getattr(self, "_client_loop", None)
+    loop = loop_ref() if(loop_ref is not None) else None
+    self._client_loop = None
+
+    result = client.close()
+    # Newer openAI is async, need to see which form
+    if(not inspect.isawaitable(result)):
+      return
+
+    if(loop is None or loop.is_closed()):
+      # close the coroutine, so it is not reported as never awaited
+      result.close()
+      logger.debug("OpenAI client's event loop has gone, dropped without closing")
+      return
+
+    def closed(task):
+      """ take the result, so asyncio does not report it as unretrieved """
+      if(not task.cancelled() and task.exception() is not None):
+        logger.debug("closing OpenAI client failed: {}".format(task.exception()))
+
+    try:
+      if(loop.is_running()):
+        loop.create_task(result).add_done_callback(closed)
+      else:
+        loop.run_until_complete(result)
+    except Exception as e:
+      logger.debug("could not close OpenAI client: {}".format(e))
+      result.close()
 
 
 class OpenAICompletion(vcon.filter_plugins.FilterPlugin):

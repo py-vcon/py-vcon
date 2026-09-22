@@ -1,4 +1,5 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 """ Unit test for OpenAI filter plugins """
 import os
 import json
@@ -7,6 +8,7 @@ import vcon
 import vcon.filter_plugins.impl.openai
 import vcon.pydantic_utils
 import pytest
+import pytest_asyncio
 
 
 TEST_EXTERNAL_AUDIO_VCON_FILE = "tests/example_external_dialog.vcon"
@@ -332,6 +334,26 @@ async def test_5_openai_triggers_transcribe():
   assert(len(out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"]) > 80)
   assert(out_vcon.analysis[original_analysis_count + 1]["model"] == TEST_CHAT_MODEL)
   print("Response: " + out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"])
+
+
+@pytest_asyncio.fixture(autouse = True)
+async def close_openai_clients():
+  """
+  Close the plugins' OpenAI clients at the end of every test in this module,
+  while the test's event loop is still running.
+
+  Each test gets its own event loop, and a client's connections belong to the
+  loop that opened them.  A client left over from a finished test is closed by
+  the OpenAI SDK's __del__ on whatever loop is running when it is collected,
+  which fails with "Event loop is closed" and is reported by asyncio.  Closing
+  here leaves nothing for the SDK to finalize.
+  """
+  yield
+  for registration in vcon.filter_plugins.FilterPluginRegistry._registry.values():
+    plugin = registration._plugin
+    client = getattr(plugin, "client", None) if(plugin is not None) else None
+    if(isinstance(client, vcon.filter_plugins.impl.openai.OpenAIClient)):
+      await client.aclose()
 
 
 def test_client_per_event_loop():
