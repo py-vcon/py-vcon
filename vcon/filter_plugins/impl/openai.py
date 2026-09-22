@@ -1,6 +1,9 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ OpenAI FilterPlugin implentation """
 import typing
+import asyncio
+import inspect
+import weakref
 import datetime
 import logging
 import pydantic
@@ -245,9 +248,31 @@ class OpenAIClient():
       openai.api_key = init_options.openai_api_key
     else:
       if(self.key_set):
-        self.client = openai.AsyncOpenAI(
-            api_key = init_options.openai_api_key
-          )
+        # created on first use, per event loop (see _async_client)
+        self._api_key = init_options.openai_api_key
+        self.client = None
+        self._client_loop = None
+
+
+  def _async_client(self):
+    """
+    The AsyncOpenAI client for the running event loop.
+
+    A client's connection pool is bound to the event loop it is first used on,
+    so a client created on an earlier loop fails once that loop is closed
+    (RuntimeError: Event loop is closed).  This plugin outlives any one loop
+    (e.g. successive asyncio.run() calls, or a test framework giving each test
+    its own loop), so a new client is created when the loop changes.
+    """
+    loop = asyncio.get_running_loop()
+    if(self.client is None or self._client_loop is None or self._client_loop() is not loop):
+      self.client = openai.AsyncOpenAI(
+          api_key = self._api_key
+        )
+      # weak, so a finished loop is not kept alive by the plugin
+      self._client_loop = weakref.ref(loop)
+
+    return(self.client)
 
 
   async def completions(
@@ -265,7 +290,7 @@ class OpenAIClient():
         )
 
     else:
-      completion_object = await self.client.completions.create(
+      completion_object = await self._async_client().completions.create(
           model = options.model,
           prompt = options.prompt + text_body,
           max_tokens = options.max_tokens,
@@ -298,7 +323,7 @@ class OpenAIClient():
         additional_args["response_format"] = {"type": "json_object"}
 
       # chat_completion_result is openai.types.chat.chat_completion.ChatCompletion
-      chat_completion_object = await self.client.chat.completions.create(
+      chat_completion_object = await self._async_client().chat.completions.create(
           model = options.model,
           messages = messages,
           max_tokens = options.max_tokens,
@@ -310,7 +335,7 @@ class OpenAIClient():
     return(chat_completion_result)
 
   def close(self):
-    if(hasattr(self, "client")):
+    if(getattr(self, "client", None) is not None):
         logger.debug("closing OpenAI client")
         result = self.client.close()
         # Newer openAI is async, need to see which form

@@ -53,7 +53,7 @@ async def test_2_completion_text_summary():
   try:
     out_vcon = await in_vcon.openai_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -96,7 +96,7 @@ async def test_2a_completion_object_summary():
   try:
     out_vcon = await in_vcon.openai_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -140,7 +140,7 @@ async def test_2b_completion_object_summary():
   try:
     out_vcon = await in_vcon.openai_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -188,7 +188,7 @@ async def test_3_chat_completion_object_summary():
   try:
     out_vcon = await in_vcon.openai_chat_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -241,7 +241,7 @@ async def test_4_diarized_chat_completion_object_summary():
   try:
     out_vcon = await in_vcon.openai_chat_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -298,7 +298,7 @@ async def test_5_openai_triggers_transcribe():
   try:
     out_vcon = await in_vcon.openai_chat_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -332,6 +332,35 @@ async def test_5_openai_triggers_transcribe():
   assert(len(out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"]) > 80)
   assert(out_vcon.analysis[original_analysis_count + 1]["model"] == TEST_CHAT_MODEL)
   print("Response: " + out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"])
+
+
+def test_client_per_event_loop():
+  """
+  The AsyncOpenAI client is bound to the event loop it is first used on, so the
+  plugin must not reuse it on a later loop (RuntimeError: Event loop is closed).
+  """
+  import asyncio
+  init_options = vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions(
+      openai_api_key = "sk-test-not-used"
+    )
+  client = vcon.filter_plugins.impl.openai.OpenAIClient(init_options, "test")
+
+  async def same_loop_twice():
+    return(client._async_client(), client._async_client())
+
+  first, again = asyncio.run(same_loop_twice())
+  # reused within a loop, keeping its connection pool
+  assert(first is again)
+
+  async def once():
+    return(client._async_client())
+
+  # a new loop gets a new client
+  second = asyncio.run(once())
+  assert(second is not first)
+
+  client.close()
+  assert(client.client is None)
 
 
 def test_init_no_key():
