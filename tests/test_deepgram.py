@@ -183,8 +183,12 @@ async def test_deepgram_transcribe_external_dialog():
   out_vcon_json = out_vcon.dumps()
   out_vcon_dict = json.loads(out_vcon_json)
 
-  # Save a copy for reference
-  out_vcon.dump("tests/example_deepgram_external_dialog.vcon", indent = 2)
+  # Save a copy for reference.  Not over tests/example_deepgram_external_dialog.vcon:
+  # that committed file is the input to test_openai_plugin.py and test_redaction.py,
+  # which must not depend on a live transcription (its sentence segmentation varies
+  # from run to run and between Deepgram models).  To refresh that fixture on
+  # purpose, copy this output over it and check those tests still pass.
+  out_vcon.dump("deepgram_external_dialog_out.vcon", indent = 2)
 
 
 @pytest.mark.asyncio
