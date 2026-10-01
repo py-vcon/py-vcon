@@ -14,7 +14,9 @@ import pytest_asyncio
 TEST_EXTERNAL_AUDIO_VCON_FILE = "tests/example_external_dialog.vcon"
 TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE = "tests/example_deepgram_external_dialog.vcon"
 SHORT_RECORDING_VCON = "tests/hello.vcon"
-TEST_MODEL = "gpt-3.5-turbo-instruct" # cheaper to run in tests than davinci-003 ???
+# The legacy /completions endpoint no longer serves gpt-3.5-turbo-instruct, davinci-002 or
+# babbage-002 (404 model_not_found, deprecated).  Use the plugin default model, which is cheap.
+TEST_MODEL = "gpt-4o-mini"
 TEST_CHAT_MODEL = "gpt-3.5-turbo-16k" # should be a little cheaper to run instead of GPT-4 for testing 
 
 def test_1_options():
