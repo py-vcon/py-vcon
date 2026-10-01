@@ -2,7 +2,6 @@
 import typing
 import time
 import os
-import pkg_resources
 import importlib
 import fastapi.responses
 import fastapi.staticfiles

@@ -83,10 +83,11 @@ setuptools.setup(
       'py_vcon_server.db',
       'py_vcon_server.db.redis',
       'py_vcon_server.processor',
-      # dir/sub-package where add on VconProcessors will appear to be installed
-      # They will not really be installed here, but the package manager will make
-      # it appear so.  Use the following in VconProcessor plugin packages:
-      # namespace_packages=['py_vcon_server.processor_addons'],
+      # dir/sub-package where add on VconProcessors will appear to be installed.
+      # Add on packages list 'py_vcon_server' and 'py_vcon_server.processor_addons' in
+      # their own setup(packages=[...]) WITHOUT their own __init__.py in those two
+      # directories (this package provides it, using pkgutil.extend_path).  Do not use
+      # namespace_packages= or pkg_resources.declare_namespace: setuptools removed them.
       'py_vcon_server.processor_addons',
       'py_vcon_server.processor.builtin',
       'py_vcon_server.states',
