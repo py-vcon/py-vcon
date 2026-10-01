@@ -2,6 +2,7 @@
 """ Unit test for filter plugin framework """
 
 import sys
+import importlib.util
 import vcon
 import vcon.filter_plugins
 import pytest
@@ -90,8 +91,10 @@ async def test_registry():
   # Test that real plugin was registered
   plugin_whisper = vcon.filter_plugins.FilterPluginRegistry.get("whisper")
   assert(plugin_whisper is not None)
-  init_options = vcon.filter_plugins.FilterPluginInitOptions(model_size = "base")
-  assert(plugin_whisper.import_plugin(init_options))
+  if(importlib.util.find_spec("stable_whisper") is not None):
+    # importing the plugin needs the optional (heavy) whisper dependency
+    init_options = vcon.filter_plugins.FilterPluginInitOptions(model_size = "base")
+    assert(plugin_whisper.import_plugin(init_options))
   # force open AI chat plugin to be instantiated so that we can test delete/close of the client
   plugin_openai_chat = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion")
   assert(plugin_openai_chat is not None)

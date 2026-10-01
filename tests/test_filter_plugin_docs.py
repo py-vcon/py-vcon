@@ -9,7 +9,13 @@ import importlib
 import pkgutil
 import pydantic
 import pydantic.fields
+import pytest
 import vcon.filter_plugins
+
+# The generated docs include the Whisper plugin, an optional (heavy) dependency:
+# skip generating them (here and in test_vcon_doc, which imports this module)
+# on a light install rather than generate docs without it.
+pytest.importorskip("stable_whisper")
 import vcon.filter_plugins.impl.whisper
 import vcon.pydantic_utils
 

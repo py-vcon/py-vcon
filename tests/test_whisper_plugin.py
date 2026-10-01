@@ -8,6 +8,9 @@ import vcon
 import vcon.filter_plugins
 import pytest
 
+# Whisper is an optional (heavy) dependency: skip on a light install
+pytest.importorskip("stable_whisper")
+
 def test_whisper_registration():
   """ Test registration of Whisper plugin """
   options = vcon.filter_plugins.TranscribeOptions(
