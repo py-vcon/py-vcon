@@ -72,7 +72,9 @@ class DeepgramOptions(
 Override the Deepgram API key set in DeepgramInitOptions.
 If None or empty, the key from DeepgramInitOptions is used.
 """,
-    default = None
+    # "" rather than None: pydantic leaves a None default out of the JSON schema, so the
+    # pipeline editor then showed this optional override as a required option that is not set
+    default = ""
     )
 
 

@@ -19,6 +19,17 @@ def test_deepgram_options():
   assert(init_options.deepgram_key == "")
 
 
+def test_deepgram_key_override_is_optional_in_schema():
+  """ The optional key override must have a default in the JSON schema, or the pipeline
+  editor shows it as a required option that is not set """
+  schema = vcon.filter_plugins.impl.deepgram.DeepgramOptions.model_json_schema()
+  assert("default" in schema["properties"]["deepgram_key"])
+  assert(not schema.get("required"))
+  assert(vcon.filter_plugins.impl.deepgram.DeepgramOptions().deepgram_key == "")
+  # None is still accepted: it means the same as empty
+  assert(vcon.filter_plugins.impl.deepgram.DeepgramOptions(deepgram_key = None).deepgram_key is None)
+
+
 @pytest.mark.asyncio
 async def test_deepgram_transcribe_inline_dialog():
   """ Test Deepgram plugin with an inline audio dialog """
