@@ -81,8 +81,8 @@ def main():
       ranges = _compact_ranges(f["missed_lines"])
       line_str = ", ".join(ranges)
       # Wrap at ~80 chars
-      if len(line_str) > 120:
-        line_str = line_str[:117] + "..."
+      #if len(line_str) > 120:
+      #  line_str = line_str[:117] + "..."
       print("    missed: {}".format(line_str))
 
   print()
