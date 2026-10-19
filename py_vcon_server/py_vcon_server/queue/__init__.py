@@ -85,7 +85,7 @@ class JobQueue():
     self._do_lua_delete_queue = redis_con.register_script(lua_script_delete_queue)
 
     # KEYS = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name]
-    # ARGV = [ name, vcon_uuids]
+    # ARGV = [ name, json.dumps(job_json) ]
     lua_script_push_vcon_uuid_queue_job = """
     if redis.call("SISMEMBER", KEYS[1], ARGV[1]) == 1 then
       -- add job to end of list
@@ -406,8 +406,9 @@ class JobQueue():
     failed_job: typing.Union[int, None] = None
     ) -> int:
     """
-    Should probably depreicate this interface in favor of:
-    push_vcon_queue_job
+    TO BE DEPRECATED: use push_vcon_queue_job.  This will be removed when
+    the pipeline success/failure queue jobs are able to specify the job
+    parameters.
 
     Push a vCon UUID queue job object onto the named queue.
 
