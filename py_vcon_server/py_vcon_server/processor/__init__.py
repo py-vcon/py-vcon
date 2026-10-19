@@ -914,14 +914,27 @@ class VconProcessorIO():
   def add_vcon_uuid_queue_job(
       self,
       queue_name: str,
+      create_queue: bool,
       vcon_uuids: typing.List[str],
       from_queue: typing.Union[str, None],
-
+      parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
     ) -> None:
     """
     Add a queue job to this **VconProcessorIO** to be queued when the processor(s) have all been processed.
     Note: jobs do NOT get commit to the database.  They are only added to this **VconProcessorIO** object.
+
+    The jobs are pushed to the job queue by **commit_queue_jobs**.
+
+    Parameters:
+      queue_name: name of the job queue to add the job to
+      create_queue: if True, the queue is created at commit time if it does not exist.
+        If False, committing to a queue that does not exist raises QueueDoesNotExist.
+      vcon_uuids: list of vCon UUIDs for the job (currently exactly one is supported)
+      from_queue: optional name of the queue/pipeline that queued this job (diagnostic only)
+      parameters: optional dict of parameters set on the pipeline input before the
+        queued job is run.  Omitted from the job if None or empty.
     """
+
 
     if(len(vcon_uuids) < 1):
       raise Exception("no vCon UUIDs provided")
@@ -930,8 +943,13 @@ class VconProcessorIO():
     job["job_type"] = "vcon_uuid"
     job["to_queue"] = queue_name
     job["vcon_uuids"] = vcon_uuids
+    job["create_queue"] = create_queue
+
     if(from_queue and len(from_queue) > 0):
       job["from_queue"] = from_queue
+
+    if(parameters):
+      job["parameters"] = parameters
 
     logger.debug("Adding job: {} to VconProcessorIO queue list".format(job))
     self._jobs_to_queue.append(job)
@@ -961,12 +979,22 @@ class VconProcessorIO():
       if(job["job_type"] != "vcon_uuid"):
         raise Exception("invalid job type in VconProcessorIO: {}".format(job))
       if(queue_name and len(queue_name)):
-         await job_queue.push_vcon_uuid_queue_job(
+        job_json = {
+            "job_type": "vcon_uuid",
+            "vcon_uuid": job.get("vcon_uuids", [])
+          }
+        from_queue = job.get("from_queue", None)
+        if(from_queue and len(from_queue) > 0):
+          job_json["queue"] = from_queue
+        parameters = job.get("parameters", None)
+        if(parameters):
+          job_json["parameters"] = parameters
+        await job_queue.push_vcon_queue_job(
             queue_name,
-            job.get("vcon_uuids", []),
-            job.get("from_queue", None)
+            job_json,
+            create_missing = job.get("create_queue", False)
           )
-         jobs_queued += 1
+        jobs_queued += 1
 
       else:
         raise Exception("invalid job to queue in VconProcessorIO: {}".format(job))

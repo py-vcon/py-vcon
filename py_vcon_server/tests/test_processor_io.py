@@ -181,7 +181,7 @@ async def test_processor_io_vcons(make_2_party_tel_vcon: vcon.Vcon):
 
   try:
     # passing in empty UUID array
-    rw_io_object.add_vcon_uuid_queue_job("foo", [], None)
+    rw_io_object.add_vcon_uuid_queue_job("foo", False, [], None)
     raise Exception("Should have rasied exception for empty list")
   except Exception:
     pass
