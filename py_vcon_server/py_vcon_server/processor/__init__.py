@@ -361,6 +361,16 @@ class VconUnsignedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
     default_factory=lambda: vcon.utils.cannonize_date(time.time()),
     examples = date_examples
     )
+  extensions: typing.Optional[typing.List[str]] = pydantic.Field(
+    title = "vCon extensions used",
+    description = "list of names of the vCon extensions used by this vCon",
+    default = None
+    )
+  critical: typing.Optional[typing.List[str]] = pydantic.Field(
+    title = "vCon critical extensions",
+    description = "list of names of the vCon extensions which a consumer must support to process this vCon",
+    default = None
+    )
   # subject: str = None
   # redacted: typing.Optional[typing.Union[typing.List[dict], None]] = None
   # appended: typing.Optional[typing.Union[typing.List[dict], None]] = None
