@@ -98,6 +98,20 @@ class JobQueue():
     """
     self._do_lua_push_vcon_uuid_queue_job = redis_con.register_script(lua_script_push_vcon_uuid_queue_job)
 
+
+    # KEYS = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name]
+    # ARGV = [ name, json.dumps(job_json) ]
+    lua_script_push_create_vcon_uuid_queue_job = """
+    -- create the queue if it does not already exist, then push
+    if redis.call("SISMEMBER", KEYS[1], ARGV[1]) == 0 then
+      redis.call("SADD", KEYS[1], ARGV[1])
+    end
+    local num_jobs = redis.call("RPUSH", KEYS[2], ARGV[2])
+    return num_jobs
+    """
+    self._do_lua_push_create_vcon_uuid_queue_job = redis_con.register_script(lua_script_push_create_vcon_uuid_queue_job)
+
+
     # KEYS = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name ]
     # ARGV = [ name ]
     lua_script_get_queue_jobs = """
@@ -424,7 +438,8 @@ class JobQueue():
 
   async def push_vcon_queue_job(self,
     name: str,
-    job_json: typing.Dict[str, typing.Any]
+    job_json: typing.Dict[str, typing.Any],
+    create_missing: bool = False
     ) -> int:
 
     vcon_uuids = job_json.get("vcon_uuid", None)
@@ -441,9 +456,13 @@ class JobQueue():
 
     keys = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name]
     args = [ name, json.dumps(job_json)]
-    num_jobs = await self._do_lua_push_vcon_uuid_queue_job(keys = keys, args = args)
-    if(num_jobs == -1):
-      raise QueueDoesNotExist("push_vcon_uuid_queue_job({}): queue does not exist".format(name))
+
+    if(create_missing):
+      num_jobs = await self._do_lua_push_create_vcon_uuid_queue_job(keys = keys, args = args)
+    else:
+      num_jobs = await self._do_lua_push_vcon_uuid_queue_job(keys = keys, args = args)
+      if(num_jobs == -1):
+        raise QueueDoesNotExist("push_vcon_queue_job({}): queue does not exist".format(name))
 
     return(num_jobs)
 
