@@ -1,18 +1,19 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit tests for Pipeline and related data objects """
-import pydantic
+import copy
 import pytest
 import pytest_asyncio
-import copy
 import fastapi.testclient
+from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 import vcon
 import vcon.pydantic_utils
 import py_vcon_server.pipeline
 from py_vcon_server.settings import PIPELINE_DB_URL
-from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
 
 PIPELINE_DB = None
 TIMEOUT = 60.0
+DO_JOB_QUEUE_NAME = "unit_test_do_job_queue_job"
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def pipeline_db():
@@ -1537,4 +1538,99 @@ async def test_pipeline_context_parameters_both_run_endpoints(make_inline_audio_
     # Cleanup
     client.delete("/vcon/{}".format(UUID))
     client.delete("/pipeline/{}".format(pipe_name))
+
+
+async def _run_do_job_with_queue_job(a_vcon, save_vcons):
+  """
+  Run PipelineJobHandler.do_job (the background pipeline server path) with a
+  pipeline containing a queue_job processor.  Returns the list of jobs in
+  the target queue after the run.
+  """
+  import py_vcon_server.db
+  import py_vcon_server.queue
+  from py_vcon_server.settings import VCON_STORAGE_URL, QUEUE_DB_URL
+
+  vs = py_vcon_server.db.VconStorage.instantiate(VCON_STORAGE_URL)
+  jq = py_vcon_server.queue.JobQueue(QUEUE_DB_URL)
+  try:
+    try:
+      await jq.delete_queue(DO_JOB_QUEUE_NAME)
+    except py_vcon_server.queue.QueueDoesNotExist:
+      pass
+    await jq.create_new_queue(DO_JOB_QUEUE_NAME)
+    await vs.set(a_vcon)
+
+    job_def = {
+      "id": "test-do-job-queue-job-1",
+      "queue": "test_do_job_from_queue",
+      "locks": [],
+      "job": {
+        "job_type": "vcon_uuid",
+        "vcon_uuid": [a_vcon.uuid]
+      },
+      "pipeline": {
+        "pipeline_options": {
+          "timeout": 30,
+          "save_vcons": save_vcons,
+          "failure_queue": "",
+          "success_queue": ""
+        },
+        "processors": [
+          {
+            "processor_name": "queue_job",
+            "processor_options": {
+              "queue_name": DO_JOB_QUEUE_NAME,
+              "job_parameters": {"dialog_index": 2}
+            }
+          }
+        ]
+      }
+    }
+
+    await py_vcon_server.pipeline.PipelineJobHandler.do_job(job_def)
+    jobs = await jq.get_queue_jobs(DO_JOB_QUEUE_NAME)
+    return(jobs)
+
+  finally:
+    try:
+      await jq.delete_queue(DO_JOB_QUEUE_NAME)
+    except py_vcon_server.queue.QueueDoesNotExist:
+      pass
+    try:
+      await vs.delete(a_vcon.uuid)
+    except Exception:
+      pass
+    await jq.shutdown()
+    await vs.shutdown()
+    # do_job may have instantiated module level connections
+    if(py_vcon_server.pipeline.JOB_QUEUE is not None):
+      await py_vcon_server.pipeline.JOB_QUEUE.shutdown()
+      py_vcon_server.pipeline.JOB_QUEUE = None
+
+    if(py_vcon_server.pipeline.VCON_STORAGE is not None):
+      await py_vcon_server.pipeline.VCON_STORAGE.shutdown()
+      py_vcon_server.pipeline.VCON_STORAGE = None
+
+
+
+@pytest.mark.asyncio
+async def test_do_job_queue_job_save_vcons_true(make_2_party_tel_vcon):
+  """
+  Background pipeline (do_job) with save_vcons True commits the jobs added
+  by queue_job, including job_parameters.
+  """
+  jobs = await _run_do_job_with_queue_job(make_2_party_tel_vcon, True)
+  assert(len(jobs) == 1)
+  assert(jobs[0]["vcon_uuid"] == [make_2_party_tel_vcon.uuid])
+  assert(jobs[0]["parameters"] == {"dialog_index": 2})
+
+
+@pytest.mark.asyncio
+async def test_do_job_queue_job_save_vcons_false(make_2_party_tel_vcon):
+  """
+  Background pipeline (do_job) with save_vcons False makes no DB changes,
+  so jobs added by queue_job are not queued.
+  """
+  jobs = await _run_do_job_with_queue_job(make_2_party_tel_vcon, False)
+  assert(len(jobs) == 0)
 

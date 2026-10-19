@@ -806,8 +806,8 @@ class PipelineJobHandler(py_vcon_server.job_worker_pool.JobInterface):
           pipeline_output.get_queue_job_count() > 0
         ):
         logger.info("instantiating JobQueue in PipelineJobHandler.do_job")
-        VCON_STORAGE = py_vcon_server.queue.JobQueue.instantiate(
-            py_vcon_server.settings.JOB_QUEUE_URL
+        JOB_QUEUE = py_vcon_server.queue.JobQueue(
+            py_vcon_server.settings.QUEUE_DB_URL
           )
 
       # Commit jobs to be queued.
