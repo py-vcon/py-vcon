@@ -437,6 +437,8 @@ class Vcon():
   MEDIATYPE_AUDIO_MP3 = "audio/x-mp3"
   MEDIATYPE_AUDIO_MP4 = "audio/x-mp4"
   MEDIATYPE_VIDEO_MP4 = "video/x-mp4"
+  MEDIATYPE_AUDIO_OGG = "audio/ogg"
+  MEDIATYPE_AUDIO_FLAC = "audio/flac"
   MEDIATYPE_VIDEO_OGG = "video/ogg"
   MEDIATYPE_MULTIPART = "multipart/mixed"
 
@@ -446,7 +448,11 @@ class Vcon():
     ".png": MEDIATYPE_IMAGE_PNG,
     ".wav": MEDIATYPE_AUDIO_WAV,
     ".mp3": MEDIATYPE_AUDIO_MP3,
-    ".mp4": MEDIATYPE_VIDEO_MP4
+    ".m4a": MEDIATYPE_AUDIO_MP4,
+    ".ogg": MEDIATYPE_AUDIO_OGG,
+    ".flac": MEDIATYPE_AUDIO_FLAC,
+    ".mp4": MEDIATYPE_VIDEO_MP4,
+    ".ogv": MEDIATYPE_VIDEO_OGG
   }
 
   MEDIATYPE_EXTENSIONS = {
@@ -454,7 +460,16 @@ class Vcon():
     MEDIATYPE_IMAGE_PNG: ".png",
     MEDIATYPE_AUDIO_WAV: ".wav",
     MEDIATYPE_AUDIO_MP3: ".mp3",
-    MEDIATYPE_VIDEO_MP4: ".mp4"
+    MEDIATYPE_AUDIO_MP4: ".m4a",
+    MEDIATYPE_AUDIO_OGG: ".ogg",
+    MEDIATYPE_AUDIO_FLAC: ".flac",
+    MEDIATYPE_VIDEO_MP4: ".mp4",
+    MEDIATYPE_VIDEO_OGG: ".ogv",
+    # Common IANA spellings of the above.  Recognized for lookup only;
+    # get_media_type returns the vCon spec media types.
+    "audio/wav": ".wav",
+    "audio/mpeg": ".mp3",
+    "audio/mp4": ".m4a"
   }
 
   CURRENT_VCON_VERSION = "0.4.0"
@@ -592,7 +607,7 @@ class Vcon():
     if(extension in vcon.Vcon.FILE_EXTENSIONS):
       mediatype = vcon.Vcon.FILE_EXTENSIONS[extension]
   
-    # TODO: add: aac, ogg, 
+    # TODO: add: aac
     else:
       raise Exception("Media type not defined for extension: {}".format(extension))
   
@@ -1720,6 +1735,8 @@ class Vcon():
             Vcon.MEDIATYPE_AUDIO_WAV,
             Vcon.MEDIATYPE_AUDIO_MP3,
             Vcon.MEDIATYPE_AUDIO_MP4,
+            Vcon.MEDIATYPE_AUDIO_OGG,
+            Vcon.MEDIATYPE_AUDIO_FLAC,
             Vcon.MEDIATYPE_VIDEO_MP4,
             Vcon.MEDIATYPE_VIDEO_OGG,
           ]):
