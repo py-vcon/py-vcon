@@ -1,12 +1,13 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit tests for queue job processor """
 import pytest
 import pytest_asyncio
+import pydantic
+import fastapi.testclient
 from common_setup import make_inline_audio_vcon, make_2_party_tel_vcon, UUID
 import vcon
 import py_vcon_server
 from py_vcon_server.settings import VCON_STORAGE_URL
-import fastapi.testclient
 
 
 VCON_STORAGE = None
@@ -283,4 +284,116 @@ async def test_pipeline_queue_job(make_inline_audio_vcon: vcon.Vcon):
     assert(len(job_list[0]["vcon_uuid"]) == 1)
     assert(job_list[0]["vcon_uuid"][0] == in_vcon.uuid)
     assert(job_list[0]["queue"] == FROM_QUEUE_NAME)
+
+
+
+
+async def _queue_job_to_list(
+    a_vcon: vcon.Vcon,
+    queue_options: dict
+  ) -> list:
+  """
+  Run the queue_job processor directly with the given options, commit
+  the queue jobs and return the jobs in the TO_QUEUE_NAME queue.
+  """
+  proc_input = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  await proc_input.add_vcon(a_vcon, "fake_lock", False)
+  queue_proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("queue_job")
+  options = queue_proc_inst.processor_options_class()(**queue_options)
+  proc_output = await queue_proc_inst.process(proc_input, options)
+  await proc_output.commit_queue_jobs(JOB_QUEUE)
+  return(await JOB_QUEUE.get_queue_jobs(TO_QUEUE_NAME))
+
+
+async def _delete_to_queue() -> None:
+  try:
+    await JOB_QUEUE.delete_queue(TO_QUEUE_NAME)
+  except py_vcon_server.queue.QueueDoesNotExist:
+    pass
+
+
+def test_queue_job_version():
+  """ queue_job processor is at version 0.0.2 """
+  queue_proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("queue_job")
+  assert(queue_proc_inst.version() == "0.0.2")
+
+
+@pytest.mark.asyncio
+async def test_queue_job_create_queue(make_2_party_tel_vcon: vcon.Vcon) -> None:
+  """ create_queue True creates the missing queue at commit and queues the job """
+  await _delete_to_queue()
+  try:
+    job_list = await _queue_job_to_list(
+        make_2_party_tel_vcon,
+        {"queue_name": TO_QUEUE_NAME, "create_queue": True}
+      )
+    assert(len(job_list) == 1)
+    assert(job_list[0]["vcon_uuid"] == [make_2_party_tel_vcon.uuid])
+    # empty job_parameters (default) are not added to the job
+    assert("parameters" not in job_list[0])
+  finally:
+    await _delete_to_queue()
+
+
+@pytest.mark.asyncio
+async def test_queue_job_missing_queue_raises(make_2_party_tel_vcon: vcon.Vcon) -> None:
+  """
+  create_queue False (default) with a missing queue raises
+  QueueDoesNotExist at commit and does not create the queue.
+  """
+  await _delete_to_queue()
+  try:
+    await _queue_job_to_list(make_2_party_tel_vcon, {"queue_name": TO_QUEUE_NAME})
+    raise Exception("expected QueueDoesNotExist")
+  except py_vcon_server.queue.QueueDoesNotExist:
+    pass
+  assert(TO_QUEUE_NAME not in await JOB_QUEUE.get_queue_names())
+
+
+@pytest.mark.asyncio
+async def test_queue_job_parameters(make_2_party_tel_vcon: vcon.Vcon) -> None:
+  """ Literal job_parameters are queued under the job's parameters key """
+  await _delete_to_queue()
+  try:
+    job_list = await _queue_job_to_list(
+        make_2_party_tel_vcon,
+        {
+          "queue_name": TO_QUEUE_NAME,
+          "create_queue": True,
+          "job_parameters": {"customer_tier": "gold", "dialog_index": 2}
+        }
+      )
+    assert(len(job_list) == 1)
+    assert(job_list[0]["parameters"] == {"customer_tier": "gold", "dialog_index": 2})
+  finally:
+    await _delete_to_queue()
+
+
+def test_queue_job_empty_queue_name_invalid():
+  """ An empty queue_name fails options validation """
+  queue_proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("queue_job")
+  try:
+    queue_proc_inst.processor_options_class()(queue_name = "")
+    raise Exception("expected validation error for empty queue_name")
+  except pydantic.ValidationError:
+    pass
+
+
+@pytest.mark.asyncio
+async def test_queue_job_empty_queue_name_process_raises(make_2_party_tel_vcon: vcon.Vcon) -> None:
+  """
+  process() also rejects an empty queue_name, for options constructed
+  without validation.
+  """
+  queue_proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("queue_job")
+  options = queue_proc_inst.processor_options_class()(queue_name = "q")
+  options.queue_name = ""
+  proc_input = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  await proc_input.add_vcon(make_2_party_tel_vcon, "fake_lock", False)
+  try:
+    await queue_proc_inst.process(proc_input, options)
+    raise Exception("expected exception for empty queue_name")
+  except Exception as e:
+    assert("queue_name" in str(e))
+  assert(proc_input.get_queue_job_count() == 0)
 

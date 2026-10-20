@@ -1540,11 +1540,18 @@ async def test_pipeline_context_parameters_both_run_endpoints(make_inline_audio_
     client.delete("/pipeline/{}".format(pipe_name))
 
 
-async def _run_do_job_with_queue_job(a_vcon, save_vcons):
+async def _run_do_job_with_queue_job(
+    a_vcon,
+    save_vcons,
+    queue_job_options = None,
+    incoming_parameters = None
+  ):
   """
   Run PipelineJobHandler.do_job (the background pipeline server path) with a
   pipeline containing a queue_job processor.  Returns the list of jobs in
-  the target queue after the run.
+  the target queue after the run.  queue_job_options replaces the default
+  queue_job processor options.  incoming_parameters are set as the
+  parameters of the job being run (as a queued job with parameters would).
   """
   import py_vcon_server.db
   import py_vcon_server.queue
@@ -1559,6 +1566,12 @@ async def _run_do_job_with_queue_job(a_vcon, save_vcons):
       pass
     await jq.create_new_queue(DO_JOB_QUEUE_NAME)
     await vs.set(a_vcon)
+
+    if(queue_job_options is None):
+      queue_job_options = {
+          "queue_name": DO_JOB_QUEUE_NAME,
+          "job_parameters": {"dialog_index": 2}
+        }
 
     job_def = {
       "id": "test-do-job-queue-job-1",
@@ -1578,14 +1591,14 @@ async def _run_do_job_with_queue_job(a_vcon, save_vcons):
         "processors": [
           {
             "processor_name": "queue_job",
-            "processor_options": {
-              "queue_name": DO_JOB_QUEUE_NAME,
-              "job_parameters": {"dialog_index": 2}
-            }
+            "processor_options": queue_job_options
           }
         ]
       }
     }
+
+    if(incoming_parameters is not None):
+      job_def["job"]["parameters"] = incoming_parameters
 
     await py_vcon_server.pipeline.PipelineJobHandler.do_job(job_def)
     jobs = await jq.get_queue_jobs(DO_JOB_QUEUE_NAME)
@@ -1685,4 +1698,30 @@ async def test_pipeline_runner_dict_field_format_options(make_2_party_tel_vcon: 
 
   finally:
     await vs.shutdown()
+
+
+
+
+@pytest.mark.asyncio
+async def test_do_job_queue_job_parameters_pass_through(make_2_party_tel_vcon):
+  """
+  End to end parameter pass through in a background pipeline (do_job):
+  parameters that came in with the job are used in the queue_job
+  format_options job_parameters template, and the rendered parameters are
+  queued with the next job.
+  """
+  jobs = await _run_do_job_with_queue_job(
+      make_2_party_tel_vcon,
+      True,
+      queue_job_options = {
+          "queue_name": DO_JOB_QUEUE_NAME,
+          "format_options": {
+              "job_parameters": '{{"dialog_index": {dialog_index}, "from": "{PIPELINE_NAME}"}}'
+            }
+        },
+      incoming_parameters = {"dialog_index": 5}
+    )
+  assert(len(jobs) == 1)
+  assert(jobs[0]["vcon_uuid"] == [make_2_party_tel_vcon.uuid])
+  assert(jobs[0]["parameters"] == {"dialog_index": 5, "from": "test_do_job_from_queue"})
 
