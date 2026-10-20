@@ -338,7 +338,7 @@ Methods:
 ## py_vcon_server.processor.builtin.queue_job.QueueJob
 
  - **Name:** queue_job
- - **Version:** 0.0.1
+ - **Version:** 0.0.2
  - **Summary:** Processor to add a job to a **JobeQueue**
 
 A vCon_uuid Job is added to the named queue, using the UUID from the vCon at the **input_vcon_index** in the input options.
@@ -780,9 +780,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -850,9 +899,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -940,9 +1038,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1001,7 +1148,7 @@ If None or empty, the key from DeepgramInitOptions is used.
 
 example:
 
-default: None
+default: 
 
 ##### label (str)
 processor documentation label
@@ -1056,9 +1203,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1136,9 +1332,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1206,9 +1451,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1303,9 +1597,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1375,9 +1718,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1465,9 +1857,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1718,9 +2159,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1790,9 +2280,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1806,6 +2345,14 @@ example:
 
 default: None
 
+##### create_queue (bool)
+Create queue if missing
+When True, create the named queue if it does not already exist before queuing the job.  When False (default), queuing to a queue that does not exist fails.
+
+example:
+
+default: False
+
 ##### from_queue (typing.Union[str, NoneType])
 From queue name
 name of the queue in which this processor is run.  This may be used for diagnostic purpose to track what pipeline the job came from.  This string does not effect the functionality.
@@ -1813,6 +2360,14 @@ name of the queue in which this processor is run.  This may be used for diagnost
 example:
 
 default: 
+
+##### job_parameters (typing.Dict[str, typing.Any])
+Job parameters
+Optional parameters set on the pipeline input before the queued job runs.  Serialized into the queued job under the parameters key.  Named job_parameters to distinguish from the processor IO parameters.  May be set from parameters using format_options; see the format_options description for the dict template rules and examples.
+
+examples: [{'customer_tier': 'gold'}, {'summary_prompt': 'Summarize the transcript in two sentences.'}]
+
+default: {}
 
 
 ## py_vcon_server.processor.builtin.send_email.SendEmailOptions
@@ -1877,9 +2432,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -2055,9 +2659,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -2154,9 +2807,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -2224,9 +2926,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -2302,9 +3053,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -2380,9 +3180,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -2494,9 +3343,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -2577,9 +3475,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -2689,9 +3636,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
 
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
