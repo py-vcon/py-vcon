@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
 unit tests for the vcon command line script
 """
@@ -20,7 +20,7 @@ WAVE_FILE_URL = "https://github.com/py-vcon/py-vcon/blob/main/examples/agent_sam
 WAVE_FILE_SIZE = os.path.getsize(WAVE_FILE_NAME)
 VCON_WITH_DIALOG_FILE_NAME = "py_vcon_server/tests/hello.vcon"
 SMTP_MESSAGE_W_IMAGE_FILE_NAME = "tests/email_acct_prob_bob_image.txt"
-GOOGLE_MEET_RECORDING = "tests/google_meet/test meeting (2023-09-06 20:27 GMT-4) (18af10d0)"
+GOOGLE_MEET_RECORDING = "tests/google_meet/test meeting (2023-09-06 20_27 GMT-4) (18af10d0)"
 ZOOM_MEETING_RECORDING = "tests/zoom/Zoom recording to computer 09 18 23"
 
 
@@ -46,7 +46,7 @@ async def test_vcon_new(capsys):
     raise e
 
   assert(len(new_vcon.uuid) == 36)
-  assert(new_vcon.vcon == "0.0.2")
+  assert(new_vcon.vcon is None)
 
 
 @pytest.mark.asyncio
@@ -107,7 +107,9 @@ async def test_filter(capsys):
 
 
   assert(len(out_vcon.dialog) == 1)
-  assert(len(out_vcon.analysis) == 3)
+  # Deepgram is now the default transcriber
+  assert(len(out_vcon.analysis) == 1)
+  #assert(len(out_vcon.analysis) == 3)
 
 
 @pytest.mark.asyncio
@@ -148,7 +150,7 @@ async def test_ext_recording(capsys):
   assert(hash_string == "MfZG-8n8eU5pbMWN9c_SyTyN6l1zwGWNg43h2n-K1q__XVgdxz1X2H3Wbg4I9VZImQKCRqgYHxJjrdIXDAXO8w")
   assert("alg" not in out_vcon.dialog[0])
   assert("signature" not in out_vcon.dialog[0])
-  assert(out_vcon.vcon == "0.0.2")
+  assert(vcon.Vcon.VCON_VERSION not in out_vcon._vcon_dict)
   assert(out_vcon.uuid == "0183878b-dacf-8e27-973a-91e26eb8001b")
 
   assert(out_vcon.dialog[0].get("body") is None )
@@ -187,7 +189,7 @@ async def test_int_recording(capsys):
   assert(out_vcon.dialog[0].get("mimetype", None) is None)
   assert(out_vcon.dialog[0]["mediatype"] == "audio/x-wav")
   assert(out_vcon.dialog[0]["filename"] == WAVE_FILE_NAME)
-  assert(out_vcon.vcon == "0.0.2")
+  assert(out_vcon.vcon is None)
   assert(out_vcon.uuid == "0183878b-dacf-8e27-973a-91e26eb8001b")
 # File is base64url encodes so size will be 4/3 larger
   assert(len(out_vcon.dialog[0]["body"]) == WAVE_FILE_SIZE / 3 * 4)

@@ -77,6 +77,12 @@ class SendEmailOptions(py_vcon_server.processor.VconProcessorOptions):
 
   text_body: str = pydantic.Field(
       title = "main text body of the email message to be sent",
+      description = "Plain text content for the email body.  Set to empty string if only HTML body is desired."
+    )
+
+  html_body: str = pydantic.Field(
+      title = "HTML body of the email message to be sent",
+      description = "HTML content for the email body.  If both text_body and html_body are provided, a multipart/alternative message is sent.  If only html_body is provided, a text/html message is sent.",
       default = ""
     )
 
@@ -97,7 +103,7 @@ class SendEmail(py_vcon_server.processor.VconProcessor):
     super().__init__(
       "VconProcessor to send email message",
       "used to send SMTP messages using content from vCon or VconProcessorIP parameters.",
-      "0.0.1",
+      "0.1.0",
       init_options,
       SendEmailOptions,
       False # modifies a Vcon
@@ -109,11 +115,23 @@ class SendEmail(py_vcon_server.processor.VconProcessor):
     options: SendEmailOptions
     ) -> py_vcon_server.processor.VconProcessorIO:
     """
-    Set the VconProcessorIO parameters from the input options parameters.  Does not modify the vCons.
+    Send an email message via SMTP.  Does not modify the vCons.
     """
 
     email_message = email.message.EmailMessage()
-    email_message.set_content(options.text_body)
+
+    # Build message body based on which body fields are provided
+    if(len(options.html_body) and len(options.text_body)):
+      # Both provided: multipart/alternative with text and HTML parts
+      email_message.set_content(options.text_body)
+      email_message.add_alternative(options.html_body, subtype = "html")
+    elif(len(options.html_body)):
+      # HTML only
+      email_message.set_content(options.html_body, subtype = "html")
+    else:
+      # Text only (or both empty — permissive, sends empty text/plain)
+      email_message.set_content(options.text_body)
+
     if(len(options.from_address)):
       email_message["From"] = options.from_address
     if(len(options.subject)):
@@ -124,7 +142,7 @@ class SendEmail(py_vcon_server.processor.VconProcessor):
       email_message["Cc"] = ",".join(options.cc)
     if(len(options.bcc)):
       email_message["Bcc"] = ",".join(options.bcc)
-    # TODO add support for attachements and multipart MIME
+    # TODO add support for attachements
 
     if(len(options.smtp_user) or
        len(options.smtp_password) or
@@ -174,4 +192,3 @@ class SendEmail(py_vcon_server.processor.VconProcessor):
       )
 
     return(processor_input)
-

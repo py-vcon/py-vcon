@@ -1,3 +1,4 @@
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Build script for vcon core package for pypi """
 # import os
 import sys
@@ -78,10 +79,16 @@ setuptools.setup(
       'vcon.filter_plugins_addons',
     ],
   data_files=[
-    ("vcon", ["vcon/docker_dev/pip_package_list.txt"])],
+    ("vcon", [
+      "vcon/docker_dev/pip_package_list_core.txt",
+      "vcon/docker_dev/pip_package_list_light.txt",
+      "vcon/docker_dev/pip_package_list.txt",
+    ])],
   python_requires=">=3.8",
   tests_require=['pytest', 'pytest-asyncio', 'pytest-dependency', "pytest_httpserver"],
-  install_requires = REQUIRES,
+  install_requires=[
+      "python-vcon-light >= {}".format(__version__)
+    ] + REQUIRES,
   scripts=['vcon/bin/vcon'],
   # entry_points={
   #   'console_scripts': [

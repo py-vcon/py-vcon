@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ unit tests for mimimum elements of vCon """
 
 import json
@@ -26,28 +26,22 @@ def assert_vcon_array_size(vCon : vcon.Vcon, list_name : str, size : int) -> Non
   assert_dict_array_size(vCon._vcon_dict, list_name, size)
 
 def test_party_parameters(empty_vcon : vcon.Vcon):
-  try:
-    empty_vcon.set_party_parameter("foo", "bar")
-    Exception("Should not allow setting of foo parameter on a Party")
 
-  except AttributeError as e:
-    pass
-
-  assert(len(empty_vcon.parties) == 0)
-
-  try:
-    empty_vcon.add_party({"tel": "1234", "foo": "bar"})
-    raise Exception("should not get her, bad party parameter")
-  except AttributeError as e:
-    pass
-
-  assert(len(empty_vcon.parties) == 0)
-
-  empty_vcon.add_party({"tel": "1234", "name": "Alice"})
+  party_index = empty_vcon.set_party_parameter("foo", "bar")
+  assert(party_index == 0)
   assert(len(empty_vcon.parties) == 1)
-  assert(empty_vcon.parties[0]["tel"] == "1234")
-  assert(empty_vcon.parties[0]["name"] == "Alice")
+  assert(empty_vcon.parties[0]["foo"] == "bar")
+  assert(vcon.Vcon.EXTENSIONS not in empty_vcon._vcon_dict)
 
+
+  party_index = empty_vcon.add_party({"tel": "1234", "foo": "bar"})
+  assert(party_index == 1)
+  assert(len(empty_vcon.parties) == 2)
+  assert(empty_vcon.parties[1]["foo"] == "bar")
+  empty_vcon.add_party({"tel": "1234", "name": "Alice"})
+  assert(len(empty_vcon.parties) == 3)
+  assert(empty_vcon.parties[2]["tel"] == "1234")
+  assert(empty_vcon.parties[2]["name"] == "Alice")
 
 def test_party_tel(empty_vcon : vcon.Vcon):
   """ Test adding first party with a tel url to create simple vCon """
@@ -110,7 +104,7 @@ def test_dumps(two_party_tel_vcon : vcon.Vcon) -> None:
 
   vcon_dict = json.loads(vcon_json)
 
-  assert(vcon_dict[vcon.Vcon.VCON_VERSION] == "0.0.2")
+  assert(vcon.Vcon.VCON_VERSION not in vcon_dict)
   assert_dict_array_size(vcon_dict, VCON_PARTIES, 2)
   assert(vcon_dict['parties'][0]['tel'] == call_data['source'])
   assert(vcon_dict['parties'][1]['tel'] == call_data['destination'])
@@ -323,4 +317,4 @@ def test_missing_properties():
 
   minVcon.group.append({ "set": True})
   assert(len(minVcon.group) == 1)
-  assert(minVcon.dumps() == '{"vcon": "0.0.2", "uuid": "01855517-ac4e-8edf-84fd-77776666acbe", "parties": [{"set": true}], "group": [{"set": true}]}')
+  assert(minVcon.dumps() == '{"uuid": "01855517-ac4e-8edf-84fd-77776666acbe", "parties": [{"set": true}], "group": [{"set": true}]}')

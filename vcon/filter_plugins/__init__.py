@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Vcon module providing frameword for filter plugins which take a Von in and provide a Vcon output """
 from __future__ import annotations
 import importlib
@@ -10,7 +10,7 @@ import traceback
 import operator
 import logging
 import pydantic
-import pythonjsonlogger.jsonlogger
+import vcon.logging_utils
 import vcon.pydantic_utils
 
 
@@ -18,29 +18,10 @@ import vcon.pydantic_utils
 # This creates a circular dependency which we avoid by importing annotations
 # above and importing vcon only if typing.TYPE_CHECKING
 if typing.TYPE_CHECKING:
-  from vcon import Vcon
+  from vcon import Vcon # pragma: no cover
 
-# This is cloned from vcon package as we cannot import vcon here due to
-# cyclical import.
-def build_logger(name : str) -> logging.Logger:
-  logger = logging.getLogger(name)
-
-  log_config_filename = "./logging.conf"
-  if(os.path.isfile(log_config_filename)):
-    logging.config.fileConfig(log_config_filename)
-    #print("got logging config", file=sys.stderr)
-  else:
-    logger.setLevel(logging.DEBUG)
-
-    # Output to stdout WILL BREAK the Vcon CLI.
-    # MUST use stderr.
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(logging.DEBUG)
-    formatter = pythonjsonlogger.jsonlogger.JsonFormatter( "%(timestamp)s %(levelname)s %(message)s ", timestamp=True)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-  return(logger)
+# TODO:  remove this and reference vcon.logging_utils directly in plugins
+build_logger = vcon.logging_utils.build_logger
 
 logger = build_logger(__name__)
 

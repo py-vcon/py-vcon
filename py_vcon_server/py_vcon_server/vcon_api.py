@@ -1,14 +1,19 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 """ Implementation of the Vcon API entry points """
 
 import os
 import typing
 import copy
+import asyncio
 import pydantic
 import fastapi
 import fastapi.responses
+import jsonpath_rfc9535
 import py_vcon_server.db
+import py_vcon_server.certs
 import py_vcon_server.processor
+import py_vcon_server.pipeline
 import py_vcon_server.logging_utils
 import vcon
 import vcon.utils
@@ -111,12 +116,25 @@ def init(restapi):
     """
     Apply the given jq transform to the vCon identified by the given UUID and return the results.
 
+    A signed vCon is verified with the trusted CA certificates (VCON_CA_CERT_PEMS
+    setting) so that its content can be queried.  If it cannot be verified, or the
+    vCon is encrypted, its content cannot be read and an error is returned.
+
     Returns: list - containing jq tranform of the vCon.
     """
     try:
       logger.info("vcon UID: {} jq transform string: {}".format(vcon_uuid, jq_transform))
-      transform_result = await py_vcon_server.db.VCON_STORAGE.jq_query(vcon_uuid, jq_transform)
+      a_vcon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
+      py_vcon_server.certs.verify_for_read(a_vcon)
+      transform_result = a_vcon.jq(jq_transform)
       logger.debug("jq  transform result: {}".format(transform_result))
+
+    except py_vcon_server.db.VconNotFound as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
+
+    except py_vcon_server.certs.VconNotReadable as e:
+      return(py_vcon_server.restful_api.ValidationError(str(e)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -129,15 +147,32 @@ def init(restapi):
     tags = [ py_vcon_server.restful_api.VCON_TAG ])
   async def get_vcon_jsonpath_query(vcon_uuid: str, path_string: str):
     """
-    Apply the given JSONpath query to the vCon idntified by the given UUID.
+    Apply the given JSONPath query (RFC 9535) to the vCon identified by the given UUID.
 
-    Returns: list - the JSONpath query results
+    A signed vCon is verified with the trusted CA certificates (VCON_CA_CERT_PEMS
+    setting) so that its content can be queried.  If it cannot be verified, or the
+    vCon is encrypted, its content cannot be read and an error is returned.
+
+    Returns: list - the values of the nodes the query selects
     """
 
     try:
       logger.info("vcon UID: {} jsonpath query string: {}".format(vcon_uuid, path_string))
-      query_result = await py_vcon_server.db.VCON_STORAGE.json_path_query(vcon_uuid, path_string)
+      a_vcon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
+      py_vcon_server.certs.verify_for_read(a_vcon)
+      query_result = a_vcon.jsonpath(path_string)
       logger.debug("jsonpath query result: {}".format(query_result))
+
+    except py_vcon_server.db.VconNotFound as e:
+      py_vcon_server.restful_api.log_exception(e)
+      return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
+
+    except py_vcon_server.certs.VconNotReadable as e:
+      return(py_vcon_server.restful_api.ValidationError(str(e)))
+
+    except jsonpath_rfc9535.JSONPathError as e:
+      return(py_vcon_server.restful_api.ValidationError(
+          "path_string: {} is not a valid JSONPath (RFC 9535) query: {}".format(path_string, e)))
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -162,10 +197,12 @@ def init(restapi):
       vcon_uuid: str,
       request: fastapi.Request,
       commit_changes: bool = False,
-      return_whole_vcon: bool = True
+      return_whole_vcon: bool = True,
+      timeout: float = py_vcon_server.settings.DEFAULT_PROCESSOR_TIMEOUT
       ) -> str:
 
       try:
+        processor_type_options = None
         #processor_name = processor_type_dict[type(options)]
         path = request.url.path
         processor_name_from_path = os.path.basename(path)
@@ -174,13 +211,35 @@ def init(restapi):
         processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
           processor_name_from_path)
 
+        if timeout is not None:
+            effective_timeout = timeout if timeout > 0 else None
+        else:
+            effective_timeout = py_vcon_server.settings.DEFAULT_PROCESSOR_TIMEOUT
+            if effective_timeout <= 0:
+                effective_timeout = None
+
         # TODO: take a real lock on the vCon
 
         processor_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
         await processor_input.add_vcon(vcon_uuid, "fake_lock", False)
 
+        # Instrumentation context
+        processor_input.set_run_context({
+            py_vcon_server.processor.RUN_CONTEXT_ENTRY_POINT: "/process"
+          })
+
         # format_options for dynamic options
-        formatted_options_dict = processor_input.format_parameters_to_options(vcon.pydantic_utils.get_dict(options))
+        merged_context = {}
+        merged_context.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+        merged_context.update(py_vcon_server.processor.SERVER_CONTEXT_PARAMETERS)
+        merged_context.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
+        merged_context.update(processor_inst.context_parameters)
+        formatted_options_dict = processor_input.format_parameters_to_options(
+            vcon.pydantic_utils.get_dict(options),
+            merged_context,
+            processor_name_from_path,
+            options_class = processor_inst.processor_options_class()
+            )
         processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
 
         logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
@@ -191,10 +250,11 @@ def init(restapi):
             processor_name_from_path
           ))
 
-        # Run the processor
-        processor_output = await processor_inst.process(
-          processor_input,
-          processor_type_options)
+        # Run the processor with a timeout
+        processor_output = await asyncio.wait_for(
+            processor_inst.process(processor_input, processor_type_options),
+            effective_timeout
+        )
 
         if(commit_changes):
           # Save changed Vcons
@@ -217,11 +277,24 @@ def init(restapi):
         py_vcon_server.restful_api.log_exception(e)
         return(py_vcon_server.restful_api.NotFoundResponse("vCon UUID: {} not found".format(vcon_uuid)))
 
+      except asyncio.TimeoutError:
+        timeout_message = "Processor {} timed out after {} seconds on vCon {}".format(
+            processor_name_from_path,
+            effective_timeout,
+            vcon_uuid
+          )
+        logger.warning(timeout_message)
+        return py_vcon_server.restful_api.ProcessingTimeout(timeout_message)
+
       except Exception as e:
         # Add options to response for easier diagnostics and error reporting
+        if(processor_type_options is not None):
+          error_options = vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True)
+        else:
+          error_options = vcon.pydantic_utils.get_dict(options, exclude_none = True)
         exception_error_content = py_vcon_server.restful_api.InternalErrorResponse(e,
             {
-              "processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True),
+              "processor_options": error_options,
               "processor_name": processor_name_from_path
             })
         return(exception_error_content)
@@ -255,12 +328,21 @@ def init(restapi):
       processor_input: processor_input_class,
       request: fastapi.Request,
       commit_changes: bool = False,
+      timeout: float = py_vcon_server.settings.DEFAULT_PROCESSOR_TIMEOUT
       ) -> str:
 
       try:
+        processor_type_options = None
         #processor_name = processor_type_dict[type(options)]
         path = request.url.path
         processor_name_from_path = os.path.basename(path)
+
+        if timeout is not None:
+            effective_timeout = timeout if timeout > 0 else None
+        else:
+            effective_timeout = py_vcon_server.settings.DEFAULT_PROCESSOR_TIMEOUT
+            if effective_timeout <= 0:
+                effective_timeout = None
 
         # Get the processor form the registry
         processor_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance(
@@ -269,6 +351,11 @@ def init(restapi):
         # TODO: take a real lock on the vCon
         processor_input_dict = vcon.pydantic_utils.get_dict(processor_input, exclude_none = True)
         processor_io = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
+
+        # Instrumentation context
+        processor_io.set_run_context({
+            py_vcon_server.processor.RUN_CONTEXT_ENTRY_POINT: "/processIO"
+          })
 
         # Copy the vcons to the input
         if( processor_input_dict and
@@ -287,7 +374,17 @@ def init(restapi):
             processor_io.set_parameter(parameter_name, parameter_value)
 
         # format_options for dynamic options
-        formatted_options_dict = processor_io.format_parameters_to_options(processor_input_dict["processor_options"])
+        merged_context = {}
+        merged_context.update(py_vcon_server.processor.BASE_CONTEXT_PARAMETERS)
+        merged_context.update(py_vcon_server.processor.SERVER_CONTEXT_PARAMETERS)
+        merged_context.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
+        merged_context.update(processor_inst.context_parameters)
+        formatted_options_dict = processor_io.format_parameters_to_options(
+            processor_input_dict["processor_options"],
+            merged_context,
+            processor_name_from_path,
+            options_class = processor_inst.processor_options_class()
+            )
         processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
 
         logger.debug("type: {} path: {} ({}) options: {} processor: {}".format(
@@ -298,10 +395,11 @@ def init(restapi):
             processor_name_from_path
           ))
 
-        # Run the processor
-        processor_output = await processor_inst.process(
-          processor_io,
-          processor_type_options)
+        # Run the processor, with a timeout
+        processor_output = await asyncio.wait_for(
+            processor_inst.process(processor_io, processor_type_options),
+            effective_timeout
+          )
 
         if(commit_changes):
           # Save changed Vcons
@@ -319,14 +417,25 @@ def init(restapi):
         # Get serializable output
         response_output = await processor_output.get_output()
 
+      except asyncio.TimeoutError:
+        timeout_message = "Processor {} timed out after {} seconds".format(
+            processor_name_from_path,
+            effective_timeout
+        )
+        logger.warning(timeout_message)
+        return py_vcon_server.restful_api.ProcessingTimeout(timeout_message)
+
       except Exception as e:
         py_vcon_server.restful_api.log_exception(e)
         # Add options to response for easier diagnostics and error reporting
+        if(processor_type_options is not None):
+          error_options = vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True)
+        else:
+          error_options = processor_input_dict.get("processor_options", {})
         exception_error_content = py_vcon_server.restful_api.InternalErrorResponse(e,
             {
-              "processor_options": vcon.pydantic_utils.get_dict(processor_type_options, exclude_none = True),
+              "processor_options": error_options,
               "processor_name": processor_name_from_path
-
             })
         return(exception_error_content)
 
@@ -349,6 +458,10 @@ def init(restapi):
       # Build the VconProcessorIO
       pipeline_input = py_vcon_server.processor.VconProcessorIO(py_vcon_server.db.VCON_STORAGE)
       await pipeline_input.add_vcon(vCon, lock_key, False)
+      pipeline_input.set_run_context({
+          py_vcon_server.processor.RUN_CONTEXT_ENTRY_POINT:   "/pipeline/run/uuid" if vcon_in_storage else "/pipeline/run",
+          py_vcon_server.processor.RUN_CONTEXT_PIPELINE_NAME: pipeline_name
+        })
 
       # Get the pipeline
       pipe_def = await py_vcon_server.pipeline.PIPELINE_DB.get_pipeline(pipeline_name)
@@ -449,7 +562,7 @@ def init(restapi):
           vcon_object.dict
         ))
       py_vcon_server.restful_api.log_exception(timeout_exception)
-      return(py_vcon_server.restful_api.ProcessingTimeout(
+      plieturn(py_vcon_server.restful_api.ProcessingTimeout(
           "Error: pipeline: {} input Vcon with uuid: {} processing time exeeded timeout".format(
             name,
             vcon_object.uuid,

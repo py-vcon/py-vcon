@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     # Service containers to run with `runner-job`
     services:
@@ -34,12 +34,24 @@ jobs:
           - 6379:6379
 
     steps:
+      # Free a bunch of disk space on the runner
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+          tool-cache: false
+
       - name: checkout ${{ github.ref }}
       # Downloads a copy of the code in your repository before running CI tests
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Python ${{ matrix.python-version }} os ${{ runner.os }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -49,6 +61,8 @@ jobs:
           # if a re-build is needed.
           cache-dependency-path: |
             vcon/docker_dev/pip_dev_package_list.txt
+            vcon/docker_dev/pip_package_list_core.txt
+            vcon/docker_dev/pip_package_list_light.txt
             vcon/docker_dev/pip_package_list.txt
             vcon/docker_dev/pip_server_requirements.txt
 
@@ -56,12 +70,16 @@ jobs:
       # For more information, see https://docs.npmjs.com/cli/ci.html
       - name: Install redis-cli
         run: |
+          sudo apt-get update
+          apt-cache madison redis-cli
           sudo apt-get install redis-tools
 
       - name: Test connection and operations with Redis
         # Runs a script that creates a Redis client, populates
         # the client with data, and retrieves data
         run: |
+          set -euxo pipefail
+
           # make sure we can connect and get response from redis server
           export PING_OUT=`redis-cli -n 0 -h ${REDIS_HOST} -p ${REDIS_PORT} PING`
           if [ "${PING_OUT}" == "PONG" ]; then echo "redis connection succeeded"; else echo "cli return: ${PING_OUT}"; exit 1; fi
@@ -86,6 +104,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          set -euxo pipefail
+
           pwd
           ls -l vcon/docker_dev
           # Pull out comments and python3 specific packages as the platform already has that
@@ -104,20 +124,28 @@ jobs:
           python -m pip install --upgrade pip
           #python -m pip install flake8 pytest
           #if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install -r vcon/docker_dev/pip_dev_package_list.txt
-          pip install -r vcon/docker_dev/pip_package_list.txt
+          pip install --no-cache-dir -r vcon/docker_dev/pip_dev_package_list.txt
+          pip install --no-cache-dir -r vcon/docker_dev/pip_package_list_core.txt
+          pip install --no-cache-dir -r vcon/docker_dev/pip_package_list_light.txt
+          pip install --no-cache-dir -r vcon/docker_dev/pip_package_list.txt
           if [[ "${{ matrix.python-version }}" == "3.8" ]]; then
             echo "Python 3.8 patching"
             pip3 uninstall --yes cryptography
             pip3 install 'cryptography<45.0.0'
+            # prometheus-fastapi-instrumentator >= 6.0 uses Python 3.9+
+            # type annotation syntax (list[str] etc) which crashes on import
+            # under Python 3.8 with TypeError: type object is not subscriptable.
+            # Pin to last 5.x release which supports Python 3.8.
+            pip3 install 'prometheus_fastapi_instrumentator<6.0.0'
           else
             echo "no version specific python patching"
           fi
           # build and install python-vcon
-          rm -f dist/*
-          python -m build
-          pip3 install dist/python_vcon*.tar.gz
-          pip install -r vcon/docker_dev/pip_server_requirements.txt
+          #rm -f dist/*
+          #python -m build
+          scripts/build_packages.sh
+          pip3 install dist/python[_,-]vcon*.tar.gz
+          pip install --no-cache-dir -r vcon/docker_dev/pip_server_requirements.txt
           pip freeze | grep stable
           pip freeze | grep whisper
           pip freeze
@@ -133,6 +161,51 @@ jobs:
         run: |
           # Run all Vcon server package unit tests
           (cd py_vcon_server; pytest -v -rP tests)
+
+      - name: Build sentinel test cluster image
+        run: |
+          cd py_vcon_server && docker build -t py_vcon_sentinel:test docker/sentinel/
+
+      - name: Start sentinel test cluster
+        run: |
+          cd py_vcon_server && bash scripts/start_sentinel.sh
+
+      - name: Run sentinel tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DEEPGRAM_KEY: ${{ secrets.DEEPGRAM_KEY }}
+          PYTHONPATH: tests/processors
+          VCON_STORAGE_URL: sentinel://localhost:26399,localhost:26400,localhost:26401/mymaster?db=0
+        run: |
+          cd py_vcon_server && pytest -v -rP tests/test_redis_sentinel.py
+
+      - name: Stop sentinel test cluster
+        if: always()
+        run: |
+          cd py_vcon_server && bash scripts/stop_sentinel.sh
+
+      - name: Uninstall whisper deps for integration tests
+        run: |
+          echo "=== Removing whisper deps for integration test ==="
+          echo "Reason: avoid worker-startup OOM on GitHub runners (7GB)."
+          echo "Server will log 'module load failed' for whisper-related"
+          echo "plugins; tolerated by import_bindings try_all=True."
+          pip3 uninstall -y stable-ts whisper
+          pip3 freeze | grep -iE "whisper|stable" || echo "whisper/stable packages removed"
+
+      - name: Run multi-worker integration tests
+        env:
+          VCON_STORAGE_URL: redis://localhost
+          REST_URL: http://localhost:8000
+          PYTHONPATH: ${{ github.workspace }}/py_vcon_server
+          MULTIWORKER_STARTUP_TIMEOUT: "60"
+          MULTIWORKER_JOB_POLL_TIMEOUT: "60"
+          MULTIWORKER_BLOCK_WAIT: "5.0"
+          INTEGRATION_HEALTH_CHECK_TIMEOUT: "10.0"
+
+        run: |
+          cd py_vcon_server
+          python3 scripts/test_integration.py --workers 2
 
       - name: get pip freeze config for successful run
 

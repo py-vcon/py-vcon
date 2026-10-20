@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ good implementations of **VconProcessor** for testing """
 
 import typing
@@ -8,11 +8,21 @@ import py_vcon_server.processor
 __version__ = "0.0.1"
 
 class AddPartyOptions(py_vcon_server.processor.VconProcessorOptions):
+  """minimal doc to pass"""
   tel: typing.Optional[str] = None
   
 
 class AddParty(py_vcon_server.processor.VconProcessor):
   """ adds a new party with the Vcon Party Object parameters provided in the **AddPartyOptions** """
+
+  context_parameters = {
+      "PARTY_INDEX": {
+          "default":     "",
+          "description": "Index of the party added or modified by AddParty",
+          "title":       "Party Index",
+        },
+    }
+
   def __init__(
     self,
     init_options: py_vcon_server.processor.VconProcessorInitOptions

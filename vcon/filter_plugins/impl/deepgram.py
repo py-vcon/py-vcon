@@ -1,17 +1,28 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ FilterPlugin for Deepgram transcription """
 import typing
 import json
 import logging
+import urllib.parse
 import pydantic
-import requests
+import vcon.http_lb
 import tenacity
 import vcon.filter_plugins
-import deepgram
+import vcon.pydantic_utils
+#import deepgram
 
 logger = vcon.build_logger(__name__)
 
-DEEPGRAM_RETRY_EXCEPTIONS = (requests.exceptions.ReadTimeout)
+class DeepgramRetryableHttpError(Exception):
+  """
+  Raised for Deepgram HTTP responses which should be retried at the
+  HTTP layer (currently only 404).  See request_transcribe and the
+  test_deepgram_bogus_model / test_deepgram_bogus_language contract
+  tests for the rationale.
+  """
+  pass
+
+DEEPGRAM_RETRY_EXCEPTIONS = vcon.http_lb.RETRYABLE_EXCEPTIONS + (DeepgramRetryableHttpError,)
 
 class DeepgramInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
@@ -48,6 +59,24 @@ class DeepgramOptions(
   https://developers.deepgram.com/reference/pre-recorded
   """
 
+  model: str = pydantic.Field(
+    title = "Deepgram transcription model",
+    description = "Deepgram model name to use for transcription. See https://developers.deepgram.com/docs/models",
+    default = "nova-3",
+    examples = ["nova-3", "nova-2", "nova-2-phonecall", "nova-2-meeting", "nova-2-medical", "base"]
+    )
+
+  deepgram_key: typing.Union[str, None] = pydantic.Field(
+    title = "Deepgram API key override",
+    description = """
+Override the Deepgram API key set in DeepgramInitOptions.
+If None or empty, the key from DeepgramInitOptions is used.
+""",
+    # "" rather than None: pydantic leaves a None default out of the JSON schema, so the
+    # pipeline editor then showed this optional override as a required option that is not set
+    default = ""
+    )
+
 
 class Deepgram(vcon.filter_plugins.FilterPlugin):
   """
@@ -73,44 +102,51 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
       logger.warning("Deepgram plugin: key not set.  Plugin will be a no-op")
       self.deepgram_client = None
 
-    else:
-      self.deepgram_client = deepgram.Deepgram(init_options.deepgram_key)
+    #else:
+    #  self.deepgram_client = deepgram.Deepgram(init_options.deepgram_key)
 
-
-
-
+  # Retry policy notes:
+  #
+  # Deepgram occasionally emits HTTP 404 for transient server-side
+  # routing/load issues rather than 503.  Observed body for that case:
+  #   {"err_code":"Not Found","err_msg":"Failed to handle request.",...}
+  # By contrast, real user-misconfig errors come back with distinct
+  # codes (confirmed by contract tests in tests/test_deepgram.py):
+  #   - bogus model    -> 403 INSUFFICIENT_PERMISSIONS
+  #   - bogus language -> 400 Bad Request
+  # Both are non-retryable.  Therefore we treat 404 as retryable.
+  #
+  # Attempts budget is 7 (down from 16): pipeline-recovery latency is
+  # operationally more expensive than a delayed pipeline, but a 16-
+  # attempt budget with up-to-90s exponential backoff could exceed an
+  # hour wall-clock for large recordings (200s read timeout per
+  # attempt).  7 attempts caps worst-case backoff at 63s while still
+  # giving real transient failures multiple chances.
   @tenacity.retry(
       #retry=retry_if_exception_type((openai.error.APIError, openai.error.APIConnectionError, openai.error.RateLimitError, openai.error.ServiceUnavailableError, openai.error.Timeout)), 
       retry = tenacity.retry_if_exception_type(DEEPGRAM_RETRY_EXCEPTIONS),
       wait = tenacity.wait_random_exponential(multiplier = 1, max = 90),
-      stop = tenacity.stop_after_attempt(16),
+      stop = tenacity.stop_after_attempt(7),
       before = tenacity.before_log(logger, logging.DEBUG),
       after = tenacity.after_log(logger, logging.DEBUG)
     )
-  def request_transcribe(
+  async def request_transcribe(
     self,
     recording_data: typing.Dict[str, typing.Any],
-    transcribe_options: typing.Dict[str, typing.Any]
+    transcribe_options: typing.Dict[str, typing.Any],
+    deepgram_key: str
     ) -> typing.Dict[str, typing.Any]:
     """ synchronous post of deepgram transcrtion request """
-    url = "https://api.deepgram.com/v1/listen"
-    headers = {
-      "accept": "application/json",
-      "content-type": recording_data["mediatype"],
-      "Authorization": "Token " + self._init_options.deepgram_key
-      }
-    # Should make this a parameter
-    requests_options = {
-      "timeout": 200
-      }
-
-    response = requests.post(
+    url = "https://api.deepgram.com/v1/listen?" + urllib.parse.urlencode(transcribe_options)
+    response = await vcon.http_lb.HttpLb.post(
       url,
-      params = transcribe_options,
-      #json = recording_data,
-      data = recording_data["buffer"],
-      headers = headers,
-      **requests_options
+      body = recording_data["buffer"],
+      content_type = recording_data["mediatype"],
+      headers = {
+        "accept": "application/json",
+        "Authorization": "Token " + deepgram_key
+        },
+      read_timeout = 200.0
       )
 
     if(response.status_code >= 300):
@@ -120,6 +156,11 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
         response.status_code,
         response.content
         ))
+      if(response.status_code == 404):
+        raise DeepgramRetryableHttpError("request to Deepgram options: {} failed: {}".format(
+          transcribe_options,
+          response.status_code
+          ))
       raise Exception("request to Deepgram options: {} failed: {}".format(
         transcribe_options,
         response.status_code
@@ -142,10 +183,10 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     Returns:
       the modified Vcon with added transcript analysis objects for the recording dialogs.
     """
-    out_vcon = in_vcon
+    if(not isinstance(options, DeepgramOptions)):
+      options = DeepgramOptions(**vcon.pydantic_utils.get_dict(options, exclude_none = False))
 
-    if(in_vcon.dialog is None):
-      return(out_vcon)
+    out_vcon = in_vcon
 
     dialog_indices = self.slice_indices(
       options.input_dialogs,
@@ -157,7 +198,10 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
     if(len(dialog_indices) == 0):
       return(out_vcon)
 
-    if(self.deepgram_client is None):
+    deepgram_key = options.deepgram_key
+    if(deepgram_key is None or len(deepgram_key) == 0):
+      deepgram_key = self._init_options.deepgram_key
+    if(deepgram_key is None or len(deepgram_key) == 0):
       logger.warning("Deepgram.filter: deepgram_key is not set, no transcription performed")
       return(out_vcon)
 
@@ -167,10 +211,11 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
 
     # TODO add some of these to DeepgramOptions
     transcribe_options = {
-      'language': 'en',
-      'model': 'nova-3',  # should make this an option: nova-2, nova-2-phonecall, nova-2-meeting, nova-2-medical
+      'language': options.language,
+      'model': options.model,
       'punctuate': 'true',
       'smart_format': 'true',
+      'multichannel': 'true',
       'diarize': 'true'
       }
 
@@ -226,9 +271,10 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
             "mediatype": dialog["mediatype"]
             }
 
-          transcript_dict = self.request_transcribe(
+          transcript_dict = await self.request_transcribe(
             recording_data,
-            transcribe_options
+            transcribe_options,
+            deepgram_key
             )
 
           # For now make synch.

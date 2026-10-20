@@ -1,39 +1,25 @@
-# runtime dependencies:
-# Deepgram 3+ uses match statement which does not run on python < 3.10
-deepgram-sdk < 3
-cbor2
-cryptography >= 37
-hsslms
-openai
-pydantic
-pyjq
-# 3.4.x caused some problems with REAND_bytes
-python-jose !=3.4.*
-python-dateutil
-pytz
-regex
-requests
-sox
-tenacity
-uuid6
-python-json-logger
-python-multipart
-
+# runtime dependencies for python-vcon (full)
+# (in addition to python-vcon-light-plugins dependencies):
 
 # whisper dependencies
-ffmpeg-python
 more-itertools
 tqdm
 transformers
 whisper
 
 # stable-ts dependencies:
-numpy < 1.25
+numpy < 1.25 ; python_version < "3.10"
 torch >= 2.1
 stable-ts > 2
 
 # redaction dependencies
+# Python 3.12 no longer includes setuptools.
+# dataprofiler uses setuptools.  So we need to explicitly install it.
+setuptools < 81
 pandas
 tensorflow
 scikit-learn
 dataprofiler
+# datasketches 5.2.0+ requires nanobind which does not support Python < 3.9
+datasketches < 5.0.0 ; python_version < "3.9"
+

@@ -39,11 +39,11 @@
       "processor_name": "jq",
       "processor_options": {
         "jq_queries": {
-          "ATTENDEES": "[(.vcons[0].parties[] | \"\\(.name) x\\(.tel)\")] | join(\"\n\")",
-          "SUMMARY": "(.vcons[0].analysis[] | select(.type == \"summary\")) .body",
-          "NOTES": "(.vcons[0].analysis[] | select(.type == \"notes\")) .body",
-          "ACTION_ITEMS": "(.vcons[0].analysis[] | select(.type == \"action items\")) .body",
-          "DATE": ".vcons[0].dialog[0].start"
+          "attendees": "[(.vcons[0].parties[] | \"\\(.name) x\\(.tel)\")] | join(\"\n\")",
+          "summary": "(.vcons[0].analysis[] | select(.type == \"summary\")) .body",
+          "notes": "(.vcons[0].analysis[] | select(.type == \"notes\")) .body",
+          "action_items": "(.vcons[0].analysis[] | select(.type == \"action items\")) .body",
+          "date": ".vcons[0].dialog[0].start"
         }
       }
     },
@@ -52,8 +52,8 @@
       "processor_name": "send_email",
       "processor_options": {
         "format_options": {
-          "subject": "Meeting notes {DATE}",
-          "text_body": "Summary:\n{SUMMARY}\n\nAttendees:\n{ATTENDEES}\n\nNotes:\n{NOTES}\n\nAction Items:\n{ACTION_ITEMS}\n\n"
+          "subject": "Meeting notes from pipeline {PIPELINE_NAME}, {date}",
+          "text_body": "Summary:\n{summary}\n\nAttendees:\n{attendees}\n\nNotes:\n{notes}\n\nAction Items:\n{action_items}\n\n"
         },
         "comment": "Note: you have to change the hostname (yourdomain) in the following fields to your real domain and real email addresses",
         "to": [

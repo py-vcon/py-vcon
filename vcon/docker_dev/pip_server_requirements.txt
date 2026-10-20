@@ -7,9 +7,13 @@ packaging
 pkgutil-resolve-name
 psutil
 pydantic
-pyjq
-python-vcon >= 0.6.0
+python-vcon >= 0.6.10
 redis
 setuptools
 smtpdfix
-uvicorn
+uvicorn < 0.50
+# Optional stuff
+prometheus_client
+prometheus_fastapi_instrumentator<6.0.0; python_version < "3.9"
+prometheus_fastapi_instrumentator; python_version >= "3.9"
+

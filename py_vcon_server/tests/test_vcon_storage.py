@@ -65,20 +65,6 @@ async def test_redis_jq(make_2_party_tel_vcon: vcon.Vcon):
   assert(party_dict[1]["tel"] == "5678")
 
 @pytest.mark.asyncio
-async def test_redis_jsonpath(make_2_party_tel_vcon: vcon.Vcon):
-  """ Test the JSONPath query on the get of a **Vcon** from the **VconStorage** """
-  vCon = make_2_party_tel_vcon
-
-  # Save the vcon
-  await VCON_STORAGE.set(vCon)
-
-  jsonpath = "$.parties"
-  party_dict = await VCON_STORAGE.json_path_query(UUID, jsonpath)
-  print("party_dict: {}".format(party_dict))
-  assert(party_dict[0][0]["tel"] == "1234")
-  assert(party_dict[0][1]["tel"] == "5678")
-
-@pytest.mark.asyncio
 async def test_redis_delete(make_2_party_tel_vcon: vcon.Vcon):
   """ Test redis delete of a **Vcon** in the **VconStorage** """
   vCon = make_2_party_tel_vcon

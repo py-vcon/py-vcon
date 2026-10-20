@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit tests for signing processor """
 import pytest
 import pytest_asyncio
@@ -412,16 +412,19 @@ async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
           },
         headers={"accept": "application/json"},
       )
-    assert(post_response.status_code == 200)
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    assert(len(pipeline_out_dict["vcons"]) == 1)
-    assert(len(pipeline_out_dict["vcons_modified"]) == 1)
-    assert(pipeline_out_dict["vcons_modified"][0])
-    modified_vcon = vcon.Vcon()
-    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
-    # signed and then serialized, makes it unverified
-    assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
+    try:
+      assert(post_response.status_code == 200)
+      assert(len(pipeline_out_dict["vcons"]) == 1)
+      assert(len(pipeline_out_dict["vcons_modified"]) == 1)
+      assert(pipeline_out_dict["vcons_modified"][0])
+      modified_vcon = vcon.Vcon()
+      modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+      # signed and then serialized, makes it unverified
+      assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
+    except Exception:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise
 
     # put pipeline with wrong trusted cert list
     set_response = client.put(
@@ -488,28 +491,31 @@ async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
           },
         headers={"accept": "application/json"},
       )
-    assert(post_response.status_code == 200)
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    modified_vcon = vcon.Vcon()
-    assert(len(pipeline_out_dict["vcons"]) == 2) # original and amended
-    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
-    # signed and then serialized, makes it unverified
-    assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
+    try:
+      assert(post_response.status_code == 200)
+      modified_vcon = vcon.Vcon()
+      assert(len(pipeline_out_dict["vcons"]) == 2) # original and amended
+      modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+      # signed and then serialized, makes it unverified
+      assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
 
-    assert(pipeline_out_dict["parameters"]["num_vcons"] == 1)
-    assert(pipeline_out_dict["parameters"]["num_dialogs"] == 1)
-    assert(pipeline_out_dict["parameters"]["dialog_type"] == "recording")
-    assert(pipeline_out_dict["parameters"]["num_analysis"] == 0)
-    assert(pipeline_out_dict["parameters"]["num_parties"] == 2)
-    assert(pipeline_out_dict["parameters"]["is_three"] == False)
+      assert(pipeline_out_dict["parameters"]["num_vcons"] == 1)
+      assert(pipeline_out_dict["parameters"]["num_dialogs"] == 1)
+      assert(pipeline_out_dict["parameters"]["dialog_type"] == "recording")
+      assert(pipeline_out_dict["parameters"]["num_analysis"] == 0)
+      assert(pipeline_out_dict["parameters"]["num_parties"] == 2)
+      assert(pipeline_out_dict["parameters"]["is_three"] == False)
 
-    assert(modified_vcon.uuid == UUID)
-    assert(pipeline_out_dict["vcons"][1]["uuid"] != UUID)
-    assert(pipeline_out_dict["vcons"][1]["amended"]["uuid"] == UUID)
-    print("analysis keys: {}".format(pipeline_out_dict["vcons"][1]["analysis"][0].keys()))
-    assert(pipeline_out_dict["vcons"][1]["analysis"][0]["vendor"] == "openai")
+      assert(modified_vcon.uuid == UUID)
+      assert(pipeline_out_dict["vcons"][1]["uuid"] != UUID)
+      assert(pipeline_out_dict["vcons"][1]["amended"]["uuid"] == UUID)
+      print("analysis keys: {}".format(pipeline_out_dict["vcons"][1]["analysis"][0].keys()))
+      assert(pipeline_out_dict["vcons"][1]["analysis"][0]["vendor"] == "openai")
 
+    except Exception:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise
 
     # put pipeline with no verification and jq processor
     set_response = client.put(
@@ -541,22 +547,24 @@ async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
           },
         headers={"accept": "application/json"},
       )
-    assert(post_response.status_code == 200)
     pipeline_out_dict = post_response.json()
-    print("pipe out: {}".format(pipeline_out_dict))
-    modified_vcon = vcon.Vcon()
-    modified_vcon.loadd(pipeline_out_dict["vcons"][0])
-    # signed and then serialized, makes it unverified
-    assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
+    try:
+      assert(post_response.status_code == 200)
+      modified_vcon = vcon.Vcon()
+      modified_vcon.loadd(pipeline_out_dict["vcons"][0])
+      # signed and then serialized, makes it unverified
+      assert(modified_vcon._state == vcon.VconStates.UNVERIFIED)
 
-    assert(pipeline_out_dict["parameters"]["num_vcons"] == 1)
-    # TODO: the vCon is in a signed state, so all these queries
-    # come out zero.  Not sure whether to allow this or force
-    # failures for state in jq processor.  In some ways its useful
-    # to be able to query the signed JWS.
-    assert(pipeline_out_dict["parameters"]["num_dialogs"] == 0)
-    assert(pipeline_out_dict["parameters"]["num_analysis"] == 0)
-    assert(pipeline_out_dict["parameters"]["num_parties"] == 0)
-    assert(pipeline_out_dict["parameters"]["num_signatures"] == 1)
-    assert(pipeline_out_dict["parameters"]["is_three"] == False)
-
+      assert(pipeline_out_dict["parameters"]["num_vcons"] == 1)
+      # TODO: the vCon is in a signed state, so all these queries
+      # come out zero.  Not sure whether to allow this or force
+      # failures for state in jq processor.  In some ways its useful
+      # to be able to query the signed JWS.
+      assert(pipeline_out_dict["parameters"]["num_dialogs"] == 0)
+      assert(pipeline_out_dict["parameters"]["num_analysis"] == 0)
+      assert(pipeline_out_dict["parameters"]["num_parties"] == 0)
+      assert(pipeline_out_dict["parameters"]["num_signatures"] == 1)
+      assert(pipeline_out_dict["parameters"]["is_three"] == False)
+    except Exception:
+      print("pipe out: {}".format(pipeline_out_dict))
+      raise

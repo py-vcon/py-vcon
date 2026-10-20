@@ -1,8 +1,7 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import typing
 import time
 import os
-import pkg_resources
 import importlib
 import fastapi.responses
 import fastapi.staticfiles
@@ -74,11 +73,14 @@ class ServerState(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
       title = "server state",
       examples = ["starting_up", "running", "shutting_down", "unknown"],
       )
-    last_heartbeat: float = pydantic.Field(
-      title = "heartbeat time stamp",
-      description = "epoch seconds time for the last heartbeat on this server",
-      examples = [time.time()]
+    workers: typing.Dict[str, typing.Any] = pydantic.Field(
+      title = "worker states",
+      description = "dict of worker_key to worker state, keyed by "
+        "host:port:pid:start_time:worker_pid.  Each entry contains "
+        "last_heartbeat, worker_pid, start_time and state.",
+      default = {}
       )
+
 
 
 class QueueProperties(pydantic.BaseModel):
@@ -94,11 +96,19 @@ class QueueJob(pydantic.BaseModel): # may need to add **vcon.pydantic_utils.SET_
       description = "queue job type (currently only \"vcon_uuid\" allowed)",
       default = "vcon_uuid"
       )
+
+    # If we support other job types, this needs to become optional
     vcon_uuid: typing.List[str] = pydantic.Field(
       title = "vCon UUIDs",
       description = "array of vCon UUIDs (currently must be exactly 1)",
       examples = [["0185656d-fake-UUID-84fd-5b4de1ef42b4"]],
       default = []
+      )
+
+    parameters: typing.Dict[str, typing.Any] = pydantic.Field(
+      title = "Pipeline Parameters",
+      description = "Optional parameters to be set before running the Pipeline job",
+      default = {}
       )
 
 
@@ -329,7 +339,8 @@ def init(restapi):
 
 
   @restapi.delete("/servers/{server_key}",
-    status_code = 204,
+    status_code = 200,
+    response_model = typing.Dict[str, int],
     tags = [ py_vcon_server.restful_api.SERVER_TAG ])
   async def delete_server_state(server_key: str):
     """
@@ -348,7 +359,7 @@ def init(restapi):
 
     try:
       logger.debug("deleting server state: {}".format(server_key))
-      server_dict = await py_vcon_server.states.SERVER_STATE.delete_server_state(server_key)
+      worker_count = await py_vcon_server.states.SERVER_STATE.delete_server_state(server_key)
 
     except py_vcon_server.states.ServerStateNotFound as e:
       py_vcon_server.restful_api.log_exception(e)
@@ -360,7 +371,9 @@ def init(restapi):
 
     logger.debug("Deleted server state: {}".format(server_key))
 
-    # no return should cause 204, no content
+    return fastapi.responses.JSONResponse(
+        content={"workers_deleted": worker_count}
+      )
 
 
   @restapi.get("/queues",
@@ -455,7 +468,8 @@ def init(restapi):
       if(job.job_type != "vcon_uuid"):
         logger.info("Error: unsupport job type: {}".format(job.job_type))
 
-      queue_length = await py_vcon_server.queue.JOB_QUEUE.push_vcon_uuid_queue_job(name, job.vcon_uuid)
+      job_dict = vcon.pydantic_utils.get_dict(job, exclude_none=True)
+      queue_length = await py_vcon_server.queue.JOB_QUEUE.push_vcon_queue_job(name, job_dict)
 
     except Exception as e:
       py_vcon_server.restful_api.log_exception(e)

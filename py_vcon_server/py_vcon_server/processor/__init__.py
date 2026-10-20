@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Abstract VconProcessor and registry """
 
 import enum
@@ -6,8 +6,11 @@ import typing
 import copy
 import time
 import datetime
+import urllib.parse
 import asyncio
 import importlib
+import json
+import string
 import pydantic
 #from py_vcon_server.db import VconStorage
 import py_vcon_server.logging_utils
@@ -50,12 +53,17 @@ class VconProcessorNotInstantiated(Exception):
   finding the class or initialization of the instance.
   """
 
+
 class InvalidVconProcessorClass(Exception):
   """ Attempt to use invalide class as a VconProcessor """
 
 
 class ParameterNotFound(Exception):
   """ parameter not found in ProcessorIO parameters """
+
+
+class FormatOptionsInvalidJson(Exception):
+  """ format_options template for a dict option field did not render to a JSON object """
 
 
 class VconTypes(enum.Enum):
@@ -65,6 +73,7 @@ class VconTypes(enum.Enum):
   JSON = 2
   DICT = 3
   OBJECT = 4
+
 
 class MultifariousVcon():
   """ Container object for various forms of vCon and cashing of the different forms """
@@ -360,6 +369,16 @@ class VconUnsignedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
     default_factory=lambda: vcon.utils.cannonize_date(time.time()),
     examples = date_examples
     )
+  extensions: typing.Optional[typing.List[str]] = pydantic.Field(
+    title = "vCon extensions used",
+    description = "list of names of the vCon extensions used by this vCon",
+    default = None
+    )
+  critical: typing.Optional[typing.List[str]] = pydantic.Field(
+    title = "vCon critical extensions",
+    description = "list of names of the vCon extensions which a consumer must support to process this vCon",
+    default = None
+    )
   # subject: str = None
   # redacted: typing.Optional[typing.Union[typing.List[dict], None]] = None
   # appended: typing.Optional[typing.Union[typing.List[dict], None]] = None
@@ -525,14 +544,77 @@ class VconProcessorOptions(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
 
   format_options: typing.Dict[str, str] = pydantic.Field(
       title = "set VconProcessorOptions fields with formatted strings built from parameters",
-      description = "dict of strings keys and values where key is the name of a"
-        " VconProcessorOptions field, to be set with the formated value string"
-        " with the VconProcessorIO parameters dict as input.  For example"
-        " {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: '"
-        " concatindated with the value returned from VconProcessorIO."
-        "get_parameters('bar').  This occurs before the given VconProcessor"
-        " performs it's process method and does not perminimently modify the"
-        " VconProcessorOptions fields",
+      description=r"""
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```""",
       default = {}
     )
   #rename_output: dict[str, str]
@@ -701,6 +783,23 @@ class VconProcessorIO():
 
     raise Exception("vCon {} not found in VconProcessorIO".format(uuid))
 
+
+  def set_run_context(self, context: dict) -> None:
+    """
+    Set the run context for this VconProcessorIO.
+    Use the RUN_CONTEXT_* constants for well-known keys.
+    Additional arbitrary keys may be added for debug/diagnostic purposes.
+    """
+    self._run_context = context
+
+  def get_run_context(self) -> dict:
+    """
+    Get the run context for this VconProcessorIO.
+    Returns empty dict if no context has been set.
+    """
+    return getattr(self, "_run_context", {})
+
+
   def set_parameter(
       self,
       name: str,
@@ -729,47 +828,153 @@ class VconProcessorIO():
 
   def format_parameters_to_options_dict(
       self,
-      options: typing.Dict[str, typing.Any]
+      options: typing.Dict[str, typing.Any],
+      context_parameters: typing.Dict[str, typing.Dict[str, typing.Any]],
+      processor_name: str,
+      context: typing.Union[typing.Dict[str, typing.Any], None] = None,
+      options_class: typing.Union[typing.Type[pydantic.BaseModel], None] = None
     ) -> None:
     """
-    Recurse through options dict tree and apply formatting to
-    string values using parameters as input to format.
+    Apply formatting to string values in options["format_options"] using
+    the VconProcessorIO parameters and the given context parameters as
+    substitution input.  context_parameters is the merged set of context
+    parameter definitions (base + pipeline + processor scopes).  context,
+    when provided, supplies per-call override values (e.g. per iteration).
+    options_class, when provided, is the processor's options class.  It is
+    used to identify dict typed option fields which are not present in
+    options (e.g. options from a pipeline definition), so that their
+    format_options templates are parsed as JSON objects.
     """
+    # Capture once per call
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    # Auto resolved system context values: base scope (per call) + server
+    # scope (resolved once, cached).
+    auto_values: typing.Dict[str, typing.Any] = {
+        "PROCESSOR_NAME": processor_name,
+        "TIMESTAMP":      now.isoformat(),
+        "NDATE":          now.strftime("%Y%m%d"),
+        "YEAR":           now.strftime("%Y"),
+        "MONTH":          now.strftime("%m"),
+        "DAY":            now.strftime("%d"),
+        "VCON_UUID":      self._resolve_vcon_uuid(options),
+      }
+    auto_values.update(_get_server_context_values())
+
+    # Map run context (lower case) to template UPPER_CASE names
+    run_ctx = self.get_run_context()
+    for run_key, template_key in _RUN_CONTEXT_TO_TEMPLATE_NAME.items():
+      if(run_key in run_ctx):
+        auto_values[template_key] = run_ctx[run_key]
+
+    # Build the substitution dict.  Precedence (highest first):
+    #   1. context kwarg (per call/iteration override)
+    #   2. auto_values (system resolved)
+    #   3. context parameter declared default
+    params = dict(self._parameters)
+    for name, definition in context_parameters.items():
+      if(context is not None and name in context):
+        params[name] = context[name]
+      elif(name in auto_values):
+        params[name] = auto_values[name]
+      else:
+        params[name] = definition["default"]
 
     formats = options.get("format_options", {})
-    for name in formats.keys():
-      # Do not recurse
-      if(name != "format_options"):
+    try:
+      # Happy path: single pass substitution
+      for name in formats.keys():
+        # Do not recurse
+        if(name != "format_options"):
+          if(isinstance(options.get(name, None), dict) or
+              _is_dict_field(options_class, name)):
+            # dict option field: template is JSON text for the whole dict
+            options[name] = _render_dict_template(name, formats[name], params, processor_name)
+          else:
+            options[name] = formats[name].format(**params)
+
+    except KeyError:
+      # Failure path: collect ALL missing names across all fields
+      missing_by_field: typing.Dict[str, typing.List[str]] = {}
+      for name in formats.keys():
+        if(name == "format_options"):
+          continue
+        collector = _MissCollector(params)
         try:
-          new_value = formats[name].format(**self._parameters)
-        except KeyError as key_not_found:
-          raise ParameterNotFound("key in: {} not found in ProcessorIO parameters: {} when formatting: {}".format(
-              formats[name],
-              list(self._parameters.keys()),
-              name
-             )) from key_not_found
-        logger.debug('setting "{}" to "{}" type: {}'.format(
-            name,
-            new_value,
-            type(new_value)
-          ))
-        options[name] = new_value
+          formats[name].format_map(collector)
+        except (IndexError, ValueError):
+          pass
+        if(collector.missing):
+          missing_by_field[name] = sorted(collector.missing)
+      raise ParameterNotFound(_build_parameter_error_message(
+          missing_by_field,
+          params,
+          context_parameters,
+          processor_name
+        ))
+
+
+  def _resolve_vcon_uuid(
+      self,
+      options: typing.Dict[str, typing.Any]
+    ) -> str:
+    """
+    Resolve the UUID of the vCon at options["input_vcon_index"].  Returns
+    empty string if the index is unset, not an integer, out of range, or
+    the vCon has no uuid.
+    """
+    raw_index = options.get("input_vcon_index", 0)
+    try:
+      index = int(raw_index)
+    except (TypeError, ValueError):
+      return("")
+    if(0 <= index < len(self._vcons)):
+      mVcon = self._vcons[index]
+      forms = getattr(mVcon, "_vcon_forms", None)
+      if(forms is None):
+        return("")
+      vcon_uuid = forms.get(VconTypes.UUID, None)
+      if(vcon_uuid is None):
+        return("")
+      return(vcon_uuid)
+    return("")
 
 
   def format_parameters_to_options(
       self,
-      options: typing.Union[VconProcessorOptions, typing.Dict[str, typing.Any]]
-    ) -> VconProcessorOptions:
+      options: typing.Union[VconProcessorOptions, typing.Dict[str, typing.Any]],
+      context_parameters: typing.Dict[str, typing.Dict[str, typing.Any]],
+      processor_name: str,
+      context: typing.Union[typing.Dict[str, typing.Any], None] = None,
+      options_class: typing.Union[typing.Type[pydantic.BaseModel], None] = None
+    ) -> typing.Union[VconProcessorOptions, typing.Dict[str, typing.Any]]:
     """
-    Format/apply parameters to string values in options
+    Format/apply parameters to string values in options.
+    options_class is the processor's options class, see
+    format_parameters_to_options_dict.  If not provided and options is a
+    VconProcessorOptions, the class of options is used.
     """
     if(isinstance(options, dict)):
-      self.format_parameters_to_options_dict(options)
+      self.format_parameters_to_options_dict(
+          options, 
+          context_parameters,
+          processor_name,
+          context,
+          options_class
+        )
       return(options)
 
     elif(isinstance(options, VconProcessorOptions)):
       options_dict = vcon.pydantic_utils.get_dict(options, exclude_none=True)
-      self.format_parameters_to_options_dict(options_dict)
+      if(options_class is None):
+        options_class = options.__class__
+      self.format_parameters_to_options_dict(
+          options_dict,
+          context_parameters,
+          processor_name,
+          context,
+          options_class
+        )
       # Reconstruct to get pydantic to do type coersion/conversions and validations
       return(options.__class__(**options_dict))
 
@@ -795,14 +1000,27 @@ class VconProcessorIO():
   def add_vcon_uuid_queue_job(
       self,
       queue_name: str,
+      create_queue: bool,
       vcon_uuids: typing.List[str],
       from_queue: typing.Union[str, None],
-
+      parameters: typing.Union[typing.Dict[str, typing.Any], None] = None,
     ) -> None:
     """
     Add a queue job to this **VconProcessorIO** to be queued when the processor(s) have all been processed.
     Note: jobs do NOT get commit to the database.  They are only added to this **VconProcessorIO** object.
+
+    The jobs are pushed to the job queue by **commit_queue_jobs**.
+
+    Parameters:
+      queue_name: name of the job queue to add the job to
+      create_queue: if True, the queue is created at commit time if it does not exist.
+        If False, committing to a queue that does not exist raises QueueDoesNotExist.
+      vcon_uuids: list of vCon UUIDs for the job (currently exactly one is supported)
+      from_queue: optional name of the queue/pipeline that queued this job (diagnostic only)
+      parameters: optional dict of parameters set on the pipeline input before the
+        queued job is run.  Omitted from the job if None or empty.
     """
+
 
     if(len(vcon_uuids) < 1):
       raise Exception("no vCon UUIDs provided")
@@ -811,8 +1029,13 @@ class VconProcessorIO():
     job["job_type"] = "vcon_uuid"
     job["to_queue"] = queue_name
     job["vcon_uuids"] = vcon_uuids
+    job["create_queue"] = create_queue
+
     if(from_queue and len(from_queue) > 0):
       job["from_queue"] = from_queue
+
+    if(parameters):
+      job["parameters"] = parameters
 
     logger.debug("Adding job: {} to VconProcessorIO queue list".format(job))
     self._jobs_to_queue.append(job)
@@ -842,12 +1065,22 @@ class VconProcessorIO():
       if(job["job_type"] != "vcon_uuid"):
         raise Exception("invalid job type in VconProcessorIO: {}".format(job))
       if(queue_name and len(queue_name)):
-         await job_queue.push_vcon_uuid_queue_job(
+        job_json = {
+            "job_type": "vcon_uuid",
+            "vcon_uuid": job.get("vcon_uuids", [])
+          }
+        from_queue = job.get("from_queue", None)
+        if(from_queue and len(from_queue) > 0):
+          job_json["queue"] = from_queue
+        parameters = job.get("parameters", None)
+        if(parameters):
+          job_json["parameters"] = parameters
+        await job_queue.push_vcon_queue_job(
             queue_name,
-            job.get("vcon_uuids", []),
-            job.get("from_queue", None)
+            job_json,
+            create_missing = job.get("create_queue", False)
           )
-         jobs_queued += 1
+        jobs_queued += 1
 
       else:
         raise Exception("invalid job to queue in VconProcessorIO: {}".format(job))
@@ -915,6 +1148,10 @@ class VconProcessor():
   validate the options provided to the concrete **VconProcessor**
   __init__ method.
   """
+
+  # Processor scope context parameters (additions only).  Subclasses declare
+  # only the names they add; base and pipeline scopes are merged at the call site.
+  context_parameters: typing.ClassVar[typing.Dict[str, typing.Dict[str, typing.Any]]] = {}
 
   def __init__(self,
     title: str,
@@ -1037,8 +1274,262 @@ class VconProcessor():
 
   def __del__(self):
     """ Teardown/uninitialization method for the VconProcessor """
-    logger.debug("deleting {}".format(self.__class__.__name__))
+    # logger may be None during interpreter shutdown when module
+    # globals have been finalized; guard before use.
+    if(logger is not None):
+      try:
+        logger.debug("deleting {}".format(self.__class__.__name__))
+      except Exception:
+        pass
 
+
+# Well-known keys for VconProcessorIO.set_run_context()
+# Additional arbitrary keys may be added without changing this list
+RUN_CONTEXT_ENTRY_POINT   = "entry_point"   # str: "/process", "/processIO", "/pipeline", "background"
+RUN_CONTEXT_PIPELINE_NAME = "pipeline_name" # str: pipeline name, or "" if not applicable
+RUN_CONTEXT_JOB_ID        = "job_id"        # str: background job ID, or "" if not applicable
+
+# Base scope context parameters, available in all processors' format_options.
+# Resolved at substitution time in VconProcessorIO.format_parameters_to_options_dict.
+BASE_CONTEXT_PARAMETERS: typing.Dict[str, typing.Dict[str, typing.Any]] = {
+    "PROCESSOR_NAME": {
+        "default":     "",
+        "description": "Registered name of the processor currently executing",
+        "title":       "Processor Name",
+      },
+    "TIMESTAMP": {
+        "default":     "",
+        "description": "ISO 8601 UTC timestamp captured at substitution time",
+        "title":       "Timestamp",
+      },
+    "NDATE": {
+        "default":     "",
+        "description": "UTC date in yyyymmdd form captured at substitution time",
+        "title":       "Numeric Date",
+      },
+    "YEAR": {
+        "default":     "",
+        "description": "UTC year in yyyy form captured at substitution time",
+        "title":       "Year",
+      },
+    "MONTH": {
+        "default":     "",
+        "description": "UTC month in mm form (zero padded) captured at substitution time",
+        "title":       "Month",
+      },
+    "DAY": {
+        "default":     "",
+        "description": "UTC day of month in dd form (zero padded) captured at substitution time",
+        "title":       "Day",
+      },
+    "VCON_UUID": {
+        "default":     "",
+        "description": "UUID of the vCon at input_vcon_index, or empty string if not resolvable",
+        "title":       "vCon UUID",
+      },
+  }
+
+
+
+# Map well-known run context keys (lower case, used by instrumentation and
+# metrics) to the UPPER_CASE context parameter names used in format_options.
+_RUN_CONTEXT_TO_TEMPLATE_NAME: typing.Dict[str, str] = {
+    RUN_CONTEXT_ENTRY_POINT:   "ENTRY_POINT",
+    RUN_CONTEXT_PIPELINE_NAME: "PIPELINE_NAME",
+    RUN_CONTEXT_JOB_ID:        "PIPELINE_JOB_ID",
+  }
+
+
+class _MissCollector(dict):
+  """
+  dict subclass for str.format_map that records every missing key rather
+  than raising on the first one.  Used to report all undefined parameters
+  referenced in format_options templates.
+  """
+  def __init__(self, real_params: typing.Dict[str, typing.Any]):
+    super().__init__(real_params)
+    self.missing: typing.Set[str] = set()
+
+  def __missing__(self, key: str) -> str:
+    self.missing.add(key)
+    return("")
+
+
+
+class _JsonEscapeFormatter(string.Formatter):
+  """
+  string.Formatter that JSON escapes each substituted value (quotes,
+  backslashes, control characters) so that a parameter value can not
+  terminate the JSON string it is placed in.  The literal text of the
+  template is not altered.  Used for format_options templates which
+  target dict option fields.
+  """
+  def format_field(self, value: typing.Any, format_spec: str) -> str:
+    formatted = super().format_field(value, format_spec)
+    # json.dumps adds surrounding quotes, strip them
+    return(json.dumps(formatted)[1:-1])
+
+
+def _is_dict_field(
+    options_class: typing.Union[typing.Type[pydantic.BaseModel], None],
+    field_name: str
+  ) -> bool:
+  """
+  Returns True if options_class declares field_name with a dict type
+  (e.g. dict or typing.Dict[str, str]).  False if options_class is None
+  or does not declare the field.
+  """
+  if(options_class is None):
+    return(False)
+  for name, field in vcon.pydantic_utils.get_field_items(options_class):
+    if(name == field_name):
+      annotation = getattr(field, "annotation", None)
+      return(annotation is dict or typing.get_origin(annotation) is dict)
+  return(False)
+
+
+def _render_dict_template(
+    field_name: str,
+    template: str,
+    params: typing.Dict[str, typing.Any],
+    processor_name: str
+  ) -> typing.Dict[str, typing.Any]:
+  """
+  Render a format_options template for a dict option field and parse
+  the result as a JSON object.  Raises KeyError for undefined parameters
+  (same as str.format) and FormatOptionsInvalidJson if the rendered text
+  is not a JSON object.  The rendered text is not included in the error
+  as it may contain secrets (e.g. Authorization headers).
+  """
+  rendered = _JsonEscapeFormatter().vformat(template, (), params)
+  try:
+    value = json.loads(rendered)
+  except ValueError as json_error:
+    raise FormatOptionsInvalidJson(
+        "processor: {} format_options template for dict field: {} did not render to valid JSON ({}).  template: {}".format(
+          processor_name,
+          field_name,
+          json_error,
+          template
+        )
+      ) from json_error
+
+  if(not isinstance(value, dict)):
+    raise FormatOptionsInvalidJson(
+        "processor: {} format_options template for dict field: {} rendered to JSON type: {}, expected a JSON object.  template: {}".format(
+          processor_name,
+          field_name,
+          type(value).__name__,
+          template
+        )
+      )
+
+  return(value)
+
+
+# Server scope context parameters, available in every processor's format_options.
+# Values are static for the life of the process and resolved lazily from
+# py_vcon_server.settings and the py_vcon_server / vcon package __version__
+# on first substitution to avoid circular imports at module load time.
+SERVER_CONTEXT_PARAMETERS: typing.Dict[str, typing.Dict[str, typing.Any]] = {
+    "INSTANCE_ID": {
+        "default":     "",
+        "description": "Identifier for this server instance, sourced from py_vcon_server.settings.INSTANCE_ID",
+        "title":       "Instance ID",
+      },
+    "REST_SCHEME": {
+        "default":     "",
+        "description": "Scheme parsed from py_vcon_server.settings.REST_URL (e.g. http, https)",
+        "title":       "REST Scheme",
+      },
+    "REST_HOST": {
+        "default":     "",
+        "description": "Host parsed from py_vcon_server.settings.REST_URL",
+        "title":       "REST Host",
+      },
+    "REST_PORT": {
+        "default":     "",
+        "description": "Port parsed from py_vcon_server.settings.REST_URL, as a string",
+        "title":       "REST Port",
+      },
+    "SERVER_VERSION": {
+        "default":     "",
+        "description": "py_vcon_server package __version__",
+        "title":       "Server Version",
+      },
+    "VCON_VERSION": {
+        "default":     "",
+        "description": "vcon package __version__",
+        "title":       "vCon Version",
+      },
+  }
+
+_SERVER_CONTEXT_VALUES: typing.Union[typing.Dict[str, str], None] = None
+
+
+def _resolve_server_context_values() -> typing.Dict[str, str]:
+  """
+  Compute the server scope context parameter values from settings and
+  package versions.  REST_URL is parsed once; if malformed (urlparse
+  returns an empty scheme), an ERROR is logged and the REST_* values
+  fall back to empty strings.
+  """
+  import py_vcon_server
+  import py_vcon_server.settings
+
+  parsed_scheme = ""
+  parsed_host = ""
+  parsed_port = ""
+  rest_url = py_vcon_server.settings.REST_URL
+  if(rest_url):
+    parsed = urllib.parse.urlparse(rest_url)
+    if(not parsed.scheme):
+      logger.error("REST_URL malformed, REST_* context parameters will be empty: {}".format(rest_url))
+    else:
+      parsed_scheme = parsed.scheme
+      parsed_host = parsed.hostname or ""
+      parsed_port = str(parsed.port) if(parsed.port is not None) else ""
+
+  return({
+      "INSTANCE_ID":    py_vcon_server.settings.INSTANCE_ID,
+      "REST_SCHEME":    parsed_scheme,
+      "REST_HOST":      parsed_host,
+      "REST_PORT":      parsed_port,
+      "SERVER_VERSION": getattr(py_vcon_server, "__version__", ""),
+      "VCON_VERSION":   getattr(vcon, "__version__", ""),
+    })
+
+
+def _get_server_context_values() -> typing.Dict[str, str]:
+  """ Lazy accessor for the resolved server scope context parameter values. """
+  global _SERVER_CONTEXT_VALUES
+  if(_SERVER_CONTEXT_VALUES is None):
+    _SERVER_CONTEXT_VALUES = _resolve_server_context_values()
+  return(_SERVER_CONTEXT_VALUES)
+
+def _build_parameter_error_message(
+    missing_by_field: typing.Dict[str, typing.List[str]],
+    params: typing.Dict[str, typing.Any],
+    context_parameters: typing.Dict[str, typing.Dict[str, typing.Any]],
+    processor_name: str
+  ) -> str:
+  """
+  Build a ParameterNotFound message listing every undefined parameter
+  referenced across all format_options fields.
+  """
+  lines = []
+  lines.append("Undefined parameter(s) referenced in format_options for processor: {}".format(
+      processor_name
+    ))
+  for field_name in sorted(missing_by_field.keys()):
+    lines.append("  field \"{}\" references undefined name(s): {}".format(
+        field_name,
+        ", ".join(missing_by_field[field_name])
+      ))
+  pipeline_param_names = sorted([k for k in params.keys() if k not in context_parameters])
+  lines.append("  available pipeline parameters: {}".format(", ".join(pipeline_param_names)))
+  lines.append("  available context parameters: {}".format(", ".join(sorted(context_parameters.keys()))))
+  return("\n".join(lines))
 
 # dict of names and VconProcessor registered
 VCON_PROCESSOR_REGISTRY = {}
@@ -1110,6 +1601,14 @@ class VconProcessorRegistry():
               self._class_name
               )) from e
 
+
+          except Exception as init_error:
+            logger.error("Error instantiating VconProcessor: {} class: {}".format(
+              self._name,
+              self._class_name
+              ))
+            logger.exception(init_error)
+
         except AttributeError as ae:
           raise ae
 
@@ -1130,8 +1629,8 @@ class VconProcessorRegistry():
           logger.info("importing: {} for registering VconProcessor: {}".format(
             self._module_name,
             self._name))
-          self._module = importlib.import_module(self._module_name)
           self._module_load_attempted = True
+          self._module = importlib.import_module(self._module_name)
           self._module_not_found = False
           loaded = True
 
@@ -1142,6 +1641,14 @@ class VconProcessorRegistry():
             ))
           logger.exception(mod_error)
           self._module_not_found = True
+
+        except Exception as mod_error:
+          logger.error("Error loading module: {} for VconProcessor: {}".format(
+            self._module_name,
+            self._name
+            ))
+          logger.exception(mod_error)
+          loaded = False
 
       return(loaded)
 
@@ -1167,7 +1674,51 @@ class VconProcessorRegistry():
       )
 
     VCON_PROCESSOR_REGISTRY[name] = processor_registration
+
+    # Store the registered name on the processor instance so the
+    # instrumentation decorator can report it in ACTIVE_RUNS and metrics
+    if(processor_registration._processor_instance is not None):
+      processor_registration._processor_instance._processor_name = name
+
+    # Wrap process() on the concrete class with current instrumentation decorator
+    if(processor_registration._processor_instance is not None):
+      import py_vcon_server.metrics
+      cls = type(processor_registration._processor_instance)
+      if(not py_vcon_server.metrics.is_instrumented(cls.process)):
+        cls.process = py_vcon_server.metrics.get_instrumentation_decorator()(cls.process)
+
     logger.info("Registered VconProcessor: {}".format(name))
+
+
+  # @staticmethod
+  # def unregister(name: str) -> bool:
+  #   """
+  #   Unregister a VconProcessor by name.
+  #   
+  #   WARNING: This method is intended for use in unit tests ONLY.
+  #   It removes a processor from the registry so that it does not
+  #   appear in API routes or documentation generation. It does NOT
+  #   unload the module from sys.modules or clean up any other
+  #   references to the processor class.
+  #   
+  #   Do not use this in production code. Processors are expected
+  #   to be registered once at startup and remain registered for
+  #   the lifetime of the server.
+  #   
+  #   Parameters:
+  #       name: str - the registered name of the VconProcessor
+  #       
+  #   Returns:
+  #       bool - True if processor was unregistered, False if not found
+  #   """
+  #   if name in VCON_PROCESSOR_REGISTRY:
+  #       del VCON_PROCESSOR_REGISTRY[name]
+  #       logger.debug("Unregistered VconProcessor: {}".format(name))
+  #       return True
+  #   else:
+  #       logger.warning("VconProcessor not found for unregister: {}".format(name))
+  #       return False
+
 
   @staticmethod
   def get_processor_names(successfully_loaded: bool = True) -> typing.List[str]:
@@ -1303,8 +1854,20 @@ class FilterPluginProcessor(VconProcessor):
     """
     Run the indicated **Vcon** through the self._plugin_name **Vcon** **filter_plugin**
     """
-
-    formatted_options = processor_input.format_parameters_to_options(options)
+    # Local import to avoid module-load-time circular import between
+    # py_vcon_server.processor and py_vcon_server.pipeline.
+    import py_vcon_server.pipeline
+    merged_context = {}
+    merged_context.update(BASE_CONTEXT_PARAMETERS)
+    merged_context.update(SERVER_CONTEXT_PARAMETERS)
+    merged_context.update(py_vcon_server.pipeline.PIPELINE_CONTEXT_PARAMETERS)
+    merged_context.update(self.context_parameters)
+    formatted_options = processor_input.format_parameters_to_options(
+        options,
+        merged_context,
+        getattr(self, "_processor_name", self.__class__.__name__),
+        options_class = self.processor_options_class()
+        )
     # force pydantic typing and defaults
     if(isinstance(formatted_options, dict)):
       formatted_options = (self.processor_options_class())(**formatted_options)

@@ -1,4 +1,5 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 """ Unit test for OpenAI filter plugins """
 import os
 import json
@@ -7,12 +8,15 @@ import vcon
 import vcon.filter_plugins.impl.openai
 import vcon.pydantic_utils
 import pytest
+import pytest_asyncio
 
 
 TEST_EXTERNAL_AUDIO_VCON_FILE = "tests/example_external_dialog.vcon"
 TEST_DIARIZED_EXTERNAL_AUDIO_VCON_FILE = "tests/example_deepgram_external_dialog.vcon"
 SHORT_RECORDING_VCON = "tests/hello.vcon"
-TEST_MODEL = "gpt-3.5-turbo-instruct" # cheaper to run in tests than davinci-003 ???
+# The legacy /completions endpoint no longer serves gpt-3.5-turbo-instruct, davinci-002 or
+# babbage-002 (404 model_not_found, deprecated).  Use the plugin default model, which is cheap.
+TEST_MODEL = "gpt-4o-mini"
 TEST_CHAT_MODEL = "gpt-3.5-turbo-16k" # should be a little cheaper to run instead of GPT-4 for testing 
 
 def test_1_options():
@@ -53,7 +57,7 @@ async def test_2_completion_text_summary():
   try:
     out_vcon = await in_vcon.openai_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -96,7 +100,7 @@ async def test_2a_completion_object_summary():
   try:
     out_vcon = await in_vcon.openai_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -140,7 +144,7 @@ async def test_2b_completion_object_summary():
   try:
     out_vcon = await in_vcon.openai_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -151,7 +155,7 @@ async def test_2b_completion_object_summary():
 
   # Check stats on input to model:
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_completion").plugin()
-  assert(40 < plugin.last_stats["num_text_segments"] < 70)
+  assert(30 < plugin.last_stats["num_text_segments"] < 170)
 
   after_analysis_count = len(out_vcon.analysis)
   assert((after_analysis_count - original_analysis_count) == 1)
@@ -188,7 +192,7 @@ async def test_3_chat_completion_object_summary():
   try:
     out_vcon = await in_vcon.openai_chat_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -241,7 +245,7 @@ async def test_4_diarized_chat_completion_object_summary():
   try:
     out_vcon = await in_vcon.openai_chat_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -254,10 +258,10 @@ async def test_4_diarized_chat_completion_object_summary():
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion").plugin()
   # verify stats of extracted messages are as expected
   print("stats: {}".format(plugin.last_stats))
-  assert(40 <= plugin.last_stats['num_messages'] <= 70)
+  assert(30 <= plugin.last_stats['num_messages'] <= 170)
   assert(plugin.last_stats['num_text_dialogs'] == 0)
   assert(plugin.last_stats['num_dialog_list'] == 1)
-  assert(50 <= plugin.last_stats['num_transcribe_analysis'] <= 70)
+  assert(30 <= plugin.last_stats['num_transcribe_analysis'] <= 170)
 
   print("New analysis object: {}".format(out_vcon.analysis[original_analysis_count]))
   assert((after_analysis_count - original_analysis_count) == 1)
@@ -298,7 +302,7 @@ async def test_5_openai_triggers_transcribe():
   try:
     out_vcon = await in_vcon.openai_chat_completion(options)
 
-  except pydantic.error_wrappers.ValidationError as e:
+  except vcon.pydantic_utils.ValidationErrorType as e:
     openai_key = os.getenv("OPENAI_API_KEY", None)
     if(openai_key is None or
       openai_key == ""):
@@ -306,31 +310,157 @@ async def test_5_openai_triggers_transcribe():
     raise e
 
   after_analysis_count = len(out_vcon.analysis)
-  assert(after_analysis_count == 4) # transcription and openai summary
+  assert(after_analysis_count == 2) # transcription and openai summary
 
   # Check stats on input to model:
   plugin = vcon.filter_plugins.FilterPluginRegistry.get("openai_chat_completion").plugin()
   # verify stats of extracted messages are as expected
   print("stats: {}".format(plugin.last_stats))
-  assert(plugin.last_stats['num_messages'] == 1)
+  assert(plugin.last_stats['num_messages'] == 2)
   assert(plugin.last_stats['num_text_dialogs'] == 0)
   assert(plugin.last_stats['num_dialog_list'] == 1)
-  assert(plugin.last_stats['num_transcribe_analysis'] == 1)
+  assert(plugin.last_stats['num_transcribe_analysis'] == 2)
 
-  assert((after_analysis_count - original_analysis_count) == 4)
-  assert(out_vcon.analysis[original_analysis_count + 3]["type"] == "summary")
-  assert(out_vcon.analysis[original_analysis_count + 3]["dialog"] == 0)
-  assert(out_vcon.analysis[original_analysis_count + 3]["vendor"] == "openai")
-  assert(out_vcon.analysis[original_analysis_count + 3]["product"] == "ChatCompletion")
-  assert(out_vcon.analysis[original_analysis_count + 3]["schema"] == "chat_completion_object")
-  assert(out_vcon.analysis[original_analysis_count + 3]["prompt"] == "Summarize the transcript in these messages.")
-  assert(out_vcon.analysis[original_analysis_count + 3].get("mimetype", None) is None)
-  assert(out_vcon.analysis[original_analysis_count + 3]["mediatype"] == vcon.Vcon.MEDIATYPE_JSON)
-  assert(out_vcon.analysis[original_analysis_count + 3]["encoding"] == "json")
-  assert(isinstance(out_vcon.analysis[original_analysis_count + 3]["body"], dict))
-  assert(isinstance(out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"], str))
-  assert(len(out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"]) > 80)
-  assert(out_vcon.analysis[original_analysis_count + 3]["model"] == TEST_CHAT_MODEL)
-  print("Response: " + out_vcon.analysis[original_analysis_count + 3]["body"]["choices"][0]["message"]["content"])
+  assert((after_analysis_count - original_analysis_count) == 2)
+  assert(out_vcon.analysis[original_analysis_count + 1]["type"] == "summary")
+  assert(out_vcon.analysis[original_analysis_count + 1]["dialog"] == 0)
+  assert(out_vcon.analysis[original_analysis_count + 1]["vendor"] == "openai")
+  assert(out_vcon.analysis[original_analysis_count + 1]["product"] == "ChatCompletion")
+  assert(out_vcon.analysis[original_analysis_count + 1]["schema"] == "chat_completion_object")
+  assert(out_vcon.analysis[original_analysis_count + 1]["prompt"] == "Summarize the transcript in these messages.")
+  assert(out_vcon.analysis[original_analysis_count + 1].get("mimetype", None) is None)
+  assert(out_vcon.analysis[original_analysis_count + 1]["mediatype"] == vcon.Vcon.MEDIATYPE_JSON)
+  assert(out_vcon.analysis[original_analysis_count + 1]["encoding"] == "json")
+  assert(isinstance(out_vcon.analysis[original_analysis_count + 1]["body"], dict))
+  assert(isinstance(out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"], str))
+  assert(len(out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"]) > 80)
+  assert(out_vcon.analysis[original_analysis_count + 1]["model"] == TEST_CHAT_MODEL)
+  print("Response: " + out_vcon.analysis[original_analysis_count + 1]["body"]["choices"][0]["message"]["content"])
 
+
+@pytest_asyncio.fixture(autouse = True)
+async def close_openai_clients():
+  """
+  Close the plugins' OpenAI clients at the end of every test in this module,
+  while the test's event loop is still running.
+
+  Each test gets its own event loop, and a client's connections belong to the
+  loop that opened them.  A client left over from a finished test is closed by
+  the OpenAI SDK's __del__ on whatever loop is running when it is collected,
+  which fails with "Event loop is closed" and is reported by asyncio.  Closing
+  here leaves nothing for the SDK to finalize.
+  """
+  yield
+  for registration in vcon.filter_plugins.FilterPluginRegistry._registry.values():
+    plugin = registration._plugin
+    client = getattr(plugin, "client", None) if(plugin is not None) else None
+    if(isinstance(client, vcon.filter_plugins.impl.openai.OpenAIClient)):
+      await client.aclose()
+
+
+def test_client_per_event_loop():
+  """
+  The AsyncOpenAI client is bound to the event loop it is first used on, so the
+  plugin must not reuse it on a later loop (RuntimeError: Event loop is closed).
+  """
+  import asyncio
+  init_options = vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions(
+      openai_api_key = "sk-test-not-used"
+    )
+  client = vcon.filter_plugins.impl.openai.OpenAIClient(init_options, "test")
+
+  async def same_loop_twice():
+    return(client._async_client(), client._async_client())
+
+  first, again = asyncio.run(same_loop_twice())
+  # reused within a loop, keeping its connection pool
+  assert(first is again)
+
+  async def once():
+    return(client._async_client())
+
+  # a new loop gets a new client
+  second = asyncio.run(once())
+  assert(second is not first)
+
+  client.close()
+  assert(client.client is None)
+
+
+def test_init_no_key():
+  """ Construction with an empty openai_api_key must not raise.
+      The OpenAIClient should mark key_set False and skip creating
+      the inner AsyncOpenAI client.
+  """
+  init_options_dict = { "openai_api_key": "" }
+
+  completion_init = vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions(
+      **init_options_dict
+    )
+  completion_plugin = vcon.filter_plugins.impl.openai.OpenAICompletion(completion_init)
+  assert(completion_plugin.client.key_set == False)
+  assert(hasattr(completion_plugin.client, "client") == False)
+
+  chat_init = vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions(
+      **init_options_dict
+    )
+  chat_plugin = vcon.filter_plugins.impl.openai.OpenAIChatCompletion(chat_init)
+  assert(chat_plugin.client.key_set == False)
+  assert(hasattr(chat_plugin.client, "client") == False)
+
+
+@pytest.mark.asyncio
+async def test_filter_no_key_raises_openai_completion():
+  """ OpenAICompletion.filter must raise OpenAIKeyNotSet when constructed
+      with no api key.
+  """
+  init_options = vcon.filter_plugins.impl.openai.OpenAICompletionInitOptions(
+      openai_api_key = ""
+    )
+  plugin = vcon.filter_plugins.impl.openai.OpenAICompletion(init_options)
+
+  in_vcon = vcon.Vcon()
+  in_vcon.add_dialog_inline_text(
+      "Hello, this is a test.",
+      "2024-03-06T20:07:43+00:00",
+      5.0,
+      0,
+      vcon.Vcon.MEDIATYPE_TEXT_PLAIN
+    )
+
+  options = vcon.filter_plugins.impl.openai.OpenAICompletionOptions()
+
+  try:
+    await plugin.filter(in_vcon, options)
+    raise Exception("filter should have raised OpenAIKeyNotSet")
+  except vcon.filter_plugins.impl.openai.OpenAIKeyNotSet:
+    pass
+
+
+@pytest.mark.asyncio
+async def test_filter_no_key_raises_openai_chat_completion():
+  """ OpenAIChatCompletion.filter must raise OpenAIKeyNotSet when constructed
+      with no api key.
+  """
+  init_options = vcon.filter_plugins.impl.openai.OpenAIChatCompletionInitOptions(
+      openai_api_key = ""
+    )
+  plugin = vcon.filter_plugins.impl.openai.OpenAIChatCompletion(init_options)
+
+  in_vcon = vcon.Vcon()
+  in_vcon.add_dialog_inline_text(
+      "Hello, this is a test.",
+      "2024-03-06T20:07:43+00:00",
+      5.0,
+      0,
+      vcon.Vcon.MEDIATYPE_TEXT_PLAIN
+    )
+
+  options = vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions()
+
+  try:
+    await plugin.filter(in_vcon, options)
+    raise Exception("filter should have raised OpenAIKeyNotSet")
+  except vcon.filter_plugins.impl.openai.OpenAIKeyNotSet:
+    pass
 

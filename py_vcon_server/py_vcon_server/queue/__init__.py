@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
    Interface for managing job queues and in progress jobs.
 
@@ -85,7 +85,7 @@ class JobQueue():
     self._do_lua_delete_queue = redis_con.register_script(lua_script_delete_queue)
 
     # KEYS = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name]
-    # ARGV = [ name, vcon_uuids]
+    # ARGV = [ name, json.dumps(job_json) ]
     lua_script_push_vcon_uuid_queue_job = """
     if redis.call("SISMEMBER", KEYS[1], ARGV[1]) == 1 then
       -- add job to end of list
@@ -97,6 +97,20 @@ class JobQueue():
     end
     """
     self._do_lua_push_vcon_uuid_queue_job = redis_con.register_script(lua_script_push_vcon_uuid_queue_job)
+
+
+    # KEYS = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name]
+    # ARGV = [ name, json.dumps(job_json) ]
+    lua_script_push_create_vcon_uuid_queue_job = """
+    -- create the queue if it does not already exist, then push
+    if redis.call("SISMEMBER", KEYS[1], ARGV[1]) == 0 then
+      redis.call("SADD", KEYS[1], ARGV[1])
+    end
+    local num_jobs = redis.call("RPUSH", KEYS[2], ARGV[2])
+    return num_jobs
+    """
+    self._do_lua_push_create_vcon_uuid_queue_job = redis_con.register_script(lua_script_push_create_vcon_uuid_queue_job)
+
 
     # KEYS = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name ]
     # ARGV = [ name ]
@@ -387,11 +401,15 @@ class JobQueue():
 
   async def push_vcon_uuid_queue_job(self,
     name: str,
-    vcon_uuids: [str],
+    vcon_uuids: typing.List[str],
     from_queue: typing.Union[str, None] = None,
     failed_job: typing.Union[int, None] = None
     ) -> int:
     """
+    TO BE DEPRECATED: use push_vcon_queue_job.  This will be removed when
+    the pipeline success/failure queue jobs are able to specify the job
+    parameters.
+
     Push a vCon UUID queue job object onto the named queue.
 
     params:
@@ -406,6 +424,26 @@ class JobQueue():
     returns: length of the queue (where the new job is in the queue)
     """
 
+    job_json: typing.Dict[str, typing.Any] = {
+        "job_type": "vcon_uuid",
+        "vcon_uuid": vcon_uuids
+      }
+
+    if(from_queue and len(from_queue) > 0):
+      job_json["queue"] = from_queue
+    if(failed_job):
+      job_json["failed_job_id"] = failed_job
+
+    return(await self.push_vcon_queue_job(name, job_json))
+
+
+  async def push_vcon_queue_job(self,
+    name: str,
+    job_json: typing.Dict[str, typing.Any],
+    create_missing: bool = False
+    ) -> int:
+
+    vcon_uuids = job_json.get("vcon_uuid", None)
     if(not isinstance(vcon_uuids, list)):
       raise Exception("expecting vcon_uuids to be a list, got: {}".format(type(vcon_uuids)))
 
@@ -413,20 +451,19 @@ class JobQueue():
       raise Exception("vcon_uuids array must contain at least one UUID")
 
     # TODO: limitation to be removed
+
     if(len(vcon_uuids) > 1):
       raise Exception("currently only support exactly 1 UUID")
 
-    job_json = { "job_type": "vcon_uuid", "vcon_uuid": vcon_uuids }
-    if(from_queue and len(from_queue) > 0):
-      job_json["queue"] = from_queue
-    if(failed_job):
-      job_json["failed_job_id"] = failed_job
-
     keys = [ QUEUE_NAMES_KEY, QUEUE_NAME_PREFIX + name]
     args = [ name, json.dumps(job_json)]
-    num_jobs = await self._do_lua_push_vcon_uuid_queue_job(keys = keys, args = args)
-    if(num_jobs == -1):
-      raise QueueDoesNotExist("push_vcon_uuid_queue_job({}): queue does not exist".format(name))
+
+    if(create_missing):
+      num_jobs = await self._do_lua_push_create_vcon_uuid_queue_job(keys = keys, args = args)
+    else:
+      num_jobs = await self._do_lua_push_vcon_uuid_queue_job(keys = keys, args = args)
+      if(num_jobs == -1):
+        raise QueueDoesNotExist("push_vcon_queue_job({}): queue does not exist".format(name))
 
     return(num_jobs)
 

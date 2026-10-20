@@ -7,4 +7,6 @@ import py_vcon_server.db.redis.redis_mgr
 
 # Register the redis implementation of Vcon Storage Interface
 py_vcon_server.db.VconStorage.register("redis", py_vcon_server.db.redis.RedisVconStorage)
+py_vcon_server.db.VconStorage.register("rediss", py_vcon_server.db.redis.RedisVconStorage)
+py_vcon_server.db.VconStorage.register("sentinel", py_vcon_server.db.redis.RedisVconStorage)
 

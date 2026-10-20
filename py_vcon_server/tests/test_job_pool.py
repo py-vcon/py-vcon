@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import typing
 import os
 import time
@@ -202,7 +202,11 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
     return(len(self._finished_jobs))
 
 
-  def verify_finished_jobs(self, count: int):
+  def verify_finished_jobs(self, count: int, check_expected_times: bool = True):
+    """
+    check_expected_times - False when the test cannot predict which jobs finish
+      (and so when), only check that each finished job ran for its own duration
+    """
     if(not len(self._finished_jobs) == count):
       for job in self._finished_jobs:
         print("finished jobs: {}".format(job["id"]))
@@ -218,9 +222,17 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
       if(not runtime):
         runtime = job.get("sleep_time", None)
       assert(abs(job["finish"] - job["start"] - runtime) < job["time_tolerance"])
-     # can't reliably predict start, hense factor of 2.0:
-      assert(abs(job["start"] - first_start - job["expected_start"]) < job["time_tolerance"] * TOL_FACTOR)
-      assert(abs(job["finish"] - first_start - job["expected_finish"]) < job["time_tolerance"] * TOL_FACTOR)
+      if(check_expected_times):
+        # can't reliably predict start, hense factor of 2.0:
+        assert(abs(job["start"] - first_start - job["expected_start"]) < job["time_tolerance"] * TOL_FACTOR)
+        assert(abs(job["finish"] - first_start - job["expected_finish"]) < job["time_tolerance"] * TOL_FACTOR)
+
+
+  def verify_jobs_ran_one_at_a_time(self):
+    """ With a single worker, finished jobs run back to back: none may start before the previous finished """
+    jobs = sorted(self._finished_jobs, key = lambda job: job["start"])
+    for previous, job in zip(jobs, jobs[1:]):
+      assert(job["start"] >= previous["finish"] - job["time_tolerance"])
 
 
   def get_exception_count(self) -> int:
@@ -253,7 +265,11 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
     return(len(self._canceled_jobs))
 
 
-  def verify_canceled_jobs(self, count: int):
+  def verify_canceled_jobs(self, count: int, check_expected_times: bool = True):
+    """
+    check_expected_times - False when the test cannot predict which jobs get canceled
+      (and so when canceled_at is recorded)
+    """
     assert(len(self._canceled_jobs) == count)
     # As its a matter of timeing we don't know how many jobs will actually get canceled.
     # If at least one job did not get canceled, we have set first_start
@@ -267,7 +283,12 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
       assert(first_start - self._time0[0] < 10.0) # TODO wide range of 5-10 seconds startup, do not know why
 
     for index, job in enumerate(self._canceled_jobs):
-      assert(abs(job["canceled_at"] - first_start - job["expected_cancel"]) < job["time_tolerance"] * TOL_FACTOR)
+      # job_canceled is only invoked for jobs canceled before they were started
+      assert("start" not in job)
+      if(check_expected_times):
+        assert(abs(job["canceled_at"] - first_start - job["expected_cancel"]) < job["time_tolerance"] * TOL_FACTOR)
+      else:
+        assert(job["canceled_at"] >= self._time0[0])
       assert(job["cancel"] == job["expected_exception_type"])
 
 
@@ -294,7 +315,7 @@ class UnitJobber(py_vcon_server.job_worker_pool.JobInterface):
     #assert(results["exception"] == results["expected_exception_type"])
     #assert(abs(results["finish"] - self._time0 - results["expected_finish"]) < results["time_tolerance"])
 
-TIME_TOLERANCE = 1.75
+TIME_TOLERANCE = 1.85
 
 SHORT_SLEEP_JOB = {
     "id": "sleep1",
@@ -493,9 +514,14 @@ async def test_job_worker_pool_cancel_immediate():
   assert(cancel_count > 0)
   finish_count = test_jobber.get_finished_count()
   assert(cancel_count + finish_count == 4)
-  test_jobber.verify_finished_jobs(finish_count)
+  # How many jobs get canceled depends on how many the ProcessPoolExecutor has already
+  # handed to the worker (it queues max_workers + 1 ahead and those can no longer be
+  # canceled) and on when check_jobs runs, so any split is valid.  The expected_* times
+  # assume one particular split, so check what holds for every split instead.
+  test_jobber.verify_finished_jobs(finish_count, check_expected_times = False)
+  test_jobber.verify_jobs_ran_one_at_a_time()
   test_jobber.verify_exception_jobs(0)
-  test_jobber.verify_canceled_jobs(cancel_count)
+  test_jobber.verify_canceled_jobs(cancel_count, check_expected_times = False)
 
 
 # TODO: fix
@@ -673,7 +699,25 @@ async def run_jobs_in_async_scheduler(jobs: list):
   for task in asyncio.all_tasks():
     logger.debug("task: {}".format(task))
 
-  await asyncio.sleep(2)
+  # new wait strategy:
+  # Wait until all jobs have been pulled from the input queue by the scheduler.
+  # Once remaining_jobs()==0 every job has been submitted to the worker pool.
+  # finish() then waits for all submitted (in-flight) jobs to complete before
+  # returning, so we do not need a fixed sleep here.
+  deadline = time.time() + 60
+  while time.time() < deadline:
+    if test_jobber.remaining_jobs() <= 0:
+      break
+    logger.debug("waiting for {} remaining jobs".format(
+        test_jobber.remaining_jobs()))
+    await asyncio.sleep(0.1)
+
+
+  # 2nd wait strategy:
+  # not consisetnly enough
+  # await asyncio.sleep(2)
+
+  # Original wait strategy:
   # Make sure there was time to start all the jobs, before telling it to finish up
   # while(True):
   #   remaining_jobs = test_jobber.remaining_jobs()

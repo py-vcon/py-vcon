@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import os
 import time
 import asyncio
@@ -13,8 +13,9 @@ TEST_Q1 = "test_admin_api_q1"
 TEST_UUID1 = "fake_uuid1"
 TEST_UUID2 = "fake_uuid2"
 TEST_JOB1 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID1 ] }
-TEST_JOB2 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID2 ] }
-TEST_JOB_UNSUPPORTED = { "job_type": "foo", "my_stuff": [ TEST_UUID1 ] }
+TEST_JOB2 = { "job_type": "vcon_uuid", "vcon_uuid": [ TEST_UUID2 ], "parameters": {"a": 1, "b": "B"} }
+# The current QueueJob model is strict. So to get to the type checking code, we need a vcon_uuid list
+TEST_JOB_UNSUPPORTED = { "job_type": "foo", "vcon_uuid": [], "my_stuff": [ TEST_UUID1 ] }
 TEST_SERVER_KEY = "test_admin_api:-1:-1:1234"
 
 @pytest.mark.asyncio
@@ -54,10 +55,15 @@ async def test_get_server_info():
     this_server_state = servers_dict[py_vcon_server.states.SERVER_STATE.server_key()]
     assert(this_server_state["pid"] == os.getpid())
     assert(this_server_state["state"] == "running")
-    assert(this_server_state["last_heartbeat"] > time.time() - 100)
-    assert(this_server_state["last_heartbeat"] < time.time())
+    # last_heartbeat is now per-worker, not top-level
+    worker_key = py_vcon_server.states.SERVER_STATE.worker_key()
+    assert(worker_key in this_server_state["workers"])
+    worker_state = this_server_state["workers"][worker_key]
+    assert(worker_state["last_heartbeat"] > time.time() - 100)
+    assert(worker_state["last_heartbeat"] < time.time())
     for setting_var in py_vcon_server.settings.STATE_SETTINGS:
-      assert(this_server_state["settings"][setting_var] == getattr(py_vcon_server.settings, setting_var, None))
+      assert(this_server_state["settings"][setting_var] == getattr(py_vcon_server.settings, setting_var, None),
+        "setting: {} not expected value".format(setting_var))
 
     # Try to delete no-existing server state
     get_response = client.delete(
@@ -72,6 +78,137 @@ async def test_get_server_info():
       headers={"accept": "application/json"},
       )
     assert(get_response.status_code == 404)
+
+
+@pytest.mark.asyncio
+async def test_delete_server_state_cleans_workers():
+  """
+  DELETE /servers/{key} (force-delete) should remove the server entry
+  and any associated worker entries.  We simulate a stale server by
+  writing directly to Redis, then verifying delete cleans it up.
+  """
+  import json
+  import py_vcon_server.states as states
+
+  fake_server_key = "test-host:9999:99999:1234567890.0"
+  fake_worker_key = "test-host:9999:99999:1234567890.0:99998"
+  workers_set_key = states.SERVER_WORKERS_SET_PREFIX + fake_server_key
+
+  fake_server = {
+    "host": "test-host", "port": 9999, "pid": 99999,
+    "start_time": 1234567890.0, "state": "running",
+    "num_workers": 0, "num_restapi_workers": 1,
+    "settings": {}, "workers": {}
+  }
+  fake_worker = {
+    "worker_pid": 99998, "state": "running",
+    "last_heartbeat": 1234567890.0
+  }
+
+  # Write fake stale entries to Redis before starting TestClient
+  redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(
+      py_vcon_server.settings.STATE_DB_URL, "test_delete_workers"
+    )
+  redis_mgr.create_pool()
+  try:
+    redis_con = redis_mgr.get_client()
+    await redis_con.hset(
+        states.SERVER_HASH_KEY, fake_server_key, json.dumps(fake_server)
+      )
+    await redis_con.sadd(workers_set_key, fake_worker_key)
+    await redis_con.hset(
+        states.SERVER_WORKER_HASH_KEY, fake_worker_key, json.dumps(fake_worker)
+      )
+
+    # Use synchronous TestClient for REST calls
+    with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+      # Verify stale entry appears in /servers
+      get_response = client.get("/servers")
+      assert get_response.status_code == 200
+      assert fake_server_key in get_response.json()
+
+      # Force-delete via REST API
+      delete_response = client.delete(
+          "/servers/{}".format(fake_server_key),
+          headers={"accept": "application/json"},
+        )
+      assert delete_response.status_code == 200
+      assert delete_response.json()["workers_deleted"] == 1
+
+      # Verify server entry is gone from /servers
+      get_response = client.get("/servers")
+      assert get_response.status_code == 200
+      assert fake_server_key not in get_response.json()
+
+    # Verify Redis cleanup after TestClient exits (async reads again)
+    worker_json = await redis_con.hget(
+        states.SERVER_WORKER_HASH_KEY, fake_worker_key
+      )
+    assert worker_json is None, \
+        "Worker entry should have been cleaned up by delete_server_state"
+
+    set_members = await redis_con.smembers(workers_set_key)
+    assert len(set_members) == 0, \
+        "Worker set should have been deleted"
+
+  finally:
+    await redis_mgr.shutdown_pool()
+
+
+@pytest.mark.asyncio
+async def test_old_format_entry_readable_and_deletable():
+  """
+  Old-format server entries (pre-migration, with last_heartbeat at
+  top level and no workers key) should appear in /servers with an
+  empty workers dict and be deletable via DELETE /servers/{key}.
+  """
+  import json
+  import py_vcon_server.states as states
+
+  old_key = "old-host:8000:11111:9876543210.0"
+  old_entry = {
+    "host": "old-host", "port": 8000, "pid": 11111,
+    "start_time": 9876543210.0, "state": "running",
+    "num_workers": 0, "last_heartbeat": 9876543210.0,
+    "settings": {}
+    # No "workers" key -- old format
+  }
+
+  # Write old-format entry before TestClient
+  redis_mgr = py_vcon_server.db.redis.redis_mgr.RedisMgr(
+      py_vcon_server.settings.STATE_DB_URL, "test_old_format"
+    )
+  redis_mgr.create_pool()
+  try:
+    redis_con = redis_mgr.get_client()
+    await redis_con.hset(
+        states.SERVER_HASH_KEY, old_key, json.dumps(old_entry)
+      )
+
+    with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+      # Should appear in /servers with empty workers dict
+      get_response = client.get("/servers")
+      assert get_response.status_code == 200
+      servers = get_response.json()
+      assert old_key in servers
+      assert servers[old_key].get("workers", None) == {}, \
+          "Old-format entry should have empty workers dict"
+
+      # Should be deletable
+      delete_response = client.delete(
+          "/servers/{}".format(old_key),
+          headers={"accept": "application/json"},
+        )
+      assert delete_response.status_code == 200
+      assert delete_response.json()["workers_deleted"] == 0
+
+      # Should be gone
+      get_response = client.get("/servers")
+      assert old_key not in get_response.json()
+
+  finally:
+    await redis_mgr.shutdown_pool()
+
 
 @pytest.mark.asyncio
 async def test_server_queue_config():
@@ -233,18 +370,23 @@ async def test_job_queue():
     put_response = client.put(
       "/queue/{}".format(TEST_Q1),
       headers={"accept": "application/json"},
-      content = json.dumps(TEST_JOB_UNSUPPORTED)
+      json = TEST_JOB_UNSUPPORTED
       )
-    assert(put_response.status_code == 500)
     put_error = put_response.json()
-    #assert("bar" in "{}".format(put_error))
-    assert("type" in put_error["exception"] or "vcon_uuid" in put_error["exception"])
+    try:
+      assert(put_response.status_code == 500)
+      put_error = put_response.json()
+      #assert("bar" in "{}".format(put_error))
+      assert("type" in put_error["exception"] or "vcon_uuid" in put_error["exception"])
+    except Exception:
+      print(f"Unexpected error code: {put_error}")
+      raise
 
     # Add a job
     put_response = client.put(
       "/queue/{}".format(TEST_Q1),
       headers={"accept": "application/json"},
-      content = json.dumps(TEST_JOB1)
+      json = TEST_JOB1
       )
     assert(put_response.status_code == 200)
     queue_position = put_response.json()
@@ -267,7 +409,7 @@ async def test_job_queue():
     put_response = client.put(
       "/queue/{}".format(TEST_Q1),
       headers={"accept": "application/json"},
-      content = json.dumps(TEST_JOB2)
+      json = TEST_JOB2
       )
     assert(put_response.status_code == 200)
     queue_position = put_response.json()
@@ -288,6 +430,8 @@ async def test_job_queue():
     assert(len(job_list[1]["vcon_uuid"]) == 1)
     assert(job_list[1]["vcon_uuid"][0] == TEST_UUID2)
     assert(job_list[1]["job_type"] == "vcon_uuid")
+    assert(len(job_list[1]["parameters"]) == 2)
+    assert(job_list[1]["parameters"] == TEST_JOB2["parameters"])
 
     # move a job into in progress
     assert(py_vcon_server.queue.JOB_QUEUE is not None)
@@ -343,4 +487,129 @@ async def test_job_queue():
     assert(len(job_list[1]["vcon_uuid"]) == 1)
     assert(job_list[1]["vcon_uuid"][0] == TEST_UUID2)
     assert(job_list[1]["job_type"] == "vcon_uuid")
+    assert(job_list[1]["parameters"] == TEST_JOB2["parameters"])
+
+
+@pytest.mark.asyncio
+async def test_create_duplicate_queue():
+  """Creating a queue that already exists should return 422"""
+  pipe_name = "test_duplicate_queue"
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    # Clean up first
+    client.delete("/queue/{}".format(pipe_name))
+
+    # Create the queue
+    post_response = client.post(
+      "/queue/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(post_response.status_code == 204)
+
+    # Try to create it again — should fail
+    post_response = client.post(
+      "/queue/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(post_response.status_code == 422)
+
+    # Clean up
+    client.delete("/queue/{}".format(pipe_name))
+
+
+@pytest.mark.asyncio
+async def test_pipeline_crud():
+  """Test pipeline create, get, list, and delete via admin API"""
+  pipe_name = "test_coverage_pipeline"
+
+  # Minimal valid pipeline definition using a known registered processor
+  pipe_def = {
+    "pipeline_options": {
+      "label": "Coverage test pipeline",
+      "save_vcons": False,
+      "timeout": 0
+    },
+    "processors": [
+      {
+        "processor_name": "set_parameters",
+        "processor_options": {}
+      }
+    ]
+  }
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+
+    # Clean up in case prior test left debris
+    client.delete("/pipeline/{}".format(pipe_name))
+
+    # PUT - create pipeline
+    put_response = client.put(
+      "/pipeline/{}".format(pipe_name),
+      json=pipe_def,
+      headers={"accept": "application/json"},
+    )
+    assert(put_response.status_code == 204)
+
+    # GET - retrieve pipeline
+    get_response = client.get(
+      "/pipeline/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(get_response.status_code == 200)
+    returned_def = get_response.json()
+    assert(returned_def["pipeline_options"]["label"] == "Coverage test pipeline")
+    assert(len(returned_def["processors"]) == 1)
+    assert(returned_def["processors"][0]["processor_name"] == "set_parameters")
+
+    # GET /pipelines - list should include our pipeline
+    list_response = client.get(
+      "/pipelines",
+      headers={"accept": "application/json"},
+    )
+    assert(list_response.status_code == 200)
+    pipeline_list = list_response.json()
+    assert(pipe_name in pipeline_list)
+
+    # DELETE - remove pipeline
+    delete_response = client.delete(
+      "/pipeline/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(delete_response.status_code == 204)
+
+    # GET after delete - should be 404
+    get_response = client.get(
+      "/pipeline/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(get_response.status_code == 404)
+
+    # DELETE again - should be 404
+    delete_response = client.delete(
+      "/pipeline/{}".format(pipe_name),
+      headers={"accept": "application/json"},
+    )
+    assert(delete_response.status_code == 404)
+
+    # PUT with unregistered processor - should return 422 validation error
+    bad_pipe_def = {
+      "pipeline_options": {
+        "label": "Bad pipeline",
+        "save_vcons": False,
+        "timeout": 0
+      },
+      "processors": [
+        {
+          "processor_name": "nonexistent_processor_xyz",
+          "processor_options": {}
+        }
+      ]
+    }
+
+    put_response = client.put(
+      "/pipeline/{}".format(pipe_name),
+      json=bad_pipe_def,
+      headers={"accept": "application/json"},
+    )
+    assert(put_response.status_code == 422)
 

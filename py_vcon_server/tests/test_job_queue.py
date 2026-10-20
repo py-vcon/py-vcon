@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import asyncio
 import pytest
 import time
@@ -8,6 +8,9 @@ import py_vcon_server.queue
 from py_vcon_server.settings import QUEUE_DB_URL
 
 CREATED_JOBS = []
+CREATE_MISSING_QUEUE = "test_queue_create_missing"
+CREATE_MISSING_UUID = "01855517-ac4e-8edf-84fd-77776666acbe"
+
 
 @pytest_asyncio.fixture()
 async def job_queue():
@@ -491,4 +494,62 @@ async def test_in_progress_api(job_queue):
     assert(get_response.status_code == 404)
     not_found_details = get_response.json()
     print("queue not found details: {}".format(not_found_details))
+
+
+@pytest.mark.asyncio
+async def test_push_vcon_queue_job_create_missing(job_queue):
+  """
+  push_vcon_queue_job with create_missing True creates a missing queue
+  and pushes the job, and pushes to an existing queue without error.
+  """
+  try:
+    await job_queue.delete_queue(CREATE_MISSING_QUEUE)
+  except py_vcon_server.queue.QueueDoesNotExist:
+    pass
+
+  job = {"job_type": "vcon_uuid", "vcon_uuid": [CREATE_MISSING_UUID]}
+  try:
+    # Queue is missing: created and the job pushed
+    num_jobs = await job_queue.push_vcon_queue_job(
+        CREATE_MISSING_QUEUE,
+        job,
+        create_missing = True
+      )
+    assert(num_jobs == 1)
+    assert(CREATE_MISSING_QUEUE in await job_queue.get_queue_names())
+
+    # Queue exists: job pushed
+    num_jobs = await job_queue.push_vcon_queue_job(
+        CREATE_MISSING_QUEUE,
+        job,
+        create_missing = True
+      )
+    assert(num_jobs == 2)
+
+    jobs = await job_queue.get_queue_jobs(CREATE_MISSING_QUEUE)
+    assert(jobs == [job, job])
+
+  finally:
+    await job_queue.delete_queue(CREATE_MISSING_QUEUE)
+
+
+@pytest.mark.asyncio
+async def test_push_vcon_queue_job_missing_queue_not_created(job_queue):
+  """
+  push_vcon_queue_job with create_missing False (the default) raises
+  QueueDoesNotExist and does not create the queue.
+  """
+  try:
+    await job_queue.delete_queue(CREATE_MISSING_QUEUE)
+  except py_vcon_server.queue.QueueDoesNotExist:
+    pass
+
+  job = {"job_type": "vcon_uuid", "vcon_uuid": [CREATE_MISSING_UUID]}
+  try:
+    await job_queue.push_vcon_queue_job(CREATE_MISSING_QUEUE, job)
+    raise Exception("expected QueueDoesNotExist")
+  except py_vcon_server.queue.QueueDoesNotExist as e:
+    assert(CREATE_MISSING_QUEUE in str(e))
+
+  assert(CREATE_MISSING_QUEUE not in await job_queue.get_queue_names())
 

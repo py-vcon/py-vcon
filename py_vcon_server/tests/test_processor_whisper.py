@@ -3,6 +3,9 @@
 
 import pytest
 import pytest_asyncio
+
+# Whisper is an optional (heavy) dependency: skip on a light install
+pytest.importorskip("stable_whisper")
 from common_setup import make_inline_audio_vcon, make_2_party_tel_vcon
 import py_vcon_server.processor
 from py_vcon_server.settings import VCON_STORAGE_URL

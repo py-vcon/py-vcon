@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Deepgram audio transcription filter plugin registration """
 import os
 import datetime
@@ -17,13 +17,27 @@ vcon.filter_plugins.FilterPluginRegistry.register(
   init_options
   )
 
+# Make deepgram the default transcribe type filter plugin
+vcon.filter_plugins.FilterPluginRegistry.set_type_default_name("transcribe", "deepgram")
+
 # Implement an accessor for the Deepgram transcription format
 class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
+  def channel_parties(self, channel_index: int):
+    """
+    Party index(es) recorded on the given channel of a multichannel recording.
+    The dialog parties array has an entry per channel.  Falls back to the channel
+    index if the dialog parties do not provide an entry for the channel.
+    """
+    parties = self._dialog_dict.get("parties", None)
+    if(isinstance(parties, list) and channel_index < len(parties) and parties[channel_index] is not None):
+      return(parties[channel_index])
+    return(channel_index)
+
   def get_text(self):
     """
-    Get speaker, text and time stamps for Whisper transcript.
+    Get speaker, text and time stamps for Deepgram transcript.
 
-    Currently diarization is not supported for Whisper so there
+    Currently diarization is not supported for Deepgram so there
     is only one text chunk, not a chunk per speaker and spoken
     segment.
     """
@@ -35,27 +49,45 @@ class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
 
       text_list = []
       dialog_start = datetime.datetime.fromisoformat(vcon.utils.cannonize_date(self._dialog_dict["start"]))
-      # get diarization if provided
-      if(self._analysis_dict["body"]["results"]["channels"][0]["alternatives"][0].get("paragraphs", None) is not None):
-        for paragraph in self._analysis_dict["body"]["results"]["channels"][0]["alternatives"][0]["paragraphs"]["paragraphs"]:
-          text_dict = {}
-          text_dict["parties"] = paragraph["speaker"]
-          relative_start = paragraph["start"]
-          text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()
-          relative_end = paragraph["end"]
-          text_dict["duration"] = relative_end - relative_start
-          sentence_list = [d["text"] for d in paragraph["sentences"]]
-          text_dict["text"] = "  ".join(sentence_list)
-          text_list.append(text_dict)
 
-      else:
-        text_dict["parties"] = self._dialog_dict["parties"]
-        text_dict["text"] = self._analysis_dict["body"]["results"]["channels"][0]["alteratives"]["transcript"]
-        relative_start = self._analysis_dict["body"]["channels"][0]["alteratives"]["words"][0]["start"]
-        text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()
-        relative_end = self._analysis_dict["body"]["channels"][0]["alternatives"]["words"][-1]["end"]
-        text_dict["duration"] = relative_end - relative_start
-        text_list.append(text_dict)
+      num_channels = len(self._analysis_dict["body"]["results"]["channels"])
+      for channel_index in range(num_channels):
+
+        # get diarization if provided
+        if(self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0].get("paragraphs", None) is not None):
+          channel_parties = []
+          # Need to get the number of parties for each channel so that we can
+          # use a unique index for each.
+
+          for paragraph in self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["paragraphs"]["paragraphs"]:
+
+            for sentence in paragraph["sentences"]:
+              text_dict = {}
+              if(num_channels == 1):
+                text_dict["parties"] = paragraph["speaker"]
+              else:
+                # use the party(s) recorded on this channel if multichannel
+                text_dict["parties"] = self.channel_parties(channel_index)
+              relative_start = sentence["start"]
+              text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()
+              relative_end = sentence["end"]
+              text_dict["duration"] = relative_end - relative_start
+              #sentence_list = [d["text"] for d in paragraph["sentences"]]
+              text_dict["text"] = sentence["text"]
+              text_list.append(text_dict)
+
+        else:
+          text_dict = {}
+          if(num_channels == 1):
+            text_dict["parties"] = self._dialog_dict["parties"]
+          else:
+            text_dict["parties"] = self.channel_parties(channel_index)
+          text_dict["text"] = self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["transcript"]
+          relative_start = self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["words"][0]["start"]
+          text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()
+          relative_end = self._analysis_dict["body"]["results"]["channels"][channel_index]["alternatives"][0]["words"][-1]["end"]
+          text_dict["duration"] = relative_end - relative_start
+          text_list.append(text_dict)
 
       return(text_list)
 

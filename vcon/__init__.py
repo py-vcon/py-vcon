@@ -1,4 +1,5 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 """
 Module for creating and modifying vCon conversation containers.
 see https:/vcon.dev
@@ -12,7 +13,6 @@ import sys
 import os
 import copy
 import logging
-import logging.config
 import enum
 import jose.constants
 import cbor2
@@ -24,38 +24,25 @@ import warnings
 import datetime
 import email
 import pathlib
-import pyjq
+import jq
+import jsonpath_rfc9535
 import uuid6
-import requests
-import pythonjsonlogger.jsonlogger
+import vcon.logging_utils
+# TODO:  remove this and reference vcon.build_logger directly in vcon.* modules
+build_logger = vcon.logging_utils.build_logger
+
+# This must occur before importing any other vcon modules that setup logging
+logger = build_logger(__name__)
+
+
 import vcon.utils
 import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
+import vcon.parameter_registry
 
-__version__ = "0.6.0"
+__version__ = "0.6.14"
 
-def build_logger(name : str) -> logging.Logger:
-  logger = logging.getLogger(name)
-
-  log_config_filename = "./logging.conf"
-  if(os.path.isfile(log_config_filename)):
-    logging.config.fileConfig(log_config_filename)
-    #print("got logging config", file=sys.stderr)
-  else:
-    logger.setLevel(logging.DEBUG)
-
-    # Output to stdout WILL BREAK the Vcon CLI.
-    # MUST use stderr.
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setLevel(logging.DEBUG)
-    formatter = pythonjsonlogger.jsonlogger.JsonFormatter( "%(timestamp)s %(levelname)s %(message)s ", timestamp=True)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-  return(logger)
-
-logger = build_logger(__name__)
 
 # TODO: this should be a setting
 # Max payload sizes for JWE and JWS.  Default is now 250000
@@ -101,6 +88,11 @@ class ExperimentalWarning(Warning):
   complient forms or parameters.  Note: these may be depricated.
   """
 
+class UnconvertedVconVersionWarning(Warning):
+  """
+  Warning for import of a vCon with a syntax version that is accepted,
+  but for which no migration or conversion is implemented.
+  """
 
 def deprecated(reason : str):
   """
@@ -148,6 +140,7 @@ def experimental(reason : str):
         category = ExperimentalWarning,
         stacklevel=2)
       warnings.simplefilter('default', ExperimentalWarning)
+      logger.warning(msg.format(func.__name__))
       return func(*args, **kwargs)
 
     return new_func
@@ -238,6 +231,55 @@ def tag_vcon_references(func):
   return(func)
 
 
+# Note: __iadd__ and __imul__ are deliberately excluded.  VconAttribute.__set__
+# raises, so an in place operator can never complete, and including them would
+# leave the mutation applied to the vCon before the assignment raises.
+_LIST_MUTATOR_NAMES = (
+  "append",
+  "extend",
+  "insert",
+  "remove",
+  "pop",
+  "clear",
+  "sort",
+  "reverse",
+  "__setitem__",
+  "__delitem__"
+  )
+
+
+def _make_write_back_method(base_type, method_name):
+  """ build a mutator which writes a plain container back into the vCon dict """
+  def write_back_method(self, *args, **kwargs):
+    result = getattr(base_type, method_name)(self, *args, **kwargs)
+    self._vcon_dict[self._key] = base_type(self)
+    return(result)
+
+  write_back_method.__name__ = method_name
+  return(write_back_method)
+
+
+def _make_write_back_type(type_name, base_type, mutator_names):
+  """
+  Build a container type which adds itself to the vCon dict when it is
+  first modified.  This allows an attribute to return an empty container
+  without adding an empty container to the vCon.
+  """
+  def write_back_init(self, vcon_dict, key, initial = ()):
+    base_type.__init__(self, initial)
+    self._vcon_dict = vcon_dict
+    self._key = key
+
+  namespace = {"__init__": write_back_init}
+  for mutator_name in mutator_names:
+    namespace[mutator_name] = _make_write_back_method(base_type, mutator_name)
+
+  return(type(type_name, (base_type,), namespace))
+
+
+_WriteBackList = _make_write_back_type("_WriteBackList", list, _LIST_MUTATOR_NAMES)
+
+
 class VconAttribute:
   """ descriptor base class for attributes in vcon """
   def __init__(self, doc : typing.Union[str, None] = None):
@@ -323,6 +365,24 @@ class VconDictList(VconAttribute):
     return(got_value)
 
 
+class VconStringList(VconAttribute):
+  """ descriptor for Lists of strings in vcon """
+
+  def __init__(self, doc : typing.Union[str, None] = None):
+    super().__init__(doc = doc)
+    self._type_name = "StringList"
+
+  def __get__(self, instance_object, class_type = None):
+    got_value = super().__get__(instance_object, class_type)
+
+    # Always return a list to avoid having to test for null and empty.
+    # The returned list adds itself to the vCon only if it is modified.
+    if(got_value is None):
+      got_value = _WriteBackList(instance_object._vcon_dict, self.name)
+
+    return(got_value)
+
+
 class VconPluginMethodType():
   """ Class defining descriptor used to instantiate methods for the named filter plugins """
   def __init__(self, filter_name, vcon_instance):
@@ -377,6 +437,8 @@ class Vcon():
   MEDIATYPE_AUDIO_MP3 = "audio/x-mp3"
   MEDIATYPE_AUDIO_MP4 = "audio/x-mp4"
   MEDIATYPE_VIDEO_MP4 = "video/x-mp4"
+  MEDIATYPE_AUDIO_OGG = "audio/ogg"
+  MEDIATYPE_AUDIO_FLAC = "audio/flac"
   MEDIATYPE_VIDEO_OGG = "video/ogg"
   MEDIATYPE_MULTIPART = "multipart/mixed"
 
@@ -386,7 +448,11 @@ class Vcon():
     ".png": MEDIATYPE_IMAGE_PNG,
     ".wav": MEDIATYPE_AUDIO_WAV,
     ".mp3": MEDIATYPE_AUDIO_MP3,
-    ".mp4": MEDIATYPE_VIDEO_MP4
+    ".m4a": MEDIATYPE_AUDIO_MP4,
+    ".ogg": MEDIATYPE_AUDIO_OGG,
+    ".flac": MEDIATYPE_AUDIO_FLAC,
+    ".mp4": MEDIATYPE_VIDEO_MP4,
+    ".ogv": MEDIATYPE_VIDEO_OGG
   }
 
   MEDIATYPE_EXTENSIONS = {
@@ -394,13 +460,30 @@ class Vcon():
     MEDIATYPE_IMAGE_PNG: ".png",
     MEDIATYPE_AUDIO_WAV: ".wav",
     MEDIATYPE_AUDIO_MP3: ".mp3",
-    MEDIATYPE_VIDEO_MP4: ".mp4"
+    MEDIATYPE_AUDIO_MP4: ".m4a",
+    MEDIATYPE_AUDIO_OGG: ".ogg",
+    MEDIATYPE_AUDIO_FLAC: ".flac",
+    MEDIATYPE_VIDEO_MP4: ".mp4",
+    MEDIATYPE_VIDEO_OGG: ".ogv",
+    # Common IANA spellings of the above.  Recognized for lookup only;
+    # get_media_type returns the vCon spec media types.
+    "audio/wav": ".wav",
+    "audio/mpeg": ".mp3",
+    "audio/mp4": ".m4a"
   }
 
-  CURRENT_VCON_VERSION = "0.0.2"
+  CURRENT_VCON_VERSION = "0.4.0"
+  # vCon syntax versions accepted on import for which a migration to the
+  # current syntax is implemented.
+  MIGRATABLE_VCON_VERSIONS = ["0.0.1", "0.0.2"]
+  # vCon syntax versions accepted on import as is.  No migration is
+  # performed and the vcon parameter is left unmodified.
+  UNCONVERTED_VCON_VERSIONS = ["0.3.0", "0.4.0"]
 
   # Dict keys
   VCON_VERSION = "vcon"
+  EXTENSIONS = "extensions"
+  CRITICAL = "critical"
   UUID = "uuid"
   SUBJECT = "subject"
   REDACTED = "redacted"
@@ -412,9 +495,16 @@ class Vcon():
   ATTACHMENTS = "attachments"
   CREATED_AT = "created_at"
 
-  PARTIES_OBJECT_STRING_PARAMETERS = ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone", "role", "extension"]
+  PARAMETER_CORE = vcon.parameter_registry.PARAMETER_CORE
+
+  PARTIES_OBJECT_STRING_PARAMETERS = vcon.parameter_registry.get_path_parameter_names("parties")
 
   vcon = VconString(doc = "vCon version string attribute")
+
+  extensions = VconStringList(doc = "List of names of the vCon extensions used by this vCon")
+
+  critical = VconStringList(doc = "List of names of the vCon extensions which a consumer must support to process this vCon")
+
   uuid = VconUuid(doc = "vCon UUID string attribute")
   created_at = VconString(doc = "vCon creation date string attribute")
   subject = VconString(doc = "vCon subject string attribute")
@@ -498,14 +588,11 @@ class Vcon():
     self._jwe_dict = None
 
     self._vcon_dict = {}
-    self._vcon_dict[Vcon.VCON_VERSION] = Vcon.CURRENT_VCON_VERSION
-    self._vcon_dict[Vcon.GROUP] = []
     self._vcon_dict[Vcon.PARTIES] = []
     self._vcon_dict[Vcon.DIALOG] = []
     self._vcon_dict[Vcon.ANALYSIS] = []
     self._vcon_dict[Vcon.ATTACHMENTS] = []
     self._vcon_dict[Vcon.CREATED_AT] = vcon.utils.cannonize_date(datetime.datetime.utcnow())
-    self._vcon_dict[Vcon.REDACTED] = {}
 
 
   # TODO: use mediatypes package instead
@@ -520,7 +607,7 @@ class Vcon():
     if(extension in vcon.Vcon.FILE_EXTENSIONS):
       mediatype = vcon.Vcon.FILE_EXTENSIONS[extension]
   
-    # TODO: add: aac, ogg, 
+    # TODO: add: aac
     else:
       raise Exception("Media type not defined for extension: {}".format(extension))
   
@@ -629,7 +716,7 @@ class Vcon():
 
     Parameters:  
       **parameter_name** (String) - name of the Party Object parameter to be set.
-                  Must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]  
+                  Unregistered parameter names are allowed and log a warning.
       **parameter_value** (String) - new value to set for the named parameter  
       **party_index** (int) - index of party to set tel url on
                   (-1 indicates a new party should be added)  
@@ -640,10 +727,7 @@ class Vcon():
 
     self._attempting_modify()
 
-    if(parameter_name not in Vcon.PARTIES_OBJECT_STRING_PARAMETERS):
-      raise AttributeError(
-        "Not supported: setting of Parties Object parameter: {}.  Must be one of the following:  {}".
-        format(parameter_name, Vcon.PARTIES_OBJECT_STRING_PARAMETERS))
+    self.add_parameter_extension("parties", parameter_name)
 
     party_index = self.__add_new_party(party_index)
 
@@ -660,16 +744,15 @@ class Vcon():
 
     Parameters:  
       **party_dict** (dict) - dict representing the parameter name and value pairs
-                  Dict key must beone of the following: ["tel", "stir", "mailto", "name", "validation", "gmlpos", "timezone"]
+                  Unregistered parameter names are allowed and log a warning.
 
     Returns:  
     int: if success, positive int index of party in list
     """
     self._attempting_modify()
     for key in party_dict.keys():
-      if(key not in Vcon.PARTIES_OBJECT_STRING_PARAMETERS):
-        raise AttributeError(f"Not supported: setting of Parties Object parameter: {key}." +
-          f"  Must be one of the following:  {Vcon.PARTIES_OBJECT_STRING_PARAMETERS}")
+      self.add_parameter_extension("parties", key)
+
     # TODO parameter specific validation
     self._vcon_dict[Vcon.PARTIES].append(party_dict)
     party_index = len(self._vcon_dict[Vcon.PARTIES]) - 1
@@ -980,8 +1063,12 @@ class Vcon():
           text_dict["party"] = dialog["parties"][0]
         elif(isinstance(dialog["parties"], int)):
           text_dict["party"] = dialog["parties"]
+        # transcript accessors and their consumers use "parties"
+        if("party" in text_dict):
+          text_dict["parties"] = text_dict["party"]
       text_dict["start"] = dialog["start"]
-      text_dict["duration"] = dialog["duration"]
+      # duration is optional (e.g. typing time is often not known)
+      text_dict["duration"] = dialog.get("duration", None)
 
       if(dialog["mediatype"].lower() == vcon.Vcon.MEDIATYPE_TEXT_PLAIN):
         text_dict["text"] = dialog["body"]
@@ -1165,7 +1252,6 @@ class Vcon():
     Returns:  
             Index to the added dialog
     """
-    # TODO should return dialog index not byte count
 
     # TODO: need a streaming/chunk version of this so that we don't have to have the whole file in memory.
 
@@ -1187,7 +1273,14 @@ class Vcon():
 
     if (body):
       if(sign_type == "LM-OTS"):
-        logger.warning("Warning: \"LM-OTS\" may be depricated")
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn(
+          "sign_type \"LM-OTS\" is deprecated; use \"SHA-512\" instead",
+          category = DeprecationWarning,
+          stacklevel = 2)
+        warnings.simplefilter('default', DeprecationWarning)
+        logger.warning("sign_type \"LM-OTS\" is deprecated; use \"SHA-512\" instead")
+
         key, signature = vcon.security.lm_one_time_signature(body)
         new_dialog['key'] = key
         new_dialog['signature'] = signature
@@ -1210,6 +1303,67 @@ class Vcon():
 
 
   @tag_dialog
+  def add_transfer_dialog(
+      self,
+      transferee: int,
+      transferor: int,
+      transfer_target: int,
+      original_dialog: int,
+      target_dialog: typing.Union[int, None],
+      consultative_dialog: typing.Union[int, None] = None
+    ) -> int:
+    """
+     A **transfer** type dialog Object shows the relationship of
+     dialogs and the role of parties in the transfer of call or conversation
+     from one party to another.  There are two types of transfer: blind and consultative.
+     With a blind transfer, there are only 2 dialogs: the orginal call and the target or
+     resulting call.  In a consultative call there are 3 dialogs, the two as in a blind trasnfer
+     and a consultative dialog which occurs before the transfer is completed.
+
+     This method constructs a **transfer** type dialog.
+
+    Parameters:
+      **transferee** (int): party index for the party from the original call that gets
+                transfered to the target call
+      **transferor** (int): party index for the party from the original call that performs
+                or actuates the transfer.  It th transfer is no actually initiated by a party,
+                (e.g system or applications initiated), this is the party from the original
+                call that particiaptes in the consultation if one occurs and is not a party
+                to the target or resulting outcome call.
+      **transfer_target** (int): party index to the new party introduced in the target call
+      **original_dialog** (int): the index to the original call dialog
+      **target_dialog** (int, None): the index to the target or resulting outcome call.  The
+                transferor may decide not to complete the transfer after the consultation.
+                In this case, the transfer_dialog may be None.
+      **consultative_dialog** (int, None): the index to the consultative dialog if one
+                occurred.
+
+    Returns:
+            Index to the added dialog
+    """
+    self._attempting_modify()
+
+    # Should we validate that the party and dialog indices
+    # are valid and exists???  All of the dialogs may not be
+    # created yet.
+    new_dialog: typing.Dict[str, typing.Any] = {}
+    new_dialog['type'] = "transfer"
+    new_dialog['transferee'] = transferee
+    new_dialog['transferor'] = transferor
+    new_dialog['transfer_target'] = transfer_target
+    new_dialog['original'] = original_dialog
+    if(target_dialog is not None):
+      new_dialog['target_dialog'] = target_dialog
+    if(consultative_dialog is not None):
+      new_dialog['consultation'] = consultative_dialog
+
+    dialog_index = len(self.dialog)
+    self._vcon_dict[Vcon.DIALOG].append(new_dialog)
+
+    return(dialog_index)
+
+
+  @tag_dialog
   async def get_dialog_external_recording(self,
     dialog_index : int,
     get_kwargs: typing.Union[dict, None] = None
@@ -1222,23 +1376,44 @@ class Vcon():
     Parameters:  
       **dialog_index** (int) - index into the Vcon.dialog array indicating
         which external recording is to be retrieved and verified.  
-      **get_kwargs** (dict) - kwargs passed to **requests.get** method
-        defaults to {"timeout": = 20} seconds
+      **get_kwargs** (dict, optional) - optional keyword arguments:
+          ``connect_timeout`` (float) - TCP/TLS connection timeout
+              (default: 5 s).
+          ``read_timeout`` (float) - time to wait for response data
+              (default: 20 s).
+          ``timeout`` (float) - **deprecated**, use ``read_timeout``
+              instead.  If provided, its value is used as
+              ``read_timeout`` and a DeprecationWarning is issued.
 
     Returns:  
       verified content/bytes for the recording
     """
-    # Get body from URL using requests
-    url = self.dialog[dialog_index]["url"]
+    from vcon.http_lb import HttpLb
+
     if(get_kwargs is None):
-      get_kwargs = {"timeout": 20}
-    req = requests.get(url, **get_kwargs)
-    if(not(200 <= req.status_code < 300)):
+      get_kwargs = {}
+
+    # Support legacy "timeout" key with a deprecation warning
+    if("timeout" in get_kwargs):
+      warnings.warn(
+        "get_kwargs key 'timeout' is deprecated; use 'read_timeout' instead",
+        DeprecationWarning,
+        stacklevel=2
+        )
+      get_kwargs.setdefault("read_timeout", get_kwargs.pop("timeout"))
+
+    url = self.dialog[dialog_index]["url"]
+    resp = await HttpLb.get(
+      url,
+      connect_timeout=get_kwargs.get("connect_timeout", None),
+      read_timeout=get_kwargs.get("read_timeout", 20.0),
+      )
+    if(not(200 <= resp.status_code < 300)):
       raise Exception("get of {} resulted in error: {}".format(
         url,
-        req.status_code
+        resp.status_code
         ))
-    body = req.content
+    body = resp.content
 
     # verify the body
     self.verify_dialog_external_recording(dialog_index, body)
@@ -1269,6 +1444,7 @@ class Vcon():
     self._attempting_modify()
 
     dialog_index = self.__add_new_dialog(dialog_index)
+    self.add_parameter_extension("dialog", parameter_name)
 
     # TODO parameter specific validation
     self._vcon_dict[Vcon.DIALOG][dialog_index][parameter_name] = parameter_value
@@ -1351,6 +1527,7 @@ class Vcon():
       analysis_element["schema"] = schema
 
     for param, value in optional_parameters.items():
+      self.add_parameter_extension("analysis", param)
       analysis_element[param] = value
 
     if(self.analysis is None):
@@ -1396,6 +1573,7 @@ class Vcon():
       analysis_element["schema"] = schema
 
     for parameter_name, value in optional_parameters.items():
+      self.add_parameter_extension("analysis", parameter_name)
       analysis_element[parameter_name] = value
 
     if(self.analysis is None):
@@ -1557,6 +1735,8 @@ class Vcon():
             Vcon.MEDIATYPE_AUDIO_WAV,
             Vcon.MEDIATYPE_AUDIO_MP3,
             Vcon.MEDIATYPE_AUDIO_MP4,
+            Vcon.MEDIATYPE_AUDIO_OGG,
+            Vcon.MEDIATYPE_AUDIO_FLAC,
             Vcon.MEDIATYPE_VIDEO_MP4,
             Vcon.MEDIATYPE_VIDEO_OGG,
           ]):
@@ -1599,16 +1779,16 @@ class Vcon():
     # TODO: would be better not to deep copy the dict
     vcon_dict = self.dumpd(False, True) # deep copy as we modify the copy and do not want this to be permient
 
-    # Iterate body parameters in redacted and ammended
-    for reference in ["redacted", "ammended"]:
+    # Iterate body parameters in redacted and amended
+    for reference in [Vcon.REDACTED, Vcon.AMENDED]:
       # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
       if(reference in vcon_dict and
-          Vcon.VconBase64Bytes.isBase64Object(vcon_dict["redacted"])
+          Vcon.VconBase64Bytes.isBase64Object(vcon_dict[Vcon.REDACTED])
         ):
         Vcon.VconBase64Bytes.objectizeBase64Object(vcon_dict["redacted"])
 
     # Iterate body parameters in objects in group, parties, dialog, attachments and analysis arrays
-    for object_array_name in ["group", "dialog", "attachemnts", "analysis"]:
+    for object_array_name in [Vcon.GROUP, Vcon.DIALOG, Vcon.ATTACHMENTS, Vcon.ANALYSIS]:
       object_array = vcon_dict.get(object_array_name, None)
       if(object_array):
         for reference_object in object_array:
@@ -1683,39 +1863,73 @@ class Vcon():
     base_uri: str = "http://{host}:{port}/vcon",
     host: str = "localhost",
     port: int = 8000,
-    # not sure why I cannot use vcon.Vcon.MEDIATYPE_JSON here
-    post_kwargs: typing.Dict[str, typing.Any] = {"timeout": 20}
+    post_kwargs: typing.Optional[typing.Dict[str, typing.Any]] = None,
     ) -> None:
     """
-    HTTP Post this Vcon from the given base_uri and path.
-
-    Parameters:  
-    **base_url** (str) - template URL for HTTP post  
-    **host** (str) - host IP or DNS name to use in URL  
-    **port** (int) - HTTP port to use  
-    **post_kwargs** (dict) - extra args to pass to requests.post
-
+    HTTP Post this Vcon to the given URL.
+ 
+    Supports two URL styles:
+ 
+    1. **Template style** (original, backward-compatible)::
+ 
+         base_uri="http://{host}:{port}/vcon", host="localhost", port=8000
+ 
+    2. **Multi-host URL with load balancing and failover**::
+ 
+         base_uri="http://:password@host1:port1,host2:port2/path?db=0"
+ 
+       When the URL contains comma-separated host:port pairs, DNS names
+       are resolved to all A/AAAA records, the addresses are shuffled for
+       load balancing, and failover is attempted on connection errors or
+       502/503/504 responses.
+ 
+    Parameters:
+      **base_uri** (str) - template URL or multi-host URL for HTTP post
+      **host** (str) - host IP or DNS name (used only with template URLs)
+      **port** (int) - HTTP port (used only with template URLs)
+      **post_kwargs** (dict, optional) - extra args:
+          ``connect_timeout`` (float) - TCP/TLS connection timeout.
+              Keep short for fast failover (default: 5 s).
+          ``read_timeout`` (float) - time to wait for response data.
+              Set high for LLM/transcription backends
+              (default: 300 s).
+          ``write_timeout`` (float) - time to send request body
+              (default: 20 s).
+          ``pool_timeout`` (float) - time to wait for a connection
+              from the pool (default: 10 s).
+          ``max_retries`` (int) - max addresses to attempt before
+              giving up (default: try all resolved).
+ 
     Return: none
     """
-    if(post_kwargs is None):
-      post_kwargs = {
-          "timeout": 20,
-          "content-type": vcon.Vcon.MEDIATYPE_JSON
-        }
-
-    uri = base_uri.format(
-      host = host,
-      port = port
+    from vcon.http_lb import HttpLb
+ 
+    if post_kwargs is None:
+      post_kwargs = {}
+ 
+    # Resolve template placeholders.
+    if "{host}" in base_uri or "{port}" in base_uri:
+      uri = base_uri.format(host=host, port=port)
+    else:
+      uri = base_uri
+ 
+    resp = await HttpLb.post(
+      url=uri,
+      body=self.dumpd(),
+      content_type=vcon.Vcon.MEDIATYPE_JSON,
+      connect_timeout=post_kwargs.get("connect_timeout", None),
+      read_timeout=post_kwargs.get("read_timeout", None),
+      write_timeout=post_kwargs.get("write_timeout", None),
+      pool_timeout=post_kwargs.get("pool_timeout", None),
+      max_retries=post_kwargs.get("max_retries", None),
+    )
+ 
+    if not (200 <= resp.status_code < 300):
+      raise Exception(
+        "post of {} resulted in error code: {} text: {} content: {}".format(
+          uri, resp.status_code, resp.text, resp.content
+        )
       )
-
-    req = requests.post(uri, json = self.dumpd(), **post_kwargs)
-    if(not(200 <= req.status_code < 300)):
-      raise Exception("post of {} resulted in error code: {} text: {} content: {}".format(
-        uri,
-        req.status_code,
-        req.text,
-        req.content
-        ))
 
 
   @tag_serialize
@@ -1817,25 +2031,17 @@ class Vcon():
       self._state = VconStates.ENCRYPTED
       self._jwe_dict = vcon_dict
 
-    # Unsigned vCon has to have vcon version and
-    elif((self.VCON_VERSION in vcon_dict) and (
+    # Unsigned vCon may have vcon version and
+    elif(
       # one of the following arrays
       ('parties' in vcon_dict) or
       ('dialog' in vcon_dict) or
       ('analysis' in vcon_dict) or
       ('attachments' in vcon_dict)
-      )):
+      ):
 
-      # validate version
-      version_string = vcon_dict.get(self.VCON_VERSION, "not set")
-      if(version_string not in ["0.0.1", "0.0.2"]):
-        raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
-
-      if(vcon_dict["vcon"] == "0.0.1"):
-        self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
-        vcon_dict = self._vcon_dict
-      if(vcon_dict["vcon"] == "0.0.2"):
-        self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
+      # validate version and migrate if needed
+      self._vcon_dict = Vcon.check_and_migrate_version(vcon_dict)
 
     # Unknown
     else:
@@ -1898,8 +2104,8 @@ class Vcon():
       self._state = VconStates.ENCRYPTED
       self._jwe_dict = vcon_dict
 
-    # Unsigned vCon has to have vcon version and
-    elif((self.VCON_VERSION in vcon_dict) and (
+    # Unsigned vCon may have vcon version and
+    elif((
       # one of the following arrays
       ('parties' in vcon_dict) or
       ('dialog' in vcon_dict) or
@@ -1910,15 +2116,15 @@ class Vcon():
       # Check for CBOR tags that need to be replaced
       # This is not easily done with hooks int the CBOR parser as we need to change the body and the encoding parameters.
 
-      # Iterate body parameters in redacted and ammended
-      for reference in ["redacted", "ammended"]:
+      # Iterate body parameters in redacted and amended
+      for reference in [Vcon.REDACTED, Vcon.AMENDED]:
         # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
         if(reference in vcon_dict and
            "body" in vcon_dict[reference] and
            isinstance(vcon_dict[reference]["body"], cbor2.CBORTag)):
           raise Exception("unimplemented CBORTag for: {}".format(reference))
 
-      for object_array_name in ["group", "dialog", "attachemnts", "analysis"]:
+      for object_array_name in [Vcon.GROUP, Vcon.DIALOG, Vcon.ATTACHMENTS, Vcon.ANALYSIS]:
         object_array = vcon_dict.get(object_array_name, None)
         if(object_array):
           for reference_object in object_array:
@@ -1936,16 +2142,8 @@ class Vcon():
               reference_object["body"] = jose.utils.base64url_encode(reference_object["body"].value).decode('utf-8')
               reference_object["encoding"] = "base64url"
 
-      # validate version
-      version_string = vcon_dict.get(self.VCON_VERSION, "not set")
-      if(version_string not in ["0.0.1", "0.0.2"]):
-        raise UnsupportedVconVersion("loads of JSON vcon version: \"{}\" not supported".format(version_string))
-
-      if(vcon_dict["vcon"] == "0.0.1"):
-        self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
-        vcon_dict = self._vcon_dict
-      if(vcon_dict["vcon"] == "0.0.2"):
-        self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
+      # validate version and migrate if needed
+      self._vcon_dict = Vcon.check_and_migrate_version(vcon_dict)
 
     # Unknown
     else:
@@ -1964,38 +2162,81 @@ class Vcon():
     host: str = "localhost",
     port: int = 8000,
     path: str = "/vcon/{uuid}",
-    # not sure why I cannot use vcon.Vcon.MEDIATYPE_JSON here
-    get_kwargs: typing.Dict[str, typing.Any] = {"timeout": 20, "headers": {"accept": "application/json"}}
+    get_kwargs: typing.Optional[typing.Dict[str, typing.Any]] = None,
     ) -> None:
     """
     HTTP GET the Vcon from the given base_uri and path.
 
-    Parameters:  
-    **uuid** (str) - UUID of the vCon to retrieve  
-    **base_url** (str) - template URL for HTTP post  
-    **host** (str) - host IP or DNS name to use in URL  
-    **port** (int) - HTTP port to use  
-    **path** (str) - template path for the URL  
-    **get_kwargs** (dict) - extra args to pass to requests.get
+    Supports two URL styles:
+
+    1. **Template style** (original, backward-compatible)::
+
+         base_uri="http://{host}:{port}{path}", host="localhost",
+         port=8000, path="/vcon/{uuid}"
+
+    2. **Multi-host URL with load balancing and failover**::
+
+         base_uri="http://:password@host1:port1,host2:port2/vcon/{uuid}"
+
+       The ``{uuid}`` placeholder in the URL is replaced with the
+       *uuid* parameter.
+
+    Parameters:
+      **uuid** (str) - UUID of the vCon to retrieve
+      **base_uri** (str) - template URL or multi-host URL
+      **host** (str) - host IP or DNS name (used only with template URLs)
+      **port** (int) - HTTP port (used only with template URLs)
+      **path** (str) - template path (used only with template URLs)
+      **get_kwargs** (dict, optional) - extra args:
+          ``connect_timeout`` (float) - TCP/TLS connection timeout
+              (default: 5 s).
+          ``read_timeout`` (float) - time to wait for response data
+              (default: 300 s).
+          ``write_timeout`` (float) - time to send request body
+              (default: 20 s).
+          ``pool_timeout`` (float) - time to wait for a connection
+              from the pool (default: 10 s).
+          ``max_retries`` (int) - max addresses to attempt before
+              giving up (default: try all resolved).
 
     Return: none
     """
-    if(get_kwargs is None):
-      get_kwargs = {"timeout": 20, "headers": {"accept": vcon.Vcon.MEDIATYPE_JSON }}
+    from vcon.http_lb import HttpLb
 
-    uri = base_uri.format(
-      host = host,
-      port = port,
-      path = path.format(uuid = uuid)
+    if get_kwargs is None:
+      get_kwargs = {}
+
+    # Resolve template placeholders.
+    if "{host}" in base_uri or "{port}" in base_uri:
+      uri = base_uri.format(
+        host=host,
+        port=port,
+        path=path.format(uuid=uuid)
       )
-    req = requests.get(uri, **get_kwargs)
-    if(not(200 <= req.status_code < 300)):
+    elif "{uuid}" in base_uri:
+      uri = base_uri.format(uuid=uuid)
+    else:
+      uri = base_uri
+
+    resp = await HttpLb.get(
+      url=uri,
+      headers={"accept": vcon.Vcon.MEDIATYPE_JSON},
+      connect_timeout=get_kwargs.get("connect_timeout", None),
+      read_timeout=get_kwargs.get("read_timeout", None),
+      write_timeout=get_kwargs.get("write_timeout", None),
+      pool_timeout=get_kwargs.get("pool_timeout", None),
+      max_retries=get_kwargs.get("max_retries", None),
+    )
+
+    if not (200 <= resp.status_code < 300):
       raise Exception("get of {} resulted in error: {}".format(
         uri,
-        req.status_code
-        ))
-    vcon_json = req.content
+        resp.status_code
+      ))
+
+    vcon_json = resp.content
     self.loads(vcon_json)
+
 
   @tag_signing
   def sign(self, private_key_pem_file: str, cert_chain_pem_files : typing.List[str]) -> None:
@@ -2128,12 +2369,7 @@ class Vcon():
                 #print("verified payload: {}".format(verified_payload))
                 #print("verified payload type: {}".format(type(verified_payload)))
                 vcon_dict = json.loads(verified_payload.decode('utf-8'))
-                if(vcon_dict["vcon"] == "0.0.1"):
-                  self._vcon_dict = self.migrate_0_0_1_vcon(vcon_dict)
-                  vcon_dict = self._vcon_dict
-                if(vcon_dict["vcon"] == "0.0.2"):
-                  self._vcon_dict = self.migrate_0_0_2_vcon(vcon_dict)
-
+                self._vcon_dict = Vcon.check_and_migrate_version(vcon_dict)
                 self._state = VconStates.VERIFIED
 
                 return(None)
@@ -2275,12 +2511,67 @@ class Vcon():
 
 
   @tag_operation
+  def jsonpath(
+    self,
+    query: typing.Union[str, dict[str, str]]
+    ) -> typing.Union[list[typing.Any], dict[str, list[typing.Any]]]:
+    """
+    Perform JSONPath queries (RFC 9535) on the Vcon JSON
+
+    The query runs on the vCon content, whether the vCon is unsigned, signed or
+    verified.  A signed vCon read back from storage must be verified first, and an
+    encrypted one decrypted and verified.
+
+    Parameters:  
+    **query** (Union[str, dict[str, str]]) - query(s) to be performed on this Vcon
+      **query** can be a single JSONPath query string or a dict containing a named set
+      where the values are query strings.
+
+    Returns:  
+      if query is a str, a list of the values of the nodes the query selects  
+      if query is a dict, a dict with keys corresponding to the input query where
+      the values are the lists of selected values.
+
+    Raises jsonpath_rfc9535.JSONPathError (JSONPathSyntaxError for a malformed query).
+    """
+    if(self._state in [VconStates.UNVERIFIED, VconStates.DECRYPTED, VconStates.ENCRYPTED]):
+      raise InvalidVconState("Vcon state: {} cannot read parameters".format(self._state))
+
+    # The vCon content, as attribute access returns it.  A signed or verified vCon
+    # also has a JWS form, but the content there is inside the payload.
+    vcon_dict = self.dumpd(signed = False)
+
+    if(isinstance(query, str)):
+      return(jsonpath_rfc9535.find(query, vcon_dict).values())
+
+    results = {}
+    for query_name, query_string in query.items():
+      results[query_name] = jsonpath_rfc9535.find(query_string, vcon_dict).values()
+
+    return(results)
+
+
+  @property
+  def state(self) -> VconStates:
+    """
+    The form this Vcon is currently in: UNSIGNED, SIGNED, UNVERIFIED (signed,
+    read from storage or the wire and not yet verified), VERIFIED, ENCRYPTED or
+    DECRYPTED.  Which operations and attributes are allowed depends upon it.
+    """
+    return(self._state)
+
+
+  @tag_operation
   def jq(
     self,
     query: typing.Union[str, dict[str, str]]
     ) -> typing.Union[list[str], dict[str, any]]:
     """
     Perform jq syle queries on the Vcon JSON
+
+    The query runs on the vCon content, whether the vCon is unsigned, signed or
+    verified.  A signed vCon read back from storage must be verified first, and an
+    encrypted one decrypted and verified.
 
     Parameters:  
     **query** (Union[str, dict[str, str]]) - query(s) to be performed on this Vcon
@@ -2292,17 +2583,23 @@ class Vcon():
     if query is a dict, a dict with keys corresponding to the input query where
     the values are the query result.
     """
-    if(self._state in [VconStates.UNVERIFIED, VconStates.DECRYPTED]):
+    if(self._state in [VconStates.UNVERIFIED, VconStates.DECRYPTED, VconStates.ENCRYPTED]):
       raise InvalidVconState("Vcon state: {} cannot read parameters".format(self._state))
 
+    # The vCon content, as attribute access returns it.  A signed or verified vCon
+    # also has a JWS form, but the content there is inside the payload.
+    vcon_dict = self.dumpd(signed = False)
+
     if(isinstance(query, str)):
-      return(pyjq.all(query, self.dumpd()))
+      compiled_query = jq.compile(query)
+
+      return(compiled_query.input_value(vcon_dict).all())
 
     else:
       results = {}
-      vcon_dict = self.dumpd()
       for query_name, query_string in query.items():
-        results[query_name] = pyjq.all(query_string, vcon_dict)[0]
+        compiled_query = jq.compile(query_string)
+        results[query_name] = compiled_query.input_value(vcon_dict).all()[0]
 
       return(results)
 
@@ -2466,10 +2763,90 @@ class Vcon():
     new_child = {}
     new_child["uuid"] = uuid
 
-    group_len = len(self._vcon_dict[Vcon.GROUP])
-    self._vcon_dict[Vcon.GROUP].append(new_child)
+    group_list = self._vcon_dict.setdefault(Vcon.GROUP, [])
+    group_len = len(group_list)
+    group_list.append(new_child)
 
     return(group_len)
+
+
+  @staticmethod
+  def get_parameter_extension(
+    path : str,
+    parameter_name : str
+    ) -> typing.Union[str, None]:
+    """
+    Get the vCon extension which defines the given parameter name at the
+    given Object path.
+
+    Parameters:  
+      **path** (String) - dot separated path to the Object containing the
+                  parameter.  Each segment is the parameter name of the Object
+                  in its parent.  The empty string is the top level vCon Object.
+                  For example: "", "parties", "dialog", "parties.civicaddress",
+                  "dialog.party_history".  
+      **parameter_name** (String) - name of the parameter in the Object at the
+                  given path.
+
+    Returns:  
+      **Vcon.PARAMETER_CORE** if defined by the core vCon schema, the extension
+      name token as it is to appear in the vCon extensions parameter if defined
+      by an extension, or None if the name is not registered at the given path.
+
+    Raises ValueError if the path is not a registered Object path.
+    """
+    return(vcon.parameter_registry.get_parameter_extension(path, parameter_name))
+
+
+  @tag_meta
+  def add_parameter_extension(
+    self,
+    path : str,
+    parameter_name : str
+    ) -> typing.Union[str, None]:
+    """
+    Add the name of the vCon extension which defines the given parameter to
+    this vCon's extensions parameter.
+
+    Has no effect if the parameter is defined by the core vCon schema.  Logs a
+    warning and has no effect if the parameter name is not registered.
+
+    Parameters:  
+      **path** (String) - dot separated path to the Object containing the
+                  parameter.  See **Vcon.get_parameter_extension**.  
+      **parameter_name** (String) - name of the parameter in the Object at the
+                  given path.
+
+    Returns:  
+      the same value as **Vcon.get_parameter_extension**
+
+    Raises ValueError if the path is not a registered Object path.
+    """
+    definer = Vcon.get_parameter_extension(path, parameter_name)
+
+    if(definer is None):
+      logger.warning(
+        "parameter name: \"%s\" at Object path: \"%s\" is not defined by the"
+        " core vCon schema or any known vCon extension",
+        parameter_name,
+        path
+        )
+      return(None)
+
+    if(definer == Vcon.PARAMETER_CORE):
+      return(definer)
+
+    self._attempting_modify()
+
+    extensions = self._vcon_dict.get(Vcon.EXTENSIONS, None)
+    if(extensions is None):
+      extensions = []
+      self._vcon_dict[Vcon.EXTENSIONS] = extensions
+
+    if(definer not in extensions):
+      extensions.append(definer)
+
+    return(definer)
 
 
   @staticmethod
@@ -2574,17 +2951,74 @@ class Vcon():
 
 
   @staticmethod
+  def check_and_migrate_version(vcon_dict : dict) -> dict:
+    """
+    Validate the vCon syntax version parameter and migrate the vCon to the
+    current syntax if a migration is implemented for that version.
+
+    The vcon parameter is deprecated.  A vCon with no vcon parameter is
+    assumed to be of the current syntax and is passed through unmodified.
+    A vCon of a version in UNCONVERTED_VCON_VERSIONS is passed through
+    unmodified, with its vcon parameter left as is, and a
+    UnconvertedVconVersionWarning is emitted.  A vCon of a version in
+    MIGRATABLE_VCON_VERSIONS is migrated, the migrations stack and the
+    last one removes the vcon parameter.
+
+    Parameters:
+      vcon_dict - unsigned form vCon dict to validate and migrate
+
+    Returns:
+      the vCon dict, migrated if a migration was implemented and needed
+    """
+
+    version_string = vcon_dict.get(Vcon.VCON_VERSION, None)
+
+    # vcon parameter is deprecated.  Assume current syntax.
+    if(version_string is None):
+      return(vcon_dict)
+
+    # Accepted as is.  No migration implemented, vcon parameter left alone.
+    if(version_string in Vcon.UNCONVERTED_VCON_VERSIONS):
+      warnings.simplefilter('always', UnconvertedVconVersionWarning)
+      warnings.warn(
+        "vCon syntax version: \"{}\" accepted without conversion."
+        "  No migration is implemented for this version."
+        "  Parameter names and semantics may differ from the current vCon syntax.".format(
+          version_string),
+        category = UnconvertedVconVersionWarning,
+        stacklevel = 3)
+      warnings.simplefilter('default', UnconvertedVconVersionWarning)
+      logger.warning("vCon syntax version: \"%s\" accepted without conversion", version_string)
+      return(vcon_dict)
+
+    if(version_string not in Vcon.MIGRATABLE_VCON_VERSIONS):
+      raise UnsupportedVconVersion("load of JSON vcon version: \"{}\" not supported".format(
+        version_string))
+
+    # Migrations stack.  Each sets the vcon parameter to the next version.
+    if(version_string == "0.0.1"):
+      vcon_dict = Vcon.migrate_0_0_1_vcon(vcon_dict)
+    if(vcon_dict.get(Vcon.VCON_VERSION, None) == "0.0.2"):
+      vcon_dict = Vcon.migrate_0_0_2_vcon(vcon_dict)
+
+    return(vcon_dict)
+
+
+  @staticmethod
   def migrate_0_0_2_vcon(old_vcon : dict) -> dict:
     """
     Migrate/translate an an older deprecated vCon to the current version.
 
     Parameters:
-      old_vcon old format 0.0.1 vCon
+      old_vcon old format 0.0.2 vCon
 
     Returns:
       the modified old_vcon in the new format
     """
 
+    # This is the last migration in the chain.  The vcon parameter is
+    # deprecated, so remove it rather than set it to a newer version.
+    old_vcon.pop(Vcon.VCON_VERSION, None)
     return(old_vcon)
 
 

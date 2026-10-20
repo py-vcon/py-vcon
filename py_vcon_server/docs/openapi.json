@@ -3,7 +3,7 @@
   "info": {
     "title": "Python vCon Server",
     "summary": "vCon pipeline processor server cluster and storage API",
-    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
+    "description": "\nThe Python vCon Server installed from the Python py_vcon_server package.\n\nThe vCon server provides a RESTful interface to store and operate on vCons.\nThese vCon operations can be a single one-off operation or can be setup\nto perform repeatable sets of operations on very large numbers of vCons.\n\nOne-off operations are performed via the vCon Storage CRUD entry points.\n\nRepeatable sets of operations can be defined in what is called a pipeline\nvia the Admin: Pipelines entry points.\nA queue is created for each pipeline and then jobs (e.g. vCons) are\nadded to the queue for the pipeline server to perform the set of processors,\ndefined by the pipline, on the vCon\n(see the Admin: Job Queues entry points for queue managment and job queuing).\nProcessors in a pipeline are sequenced such that the\ninput to the first processor is defined in the job from the queue.\nThe first processor's output is then given as input to the second processor\nin the pipeline and so on.  After the last processor in a pipeline has\nbeen run, its output is commited if marked as new or modified.  Many queues,\neach with a pipeline of configured processors can exist in the system\nat one time.  Pipeline servers are configured to watch for jobs in\na specific set of queues.  Consequently, a pipeline server only\nruns processors defined in the pipelines configured in the\npipeline server's configure set of queues.\n\nServers, Job Queues and In Progress Jobs can be monitored via the following entry points:\n\n  * Admin: Servers\n  * Admin: Job Queues\n  * Admin: In Progress Jobs\n\nThis server is built to scale from a simple single server to hundreds\nof pipeline servers.  A server can be configured to provide any one\nor conbination of the following:\n\n  * Admin RESTful API\n  * vCon RESTful API\n  * Pipeline server with configured number of workers\n\n**New:**\n\n  * [Visual Pipeline Editor](./pipeline_editor/index.html) (Note: link works only on live server)\n\nThe open source repository at: https://github.com/py-vcon/py-vcon\n",
     "contact": {
       "name": "Commercial support available from SIPez",
       "url": "http://www.sipez.com/"
@@ -11,9 +11,49 @@
     "license": {
       "name": "MIT License"
     },
-    "version": "0.4.1"
+    "version": "0.5.20"
   },
   "paths": {
+    "/metrics": {
+      "get": {
+        "tags": [
+          "Admin: Servers"
+        ],
+        "summary": "Prometheus metrics",
+        "description": "Returns Prometheus metrics in text exposition format. In multi-worker mode, metrics are aggregated across all worker processes via prometheus_client multiprocess mode. Returns empty response if ENABLE_PROMETHEUS is False.",
+        "operationId": "metrics_endpoint_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnostics": {
+      "get": {
+        "tags": [
+          "Admin: Servers"
+        ],
+        "summary": "Get currently active processor runs",
+        "description": "Returns a dict of currently running processor invocations with processor name, vCon UUIDs, entry point, pipeline name, job ID, start time and elapsed seconds.  In multi-worker mode, aggregates runs from all workers via shared memory.  Use this endpoint to diagnose blocked or long-running processors.  This is a point-in-time snapshot - no history is retained.",
+        "operationId": "get_diagnostics_diagnostics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/server/info": {
       "get": {
         "tags": [
@@ -188,8 +228,19 @@
           }
         ],
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Delete Server State Servers  Server Key  Delete"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -273,6 +324,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -425,6 +486,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -753,6 +824,16 @@
             },
             "description": "Not Found"
           },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -806,6 +887,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -873,6 +964,16 @@
               }
             }
           },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal Server Error",
             "content": {
@@ -902,7 +1003,7 @@
           "vCon: Storage CRUD"
         ],
         "summary": "Get Vcon Jq Transform",
-        "description": "Apply the given jq transform to the vCon identified by the given UUID and return the results.\n\nReturns: list - containing jq tranform of the vCon.",
+        "description": "Apply the given jq transform to the vCon identified by the given UUID and return the results.\n\nA signed vCon is verified with the trusted CA certificates (VCON_CA_CERT_PEMS\nsetting) so that its content can be queried.  If it cannot be verified, or the\nvCon is encrypted, its content cannot be read and an error is returned.\n\nReturns: list - containing jq tranform of the vCon.",
         "operationId": "get_vcon_jq_transform_vcon__vcon_uuid__jq_get",
         "parameters": [
           {
@@ -943,6 +1044,16 @@
             },
             "description": "Not Found"
           },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
           "500": {
             "content": {
               "application/json": {
@@ -972,7 +1083,7 @@
           "vCon: Storage CRUD"
         ],
         "summary": "Get Vcon Jsonpath Query",
-        "description": "Apply the given JSONpath query to the vCon idntified by the given UUID.\n\nReturns: list - the JSONpath query results",
+        "description": "Apply the given JSONPath query (RFC 9535) to the vCon identified by the given UUID.\n\nA signed vCon is verified with the trusted CA certificates (VCON_CA_CERT_PEMS\nsetting) so that its content can be queried.  If it cannot be verified, or the\nvCon is encrypted, its content cannot be read and an error is returned.\n\nReturns: list - the values of the nodes the query selects",
         "operationId": "get_vcon_jsonpath_query_vcon__vcon_uuid__jsonpath_get",
         "parameters": [
           {
@@ -1012,6 +1123,468 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/timeout_test_sleep_async": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Async Sleep Processor",
+        "description": "Sleeps asynchronously for testing timeouts",
+        "operationId": "run_vcon_processor_process__vcon_uuid__timeout_test_sleep_async_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SleepAsyncOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/timeout_test_sleep_sync": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Sync Sleep Processor",
+        "description": "Sleeps synchronously for testing blocking behavior",
+        "operationId": "run_vcon_processor_process__vcon_uuid__timeout_test_sleep_sync_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SleepSyncOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/timeout_test_success": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Success Processor",
+        "description": "Returns immediately for testing normal operation",
+        "operationId": "run_vcon_processor_process__vcon_uuid__timeout_test_success_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuccessOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/timeout_test_exception": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Exception Processor",
+        "description": "Raises an exception for testing error handling",
+        "operationId": "run_vcon_processor_process__vcon_uuid__timeout_test_exception_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExceptionOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1073,6 +1646,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1105,6 +1688,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1166,6 +1759,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1198,6 +1801,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1259,6 +1872,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1291,6 +1914,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1352,6 +1985,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1384,6 +2027,242 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/fix_recording_dialog": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon fix recording dialog **VconProcessor**",
+        "description": "vCon fix recording dialog **VconProcessor**\nThis **VconProcessor** will fix dialog parameters that need updating post recording",
+        "operationId": "run_vcon_processor_process__vcon_uuid__fix_recording_dialog_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixRecordingDialogOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/process/{vcon_uuid}/jinja_report": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Jinja2 template report generator **VconProcessor**",
+        "description": "Renders a Jinja2 template using the VconProcessorIO as the template context.  The template has access to all vCons and parameters in the VconProcessorIO.  The rendered output is stored as a VconProcessorIO parameter and optionally as a new analysis object in the vCon.",
+        "operationId": "run_vcon_processor_process__vcon_uuid__jinja_report_post",
+        "parameters": [
+          {
+            "name": "vcon_uuid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Vcon Uuid"
+            }
+          },
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "return_whole_vcon",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Return Whole Vcon"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JinjaReportOptions"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1445,6 +2324,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1477,6 +2366,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1538,6 +2437,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1570,6 +2479,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1631,6 +2550,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1663,6 +2592,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1724,6 +2663,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1756,6 +2705,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1817,6 +2776,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1849,6 +2818,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -1910,6 +2889,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -1942,6 +2931,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2003,6 +3002,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2035,6 +3044,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2096,6 +3115,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2128,6 +3157,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2189,6 +3228,16 @@
               "default": true,
               "title": "Return Whole Vcon"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2221,6 +3270,392 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/timeout_test_sleep_async": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Async Sleep Processor",
+        "description": "Sleeps asynchronously for testing timeouts",
+        "operationId": "run_vcon_processor_io_processIO_timeout_test_sleep_async_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SleepAsyncIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/timeout_test_sleep_sync": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Sync Sleep Processor",
+        "description": "Sleeps synchronously for testing blocking behavior",
+        "operationId": "run_vcon_processor_io_processIO_timeout_test_sleep_sync_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SleepSyncIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/timeout_test_success": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Success Processor",
+        "description": "Returns immediately for testing normal operation",
+        "operationId": "run_vcon_processor_io_processIO_timeout_test_success_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuccessIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/timeout_test_exception": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Exception Processor",
+        "description": "Raises an exception for testing error handling",
+        "operationId": "run_vcon_processor_io_processIO_timeout_test_exception_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExceptionIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2263,6 +3698,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2295,6 +3740,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2337,6 +3792,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2369,6 +3834,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2411,6 +3886,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2443,6 +3928,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2485,6 +3980,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2517,6 +4022,204 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/fix_recording_dialog": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "vCon fix recording dialog **VconProcessor**",
+        "description": "vCon fix recording dialog **VconProcessor**\nThis **VconProcessor** will fix dialog parameters that need updating post recording",
+        "operationId": "run_vcon_processor_io_processIO_fix_recording_dialog_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixRecordingDialogIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/processIO/jinja_report": {
+      "post": {
+        "tags": [
+          "vCon: Processors"
+        ],
+        "summary": "Jinja2 template report generator **VconProcessor**",
+        "description": "Renders a Jinja2 template using the VconProcessorIO as the template context.  The template has access to all vCons and parameters in the VconProcessorIO.  The rendered output is stored as a VconProcessorIO parameter and optionally as a new analysis object in the vCon.",
+        "operationId": "run_vcon_processor_io_processIO_jinja_report_post",
+        "parameters": [
+          {
+            "name": "commit_changes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Commit Changes"
+            }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JinjaReportIO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VconProcessorOutput-Output"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2559,6 +4262,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2591,6 +4304,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2633,6 +4356,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2665,6 +4398,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2707,6 +4450,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2739,6 +4492,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2781,6 +4544,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2813,6 +4586,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2855,6 +4638,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2887,6 +4680,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -2929,6 +4732,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -2961,6 +4774,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -3003,6 +4826,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -3035,6 +4868,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -3077,6 +4920,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -3109,6 +4962,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -3151,6 +5014,16 @@
               "default": false,
               "title": "Commit Changes"
             }
+          },
+          {
+            "name": "timeout",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 300.0,
+              "title": "Timeout"
+            }
           }
         ],
         "requestBody": {
@@ -3183,6 +5056,16 @@
               }
             },
             "description": "Not Found"
+          },
+          "430": {
+            "description": "Processing timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpErrorResponseBody"
+                }
+              }
+            }
           },
           "500": {
             "content": {
@@ -3428,7 +5311,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -3507,7 +5390,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -3567,6 +5450,33 @@
               ]
             ]
           },
+          "model": {
+            "type": "string",
+            "title": "Deepgram transcription model",
+            "description": "Deepgram model name to use for transcription. See https://developers.deepgram.com/docs/models",
+            "default": "nova-3",
+            "examples": [
+              "nova-3",
+              "nova-2",
+              "nova-2-phonecall",
+              "nova-2-meeting",
+              "nova-2-medical",
+              "base"
+            ]
+          },
+          "deepgram_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deepgram API key override",
+            "description": "\nOverride the Deepgram API key set in DeepgramInitOptions.\nIf None or empty, the key from DeepgramInitOptions is used.\n",
+            "default": ""
+          },
           "label": {
             "type": "string",
             "title": "processor documentation label",
@@ -3597,7 +5507,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -3664,7 +5574,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -3672,6 +5582,152 @@
         "type": "object",
         "title": "encrypt filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for EncryptFilterPlugin **FilterPlugin**"
+      },
+      "ExceptionIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/ExceptionOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "ExceptionIO"
+      },
+      "ExceptionOptions": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
+            "default": {}
+          },
+          "message": {
+            "type": "string",
+            "title": "exception message",
+            "description": "Message for the exception to raise",
+            "default": "Test exception"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "ExceptionOptions",
+        "description": "Options for ExceptionProcessor."
+      },
+      "FixRecordingDialogIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/FixRecordingDialogOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "FixRecordingDialogIO"
+      },
+      "FixRecordingDialogOptions": {
+        "properties": {
+          "input_dialogs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "input **Vcon** recording **dialog** objects",
+            "description": "\nIndicates which recording **dialog** objects in the given **Vcon** are\nto have recording info (duration and content_hash) fixed.\n\n * **\"\"** (empty str or None) - all recording **dialogs** are to be fixed.  This is the equivalent of providing \"0:\".\n * **n:m** (str) - **dialog** objects having indices **n-m** are to be fixed.\n * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be fixed.\n * **[]** (empty list[int]) - none of the **dialog** objects are to be fixed.\n * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be fixed.\n\n**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.\n",
+            "default": "0:",
+            "examples": [
+              "",
+              "0:",
+              "0:-2",
+              "2:5",
+              "0:6:2",
+              [],
+              [
+                1,
+                4,
+                5,
+                9
+              ]
+            ]
+          },
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
+            "default": {}
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Fix recording dialog filter_plugin options",
+        "description": "processor options class for **processor** method of VconProcessor wrapper for FixRecordingDialog **FilterPlugin**"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3724,7 +5780,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1757027135.939591
+              1792455850.9506125
             ]
           },
           "server": {
@@ -3792,7 +5848,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           },
           "jq_queries": {
@@ -3815,6 +5871,157 @@
         "type": "object",
         "title": "JQOptions",
         "description": "JOptions is passed to the jq processor when processing the VconProcessorIO.\nJQOptions adds the jq_queries to VconProcessorOptions which defines the\nset of querries to perform on the VconProcessorIO."
+      },
+      "JinjaReportIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/JinjaReportOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "JinjaReportIO"
+      },
+      "JinjaReportOptions": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
+            "default": {}
+          },
+          "template": {
+            "type": "string",
+            "title": "Jinja2 template string",
+            "description": "Jinja2 template string to render using the VconProcessorIO as the template context.  The template has access to two top level variables: **vcons** (array of vCon dicts) and **parameters** (dict of VconProcessorIO parameters).  For example: {{ vcons[0].uuid }} accesses the first vCon's UUID.",
+            "examples": [
+              "Conversation Report\n===================\nUUID: {{ vcons[0].uuid }}\nSubject: {{ vcons[0].subject | default(\"N/A\", true) }}\nDate: {{ vcons[0].dialog[0].start | default(\"N/A\", true) }}\nDuration: {{ vcons[0].dialog[0].duration | default(\"N/A\", true) }} seconds\n\nParties:\n{% for p in vcons[0].parties -%}\n  - {{ p.name | default(\"Unknown\", true) }}\n{% endfor %}"
+            ]
+          },
+          "output_parameter_name": {
+            "type": "string",
+            "title": "output parameter name for rendered template",
+            "description": "Name of the VconProcessorIO parameter in which to store the rendered template output string.",
+            "default": "report_output",
+            "examples": [
+              "report_output"
+            ]
+          },
+          "analysis_type": {
+            "type": "string",
+            "title": "analysis object type",
+            "description": "If set, the rendered template output is added as a new analysis object in the vCon indicated by **input_vcon_index** with this type value.  If not set, no analysis object is created.",
+            "default": "",
+            "examples": [
+              "report"
+            ]
+          },
+          "analysis_vendor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "analysis object vendor",
+            "description": "Vendor string for the analysis object.  Only used when **analysis_type** is set.",
+            "default": "jinja",
+            "examples": [
+              "jinja"
+            ]
+          },
+          "analysis_product": {
+            "type": "string",
+            "title": "analysis object product",
+            "description": "Product string for the analysis object.  Only used when **analysis_type** is set.  Typically only needed for non-text output formats where a consumer needs to identify the format.",
+            "default": "",
+            "examples": [
+              "jinja_report"
+            ]
+          },
+          "analysis_schema": {
+            "type": "string",
+            "title": "analysis object schema",
+            "description": "Schema string for the analysis object.  Only used when **analysis_type** is set.  Typically only needed for non-text output formats where a consumer needs to identify the format.",
+            "default": "",
+            "examples": [
+              "text_report"
+            ]
+          },
+          "media_type": {
+            "type": "string",
+            "title": "analysis object media type",
+            "description": "Media type for the analysis object.  Only used when **analysis_type** is set.",
+            "default": "text/plain",
+            "examples": [
+              "text/plain",
+              "text/html"
+            ]
+          },
+          "analysis_dialog_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "analysis object dialog index",
+            "description": "Dialog index or list of dialog indices that the analysis object references.  Only used when **analysis_type** is set.  If not set (None), defaults to all dialog indices in the vCon at runtime.",
+            "default": [],
+            "examples": [
+              0,
+              [
+                0,
+                1
+              ]
+            ]
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "template"
+        ],
+        "title": "JinjaReportOptions",
+        "description": "JinjaReportOptions defines the Jinja2 template and output destinations for the\njinja_report processor.\n\nThe **template** field is a Jinja2 template string that is rendered using the\nVconProcessorIO as the template context.  The template has access to two top\nlevel variables:\n\n  * **vcons** - array of dicts, one for each vCon in the VconProcessorIO\n  * **parameters** - dict of parameters from the VconProcessorIO\n\nThe rendered output is always stored in the VconProcessorIO parameter named\nby **output_parameter_name**.  If **analysis_type** is set, the rendered output\nis also added as a new analysis object in the vCon indicated by **input_vcon_index**."
       },
       "JweUnprotectedObject": {
         "properties": {
@@ -3986,7 +6193,7 @@
             "type": "string",
             "title": "**OpenAI** model name to use for generative AI",
             "description": "\nThe named model is used to feed the transcription/text and then ask it the\ngiven prompt.\nOpenAI has numerous trained models, the latest of which may not be listed here\nin examples.\n\nYou can get the current list of of available models for\nyour license/API key using the following:\n\n    import openai\n    openai.api_key = \"your key here\"\n    openai.Model.list()\n",
-            "default": "gpt-4-1106-preview",
+            "default": "gpt-4o-mini",
             "examples": [
               "davinci",
               "gpt-4",
@@ -4118,7 +6325,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -4286,6 +6493,12 @@
                 "0185656d-fake-UUID-84fd-5b4de1ef42b4"
               ]
             ]
+          },
+          "parameters": {
+            "type": "object",
+            "title": "Pipeline Parameters",
+            "description": "Optional parameters to be set before running the Pipeline job",
+            "default": {}
           }
         },
         "type": "object",
@@ -4337,13 +6550,20 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           },
           "queue_name": {
             "type": "string",
+            "minLength": 1,
             "title": "Job queue name",
             "description": "name of the queue to put the job in"
+          },
+          "create_queue": {
+            "type": "boolean",
+            "title": "Create queue if missing",
+            "description": "When True, create the named queue if it does not already exist before queuing the job.  When False (default), queuing to a queue that does not exist fails.",
+            "default": false
           },
           "from_queue": {
             "anyOf": [
@@ -4357,6 +6577,20 @@
             "title": "From queue name",
             "description": "name of the queue in which this processor is run.  This may be used for diagnostic purpose to track what pipeline the job came from.  This string does not effect the functionality.",
             "default": ""
+          },
+          "job_parameters": {
+            "type": "object",
+            "title": "Job parameters",
+            "description": "Optional parameters set on the pipeline input before the queued job runs.  Serialized into the queued job under the parameters key.  Named job_parameters to distinguish from the processor IO parameters.  May be set from parameters using format_options; see the format_options description for the dict template rules and examples.",
+            "default": {},
+            "examples": [
+              {
+                "customer_tier": "gold"
+              },
+              {
+                "summary_prompt": "Summarize the transcript in two sentences."
+              }
+            ]
           }
         },
         "additionalProperties": true,
@@ -4425,7 +6659,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           },
           "smtp_host": {
@@ -4496,6 +6730,12 @@
           "text_body": {
             "type": "string",
             "title": "main text body of the email message to be sent",
+            "description": "Plain text content for the email body.  Set to empty string if only HTML body is desired."
+          },
+          "html_body": {
+            "type": "string",
+            "title": "HTML body of the email message to be sent",
+            "description": "HTML content for the email body.  If both text_body and html_body are provided, a multipart/alternative message is sent.  If only html_body is provided, a text/html message is sent.",
             "default": ""
           },
           "client_hostname": {
@@ -4506,6 +6746,9 @@
         },
         "additionalProperties": true,
         "type": "object",
+        "required": [
+          "text_body"
+        ],
         "title": "SendEmailOptions",
         "description": "SendEmailOptions provides the SMTP headers and message data required to send\nan SMTP email message.  SendEmailOptions is passed to the send_email processor."
       },
@@ -4515,27 +6758,27 @@
             "type": "string",
             "title": "server version",
             "description": "Python package py_vcon_server version number",
-            "default": "0.4.1"
+            "default": "0.5.20"
           },
           "vcon": {
             "type": "string",
             "title": "vcon version",
             "description": "Python package **py_vcon** version number",
-            "default": "0.5.0"
+            "default": "0.6.14"
           },
           "start_time": {
             "type": "number",
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1757027135.927884
+              1792455850.9442377
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              41544
+              3679
             ]
           },
           "settings": {
@@ -4575,7 +6818,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              41544
+              3679
             ]
           },
           "start_time": {
@@ -4583,7 +6826,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1757027135.9318745
+              1792455850.9461665
             ]
           },
           "num_workers": {
@@ -4604,13 +6847,11 @@
               "unknown"
             ]
           },
-          "last_heartbeat": {
-            "type": "number",
-            "title": "heartbeat time stamp",
-            "description": "epoch seconds time for the last heartbeat on this server",
-            "examples": [
-              1757027135.9321446
-            ]
+          "workers": {
+            "type": "object",
+            "title": "worker states",
+            "description": "dict of worker_key to worker state, keyed by host:port:pid:start_time:worker_pid.  Each entry contains last_heartbeat, worker_pid, start_time and state.",
+            "default": {}
           }
         },
         "additionalProperties": true,
@@ -4621,8 +6862,7 @@
           "pid",
           "start_time",
           "num_workers",
-          "state",
-          "last_heartbeat"
+          "state"
         ],
         "title": "ServerState"
       },
@@ -4672,7 +6912,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           },
           "parameters": {
@@ -4753,7 +6993,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -4761,6 +7001,183 @@
         "type": "object",
         "title": "Sign filter method options",
         "description": "processor options class for **processor** method of VconProcessor wrapper for SignFilterPlugin **FilterPlugin**"
+      },
+      "SleepAsyncIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/SleepAsyncOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "SleepAsyncIO"
+      },
+      "SleepAsyncOptions": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
+            "default": {}
+          },
+          "sleep_seconds": {
+            "type": "number",
+            "title": "seconds to sleep",
+            "description": "Number of seconds to sleep asynchronously",
+            "default": 1.0
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SleepAsyncOptions",
+        "description": "Options for SleepAsyncProcessor."
+      },
+      "SleepSyncIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/SleepSyncOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "SleepSyncIO"
+      },
+      "SleepSyncOptions": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
+            "default": {}
+          },
+          "sleep_seconds": {
+            "type": "number",
+            "title": "seconds to sleep",
+            "description": "Number of seconds to sleep synchronously",
+            "default": 1.0
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SleepSyncOptions",
+        "description": "Options for SleepSyncProcessor."
+      },
+      "SuccessIO": {
+        "properties": {
+          "processor_io": {
+            "$ref": "#/components/schemas/VconProcessorOutput-Input",
+            "default": "processor IO"
+          },
+          "processor_options": {
+            "$ref": "#/components/schemas/SuccessOptions",
+            "default": "processor options"
+          }
+        },
+        "type": "object",
+        "title": "SuccessIO"
+      },
+      "SuccessOptions": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "processor documentation label",
+            "description": "Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "processor documentation notes",
+            "description": "Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.",
+            "default": ""
+          },
+          "input_vcon_index": {
+            "type": "integer",
+            "title": "VconProcessorIO input vCon index",
+            "description": "Index to which vCon in the VconProcessorIO is to be used for input",
+            "default": 0
+          },
+          "should_process": {
+            "type": "boolean",
+            "title": "if True run processor",
+            "description": "Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.",
+            "default": true
+          },
+          "format_options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "set VconProcessorOptions fields with formatted strings built from parameters",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
+            "default": {}
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SuccessOptions",
+        "description": "Options for SuccessProcessor."
       },
       "TextPiiRedactorIO": {
         "properties": {
@@ -4858,7 +7275,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -5110,7 +7527,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -5268,7 +7685,7 @@
           "vcon": {
             "type": "string",
             "title": "vCon format version",
-            "default": "0.0.2"
+            "default": "0.4.0"
           },
           "uuid": {
             "type": "string",
@@ -5294,12 +7711,42 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1757027135,
-              1757027135.5856392,
+              1792455850,
+              1792455850.8918514,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2025-09-04T23:05:35.585+00:00",
+              "2026-10-20T00:24:10.891+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
+          },
+          "extensions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "vCon extensions used",
+            "description": "list of names of the vCon extensions used by this vCon"
+          },
+          "critical": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "vCon critical extensions",
+            "description": "list of names of the vCon extensions which a consumer must support to process this vCon"
           },
           "parties": {
             "anyOf": [
@@ -5420,7 +7867,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -5523,7 +7970,7 @@
             },
             "type": "object",
             "title": "set VconProcessorOptions fields with formatted strings built from parameters",
-            "description": "dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields",
+            "description": "\nDictionary of option field names to template strings.\n\nThe template string value replaces the field's original value after\nsubstituting {parameter_name} placeholders with values from\nVconProcessorIO.get_parameter().\n\nExample: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated\nwith the value of VconProcessorIO.get_parameter('bar').\n\nTemplates may also reference context parameters provided by the\nsystem.  Context parameters are organized into scopes - server,\npipeline, and processor - that are merged before substitution.  By\nconvention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,\nNDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to\ndistinguish them from user-defined pipeline parameters, which should\nuse lower_case names.  Individual processors may declare additional\ncontext parameters; see the documentation of the specific processor\nfor the names it provides.\n\nSee [Context Parameters](../../docs/context_parameters.md)\nfor the complete list of context parameters across all scopes.\n\nTemplates for dict option fields:\n\nWhen the option field is a dict (e.g. webhook headers, queue_job\njob_parameters, transcode_vcon_content ffmpeg_output_args) the template\nis the JSON text for the whole dict.  After substitution the text is\nparsed as JSON and must produce a JSON object, which replaces the\nfield's value (it is not merged with the field's value).  In the\ntemplate:\n\n * double the literal JSON braces: {{ and }} produce { and }\n * keep single braces on placeholders: {name}\n * put a placeholder inside double quotes to produce a JSON string.\n   Substituted values are JSON escaped, so a value containing double\n   quotes, backslashes or newlines stays inside its string and can not\n   break the JSON or add keys.\n * leave a placeholder unquoted only to produce a number, and only from\n   a trusted parameter.  Dict fields with string values (e.g. headers,\n   ffmpeg_output_args) need every placeholder quoted.\n * keys may contain placeholders too, e.g. \"X-Vcon-{header_suffix}\"\n\nTemplate text as it appears in a pipeline definition JSON file.  The\ntemplate is itself a JSON string, so each inner double quote is\nwritten with a backslash before it:\n\n```\n\"format_options\": {\n  \"headers\": \"{{\\\"Authorization\\\": \\\"Bearer {api_token}\\\", \\\"X-Vcon-{header_suffix}\\\": \\\"{VCON_UUID}\\\"}}\",\n  \"job_parameters\": \"{{\\\"dialog_index\\\": {dialog_index}, \\\"source\\\": \\\"{PIPELINE_NAME}\\\"}}\"\n}\n```\n\nThe same templates as Python string values (single quoted, so no\nbackslashes):\n\n```\nformat_options = {\n  \"headers\": '{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}',\n  \"job_parameters\": '{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}'\n}\n```\n\nWith parameters api_token = abc, header_suffix = Trace and\ndialog_index = 2, in a pipeline named p1, the fields become:\n\n```\nheaders:        {\"Authorization\": \"Bearer abc\", \"X-Vcon-Trace\": \"<vCon UUID>\"}\njob_parameters: {\"dialog_index\": 2, \"source\": \"p1\"}\n```",
             "default": {}
           }
         },
@@ -5545,7 +7992,7 @@
     },
     {
       "name": "Admin: Pipelines",
-      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](/pipeline_editor/index.html) (Note: link works only on live server)"
+      "description": "Entry points to create, update and delete pipelines\n\n**New:** [Visual Pipeline Editor](./pipeline_editor/index.html) (Note: link works only on live server)"
     },
     {
       "name": "Admin: In Progress Jobs",

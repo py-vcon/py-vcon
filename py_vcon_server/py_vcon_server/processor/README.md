@@ -9,10 +9,16 @@
  + [Introduction](#introduction)
  + [Processor Classes](#processors)
    * [py_vcon_server.processor.VconProcessor](#py_vcon_serverprocessorvconprocessor)
+   * [timeout_processors.SleepAsyncProcessor](#timeout_processorssleepasyncprocessor)
+   * [timeout_processors.SleepSyncProcessor](#timeout_processorssleepsyncprocessor)
+   * [timeout_processors.SuccessProcessor](#timeout_processorssuccessprocessor)
+   * [timeout_processors.ExceptionProcessor](#timeout_processorsexceptionprocessor)
    * [py_vcon_server.processor.builtin.create_amended.Amended](#py_vcon_serverprocessorbuiltincreate_amendedamended)
    * [py_vcon_server.processor.builtin.decrypt.Decrypt](#py_vcon_serverprocessorbuiltindecryptdecrypt)
    * [py_vcon_server.processor.builtin.deepgram.Deepgram](#py_vcon_serverprocessorbuiltindeepgramdeepgram)
    * [py_vcon_server.processor.builtin.encrypt.Encrypt](#py_vcon_serverprocessorbuiltinencryptencrypt)
+   * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialog](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialog)
+   * [py_vcon_server.processor.builtin.jinja_report.JinjaReport](#py_vcon_serverprocessorbuiltinjinja_reportjinjareport)
    * [py_vcon_server.processor.builtin.jq.JQProcessor](#py_vcon_serverprocessorbuiltinjqjqprocessor)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletion](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletion)
    * [py_vcon_server.processor.builtin.queue_job.QueueJob](#py_vcon_serverprocessorbuiltinqueue_jobqueuejob)
@@ -25,10 +31,16 @@
 
  + [Processor Initialization Options Classes](#processor-initialization-options-classes)
    * [py_vcon_server.processor.VconProcessorInitOptions](#py_vcon_serverprocessorvconprocessorinitoptions)
+   * [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+   * [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+   * [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+   * [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginInitOptions](#py_vcon_serverprocessorbuiltincreate_amendedamendedfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterplugininitoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramInitOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgraminitoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginInitOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterplugininitoptions)
+   * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogInitOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialoginitoptions)
+   * [py_vcon_server.processor.builtin.jinja_report.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjinja_reportvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.jq.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjqvconprocessorinitoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionInitOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletioninitoptions)
    * [py_vcon_server.processor.builtin.queue_job.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinqueue_jobvconprocessorinitoptions)
@@ -41,10 +53,16 @@
 
  + [Processor Options Classes](#processor-options-classes)
    * [py_vcon_server.processor.VconProcessorOptions](#py_vcon_serverprocessorvconprocessoroptions)
+   * [timeout_processors.SleepAsyncOptions](#timeout_processorssleepasyncoptions)
+   * [timeout_processors.SleepSyncOptions](#timeout_processorssleepsyncoptions)
+   * [timeout_processors.SuccessOptions](#timeout_processorssuccessoptions)
+   * [timeout_processors.ExceptionOptions](#timeout_processorsexceptionoptions)
    * [py_vcon_server.processor.builtin.create_amended.AmendedFilterPluginOptions](#py_vcon_serverprocessorbuiltincreate_amendedamendedfilterpluginoptions)
    * [py_vcon_server.processor.builtin.decrypt.DecryptFilterPluginOptions](#py_vcon_serverprocessorbuiltindecryptdecryptfilterpluginoptions)
    * [py_vcon_server.processor.builtin.deepgram.DeepgramOptions](#py_vcon_serverprocessorbuiltindeepgramdeepgramoptions)
    * [py_vcon_server.processor.builtin.encrypt.EncryptFilterPluginOptions](#py_vcon_serverprocessorbuiltinencryptencryptfilterpluginoptions)
+   * [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialogoptions)
+   * [py_vcon_server.processor.builtin.jinja_report.JinjaReportOptions](#py_vcon_serverprocessorbuiltinjinja_reportjinjareportoptions)
    * [py_vcon_server.processor.builtin.jq.JQOptions](#py_vcon_serverprocessorbuiltinjqjqoptions)
    * [py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions](#py_vcon_serverprocessorbuiltinopenaiopenaichatcompletionoptions)
    * [py_vcon_server.processor.builtin.queue_job.QueueJobOptions](#py_vcon_serverprocessorbuiltinqueue_jobqueuejoboptions)
@@ -221,6 +239,44 @@ Methods:
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
 
 
+## timeout_processors.ExceptionProcessor
+
+ - **Name:** timeout_test_exception
+ - **Version:** 0.0.1
+ - **Summary:** Exception Processor
+
+Raises an exception for testing error handling
+ - **Initialization options Object:** [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+ - **Processing options Object:** [timeout_processors.ExceptionOptions](#timeout_processorsexceptionoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: ExceptionOptions)
+
+
+## py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialog
+
+ - **Name:** fix_recording_dialog
+ - **Version:** 0.0.1
+ - **Summary:** vCon fix recording dialog **VconProcessor**
+
+vCon fix recording dialog **VconProcessor**
+This **VconProcessor** will fix dialog parameters that need updating post recording
+
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogInitOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialoginitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogOptions](#py_vcon_serverprocessorbuiltinfix_recording_dialogfixrecordingdialogoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
 ## py_vcon_server.processor.builtin.jq.JQProcessor
 
  - **Name:** jq
@@ -237,6 +293,24 @@ Methods:
 **__init__**(self, init_options: JQInitOptions)
 
 **process**(self, processor_input: VconProcessorIO, options: JQOptions)
+
+
+## py_vcon_server.processor.builtin.jinja_report.JinjaReport
+
+ - **Name:** jinja_report
+ - **Version:** 0.0.1
+ - **Summary:** Jinja2 template report generator **VconProcessor**
+
+Renders a Jinja2 template using the VconProcessorIO as the template context.  The template has access to all vCons and parameters in the VconProcessorIO.  The rendered output is stored as a VconProcessorIO parameter and optionally as a new analysis object in the vCon.
+ - **Initialization options Object:** [py_vcon_server.processor.builtin.jinja_report.VconProcessorInitOptions](#py_vcon_serverprocessorbuiltinjinja_reportvconprocessorinitoptions)
+ - **Processing options Object:** [py_vcon_server.processor.builtin.jinja_report.JinjaReportOptions](#py_vcon_serverprocessorbuiltinjinja_reportjinjareportoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: JinjaReportInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: JinjaReportOptions)
 
 
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletion
@@ -264,7 +338,7 @@ Methods:
 ## py_vcon_server.processor.builtin.queue_job.QueueJob
 
  - **Name:** queue_job
- - **Version:** 0.0.1
+ - **Version:** 0.0.2
  - **Summary:** Processor to add a job to a **JobeQueue**
 
 A vCon_uuid Job is added to the named queue, using the UUID from the vCon at the **input_vcon_index** in the input options.
@@ -282,7 +356,7 @@ Methods:
 ## py_vcon_server.processor.builtin.send_email.SendEmail
 
  - **Name:** send_email
- - **Version:** 0.0.1
+ - **Version:** 0.1.0
  - **Summary:** VconProcessor to send email message
 
 used to send SMTP messages using content from vCon or VconProcessorIP parameters.
@@ -333,6 +407,60 @@ Methods:
 **__init__**(self, init_options: VconProcessorInitOptions)
 
 **process**(self, processor_input: VconProcessorIO, options: VconProcessorOptions)
+
+
+## timeout_processors.SleepAsyncProcessor
+
+ - **Name:** timeout_test_sleep_async
+ - **Version:** 0.0.1
+ - **Summary:** Async Sleep Processor
+
+Sleeps asynchronously for testing timeouts
+ - **Initialization options Object:** [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+ - **Processing options Object:** [timeout_processors.SleepAsyncOptions](#timeout_processorssleepasyncoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SleepAsyncOptions)
+
+
+## timeout_processors.SleepSyncProcessor
+
+ - **Name:** timeout_test_sleep_sync
+ - **Version:** 0.0.1
+ - **Summary:** Sync Sleep Processor
+
+Sleeps synchronously for testing blocking behavior
+ - **Initialization options Object:** [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+ - **Processing options Object:** [timeout_processors.SleepSyncOptions](#timeout_processorssleepsyncoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SleepSyncOptions)
+
+
+## timeout_processors.SuccessProcessor
+
+ - **Name:** timeout_test_success
+ - **Version:** 0.0.1
+ - **Summary:** Success Processor
+
+Returns immediately for testing normal operation
+ - **Initialization options Object:** [timeout_processors.VconProcessorInitOptions](#timeout_processorsvconprocessorinitoptions)
+ - **Processing options Object:** [timeout_processors.SuccessOptions](#timeout_processorssuccessoptions)
+
+Methods:
+
+
+**__init__**(self, init_options: VconProcessorInitOptions)
+
+**process**(self, processor_input: VconProcessorIO, options: SuccessOptions)
 
 
 ## py_vcon_server.processor.builtin.text_pii_redactor.TextPiiRedactor
@@ -485,7 +613,16 @@ example:
 default: None
 
 
-## py_vcon_server.processor.builtin.jq.OpenAiChatCompletionInitOptions
+## timeout_processors.FixRecordingDialogInitOptions
+
+ - **Summary:** Initialization options for fix recording info filter_plugin
+
+initialization class for VconProcessor wrapper for FixRecordingDialog **FilterPlugin**
+
+### Fields
+none
+
+## py_vcon_server.processor.builtin.fix_recording_dialog.OpenAiChatCompletionInitOptions
 
  - **Summary:** OpenAI/ChatGPT Completion **FilterPlugin** intialization object
 
@@ -507,7 +644,7 @@ examples: ['sk-cABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstu']
 default: None
 
 
-## py_vcon_server.processor.builtin.openai.SignFilterPluginInitOptions
+## py_vcon_server.processor.builtin.jq.SignFilterPluginInitOptions
 
  - **Summary:** JWS signing of vCon **FilterPlugin** intialization object
 
@@ -536,7 +673,7 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.queue_job.VerifyFilterPluginInitOptions
+## py_vcon_server.processor.builtin.jinja_report.VerifyFilterPluginInitOptions
 
  - **Summary:** JWS verification of vCon **FilterPlugin** intialization object
 
@@ -558,7 +695,7 @@ example:
 default: []
 
 
-## py_vcon_server.processor.builtin.send_email.WhisperInitOptions
+## py_vcon_server.processor.builtin.openai.WhisperInitOptions
 
  - **Summary:** Whisper **FilterPlugin** intialization object
 
@@ -624,7 +761,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -673,7 +880,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -742,7 +1019,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -784,6 +1131,25 @@ examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
 
 default: 0:
 
+##### model (str)
+Deepgram transcription model
+Deepgram model name to use for transcription. See https://developers.deepgram.com/docs/models
+
+examples: ['nova-3', 'nova-2', 'nova-2-phonecall', 'nova-2-meeting', 'nova-2-medical', 'base']
+
+default: "nova-3"
+
+##### deepgram_key (typing.Union[str, NoneType])
+Deepgram API key override
+
+Override the Deepgram API key set in DeepgramInitOptions.
+If None or empty, the key from DeepgramInitOptions is used.
+
+
+example:
+
+default: 
+
 ##### label (str)
 processor documentation label
 Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
@@ -818,7 +1184,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -877,7 +1313,342 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
+
+example:
+
+default: {}
+
+
+## timeout_processors.ExceptionOptions
+
+ - **Summary:** ExceptionOptions
+
+Options for ExceptionProcessor.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
+
+example:
+
+default: {}
+
+##### message (str)
+exception message
+Message for the exception to raise
+
+example:
+
+default: "Test exception"
+
+
+## py_vcon_server.processor.builtin.fix_recording_dialog.FixRecordingDialogOptions
+
+ - **Summary:** Fix recording dialog filter_plugin options
+
+processor options class for **processor** method of VconProcessor wrapper for FixRecordingDialog **FilterPlugin**
+
+### Fields
+
+##### input_dialogs (typing.Union[str, typing.List[int]])
+input **Vcon** recording **dialog** objects
+
+Indicates which recording **dialog** objects in the given **Vcon** are
+to have recording info (duration and content_hash) fixed.
+
+ * **""** (empty str or None) - all recording **dialogs** are to be fixed.  This is the equivalent of providing "0:".
+ * **n:m** (str) - **dialog** objects having indices **n-m** are to be fixed.
+ * **n:m:i** (str) - **dialog** objects having indices **n-m** using interval **i** are to be fixed.
+ * **[]** (empty list[int]) - none of the **dialog** objects are to be fixed.
+ * **[1, 4, 5, 9]** (list[int]) - the **dialog** objects having the indices in the given list are to be fixed.
+
+**dialog** objects in the given sequence or list which are not **recording** type dialogs are ignored.
+
+
+examples: ['', '0:', '0:-2', '2:5', '0:6:2', [], [1, 4, 5, 9]]
+
+default: 0:
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -928,7 +1699,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -941,6 +1782,201 @@ None
 examples: [{'party_count': '.parties | length', 'first_dialog_type': '.vcons[0].dialog[0].type', 'party0_has_email_address': '.vcons[0].parties[0].email | length > 0'}]
 
 default: {}
+
+
+## py_vcon_server.processor.builtin.jinja_report.JinjaReportOptions
+
+ - **Summary:** JinjaReportOptions
+
+JinjaReportOptions defines the Jinja2 template and output destinations for the
+jinja_report processor.
+
+The **template** field is a Jinja2 template string that is rendered using the
+VconProcessorIO as the template context.  The template has access to two top
+level variables:
+
+  * **vcons** - array of dicts, one for each vCon in the VconProcessorIO
+  * **parameters** - dict of parameters from the VconProcessorIO
+
+The rendered output is always stored in the VconProcessorIO parameter named
+by **output_parameter_name**.  If **analysis_type** is set, the rendered output
+is also added as a new analysis object in the vCon indicated by **input_vcon_index**.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
+
+example:
+
+default: {}
+
+##### template (str)
+Jinja2 template string
+Jinja2 template string to render using the VconProcessorIO as the template context.  The template has access to two top level variables: **vcons** (array of vCon dicts) and **parameters** (dict of VconProcessorIO parameters).  For example: {{ vcons[0].uuid }} accesses the first vCon's UUID.
+
+examples: ['Conversation Report\n===================\nUUID: {{ vcons[0].uuid }}\nSubject: {{ vcons[0].subject | default("N/A", true) }}\nDate: {{ vcons[0].dialog[0].start | default("N/A", true) }}\nDuration: {{ vcons[0].dialog[0].duration | default("N/A", true) }} seconds\n\nParties:\n{% for p in vcons[0].parties -%}\n  - {{ p.name | default("Unknown", true) }}\n{% endfor %}']
+
+default: None
+
+##### output_parameter_name (str)
+output parameter name for rendered template
+Name of the VconProcessorIO parameter in which to store the rendered template output string.
+
+examples: ['report_output']
+
+default: "report_output"
+
+##### analysis_type (str)
+analysis object type
+If set, the rendered template output is added as a new analysis object in the vCon indicated by **input_vcon_index** with this type value.  If not set, no analysis object is created.
+
+examples: ['report']
+
+default: ""
+
+##### analysis_vendor (typing.Union[str, NoneType])
+analysis object vendor
+Vendor string for the analysis object.  Only used when **analysis_type** is set.
+
+examples: ['jinja']
+
+default: jinja
+
+##### analysis_product (str)
+analysis object product
+Product string for the analysis object.  Only used when **analysis_type** is set.  Typically only needed for non-text output formats where a consumer needs to identify the format.
+
+examples: ['jinja_report']
+
+default: ""
+
+##### analysis_schema (str)
+analysis object schema
+Schema string for the analysis object.  Only used when **analysis_type** is set.  Typically only needed for non-text output formats where a consumer needs to identify the format.
+
+examples: ['text_report']
+
+default: ""
+
+##### media_type (str)
+analysis object media type
+Media type for the analysis object.  Only used when **analysis_type** is set.
+
+examples: ['text/plain', 'text/html']
+
+default: "text/plain"
+
+##### analysis_dialog_index (typing.Union[int, typing.List[int]])
+analysis object dialog index
+Dialog index or list of dialog indices that the analysis object references.  Only used when **analysis_type** is set.  If not set (None), defaults to all dialog indices in the vCon at runtime.
+
+examples: [0, [0, 1]]
+
+default: []
 
 
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletionOptions
@@ -990,7 +2026,7 @@ your license/API key using the following:
 
 examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
 
-default: "gpt-4-1106-preview"
+default: "gpt-4o-mini"
 
 ##### prompt (str)
 the prompt or question to ask about the transcription/text
@@ -1104,7 +2140,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1155,7 +2261,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1169,6 +2345,14 @@ example:
 
 default: None
 
+##### create_queue (bool)
+Create queue if missing
+When True, create the named queue if it does not already exist before queuing the job.  When False (default), queuing to a queue that does not exist fails.
+
+example:
+
+default: False
+
 ##### from_queue (typing.Union[str, NoneType])
 From queue name
 name of the queue in which this processor is run.  This may be used for diagnostic purpose to track what pipeline the job came from.  This string does not effect the functionality.
@@ -1176,6 +2360,14 @@ name of the queue in which this processor is run.  This may be used for diagnost
 example:
 
 default: 
+
+##### job_parameters (typing.Dict[str, typing.Any])
+Job parameters
+Optional parameters set on the pipeline input before the queued job runs.  Serialized into the queued job under the parameters key.  Named job_parameters to distinguish from the processor IO parameters.  May be set from parameters using format_options; see the format_options description for the dict template rules and examples.
+
+examples: [{'customer_tier': 'gold'}, {'summary_prompt': 'Summarize the transcript in two sentences.'}]
+
+default: {}
 
 
 ## py_vcon_server.processor.builtin.send_email.SendEmailOptions
@@ -1221,7 +2413,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1309,7 +2571,15 @@ default: ""
 
 ##### text_body (str)
 main text body of the email message to be sent
-None
+Plain text content for the email body.  Set to empty string if only HTML body is desired.
+
+example:
+
+default: None
+
+##### html_body (str)
+HTML body of the email message to be sent
+HTML content for the email body.  If both text_body and html_body are provided, a multipart/alternative message is sent.  If only html_body is provided, a text/html message is sent.
 
 example:
 
@@ -1370,7 +2640,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1448,7 +2788,450 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
+
+example:
+
+default: {}
+
+
+## timeout_processors.SleepAsyncOptions
+
+ - **Summary:** SleepAsyncOptions
+
+Options for SleepAsyncProcessor.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
+
+example:
+
+default: {}
+
+##### sleep_seconds (float)
+seconds to sleep
+Number of seconds to sleep asynchronously
+
+example:
+
+default: 1.0
+
+
+## timeout_processors.SleepSyncOptions
+
+ - **Summary:** SleepSyncOptions
+
+Options for SleepSyncProcessor.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
+
+example:
+
+default: {}
+
+##### sleep_seconds (float)
+seconds to sleep
+Number of seconds to sleep synchronously
+
+example:
+
+default: 1.0
+
+
+## timeout_processors.SuccessOptions
+
+ - **Summary:** SuccessOptions
+
+Options for SuccessProcessor.
+
+### Fields
+
+##### label (str)
+processor documentation label
+Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.
+
+example:
+
+default: ""
+
+##### notes (str)
+processor documentation notes
+Documentaion notes for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The notes can be used to give a detailed description of what the processor will acheve, how and why it is configured the way that it is with the given set of options. The notes can be as long as you like.
+
+example:
+
+default: ""
+
+##### input_vcon_index (int)
+VconProcessorIO input vCon index
+Index to which vCon in the VconProcessorIO is to be used for input
+
+example:
+
+default: 0
+
+##### should_process (bool)
+if True run processor
+Conditional parameter indicating whether to run this processor on the PriocessorIO or to skip this processor and pass input as output.  It is often useful to use a parameter from the ProcessorIO as the conditional value of this option parameter via the **format_parameters** option.
+
+example:
+
+default: True
+
+##### format_options (typing.Dict[str, str])
+set VconProcessorOptions fields with formatted strings built from parameters
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1541,7 +3324,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1603,7 +3456,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 
@@ -1694,7 +3617,77 @@ default: True
 
 ##### format_options (typing.Dict[str, str])
 set VconProcessorOptions fields with formatted strings built from parameters
-dict of strings keys and values where key is the name of a VconProcessorOptions field, to be set with the formated value string with the VconProcessorIO parameters dict as input.  For example {'foo': 'hi: {bar}'} sets the foo Field to the value of 'hi: ' concatindated with the value returned from VconProcessorIO.get_parameters('bar').  This occurs before the given VconProcessor performs it's process method and does not perminimently modify the VconProcessorOptions fields
+
+Dictionary of option field names to template strings.
+
+The template string value replaces the field's original value after
+substituting {parameter_name} placeholders with values from
+VconProcessorIO.get_parameter().
+
+Example: {'foo': 'hi: {bar}'} sets the foo field to 'hi: ' concatenated
+with the value of VconProcessorIO.get_parameter('bar').
+
+Templates may also reference context parameters provided by the
+system.  Context parameters are organized into scopes - server,
+pipeline, and processor - that are merged before substitution.  By
+convention they use UPPER_CASE names (e.g. PROCESSOR_NAME, TIMESTAMP,
+NDATE, VCON_UUID, PIPELINE_NAME, PIPELINE_JOB_ID, ENTRY_POINT) to
+distinguish them from user-defined pipeline parameters, which should
+use lower_case names.  Individual processors may declare additional
+context parameters; see the documentation of the specific processor
+for the names it provides.
+
+See [Context Parameters](../../docs/context_parameters.md)
+for the complete list of context parameters across all scopes.
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```
 
 example:
 

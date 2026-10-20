@@ -1,7 +1,7 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ FilterPlugin for jq query based redaction of vCon """
 import typing
-import pyjq
+import jq
 import pydantic
 import vcon.filter_plugins
 
@@ -92,8 +92,8 @@ class JqRedaction(vcon.filter_plugins.FilterPlugin):
     if(redaction_query is None or len(redaction_query) == 0):
       raise Exception("invalid JQ query for redaction: {}".format(redaction_query))
 
-    query_result = pyjq.all(redaction_query,
-         vcon_dict)[0]
+    compiled_query = jq.compile(redaction_query)
+    query_result = compiled_query.input_value(vcon_dict).all()[0]
 
     redacted_uuid = query_result.get("uuid", None)
 

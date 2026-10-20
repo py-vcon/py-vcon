@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-202 SIPez LLC.  All rights reserved.
 """ Redis implementation of the Vcon storage DB interface """
 
 import typing
@@ -93,15 +93,6 @@ class RedisVconStorage(py_vcon_server.db.VconStorage):
     query_result = a_vcon.jq(jq_query_string)
 
     return(query_result)
-
-
-  async def json_path_query(self, vcon_uuid : str, json_path_query_string : str) -> list:
-    """ Get the JSON path query results for the given **Vcon** """
-    redis_con = self._redis_mgr.get_client()
-
-    query_list = await redis_con.json().get("vcon:{}".format(vcon_uuid), json_path_query_string)
-
-    return(query_list)
 
 
   async def delete(self, vcon_uuid : str) -> None:

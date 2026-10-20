@@ -1,17 +1,21 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 import os
 import multiprocessing
-from pathlib import Path
 
 VCON_STORAGE_URL = os.getenv("VCON_STORAGE_URL", "redis://localhost")
-QUEUE_DB_URL = os.getenv("QUEUE_DB__URL", VCON_STORAGE_URL)
+QUEUE_DB_URL = os.getenv("QUEUE_DB_URL", VCON_STORAGE_URL)
 PIPELINE_DB_URL = os.getenv("PIPELINE_DB_URL", VCON_STORAGE_URL)
 STATE_DB_URL = os.getenv("STATE_DB_URL", VCON_STORAGE_URL)
 REST_URL = os.getenv("REST_URL", "http://localhost:8000")
+PROXY_PATH = os.getenv("PROXY_PATH", None)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")
-LOGGING_CONFIG_FILE = os.getenv("LOGGING_CONFIG_FILE", Path(__file__).parent / 'logging.conf')
 LAUNCH_VCON_API = os.getenv("LAUNCH_VCON_API", True)
 LAUNCH_ADMIN_API = os.getenv("LAUNCH_ADMIN_API", True)
+DEFAULT_PROCESSOR_TIMEOUT = float(os.getenv("DEFAULT_PROCESSOR_TIMEOUT", 300.0))
+HEARTBEAT_PERIOD = int(os.getenv("HEARTBEAT_PERIOD", 60))
+SERVER_SHUTDOWN_WORKER_WAIT_TIMEOUT = float(os.getenv("SERVER_SHUTDOWN_WORKER_WAIT_TIMEOUT", 30.0))
+SERVER_SHUTDOWN_WORKER_POLL_INTERVAL = float(os.getenv("SERVER_SHUTDOWN_WORKER_POLL_INTERVAL", 0.5))
 
 # FASTapi worker processes
 try:
@@ -38,13 +42,21 @@ if(not isinstance(NUM_WORKERS, int)):
 
 PLUGIN_PATHS = os.getenv("PLUGIN_PATHS", "").split(",")
 
+# Trusted Certificate Authority certificates used to verify signed (JWS) vCons
+# read from storage, comma separated.  An entry may be a certificate file, a
+# directory of *.pem and *.crt files, or an inline PEM.  When none are set, the
+# content of a signed vCon cannot be read (see py_vcon_server.certs).
+VCON_CA_CERT_PEMS = [entry.strip()
+    for entry in os.getenv("VCON_CA_CERT_PEMS", "").split(",")
+    if(entry.strip() != "")]
+
 CORS_ORIGINS = []
 cors_origins_string = os.getenv("CORS_ORIGINS", "").strip()
 if(cors_origins_string != ""):
   CORS_ORIGINS = cors_origins_string.split(", ")
 
 # parse out optional weights from name for each queue
-manager = multiprocessing.Manager()
+#manager = multiprocessing.Manager()
 #WORK_QUEUES: multiprocessing.managers.DictProxy = manager.dict({})
 WORK_QUEUES = {}
 queue_tokens = os.getenv("WORK_QUEUES", "").split(",")
@@ -69,7 +81,19 @@ for token in queue_tokens:
     WORK_QUEUES[name] = {"weight": weight}
 
 STATE_SETTINGS = []
-state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES").strip()
+state_settings_list = os.getenv("STATE_SETTINGS", "REST_URL, PROXY_PATH, INSTANCE_ID, LOG_LEVEL, LAUNCH_VCON_API, LAUNCH_ADMIN_API, NUM_RESTAPI_WORKERS, PLUGIN_PATHS, CORS_ORIGINS, WORK_QUEUES, HEARTBEAT_PERIOD, DEFAULT_PROCESSOR_TIMEOUT").strip()
 if(state_settings_list != ""):
   STATE_SETTINGS = state_settings_list.split(", ")
+
+# Enable Prometheus metrics entry point
+ENABLE_PROMETHEUS = os.getenv("ENABLE_PROMETHEUS", False)
+if(isinstance(ENABLE_PROMETHEUS, str)):
+  if(ENABLE_PROMETHEUS.lower() == "true"):
+    ENABLE_PROMETHEUS = True
+  else:
+    ENABLE_PROMETHEUS = False
+
+INSTANCE_ID = os.getenv("INSTANCE_ID", "")
+
+SERVICE_NAME = "py_vcon_server"
 

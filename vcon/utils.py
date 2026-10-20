@@ -1,8 +1,13 @@
+# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
 """ Utilities and helper functions for the vcon package """
 
 import datetime
+import os
+import tempfile
 import email.utils
 import typing
+import ffmpeg
+import sox
 
 def epoch_to_rfc2822(time : typing.Union[int, float]) -> str:
   """ Returns RFC2822 date for given epoch time """
@@ -84,3 +89,39 @@ def cannonize_date(date : typing.Union[int, float, str, datetime.datetime]) -> s
     raise AttributeError("unsupported type: {} value: {} for date".format(type(date), date))
 
   return(date_string)
+
+
+def get_recording_duration(
+  recording_file: typing.Union[typing.BinaryIO, str, bytes]
+  ) -> typing.Union[float, None]:
+
+    tmp_path = None
+
+    if(isinstance(recording_file, bytes)):
+      # Could not get stream based solutions to work reliably
+      # So create temp file
+      with tempfile.NamedTemporaryFile(
+          delete=False,
+          # suffix=ext
+        ) as tmp:
+        tmp.write(recording_file)
+        tmp_path = tmp.name
+        recording_file = tmp_path
+
+    try:
+      recording_meta = ffmpeg.probe(recording_file)
+      duration = float(recording_meta["streams"][0]['duration'])
+    except Exception as e:
+      #logger.debug("could not get duration of {} using ffmpeg, trying sox\n{}".format(recording_file, e))
+      sox_info = sox.file_info.info(str(recording_file))
+      duration = sox_info["duration"]
+
+    finally:
+      try:
+        if(tmp_path and os.path.exists(tmp_path)):
+          os.unlink(tmp_path)
+      except Exception:
+        pass
+
+    return(duration)
+

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import os
 import asyncio
 import pytest
@@ -7,6 +7,9 @@ import importlib
 import py_vcon_server
 import py_vcon_server.settings
 import fastapi.testclient
+
+# Save original WORK_QUEUES before module-level exception tests
+_ORIGINAL_WORK_QUEUES = os.getenv("WORK_QUEUES", None)
 
 os.environ["WORK_QUEUES"] = "A:4,DDD:5,C:1,E:,F,G:a"
 
@@ -33,6 +36,13 @@ except Exception as e:
     pass
   else:
     raise e
+
+# Restore original WORK_QUEUES after module-level exception tests
+if _ORIGINAL_WORK_QUEUES is None:
+    if "WORK_QUEUES" in os.environ:
+        del os.environ["WORK_QUEUES"]
+else:
+    os.environ["WORK_QUEUES"] = _ORIGINAL_WORK_QUEUES
 
 @pytest.mark.asyncio
 async def test_queue_config():

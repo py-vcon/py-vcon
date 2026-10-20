@@ -1,11 +1,15 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
+# Copyright (C) 2026 SIP Spectrum, Inc.  All rights reserved.
 """ OpenAI FilterPlugin implentation """
 import typing
+import asyncio
+import inspect
+import weakref
 import datetime
 import logging
 import pydantic
 import openai
-import pyjq
+import jq
 import tenacity
 import vcon
 import vcon.filter_plugins
@@ -19,6 +23,10 @@ if(OPENAI_MAJOR_VERSION < 1):
   OPENAI_RETRY_EXCEPTIONS = (openai.error.ServiceUnavailableError, openai.error.Timeout)
 else:
   OPENAI_RETRY_EXCEPTIONS = (openai.APITimeoutError)
+
+class OpenAIKeyNotSet(Exception):
+  """ Raised when an OpenAI FilterPlugin is invoked without an API key set """
+
 
 class OpenAICompletionInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
@@ -88,7 +96,7 @@ your license/API key using the following:
     openai.api_key = "your key here"
     openai.Model.list()
 """,
-    default = 'gpt-4-1106-preview',
+    default = 'gpt-4o-mini',
     examples = [
       'davinci',
       'gpt-4',
@@ -240,9 +248,32 @@ class OpenAIClient():
     if(OPENAI_MAJOR_VERSION < 1):
       openai.api_key = init_options.openai_api_key
     else:
+      if(self.key_set):
+        # created on first use, per event loop (see _async_client)
+        self._api_key = init_options.openai_api_key
+        self.client = None
+        self._client_loop = None
+
+
+  def _async_client(self):
+    """
+    The AsyncOpenAI client for the running event loop.
+
+    A client's connection pool is bound to the event loop it is first used on,
+    so a client created on an earlier loop fails once that loop is closed
+    (RuntimeError: Event loop is closed).  This plugin outlives any one loop
+    (e.g. successive asyncio.run() calls, or a test framework giving each test
+    its own loop), so a new client is created when the loop changes.
+    """
+    loop = asyncio.get_running_loop()
+    if(self.client is None or self._client_loop is None or self._client_loop() is not loop):
       self.client = openai.AsyncOpenAI(
-          api_key = init_options.openai_api_key
+          api_key = self._api_key
         )
+      # weak, so a finished loop is not kept alive by the plugin
+      self._client_loop = weakref.ref(loop)
+
+    return(self.client)
 
 
   async def completions(
@@ -260,7 +291,7 @@ class OpenAIClient():
         )
 
     else:
-      completion_object = await self.client.completions.create(
+      completion_object = await self._async_client().completions.create(
           model = options.model,
           prompt = options.prompt + text_body,
           max_tokens = options.max_tokens,
@@ -293,7 +324,7 @@ class OpenAIClient():
         additional_args["response_format"] = {"type": "json_object"}
 
       # chat_completion_result is openai.types.chat.chat_completion.ChatCompletion
-      chat_completion_object = await self.client.chat.completions.create(
+      chat_completion_object = await self._async_client().chat.completions.create(
           model = options.model,
           messages = messages,
           max_tokens = options.max_tokens,
@@ -304,13 +335,72 @@ class OpenAIClient():
 
     return(chat_completion_result)
 
+  async def aclose(self):
+    """
+    Close the client of the running event loop, from that loop.
+
+    Connections can only be closed on the loop that opened them, so this has to
+    be awaited on that loop while it is still running.  Anything that uses more
+    than one event loop (successive asyncio.run() calls, or a test framework
+    giving each test its own loop) should await this before a loop ends.  A
+    client left behind is closed by the OpenAI SDK's __del__ on whatever loop
+    is running when it is garbage collected, which fails with "Event loop is
+    closed" and is reported by asyncio as an unretrieved task exception.
+    """
+    client = getattr(self, "client", None)
+    if(client is None):
+      return
+
+    logger.debug("closing OpenAI client for this event loop")
+    self.client = None
+    self._client_loop = None
+    result = client.close()
+    if(inspect.isawaitable(result)):
+      await result
+
+
   def close(self):
-    if(hasattr(self, "client")):
-      logger.debug("closing OpenAI client")
-      self.client.close()
-      self.client = None
-    else:
+    """
+    Release the client, from outside a coroutine.  Prefer aclose() when there
+    is a running event loop: connections can only be closed on the loop that
+    opened them, so a client whose loop has gone is dropped without closing
+    (the connections went with the loop).
+    """
+    client = getattr(self, "client", None)
+    if(client is None):
       logger.debug("None OpenAI client")
+      return
+
+    logger.debug("closing OpenAI client")
+    self.client = None
+    loop_ref = getattr(self, "_client_loop", None)
+    loop = loop_ref() if(loop_ref is not None) else None
+    self._client_loop = None
+
+    result = client.close()
+    # Newer openAI is async, need to see which form
+    if(not inspect.isawaitable(result)):
+      return
+
+    if(loop is None or loop.is_closed()):
+      # close the coroutine, so it is not reported as never awaited
+      result.close()
+      logger.debug("OpenAI client's event loop has gone, dropped without closing")
+      return
+
+    def closed(task):
+      """ take the result, so asyncio does not report it as unretrieved """
+      if(not task.cancelled() and task.exception() is not None):
+        logger.debug("closing OpenAI client failed: {}".format(task.exception()))
+
+    try:
+      if(loop.is_running()):
+        loop.create_task(result).add_done_callback(closed)
+      else:
+        loop.run_until_complete(result)
+    except Exception as e:
+      logger.debug("could not close OpenAI client: {}".format(e))
+      result.close()
 
 
 class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
@@ -364,7 +454,8 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
         text_body
       )
 
-    query_result = pyjq.all(options.jq_result, completion_result)
+    compiled_query = jq.compile(options.jq_result)
+    query_result = compiled_query.input_value(completion_result).all()
     if(len(query_result) == 0):
       logger.warning("{} jq query resulted in no elements.  No analysis object added".format(
        self.__class__.__name__
@@ -441,8 +532,9 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
       return(out_vcon)
 
     if(not self.client.key_set):
-      logger.warning("OpenAICompletion.filter: OpenAI API key is not set, no filtering performed")
-      return(out_vcon)
+      message = "OpenAICompletion.filter: OPENAI_API_KEY is not set"
+      logger.error(message)
+      raise OpenAIKeyNotSet(message)
 
     for dialog_index in dialog_indices:
       this_dialog_texts = await in_vcon.get_dialog_text(
@@ -472,7 +564,7 @@ class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
 
   def __del__(self):
     """ Close down OpenAI client if created. """
-    if(self.client):
+    if(hasattr(self, "client") and self.client):
       logger.debug("OpenAICompletion closing OpenAIClient")
       self.client.close()
       self.client = None
@@ -591,6 +683,11 @@ class OpenAIChatCompletion(OpenAICompletion):
       "OpenaiChatCompletionOptions.input_dialogs"
       )
 
+    if(not self.client.key_set):
+      message = "OpenAIChatCompletion.filter: OPENAI_API_KEY is not set"
+      logger.error(message)
+      raise OpenAIKeyNotSet(message)
+
     dialog_text: typing.List[typing.Dict[str, str]] = []
     # Loop through the text dialogs and add them to the list
     num_text_dialogs = 0
@@ -698,7 +795,8 @@ class OpenAIChatCompletion(OpenAICompletion):
     #   temperature = options.temperature
     #   )
 
-    query_result = pyjq.all(options.jq_result, chat_completion_result)
+    compiled_query = jq.compile(options.jq_result)
+    query_result = compiled_query.input_value(chat_completion_result).all()
     if(len(query_result) == 0):
       logger.warning("{} jq query resulted in no elements.  No analysis object added".format(
        self.__class__.__name__
@@ -755,7 +853,7 @@ class OpenAIChatCompletion(OpenAICompletion):
 
   def __del__(self):
     """ Close down OpenAI client if created. """
-    if(self.client):
+    if(hasattr(self, "client") and self.client):
       logger.debug("OpenAIChatCompletion closing OpenAIClient")
       self.client.close()
       self.client = None
