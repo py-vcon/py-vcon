@@ -423,6 +423,7 @@ class PipelineRunner():
           vcon.pydantic_utils.get_dict(processor_options),
           merged_context,
           processor_name,
+          options_class = processor.processor_options_class()
           )
       processor_type_options = processor.processor_options_class()(** formatted_options)
       if(processor_type_options.should_process is None): # pragma: no cover

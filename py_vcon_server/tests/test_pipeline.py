@@ -1634,3 +1634,55 @@ async def test_do_job_queue_job_save_vcons_false(make_2_party_tel_vcon):
   jobs = await _run_do_job_with_queue_job(make_2_party_tel_vcon, False)
   assert(len(jobs) == 0)
 
+
+
+
+@pytest.mark.asyncio
+async def test_pipeline_runner_dict_field_format_options(make_2_party_tel_vcon: vcon.Vcon):
+  """
+  In a pipeline definition, processor options hold only the fields that
+  were set.  A format_options template for a dict field that is not set
+  literally (queue_job job_parameters) must still be rendered and parsed
+  into a dict.
+  """
+  import py_vcon_server.db
+  from py_vcon_server.settings import VCON_STORAGE_URL
+
+  vs = py_vcon_server.db.VconStorage.instantiate(VCON_STORAGE_URL)
+  try:
+    pipe_def = py_vcon_server.pipeline.PipelineDefinition(**{
+      "pipeline_options": {
+        "timeout": 30,
+        "save_vcons": False
+      },
+      "processors": [
+        {
+          "processor_name": "queue_job",
+          "processor_options": {
+            "queue_name": "unit_test_dict_field_queue",
+            "format_options": {
+              "job_parameters": '{{"dialog_index": {dialog_index}, "pipeline": "{PIPELINE_NAME}"}}'
+            }
+          }
+        }
+      ]
+    })
+
+    runner = py_vcon_server.pipeline.PipelineRunner(pipe_def, "test_dict_field_pipeline")
+
+    proc_input = py_vcon_server.processor.VconProcessorIO(vs)
+    await proc_input.add_vcon(make_2_party_tel_vcon, "fake_lock", False)
+    proc_input.set_parameter("dialog_index", 2)
+    proc_input.set_run_context({
+        py_vcon_server.processor.RUN_CONTEXT_PIPELINE_NAME: "test_dict_field_pipeline"
+      })
+
+    proc_output = await runner.run(proc_input)
+
+    jobs = (await proc_output.get_output()).queue_jobs
+    assert(len(jobs) == 1)
+    assert(jobs[0]["parameters"] == {"dialog_index": 2, "pipeline": "test_dict_field_pipeline"})
+
+  finally:
+    await vs.shutdown()
+

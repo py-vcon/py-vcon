@@ -238,6 +238,7 @@ def init(restapi):
             vcon.pydantic_utils.get_dict(options),
             merged_context,
             processor_name_from_path,
+            options_class = processor_inst.processor_options_class()
             )
         processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
 
@@ -382,6 +383,7 @@ def init(restapi):
             processor_input_dict["processor_options"],
             merged_context,
             processor_name_from_path,
+            options_class = processor_inst.processor_options_class()
             )
         processor_type_options = processor_inst.processor_options_class()(** formatted_options_dict)
 

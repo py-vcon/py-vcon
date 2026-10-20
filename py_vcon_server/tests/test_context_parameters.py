@@ -579,3 +579,234 @@ def test_processor_scope_default_shadowed_by_auto_value():
     )
   assert(options["label"] == "context_wins")
 
+
+
+
+# ============================================================
+#  format_options templates for dict option fields
+# ============================================================
+
+def test_dict_field_template_rendered():
+  """
+  A format_options template for a field whose current value is a dict is
+  rendered as JSON text and parsed into a dict: quoted placeholders give
+  strings, unquoted give numbers, and keys may contain placeholders.
+  """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  io.set_parameter("api_token", "abc")
+  io.set_parameter("suffix", "Trace")
+  io.set_parameter("dialog_index", 2)
+  options = {
+      "headers": {},
+      "format_options": {
+          "headers": '{{"Authorization": "Bearer {api_token}",'
+            ' "X-Vcon-{suffix}": "{PROCESSOR_NAME}", "index": {dialog_index}}}'
+        }
+    }
+  io.format_parameters_to_options_dict(options, merged_base_pipeline(), "my_proc")
+  assert(options["headers"] == {
+      "Authorization": "Bearer abc",
+      "X-Vcon-Trace": "my_proc",
+      "index": 2
+    })
+
+
+def test_dict_field_values_json_escaped():
+  """
+  Substituted values containing double quotes, backslashes and newlines
+  stay inside their JSON string and round trip unchanged.
+  """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  tricky = 'Bob "The Builder" \\ Smith\nline2'
+  io.set_parameter("name", tricky)
+  options = {
+      "headers": {},
+      "format_options": {"headers": '{{"X-Name": "{name}"}}'}
+    }
+  io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+  assert(options["headers"] == {"X-Name": tricky})
+
+
+def test_dict_field_value_cannot_add_keys():
+  """ A value crafted to close its string and add a key stays a single value """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  evil = 'x", "Authorization": "Bearer evil'
+  io.set_parameter("evil", evil)
+  options = {
+      "headers": {},
+      "format_options": {"headers": '{{"X-Note": "{evil}"}}'}
+    }
+  io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+  assert(options["headers"] == {"X-Note": evil})
+
+
+def test_dict_field_invalid_json_raises():
+  """
+  A template that does not render to valid JSON raises
+  FormatOptionsInvalidJson naming the processor and field, without the
+  rendered (possibly secret) text in the message.
+  """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  io.set_parameter("api_token", "s3cr3t_t0ken")
+  options = {
+      "headers": {},
+      "format_options": {"headers": '{{"Authorization": "Bearer {api_token}"'}
+    }
+  try:
+    io.format_parameters_to_options_dict(options, merged_base_pipeline(), "my_proc")
+    raise Exception("expected FormatOptionsInvalidJson")
+  except py_vcon_server.processor.FormatOptionsInvalidJson as e:
+    msg = str(e)
+    assert("my_proc" in msg)
+    assert("headers" in msg)
+    assert("s3cr3t_t0ken" not in msg)
+
+
+def test_dict_field_non_object_raises():
+  """ A template that renders to a JSON list raises FormatOptionsInvalidJson """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  io.set_parameter("x", 1)
+  options = {
+      "headers": {},
+      "format_options": {"headers": '[{x}]'}
+    }
+  try:
+    io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+    raise Exception("expected FormatOptionsInvalidJson")
+  except py_vcon_server.processor.FormatOptionsInvalidJson as e:
+    assert("JSON object" in str(e))
+
+
+def test_dict_field_undefined_parameters_listed_with_other_fields():
+  """
+  Undefined names in a dict field template are reported together with
+  undefined names in other fields.
+  """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  options = {
+      "headers": {},
+      "format_options": {
+          "headers": '{{"{missing_key}": "{missing_value}"}}',
+          "label": "{missing_label}"
+        }
+    }
+  try:
+    io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+    raise Exception("expected ParameterNotFound")
+  except py_vcon_server.processor.ParameterNotFound as e:
+    msg = str(e)
+    assert("missing_key" in msg)
+    assert("missing_value" in msg)
+    assert("missing_label" in msg)
+
+
+def test_dict_field_not_in_format_options_unchanged():
+  """ A dict field with no format_options entry keeps its literal value """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  options = {
+      "headers": {"X-Literal": "{not_a_template}"},
+      "format_options": {"label": "{PROCESSOR_NAME}"}
+    }
+  io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+  assert(options["headers"] == {"X-Literal": "{not_a_template}"})
+  assert(options["label"] == "p")
+
+
+def test_str_field_json_text_not_parsed():
+  """ A str field whose template renders to JSON looking text stays a str """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  io.set_parameter("x", "y")
+  options = {
+      "label": "",
+      "format_options": {"label": '{{"looks": "{x}"}}'}
+    }
+  io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+  assert(options["label"] == '{"looks": "y"}')
+
+
+def test_absent_field_without_options_class_is_str():
+  """
+  Without options_class, a field absent from the options dict can not be
+  identified as a dict field, so its template result is assigned as a str.
+  """
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  options = {"format_options": {"job_parameters": '{{"a": 1}}'}}
+  io.format_parameters_to_options_dict(options, merged_base_pipeline(), "p")
+  assert(options["job_parameters"] == '{"a": 1}')
+
+
+def test_options_class_identifies_absent_dict_field():
+  """
+  With options_class, a dict typed field absent from the options dict (as
+  in a pipeline definition) is rendered and parsed as a dict.
+  """
+  import py_vcon_server.processor.builtin.queue_job
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  io.set_parameter("dialog_index", 3)
+  options = {
+      "queue_name": "q",
+      "format_options": {"job_parameters": '{{"dialog_index": {dialog_index}}}'}
+    }
+  io.format_parameters_to_options_dict(
+      options,
+      merged_base_pipeline(),
+      "queue_job",
+      options_class = py_vcon_server.processor.builtin.queue_job.QueueJobOptions
+    )
+  assert(options["job_parameters"] == {"dialog_index": 3})
+
+
+def test_options_class_str_field_stays_str():
+  """ With options_class, a str typed field absent from the dict stays a str """
+  import py_vcon_server.processor.builtin.queue_job
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  options = {"format_options": {"queue_name": '{{"q": 1}}'}}
+  io.format_parameters_to_options_dict(
+      options,
+      merged_base_pipeline(),
+      "queue_job",
+      options_class = py_vcon_server.processor.builtin.queue_job.QueueJobOptions
+    )
+  assert(options["queue_name"] == '{"q": 1}')
+
+
+def test_format_parameters_to_options_passes_options_class():
+  """
+  format_parameters_to_options passes options_class through for dict input
+  so the result can be used to construct the typed options.
+  """
+  import py_vcon_server.processor.builtin.queue_job
+  options_class = py_vcon_server.processor.builtin.queue_job.QueueJobOptions
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  io.set_parameter("tier", "gold")
+  options = {
+      "queue_name": "q",
+      "format_options": {"job_parameters": '{{"customer_tier": "{tier}"}}'}
+    }
+  result = io.format_parameters_to_options(
+      options,
+      merged_base_pipeline(),
+      "queue_job",
+      options_class = options_class
+    )
+  typed = options_class(**result)
+  assert(typed.job_parameters == {"customer_tier": "gold"})
+
+
+def test_format_parameters_to_options_typed_instance_dict_field():
+  """
+  A typed options instance carries its dict field defaults, so a dict
+  field template is parsed without passing options_class.
+  """
+  import py_vcon_server.processor.builtin.queue_job
+  options_class = py_vcon_server.processor.builtin.queue_job.QueueJobOptions
+  io = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  io.set_parameter("tier", "gold")
+  options = options_class(
+      queue_name = "q",
+      format_options = {"job_parameters": '{{"customer_tier": "{tier}"}}'}
+    )
+  result = io.format_parameters_to_options(options, merged_base_pipeline(), "queue_job")
+  assert(isinstance(result, options_class))
+  assert(result.job_parameters == {"customer_tier": "gold"})
+

@@ -9,6 +9,8 @@ import datetime
 import urllib.parse
 import asyncio
 import importlib
+import json
+import string
 import pydantic
 #from py_vcon_server.db import VconStorage
 import py_vcon_server.logging_utils
@@ -51,12 +53,17 @@ class VconProcessorNotInstantiated(Exception):
   finding the class or initialization of the instance.
   """
 
+
 class InvalidVconProcessorClass(Exception):
   """ Attempt to use invalide class as a VconProcessor """
 
 
 class ParameterNotFound(Exception):
   """ parameter not found in ProcessorIO parameters """
+
+
+class FormatOptionsInvalidJson(Exception):
+  """ format_options template for a dict option field did not render to a JSON object """
 
 
 class VconTypes(enum.Enum):
@@ -66,6 +73,7 @@ class VconTypes(enum.Enum):
   JSON = 2
   DICT = 3
   OBJECT = 4
+
 
 class MultifariousVcon():
   """ Container object for various forms of vCon and cashing of the different forms """
@@ -536,7 +544,7 @@ class VconProcessorOptions(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
 
   format_options: typing.Dict[str, str] = pydantic.Field(
       title = "set VconProcessorOptions fields with formatted strings built from parameters",
-      description="""
+      description=r"""
 Dictionary of option field names to template strings.
 
 The template string value replaces the field's original value after
@@ -555,9 +563,58 @@ distinguish them from user-defined pipeline parameters, which should
 use lower_case names.  Individual processors may declare additional
 context parameters; see the documentation of the specific processor
 for the names it provides.
+
 See [Context Parameters](../../docs/context_parameters.md)
 for the complete list of context parameters across all scopes.
-""",
+
+Templates for dict option fields:
+
+When the option field is a dict (e.g. webhook headers, queue_job
+job_parameters, transcode_vcon_content ffmpeg_output_args) the template
+is the JSON text for the whole dict.  After substitution the text is
+parsed as JSON and must produce a JSON object, which replaces the
+field's value (it is not merged with the field's value).  In the
+template:
+
+ * double the literal JSON braces: {{ and }} produce { and }
+ * keep single braces on placeholders: {name}
+ * put a placeholder inside double quotes to produce a JSON string.
+   Substituted values are JSON escaped, so a value containing double
+   quotes, backslashes or newlines stays inside its string and can not
+   break the JSON or add keys.
+ * leave a placeholder unquoted only to produce a number, and only from
+   a trusted parameter.  Dict fields with string values (e.g. headers,
+   ffmpeg_output_args) need every placeholder quoted.
+ * keys may contain placeholders too, e.g. "X-Vcon-{header_suffix}"
+
+Template text as it appears in a pipeline definition JSON file.  The
+template is itself a JSON string, so each inner double quote is
+written with a backslash before it:
+
+```
+"format_options": {
+  "headers": "{{\"Authorization\": \"Bearer {api_token}\", \"X-Vcon-{header_suffix}\": \"{VCON_UUID}\"}}",
+  "job_parameters": "{{\"dialog_index\": {dialog_index}, \"source\": \"{PIPELINE_NAME}\"}}"
+}
+```
+
+The same templates as Python string values (single quoted, so no
+backslashes):
+
+```
+format_options = {
+  "headers": '{{"Authorization": "Bearer {api_token}", "X-Vcon-{header_suffix}": "{VCON_UUID}"}}',
+  "job_parameters": '{{"dialog_index": {dialog_index}, "source": "{PIPELINE_NAME}"}}'
+}
+```
+
+With parameters api_token = abc, header_suffix = Trace and
+dialog_index = 2, in a pipeline named p1, the fields become:
+
+```
+headers:        {"Authorization": "Bearer abc", "X-Vcon-Trace": "<vCon UUID>"}
+job_parameters: {"dialog_index": 2, "source": "p1"}
+```""",
       default = {}
     )
   #rename_output: dict[str, str]
@@ -774,7 +831,8 @@ class VconProcessorIO():
       options: typing.Dict[str, typing.Any],
       context_parameters: typing.Dict[str, typing.Dict[str, typing.Any]],
       processor_name: str,
-      context: typing.Union[typing.Dict[str, typing.Any], None] = None
+      context: typing.Union[typing.Dict[str, typing.Any], None] = None,
+      options_class: typing.Union[typing.Type[pydantic.BaseModel], None] = None
     ) -> None:
     """
     Apply formatting to string values in options["format_options"] using
@@ -782,6 +840,10 @@ class VconProcessorIO():
     substitution input.  context_parameters is the merged set of context
     parameter definitions (base + pipeline + processor scopes).  context,
     when provided, supplies per-call override values (e.g. per iteration).
+    options_class, when provided, is the processor's options class.  It is
+    used to identify dict typed option fields which are not present in
+    options (e.g. options from a pipeline definition), so that their
+    format_options templates are parsed as JSON objects.
     """
     # Capture once per call
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -824,7 +886,13 @@ class VconProcessorIO():
       for name in formats.keys():
         # Do not recurse
         if(name != "format_options"):
-          options[name] = formats[name].format(**params)
+          if(isinstance(options.get(name, None), dict) or
+              _is_dict_field(options_class, name)):
+            # dict option field: template is JSON text for the whole dict
+            options[name] = _render_dict_template(name, formats[name], params, processor_name)
+          else:
+            options[name] = formats[name].format(**params)
+
     except KeyError:
       # Failure path: collect ALL missing names across all fields
       missing_by_field: typing.Dict[str, typing.List[str]] = {}
@@ -877,18 +945,36 @@ class VconProcessorIO():
       options: typing.Union[VconProcessorOptions, typing.Dict[str, typing.Any]],
       context_parameters: typing.Dict[str, typing.Dict[str, typing.Any]],
       processor_name: str,
-      context: typing.Union[typing.Dict[str, typing.Any], None] = None
+      context: typing.Union[typing.Dict[str, typing.Any], None] = None,
+      options_class: typing.Union[typing.Type[pydantic.BaseModel], None] = None
     ) -> typing.Union[VconProcessorOptions, typing.Dict[str, typing.Any]]:
     """
-    Format/apply parameters to string values in options
+    Format/apply parameters to string values in options.
+    options_class is the processor's options class, see
+    format_parameters_to_options_dict.  If not provided and options is a
+    VconProcessorOptions, the class of options is used.
     """
     if(isinstance(options, dict)):
-      self.format_parameters_to_options_dict(options, context_parameters, processor_name, context)
+      self.format_parameters_to_options_dict(
+          options, 
+          context_parameters,
+          processor_name,
+          context,
+          options_class
+        )
       return(options)
 
     elif(isinstance(options, VconProcessorOptions)):
       options_dict = vcon.pydantic_utils.get_dict(options, exclude_none=True)
-      self.format_parameters_to_options_dict(options_dict, context_parameters, processor_name, context)
+      if(options_class is None):
+        options_class = options.__class__
+      self.format_parameters_to_options_dict(
+          options_dict,
+          context_parameters,
+          processor_name,
+          context,
+          options_class
+        )
       # Reconstruct to get pydantic to do type coersion/conversions and validations
       return(options.__class__(**options_dict))
 
@@ -1267,6 +1353,79 @@ class _MissCollector(dict):
   def __missing__(self, key: str) -> str:
     self.missing.add(key)
     return("")
+
+
+
+class _JsonEscapeFormatter(string.Formatter):
+  """
+  string.Formatter that JSON escapes each substituted value (quotes,
+  backslashes, control characters) so that a parameter value can not
+  terminate the JSON string it is placed in.  The literal text of the
+  template is not altered.  Used for format_options templates which
+  target dict option fields.
+  """
+  def format_field(self, value: typing.Any, format_spec: str) -> str:
+    formatted = super().format_field(value, format_spec)
+    # json.dumps adds surrounding quotes, strip them
+    return(json.dumps(formatted)[1:-1])
+
+
+def _is_dict_field(
+    options_class: typing.Union[typing.Type[pydantic.BaseModel], None],
+    field_name: str
+  ) -> bool:
+  """
+  Returns True if options_class declares field_name with a dict type
+  (e.g. dict or typing.Dict[str, str]).  False if options_class is None
+  or does not declare the field.
+  """
+  if(options_class is None):
+    return(False)
+  for name, field in vcon.pydantic_utils.get_field_items(options_class):
+    if(name == field_name):
+      annotation = getattr(field, "annotation", None)
+      return(annotation is dict or typing.get_origin(annotation) is dict)
+  return(False)
+
+
+def _render_dict_template(
+    field_name: str,
+    template: str,
+    params: typing.Dict[str, typing.Any],
+    processor_name: str
+  ) -> typing.Dict[str, typing.Any]:
+  """
+  Render a format_options template for a dict option field and parse
+  the result as a JSON object.  Raises KeyError for undefined parameters
+  (same as str.format) and FormatOptionsInvalidJson if the rendered text
+  is not a JSON object.  The rendered text is not included in the error
+  as it may contain secrets (e.g. Authorization headers).
+  """
+  rendered = _JsonEscapeFormatter().vformat(template, (), params)
+  try:
+    value = json.loads(rendered)
+  except ValueError as json_error:
+    raise FormatOptionsInvalidJson(
+        "processor: {} format_options template for dict field: {} did not render to valid JSON ({}).  template: {}".format(
+          processor_name,
+          field_name,
+          json_error,
+          template
+        )
+      ) from json_error
+
+  if(not isinstance(value, dict)):
+    raise FormatOptionsInvalidJson(
+        "processor: {} format_options template for dict field: {} rendered to JSON type: {}, expected a JSON object.  template: {}".format(
+          processor_name,
+          field_name,
+          type(value).__name__,
+          template
+        )
+      )
+
+  return(value)
+
 
 # Server scope context parameters, available in every processor's format_options.
 # Values are static for the life of the process and resolved lazily from
@@ -1707,6 +1866,7 @@ class FilterPluginProcessor(VconProcessor):
         options,
         merged_context,
         getattr(self, "_processor_name", self.__class__.__name__),
+        options_class = self.processor_options_class()
         )
     # force pydantic typing and defaults
     if(isinstance(formatted_options, dict)):
