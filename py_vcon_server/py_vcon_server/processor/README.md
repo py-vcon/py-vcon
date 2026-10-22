@@ -316,7 +316,7 @@ Methods:
 ## py_vcon_server.processor.builtin.openai.OpenAiChatCompletion
 
  - **Name:** openai_chat_completion
- - **Version:** 0.0.1
+ - **Version:** 0.1.0
  - **Summary:** OpenAi Chat Completion binding for **VconProcessor**
 
 OpenAi Chat Completion binding for **VconProcessor**
@@ -624,7 +624,7 @@ none
 
 ## py_vcon_server.processor.builtin.fix_recording_dialog.OpenAiChatCompletionInitOptions
 
- - **Summary:** OpenAI/ChatGPT Completion **FilterPlugin** intialization object
+ - **Summary:** OpenAI/ChatGPT Chat Completion **FilterPlugin** intialization object
 
 initialization class for VconProcessor wrapper for OpenAIChatCompletion **FilterPlugin**
 
@@ -2020,13 +2020,13 @@ You can get the current list of of available models for
 your license/API key using the following:
 
     import openai
-    openai.api_key = "your key here"
-    openai.Model.list()
+    client = openai.OpenAI(api_key = "your key here")
+    print([model.id for model in client.models.list()])
 
 
-examples: ['davinci', 'gpt-4', 'text-davinci-001', 'text-search-curie-query-001', 'gpt-3.5-turbo', 'gpt-4-0613', 'babbage', 'text-babbage-001', 'curie-instruct-beta', 'davinci-similarity', 'code-davinci-edit-001', 'text-similarity-curie-001', 'ada-code-search-text', 'gpt-3.5-turbo-0613', 'text-search-ada-query-001', 'gpt-3.5-turbo-16k-0613', 'gpt-4-0314', 'babbage-search-query', 'ada-similarity', 'text-curie-001', 'gpt-3.5-turbo-16k', 'text-search-ada-doc-001', 'text-search-babbage-query-001', 'code-search-ada-code-001', 'curie-search-document', 'davinci-002', 'text-search-davinci-query-001', 'text-search-curie-doc-001', 'babbage-search-document', 'babbage-002', 'babbage-code-search-text', 'text-embedding-ada-002', 'davinci-instruct-beta', 'davinci-search-query', 'text-similarity-babbage-001', 'text-davinci-002', 'code-search-babbage-text-001', 'text-davinci-003', 'text-search-davinci-doc-001', 'code-search-ada-text-001', 'ada-search-query', 'text-similarity-ada-001', 'ada-code-search-code', 'whisper-1', 'text-davinci-edit-001', 'davinci-search-document', 'curie-search-query', 'babbage-similarity', 'ada', 'ada-search-document', 'text-ada-001', 'text-similarity-davinci-001', 'curie-similarity', 'babbage-code-search-code', 'code-search-babbage-code-001', 'text-search-babbage-doc-001', 'gpt-3.5-turbo-0301', 'curie']
+examples: ['gpt-6-sol', 'gpt-6-luna', 'gpt-6.1-sol', 'gpt-6-astra']
 
-default: "gpt-4o-mini"
+default: "gpt-6-sol"
 
 ##### prompt (str)
 the prompt or question to ask about the transcription/text
@@ -2046,10 +2046,16 @@ maximum number of tokens of output
 The **max_tokens** limits the size of the output generative AI text.
 A token is approximately a syllable.  On average a word is 1.33 tokens.
 
+For reasoning models (e.g. gpt-6-sol and gpt-6-luna), **max_tokens** also
+includes the hidden reasoning tokens, which can use more of the allotment than
+the output text itself.  If the allotment is used up before any text is
+output, **OpenAITokenLimitExceeded** is raised.  See also **reasoning_effort**
+and **fail_on_truncation**.
+
 
 example:
 
-default: 100
+default: 1000
 
 ##### temperature (float)
 **OpenAI** sampling temperature
@@ -2058,36 +2064,39 @@ lower number is more deterministic, higher is more random.
 
 values should range from 0.0 to 2.0
 
+Only sent to **OpenAI** when not 1.0 (the **OpenAI** default).  Some models
+(e.g. gpt-6-sol and gpt-6-luna) only accept the default and reject any other value.
+
 
 example:
 
-default: 0.0
+default: 1.0
 
 ##### jq_result (str)
 **jq** query of result
 
-The **OpenAI** completion outputs a JSON 
-[Completion Object](https://platform.openai.com/docs/api-reference/completions/object)
+The **OpenAI** chat completion outputs a JSON
+[Chat Completion Object](https://platform.openai.com/docs/api-reference/chat/object)
 
 The **jq_results** string contains a **jq**  filter/query string that
 is applied to the output to determine what is saved in the
 created **Vcon** **analysis** object.
 
 * **"."** - results in a query that returns the entire JSON object.
-* **".choices[0].text"** - results in a query which contains only the text portion of the completion output
+* **".choices[0].message.content"** - results in a query which contains only the text portion of the completion output
 
 For more information on creating **jq filters** see:
 https://jqlang.github.io/jq/manual/
 
 
 
-examples: ['.', '.choices[0].text']
+examples: ['.', '.choices[0].message.content']
 
 default: ".choices[0].message.content"
 
 ##### json_response (bool)
 provide response in JSON format
-If False (default) response will be in a readable text format.  If True, the response from ChatGPT will be in a JSON formatted document.  If a JSON response is desired, your prompt should specify the format of the JSON content or parameters.
+If False (default) response will be in a readable text format.  If True, the response from ChatGPT will be in a JSON formatted document.  If a JSON response is desired, your prompt should specify the format of the JSON content or parameters.  JSON output cut off at **max_tokens** is never valid JSON, so setting **fail_on_truncation** to True is recommended when this is True.
 
 example:
 
@@ -2105,6 +2114,45 @@ on the new **analysis** object in the **Vcon**.
 example:
 
 default: "summary"
+
+##### reasoning_effort (str)
+**OpenAI** reasoning effort
+
+How much hidden reasoning a reasoning model does before it outputs text.
+Passed to **OpenAI** as **reasoning_effort**.
+
+ * **""** (empty string, default) - not sent, the model uses its own default
+ * **"none"**, **"minimal"**, **"low"**, **"medium"**, **"high"**, **"xhigh"**, **"max"**
+
+Which values are accepted varies by model (e.g. gpt-6.1-sol does not accept
+"none") and models without reasoning reject this parameter, so leave it
+empty for those.  The value is not checked here, **OpenAI** rejects values
+that the model does not support.
+
+Reasoning tokens count against **max_tokens**.
+
+
+examples: ['', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max']
+
+default: ""
+
+##### fail_on_truncation (bool)
+fail if the output is cut off at **max_tokens**
+
+If True, **OpenAITokenLimitExceeded** is raised when the output was cut off
+at **max_tokens**.
+
+If False (default), output that was cut off is kept, a warning is logged and
+**"truncated": true** is set on the new **analysis** object.
+
+In either case, **OpenAITokenLimitExceeded** is always raised when no text
+was output at all, or when **json_response** is True and the JSON output was
+cut off.
+
+
+example:
+
+default: False
 
 ##### label (str)
 processor documentation label

@@ -5780,7 +5780,7 @@
             "title": "job start time",
             "description": "epoch seconds time at which this in progress job started",
             "examples": [
-              1792455850.9506125
+              1792622526.5537703
             ]
           },
           "server": {
@@ -6192,67 +6192,13 @@
           "model": {
             "type": "string",
             "title": "**OpenAI** model name to use for generative AI",
-            "description": "\nThe named model is used to feed the transcription/text and then ask it the\ngiven prompt.\nOpenAI has numerous trained models, the latest of which may not be listed here\nin examples.\n\nYou can get the current list of of available models for\nyour license/API key using the following:\n\n    import openai\n    openai.api_key = \"your key here\"\n    openai.Model.list()\n",
-            "default": "gpt-4o-mini",
+            "description": "\nThe named model is used to feed the transcription/text and then ask it the\ngiven prompt.\nOpenAI has numerous trained models, the latest of which may not be listed here\nin examples.\n\nYou can get the current list of of available models for\nyour license/API key using the following:\n\n    import openai\n    client = openai.OpenAI(api_key = \"your key here\")\n    print([model.id for model in client.models.list()])\n",
+            "default": "gpt-6-sol",
             "examples": [
-              "davinci",
-              "gpt-4",
-              "text-davinci-001",
-              "text-search-curie-query-001",
-              "gpt-3.5-turbo",
-              "gpt-4-0613",
-              "babbage",
-              "text-babbage-001",
-              "curie-instruct-beta",
-              "davinci-similarity",
-              "code-davinci-edit-001",
-              "text-similarity-curie-001",
-              "ada-code-search-text",
-              "gpt-3.5-turbo-0613",
-              "text-search-ada-query-001",
-              "gpt-3.5-turbo-16k-0613",
-              "gpt-4-0314",
-              "babbage-search-query",
-              "ada-similarity",
-              "text-curie-001",
-              "gpt-3.5-turbo-16k",
-              "text-search-ada-doc-001",
-              "text-search-babbage-query-001",
-              "code-search-ada-code-001",
-              "curie-search-document",
-              "davinci-002",
-              "text-search-davinci-query-001",
-              "text-search-curie-doc-001",
-              "babbage-search-document",
-              "babbage-002",
-              "babbage-code-search-text",
-              "text-embedding-ada-002",
-              "davinci-instruct-beta",
-              "davinci-search-query",
-              "text-similarity-babbage-001",
-              "text-davinci-002",
-              "code-search-babbage-text-001",
-              "text-davinci-003",
-              "text-search-davinci-doc-001",
-              "code-search-ada-text-001",
-              "ada-search-query",
-              "text-similarity-ada-001",
-              "ada-code-search-code",
-              "whisper-1",
-              "text-davinci-edit-001",
-              "davinci-search-document",
-              "curie-search-query",
-              "babbage-similarity",
-              "ada",
-              "ada-search-document",
-              "text-ada-001",
-              "text-similarity-davinci-001",
-              "curie-similarity",
-              "babbage-code-search-code",
-              "code-search-babbage-code-001",
-              "text-search-babbage-doc-001",
-              "gpt-3.5-turbo-0301",
-              "curie"
+              "gpt-6-sol",
+              "gpt-6-luna",
+              "gpt-6.1-sol",
+              "gpt-6-astra"
             ]
           },
           "prompt": {
@@ -6264,29 +6210,29 @@
           "max_tokens": {
             "type": "integer",
             "title": "maximum number of tokens of output",
-            "description": "\nThe **max_tokens** limits the size of the output generative AI text.\nA token is approximately a syllable.  On average a word is 1.33 tokens.\n",
-            "default": 100
+            "description": "\nThe **max_tokens** limits the size of the output generative AI text.\nA token is approximately a syllable.  On average a word is 1.33 tokens.\n\nFor reasoning models (e.g. gpt-6-sol and gpt-6-luna), **max_tokens** also\nincludes the hidden reasoning tokens, which can use more of the allotment than\nthe output text itself.  If the allotment is used up before any text is\noutput, **OpenAITokenLimitExceeded** is raised.  See also **reasoning_effort**\nand **fail_on_truncation**.\n",
+            "default": 1000
           },
           "temperature": {
             "type": "number",
             "title": "**OpenAI** sampling temperature",
-            "description": "\nlower number is more deterministic, higher is more random.\n\nvalues should range from 0.0 to 2.0\n",
-            "default": 0.0
+            "description": "\nlower number is more deterministic, higher is more random.\n\nvalues should range from 0.0 to 2.0\n\nOnly sent to **OpenAI** when not 1.0 (the **OpenAI** default).  Some models\n(e.g. gpt-6-sol and gpt-6-luna) only accept the default and reject any other value.\n",
+            "default": 1.0
           },
           "jq_result": {
             "type": "string",
             "title": "**jq** query of result",
-            "description": "\nThe **OpenAI** completion outputs a JSON \n[Completion Object](https://platform.openai.com/docs/api-reference/completions/object)\n\nThe **jq_results** string contains a **jq**  filter/query string that\nis applied to the output to determine what is saved in the\ncreated **Vcon** **analysis** object.\n\n* **\".\"** - results in a query that returns the entire JSON object.\n* **\".choices[0].text\"** - results in a query which contains only the text portion of the completion output\n\nFor more information on creating **jq filters** see:\nhttps://jqlang.github.io/jq/manual/\n\n",
+            "description": "\nThe **OpenAI** chat completion outputs a JSON\n[Chat Completion Object](https://platform.openai.com/docs/api-reference/chat/object)\n\nThe **jq_results** string contains a **jq**  filter/query string that\nis applied to the output to determine what is saved in the\ncreated **Vcon** **analysis** object.\n\n* **\".\"** - results in a query that returns the entire JSON object.\n* **\".choices[0].message.content\"** - results in a query which contains only the text portion of the completion output\n\nFor more information on creating **jq filters** see:\nhttps://jqlang.github.io/jq/manual/\n\n",
             "default": ".choices[0].message.content",
             "examples": [
               ".",
-              ".choices[0].text"
+              ".choices[0].message.content"
             ]
           },
           "json_response": {
             "type": "boolean",
             "title": "provide response in JSON format",
-            "description": "If False (default) response will be in a readable text format.  If True, the response from ChatGPT will be in a JSON formatted document.  If a JSON response is desired, your prompt should specify the format of the JSON content or parameters.",
+            "description": "If False (default) response will be in a readable text format.  If True, the response from ChatGPT will be in a JSON formatted document.  If a JSON response is desired, your prompt should specify the format of the JSON content or parameters.  JSON output cut off at **max_tokens** is never valid JSON, so setting **fail_on_truncation** to True is recommended when this is True.",
             "default": false
           },
           "analysis_type": {
@@ -6294,6 +6240,28 @@
             "title": "the **Vcon analysis** object type",
             "description": "\nThe results of the completion are saved in a new **analysis**\nobject which is added to the input **Vcon**.\n**analysis_type** is the **analysis** type token that is set\non the new **analysis** object in the **Vcon**.\n",
             "default": "summary"
+          },
+          "reasoning_effort": {
+            "type": "string",
+            "title": "**OpenAI** reasoning effort",
+            "description": "\nHow much hidden reasoning a reasoning model does before it outputs text.\nPassed to **OpenAI** as **reasoning_effort**.\n\n * **\"\"** (empty string, default) - not sent, the model uses its own default\n * **\"none\"**, **\"minimal\"**, **\"low\"**, **\"medium\"**, **\"high\"**, **\"xhigh\"**, **\"max\"**\n\nWhich values are accepted varies by model (e.g. gpt-6.1-sol does not accept\n\"none\") and models without reasoning reject this parameter, so leave it\nempty for those.  The value is not checked here, **OpenAI** rejects values\nthat the model does not support.\n\nReasoning tokens count against **max_tokens**.\n",
+            "default": "",
+            "examples": [
+              "",
+              "none",
+              "minimal",
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          },
+          "fail_on_truncation": {
+            "type": "boolean",
+            "title": "fail if the output is cut off at **max_tokens**",
+            "description": "\nIf True, **OpenAITokenLimitExceeded** is raised when the output was cut off\nat **max_tokens**.\n\nIf False (default), output that was cut off is kept, a warning is logged and\n**\"truncated\": true** is set on the new **analysis** object.\n\nIn either case, **OpenAITokenLimitExceeded** is always raised when no text\nwas output at all, or when **json_response** is True and the JSON output was\ncut off.\n",
+            "default": false
           },
           "label": {
             "type": "string",
@@ -6771,14 +6739,14 @@
             "title": "server start time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1792455850.9442377
+              1792622526.5478137
             ]
           },
           "pid": {
             "type": "integer",
             "title": "server process id",
             "examples": [
-              3679
+              25503
             ]
           },
           "settings": {
@@ -6818,7 +6786,7 @@
             "type": "integer",
             "title": "server process id",
             "examples": [
-              3679
+              25503
             ]
           },
           "start_time": {
@@ -6826,7 +6794,7 @@
             "title": "server start up time",
             "description": "epoch seconds time at which this server started",
             "examples": [
-              1792455850.9461665
+              1792622526.54967
             ]
           },
           "num_workers": {
@@ -7711,10 +7679,10 @@
             ],
             "title": "vCon format version",
             "examples": [
-              1792455850,
-              1792455850.8918514,
+              1792622526,
+              1792622526.5000303,
               "Wed, 14 May 2022 18:16:19 -0000",
-              "2026-10-20T00:24:10.891+00:00",
+              "2026-10-21T22:42:06.500+00:00",
               "2022-05-14T18:16:19.000+00:00"
             ]
           },

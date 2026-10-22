@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ VconProcessor binding for the Vcon OpenAI chat_completion filter_plugin """
 
 import typing
@@ -20,7 +20,7 @@ OpenAiChatCompletionOptions = py_vcon_server.processor.FilterPluginProcessor.mak
 
 class OpenAiChatCompletion(py_vcon_server.processor.FilterPluginProcessor):
   """ OpenAi Chat Completion generative AI binding for **VconProcessor** """
-  plugin_version = "0.0.1"
+  plugin_version = "0.1.0"
   plugin_name = PLUGIN_NAME
   options_class =  OpenAiChatCompletionOptions
   headline = "OpenAi Chat Completion binding for **VconProcessor**"
