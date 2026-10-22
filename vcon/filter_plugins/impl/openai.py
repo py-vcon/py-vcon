@@ -6,6 +6,7 @@ import asyncio
 import inspect
 import weakref
 import datetime
+import json
 import logging
 import pydantic
 import openai
@@ -18,23 +19,27 @@ VERBOSE = False
 
 logger = vcon.build_logger(__name__)
 
-OPENAI_MAJOR_VERSION = int(openai.__version__.split('.')[0])
-if(OPENAI_MAJOR_VERSION < 1):
-  OPENAI_RETRY_EXCEPTIONS = (openai.error.ServiceUnavailableError, openai.error.Timeout)
-else:
-  OPENAI_RETRY_EXCEPTIONS = (openai.APITimeoutError)
+OPENAI_RETRY_EXCEPTIONS = (openai.APITimeoutError)
 
 class OpenAIKeyNotSet(Exception):
   """ Raised when an OpenAI FilterPlugin is invoked without an API key set """
 
 
-class OpenAICompletionInitOptions(
+class OpenAITokenLimitExceeded(Exception):
+  """ Raised when an OpenAI response was cut off at max_tokens and is not usable """
+
+
+class OpenAIRefusal(Exception):
+  """ Raised when the OpenAI model refuses the request """
+
+
+class OpenAIChatCompletionInitOptions(
   vcon.filter_plugins.FilterPluginInitOptions,
-  title = "OpenAI/ChatGPT Completion **FilterPlugin** intialization object"
+  title = "OpenAI/ChatGPT Chat Completion **FilterPlugin** intialization object"
   ):
   """
-  A **OpenAIInitOptions** object is provided to the
-  **OpenAI FilterPlugin.__init__** method when it is first loaded.  Its
+  A **OpenAIChatCompletionInitOptions** object is provided to the
+  **OpenAIChatCompletion FilterPlugin.__init__** method when it is first loaded.  Its
   attributes effect how the registered **FilterPlugin** functions.
   """
   openai_api_key: str = pydantic.Field(
@@ -49,17 +54,17 @@ You can get one at: https://platform.openai.com/account/api-keys
     )
 
 
-class OpenAICompletionOptions(
+class OpenAIChatCompletionOptions(
   vcon.filter_plugins.FilterPluginOptions,
-  title = "OpenAI Completion filter method options"
+  title = "OpenAI Chat Completion filter method options"
   ):
   """
-  Options for generative AI using **OpenAI** completion (e.g. ChatGPT)
+  Options for generative AI using **OpenAI** chat completion (e.g. ChatGPT)
   on the text dialogs and/or transcription analysis in the given
   **Vcon**
 
   More details on the OpenAI specific parameters can be found here:
-  https://platform.openai.com/docs/api-reference/completions/create
+  https://platform.openai.com/docs/api-reference/chat/create
   """
   input_dialogs: typing.Union[str,typing.List[int]] = pydantic.Field(
     title = "input **Vcon** text **dialog** objects",
@@ -93,69 +98,15 @@ You can get the current list of of available models for
 your license/API key using the following:
 
     import openai
-    openai.api_key = "your key here"
-    openai.Model.list()
+    client = openai.OpenAI(api_key = "your key here")
+    print([model.id for model in client.models.list()])
 """,
-    default = 'gpt-4o-mini',
+    default = 'gpt-6-sol',
     examples = [
-      'davinci',
-      'gpt-4',
-      'text-davinci-001',
-      'text-search-curie-query-001',
-      'gpt-3.5-turbo',
-      'gpt-4-0613',
-      'babbage',
-      'text-babbage-001',
-      'curie-instruct-beta',
-      'davinci-similarity',
-      'code-davinci-edit-001',
-      'text-similarity-curie-001',
-      'ada-code-search-text',
-      'gpt-3.5-turbo-0613',
-      'text-search-ada-query-001',
-      'gpt-3.5-turbo-16k-0613',
-      'gpt-4-0314',
-      'babbage-search-query',
-      'ada-similarity',
-      'text-curie-001',
-      'gpt-3.5-turbo-16k',
-      'text-search-ada-doc-001',
-      'text-search-babbage-query-001',
-      'code-search-ada-code-001',
-      'curie-search-document',
-      'davinci-002',
-      'text-search-davinci-query-001',
-      'text-search-curie-doc-001',
-      'babbage-search-document',
-      'babbage-002',
-      'babbage-code-search-text',
-      'text-embedding-ada-002',
-      'davinci-instruct-beta',
-      'davinci-search-query',
-      'text-similarity-babbage-001',
-      'text-davinci-002',
-      'code-search-babbage-text-001',
-      'text-davinci-003',
-      'text-search-davinci-doc-001',
-      'code-search-ada-text-001',
-      'ada-search-query',
-      'text-similarity-ada-001',
-      'ada-code-search-code',
-      'whisper-1',
-      'text-davinci-edit-001',
-      'davinci-search-document',
-      'curie-search-query',
-      'babbage-similarity',
-      'ada',
-      'ada-search-document',
-      'text-ada-001',
-      'text-similarity-davinci-001',
-      'curie-similarity',
-      'babbage-code-search-code',
-      'code-search-babbage-code-001',
-      'text-search-babbage-doc-001',
-      'gpt-3.5-turbo-0301',
-      'curie'
+      'gpt-6-sol',
+      'gpt-6-luna',
+      'gpt-6.1-sol',
+      'gpt-6-astra'
       ]
     )
 
@@ -166,7 +117,7 @@ The **OpenAI** model is given text from the dialog and
 given this prompt to instruct it what generative AI text
 that you would like from it.
 """,
-    default = "Summarize this conversation: "
+    default = "Summarize the transcript in these messages."
     )
 
   max_tokens: int = pydantic.Field(
@@ -174,8 +125,14 @@ that you would like from it.
     description = """
 The **max_tokens** limits the size of the output generative AI text.
 A token is approximately a syllable.  On average a word is 1.33 tokens.
+
+For reasoning models (e.g. gpt-6-sol and gpt-6-luna), **max_tokens** also
+includes the hidden reasoning tokens, which can use more of the allotment than
+the output text itself.  If the allotment is used up before any text is
+output, **OpenAITokenLimitExceeded** is raised.  See also **reasoning_effort**
+and **fail_on_truncation**.
 """,
-    default = 100
+    default = 1000
     )
 
   temperature: float = pydantic.Field(
@@ -184,29 +141,32 @@ A token is approximately a syllable.  On average a word is 1.33 tokens.
 lower number is more deterministic, higher is more random.
 
 values should range from 0.0 to 2.0
+
+Only sent to **OpenAI** when not 1.0 (the **OpenAI** default).  Some models
+(e.g. gpt-6-sol and gpt-6-luna) only accept the default and reject any other value.
 """,
-    default = 0.0
+    default = 1.0
     )
 
   jq_result: str = pydantic.Field(
     title = "**jq** query of result",
     description = """
-The **OpenAI** completion outputs a JSON 
-[Completion Object](https://platform.openai.com/docs/api-reference/completions/object)
+The **OpenAI** chat completion outputs a JSON
+[Chat Completion Object](https://platform.openai.com/docs/api-reference/chat/object)
 
 The **jq_results** string contains a **jq**  filter/query string that
 is applied to the output to determine what is saved in the
 created **Vcon** **analysis** object.
 
 * **"."** - results in a query that returns the entire JSON object.
-* **".choices[0].text"** - results in a query which contains only the text portion of the completion output
+* **".choices[0].message.content"** - results in a query which contains only the text portion of the completion output
 
 For more information on creating **jq filters** see:
 https://jqlang.github.io/jq/manual/
 
 """,
-   default = ".choices[0].text",
-   examples = [".", ".choices[0].text" ]
+   default = ".choices[0].message.content",
+   examples = [".", ".choices[0].message.content" ]
     )
 
   json_response: bool = pydantic.Field(
@@ -214,7 +174,9 @@ https://jqlang.github.io/jq/manual/
       description = "If False (default) response will be in a readable text format."
         "  If True, the response from ChatGPT will be in a JSON formatted document."
         "  If a JSON response is desired, your prompt should specify the format of"
-        " the JSON content or parameters.",
+        " the JSON content or parameters."
+        "  JSON output cut off at **max_tokens** is never valid JSON, so setting"
+        " **fail_on_truncation** to True is recommended when this is True.",
       default = False
     )
 
@@ -229,9 +191,45 @@ on the new **analysis** object in the **Vcon**.
     default = "summary"
     )
 
+  reasoning_effort: str = pydantic.Field(
+    title = "**OpenAI** reasoning effort",
+    description = """
+How much hidden reasoning a reasoning model does before it outputs text.
+Passed to **OpenAI** as **reasoning_effort**.
+
+ * **""** (empty string, default) - not sent, the model uses its own default
+ * **"none"**, **"minimal"**, **"low"**, **"medium"**, **"high"**, **"xhigh"**, **"max"**
+
+Which values are accepted varies by model (e.g. gpt-6.1-sol does not accept
+"none") and models without reasoning reject this parameter, so leave it
+empty for those.  The value is not checked here, **OpenAI** rejects values
+that the model does not support.
+
+Reasoning tokens count against **max_tokens**.
+""",
+    default = "",
+    examples = ["", "none", "minimal", "low", "medium", "high", "xhigh", "max"]
+    )
+
+  fail_on_truncation: bool = pydantic.Field(
+    title = "fail if the output is cut off at **max_tokens**",
+    description = """
+If True, **OpenAITokenLimitExceeded** is raised when the output was cut off
+at **max_tokens**.
+
+If False (default), output that was cut off is kept, a warning is logged and
+**"truncated": true** is set on the new **analysis** object.
+
+In either case, **OpenAITokenLimitExceeded** is always raised when no text
+was output at all, or when **json_response** is True and the JSON output was
+cut off.
+""",
+    default = False
+    )
+
 
 class OpenAIClient():
-  """ Abstration to hide OpenAI API difference between 0.X and 1.X """
+  """ Wrapper around the **OpenAI** AsyncOpenAI client (one per event loop) """
   def __init__(
       self,
       init_options,
@@ -244,15 +242,11 @@ class OpenAIClient():
     else:
       self.key_set = True
 
-
-    if(OPENAI_MAJOR_VERSION < 1):
-      openai.api_key = init_options.openai_api_key
-    else:
-      if(self.key_set):
-        # created on first use, per event loop (see _async_client)
-        self._api_key = init_options.openai_api_key
-        self.client = None
-        self._client_loop = None
+    if(self.key_set):
+      # created on first use, per event loop (see _async_client)
+      self._api_key = init_options.openai_api_key
+      self.client = None
+      self._client_loop = None
 
 
   def _async_client(self):
@@ -276,62 +270,28 @@ class OpenAIClient():
     return(self.client)
 
 
-  async def completions(
-      self,
-      options,
-      text_body
-    ):
-    """ Generative AI completion on single text chunk """
-    if(OPENAI_MAJOR_VERSION < 1):
-      completion_result = openai.Completion.create(
-          model = options.model,
-          prompt = options.prompt + text_body,
-          max_tokens = options.max_tokens,
-          temperature = options.temperature
-        )
-
-    else:
-      completion_object = await self._async_client().completions.create(
-          model = options.model,
-          prompt = options.prompt + text_body,
-          max_tokens = options.max_tokens,
-          temperature = options.temperature
-        )
-
-      # completion_object is a openai.types.completion.Completion
-      completion_result = completion_object.dict()
-
-    return(completion_result)
-
-
   async def chat_completions(
       self,
       options,
       messages
     ):
     """ Generative AI completion on set of messages, from potentially mutliple people """
-    if(OPENAI_MAJOR_VERSION < 1):
-      chat_completion_result = openai.ChatCompletion.create(
-          model = options.model,
-          messages = messages,
-          max_tokens = options.max_tokens,
-          temperature = options.temperature
-        )
+    additional_args = {}
+    if(options.json_response):
+      additional_args["response_format"] = {"type": "json_object"}
+    if(options.temperature != 1.0):
+      additional_args["temperature"] = options.temperature
+    if(options.reasoning_effort != ""):
+      additional_args["reasoning_effort"] = options.reasoning_effort
 
-    else:
-      additional_args = {}
-      if(options.json_response):
-        additional_args["response_format"] = {"type": "json_object"}
-
-      # chat_completion_result is openai.types.chat.chat_completion.ChatCompletion
-      chat_completion_object = await self._async_client().chat.completions.create(
-          model = options.model,
-          messages = messages,
-          max_tokens = options.max_tokens,
-          temperature = options.temperature,
-          **additional_args
-        )
-      chat_completion_result  = chat_completion_object.dict()
+    # chat_completion_object is openai.types.chat.chat_completion.ChatCompletion
+    chat_completion_object = await self._async_client().chat.completions.create(
+        model = options.model,
+        messages = messages,
+        max_completion_tokens = options.max_tokens,
+        **additional_args
+      )
+    chat_completion_result = chat_completion_object.dict()
 
     return(chat_completion_result)
 
@@ -403,222 +363,15 @@ class OpenAIClient():
       result.close()
 
 
-class OpenAICompletion(vcon.filter_plugins.FilterPlugin):
-  """
-  **FilterPlugin** to for generative AI using **OpenAI** completion (e.g. ChatGPT)
-
-  **OpenAICompletion** differs from **OpenAIChatCompletion** in that is uses
-  only imputs a single text dialog or transcribe analysis text when asking
-  for a completion to the prompt.  **OpenAIChatCompletion** by default will
-  iterate through all of the text dialog or transcribe analysis text, but it
-  evaluates the prompt for only one text input at a time.  Thus generating
-  a prompt answer as a new analysis obejct for each text dialog or
-  transcribe analysis text analysed.
-
-  In contrast, **OpenAIChatCompletion** inputs the context of all of the text
-  dialog and transcribe analysis objects as input labeled by time and party
-  and will generate a single prompt response as one new analysis object.
-  
-  """
-  init_options_type = OpenAICompletionInitOptions
-
-  def __init__(
-    self,
-    init_options: OpenAICompletionInitOptions
-    ):
-    """
-    Parameters:
-      init_options (OpenAICompletionInitOptions) - the initialization options for the **OpenAI** completion plugin
-    """
-    super().__init__(
-      init_options,
-      OpenAICompletionOptions
-      )
-
-    self.client =  OpenAIClient(init_options, self.__class__.__name__)
-
-    self.last_stats: typing.Dict[str, int] = {}
-
-
-  async def completions(
-    self,
-    out_vcon: vcon.Vcon,
-    options: OpenAICompletionOptions,
-    text_body: str,
-    dialog_index: int
-    ) -> vcon.Vcon:
-    """ Run **OpenAI completion* on the given text and create a new analysis object """
-
-    completion_result = await self.client.completions(
-        options,
-        text_body
-      )
-
-    compiled_query = jq.compile(options.jq_result)
-    query_result = compiled_query.input_value(completion_result).all()
-    if(len(query_result) == 0):
-      logger.warning("{} jq query resulted in no elements.  No analysis object added".format(
-       self.__class__.__name__
-       ))
-      return(out_vcon)
-    if(len(query_result) == 1):
-      new_analysis_body = query_result[0]
-    else:
-      # TODO: is this what we should be doing??
-      logger.warning("{} jq query resulted in {} elements.  Dropping all but the first one.".format(
-       self.__class__.__name__,
-       len(query_result)
-       ))
-      new_analysis_body = query_result[0]
-
-    addition_analysis_parameters = {
-      "prompt": options.prompt,
-      "model": options.model,
-      "product": "Completion"
-      }
-
-    # guess the body type
-    if(isinstance(new_analysis_body, str)):
-      encoding = "none"
-      schema = "text"
-      addition_analysis_parameters["mediatype"] = vcon.Vcon.MEDIATYPE_TEXT_PLAIN
-    else:
-      encoding = "json"
-      schema = "completion_object"
-      if(options.jq_result != "."):
-        schema += " ?jq=" + options.jq_result
-      addition_analysis_parameters["mediatype"] = vcon.Vcon.MEDIATYPE_JSON
-
-    out_vcon.add_analysis(
-      dialog_index,
-      options.analysis_type,
-      new_analysis_body,
-      'openai',
-      schema,
-      encoding,
-      **addition_analysis_parameters
-      )
-
-    return(out_vcon)
-
-
-
-  async def filter(
-    self,
-    in_vcon: vcon.Vcon,
-    options: OpenAICompletionOptions
-    ) -> vcon.Vcon:
-    """
-    Perform generative AI using **OpenAI** completion on the
-    text **dialogs** and/or transcription **analysis** objects
-    in the given **Vcon** using the given **options.prompt**.
-`
-    Parameters:
-      options (OpenAICompletionOptions)
-
-    Returns:
-      the modified Vcon with added analysis objects for the text dialogs and transcription analysis.
-    """
-    out_vcon = in_vcon
-
-    dialog_indices = self.slice_indices(
-      options.input_dialogs,
-      len(in_vcon.dialog),
-      "OpenaiCompletionOptions.input_dialogs"
-      )
-
-    # no dialogs
-    if(len(dialog_indices) == 0):
-      return(out_vcon)
-
-    if(not self.client.key_set):
-      message = "OpenAICompletion.filter: OPENAI_API_KEY is not set"
-      logger.error(message)
-      raise OpenAIKeyNotSet(message)
-
-    for dialog_index in dialog_indices:
-      this_dialog_texts = await in_vcon.get_dialog_text(
-        dialog_index,
-        True, # find text from transcript analysis if dialog is a recording and transcript exists
-        True  # transcribe this recording dialog if transcript does not exist
-        )
-      dialog = in_vcon.dialog[dialog_index]
-
-      text_segments = [d["text"] for d in this_dialog_texts]
-
-      # no text, no analysis
-      if(len(text_segments) == 0):
-        continue
-
-      self.last_stats["num_text_segments"] = len(text_segments)
-      all_dialog_text = "  ".join(text_segments)
-      out_vcon = await self.completions(
-          out_vcon,
-          options,
-          all_dialog_text,
-          dialog_index
-        )
-
-    return(out_vcon)
-
-
-  def __del__(self):
-    """ Close down OpenAI client if created. """
-    if(hasattr(self, "client") and self.client):
-      logger.debug("OpenAICompletion closing OpenAIClient")
-      self.client.close()
-      self.client = None
-    else:
-      logger.debug("OpenAICompletion None OpenAIClient")
-    super().__del__()
-
-
-chat_completions_init_options_defaults = {
-}
-
-class OpenAIChatCompletionInitOptions(
-  OpenAICompletionInitOptions,
-  field_defaults = chat_completions_init_options_defaults,
-  title = "OpenAI/ChatGPT Chat Completion **FilterPlugin** intialization object"
-  ):
-  """
-  A OpenAIChatCompletionInitOptions is derived from OpenAICompletionInitOptions
-  with no added fields.  An OpenAIChatCompletionInitOptions is passed to the
-  OpenAIChatCompletion plugin when it is initialized.
-  """
-
-chat_completion_options_defaults = {
-  "jq_result": ".choices[0].message.content",
-  #"model": "gpt-3.5-turbo-0125",
-  #"model": "gpt-4",
-  #"model": "gpt-4-1106-preview",
-  "prompt": "Summarize the transcript in these messages."
-  }
-
-class OpenAIChatCompletionOptions(
-  OpenAICompletionOptions,
-  field_defaults = chat_completion_options_defaults,
-  title = "OpenAI Chat Completion filter method options"
-  ):
-  """
-  Options for OpenAIChatCompletion.  Does not add any fields to the
-  OpenAICompletionOptions from which OpenAIChatCompletionOptions is
-  derived.
-  """
-
-
-class OpenAIChatCompletion(OpenAICompletion):
+class OpenAIChatCompletion(vcon.filter_plugins.FilterPlugin):
   """
   **FilterPlugin** to for generative AI using **OpenAI** chat completion (e.g. ChatGPT)
 
-  **OpenAIChatCompletion** differs from **OpenAICompletion** in that is uses the
-  context of all of the text dialog and transcribe analysis objects as input labeled by
-  time and party and generates a single prompt response or answer in one new analysis
-  object.  In contrast, **OpenAICompletion** only imputs a single text dialog
-  or transcribe analysis text when asking for a completion to the prompt, generating
-  a prompt response and a new analysis object for each text dialog and transcribe
-  analysis object analysed.
+  **OpenAIChatCompletion** uses the context of all of the text dialog and
+  transcribe analysis objects as input labeled by time and party and generates
+  a single prompt response or answer in one new analysis object.
   """
+  init_options_type = OpenAIChatCompletionInitOptions
 
   def __init__(
     self,
@@ -626,11 +379,12 @@ class OpenAIChatCompletion(OpenAICompletion):
     ):
     """
     Parameters:
-      init_options (OpenAICompletionInitOptions) - the initialization options for the **OpenAI** completion plugin
+      init_options (OpenAIChatCompletionInitOptions) - the initialization options for the **OpenAI** chat completion plugin
     """
-    super().__init__(init_options)
-
-    self.options_type = OpenAIChatCompletionOptions
+    super().__init__(
+      init_options,
+      OpenAIChatCompletionOptions
+      )
 
     logger.debug("OpenAIChatComplete setting client")
     self.client =  OpenAIClient(init_options, self.__class__.__name__)
@@ -639,7 +393,6 @@ class OpenAIChatCompletion(OpenAICompletion):
 
 
   @tenacity.retry(
-      #retry=retry_if_exception_type((openai.error.APIError, openai.error.APIConnectionError, openai.error.RateLimitError, openai.error.ServiceUnavailableError, openai.error.Timeout)), 
       retry = tenacity.retry_if_exception_type(OPENAI_RETRY_EXCEPTIONS),
       wait = tenacity.wait_random_exponential(multiplier = 1, max = 90),
       stop = tenacity.stop_after_attempt(16),
@@ -656,6 +409,72 @@ class OpenAIChatCompletion(OpenAICompletion):
     return(chat_completion_result)
 
 
+  def check_response(
+    self,
+    chat_completion_result: typing.Dict[str, typing.Any],
+    options: OpenAIChatCompletionOptions
+    ) -> bool:
+    """
+    Check the chat completion response for a refusal or for output cut off
+    at **max_tokens**.
+
+    Parameters:
+      chat_completion_result (dict) - the chat completion object as a dict
+      options (OpenAIChatCompletionOptions) - the options used for the request
+
+    Raises:
+      OpenAIRefusal - the model refused the request
+      OpenAITokenLimitExceeded - the output was cut off at **max_tokens** and is not usable
+
+    Returns:
+      True if the output was cut off at **max_tokens** but is kept, otherwise False
+    """
+    choice = chat_completion_result["choices"][0]
+    message = choice.get("message") or {}
+
+    refusal = message.get("refusal")
+    if(refusal):
+      raise OpenAIRefusal("{}: model {} refused the request: {}".format(
+        self.__class__.__name__,
+        options.model,
+        refusal
+        ))
+
+    if(choice.get("finish_reason") != "length"):
+      return(False)
+
+    usage = chat_completion_result.get("usage") or {}
+    completion_tokens = usage.get("completion_tokens")
+    reasoning_tokens = (usage.get("completion_tokens_details") or {}).get("reasoning_tokens")
+    usage_text = ""
+    if(completion_tokens is not None):
+      usage_text = "; {} used".format(completion_tokens)
+      if(reasoning_tokens):
+        usage_text += ", {} for reasoning".format(reasoning_tokens)
+    limit_text = "{}: model {} response was cut off at max_tokens ({}{})".format(
+      self.__class__.__name__,
+      options.model,
+      options.max_tokens,
+      usage_text
+      )
+    advice = "Increase max_tokens or lower reasoning_effort."
+
+    content = message.get("content")
+    if(content is None or content == ""):
+      raise OpenAITokenLimitExceeded("{} and returned no text.  {}".format(limit_text, advice))
+
+    if(options.json_response):
+      try:
+        json.loads(content)
+      except ValueError:
+        raise OpenAITokenLimitExceeded("{} and the JSON is incomplete.  {}".format(limit_text, advice))
+
+    if(options.fail_on_truncation):
+      raise OpenAITokenLimitExceeded("{}.  {}".format(limit_text, advice))
+
+    logger.warning("{}.  Keeping the truncated output.  {}".format(limit_text, advice))
+    return(True)
+
   async def filter(
     self,
     in_vcon: vcon.Vcon,
@@ -667,7 +486,7 @@ class OpenAIChatCompletion(OpenAICompletion):
     in the given **Vcon** using the given **options.prompt**.
 
     Parameters:
-      options (OpenAICompletionOptions)
+      options (OpenAIChatCompletionOptions)
 
     Returns:
       the modified Vcon with a single analysis object added in total
@@ -783,17 +602,8 @@ class OpenAIChatCompletion(OpenAICompletion):
       logger.debug("OpenAIChatCompletion messages: {}".format(sorted_messages))
     # feed message to ChatGPT
 
-    # TODO try/except
-    #  openai.error.ServiceUnavailableError: The server is overloaded or not ready yet.
-    # /usr/local/lib/python3.8/dist-packages/openai/api_requestor.py:743: ServiceUnavailableError
-
     chat_completion_result = await self.chat_completions_with_retry(sorted_messages, options)
-    # chat_completion_result = openai.ChatCompletion.create(
-    #   model = options.model,
-    #   messages = sorted_messages,
-    #   max_tokens = options.max_tokens,
-    #   temperature = options.temperature
-    #   )
+    truncated = self.check_response(chat_completion_result, options)
 
     compiled_query = jq.compile(options.jq_result)
     query_result = compiled_query.input_value(chat_completion_result).all()
@@ -818,6 +628,9 @@ class OpenAIChatCompletion(OpenAICompletion):
       "model": options.model,
       "product": "ChatCompletion"
       }
+
+    if(truncated):
+      addition_analysis_parameters["truncated"] = True
 
     # guess the body type
     if(isinstance(new_analysis_body, str)):
