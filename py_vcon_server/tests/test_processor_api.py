@@ -1,10 +1,11 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import asyncio
 import pytest
 import pytest_asyncio
 import py_vcon_server
 import vcon
 import fastapi.testclient
+from common_setup import OPENAI_TEST_MODEL
 
 @pytest.mark.asyncio
 async def test_deepgram_processor_api():
@@ -89,7 +90,7 @@ async def test_deepgram_processor_api():
     # Test OpenAI  /process entry point
     post_response = client.post("/process/{}/openai_chat_completion".format(vCon.uuid),
         params = parameters,
-        json = options
+        json = dict(options, model = OPENAI_TEST_MODEL, reasoning_effort = "none")
       )
     assert(post_response.status_code == 200)
     processor_out_dict = post_response.json()

@@ -10,7 +10,7 @@ import logging
 import py_vcon_server
 import py_vcon_server.settings
 import py_vcon_server.metrics
-from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
+from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon, OPENAI_TEST_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,8 @@ PIPELINE_DEFINITION = {
       {
         "processor_name": "openai_chat_completion",
         "processor_options":  {
+             "model": OPENAI_TEST_MODEL,
+             "reasoning_effort": "none",
              "format_options": {
                  "analysis_type": "{sums}"
               }

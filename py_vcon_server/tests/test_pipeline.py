@@ -4,7 +4,7 @@ import copy
 import pytest
 import pytest_asyncio
 import fastapi.testclient
-from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon
+from common_setup import UUID, make_inline_audio_vcon, make_2_party_tel_vcon, OPENAI_TEST_MODEL
 import vcon
 import vcon.pydantic_utils
 import py_vcon_server.pipeline
@@ -183,6 +183,8 @@ PIPE_DEF2_DICT = {
       {
         "processor_name": "openai_chat_completion",
         "processor_options":  {
+            "model": OPENAI_TEST_MODEL,
+            "reasoning_effort": "none"
           }
       }
     ]
@@ -532,7 +534,10 @@ async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
     assert(pipe_def.processors[0].processor_options.input_vcon_index == 0)
     assert(pipe_def.processors[0].processor_options.should_process == True)
     assert(pipe_def.processors[1].processor_name == "openai_chat_completion")
-    assert(len(vcon.pydantic_utils.get_dict(pipe_def.processors[1].processor_options, exclude_none=True)) == 5)
+    openai_options = vcon.pydantic_utils.get_dict(pipe_def.processors[1].processor_options, exclude_none=True)
+    assert(len(openai_options) == 7)
+    assert(openai_options["model"] == OPENAI_TEST_MODEL)
+    assert(openai_options["reasoning_effort"] == "none")
     assert(pipe_def.processors[1].processor_options.input_vcon_index == 0)
     assert(pipe_def.processors[1].processor_options.should_process == True)
 

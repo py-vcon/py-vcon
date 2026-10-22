@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Common test data and tools for conserver unit tests """
 
 import os
@@ -8,6 +8,10 @@ import pytest
 import vcon
 
 UUID = "01855517-test-fake-uuid-77776666acbe"
+
+# Cheap OpenAI model for unit tests; the plugin default is a more capable
+# (more costly) model.
+OPENAI_TEST_MODEL = os.getenv("OPENAI_TEST_MODEL", "gpt-6-luna")
 
 @pytest.fixture(scope="function")
 def make_2_party_tel_vcon() -> vcon.Vcon:
