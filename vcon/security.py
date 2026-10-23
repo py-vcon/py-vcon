@@ -253,7 +253,7 @@ def jws_sign(
 
 def decode_jws_protected_header(protected : str) -> dict:
   """
-  Decode the base64url encoded protected header of a JWS signature.
+  Decode the base64url encoded protected header of a JWS signature or a JWE.
 
   Parameters:
     protected (str): base64url encoded protected header
@@ -271,7 +271,9 @@ def decode_jws_protected_header(protected : str) -> dict:
 def merge_jose_headers(
   protected_header : dict,
   unprotected_header : dict,
-  object_label : str
+  object_label : str,
+  first_header_name : str = "protected",
+  second_header_name : str = "unprotected"
   ) -> dict:
   """
   Merge the protected and unprotected header parameters of a JWS signature
@@ -286,6 +288,8 @@ def merge_jose_headers(
     protected_header (dict): protected header parameters
     unprotected_header (dict): unprotected header parameters
     object_label (str): label for the signature or recipient in error messages
+    first_header_name (str): name of the first header in error messages
+    second_header_name (str): name of the second header in error messages
 
   Returns:
     dict containing the parameters of both headers
@@ -295,12 +299,38 @@ def merge_jose_headers(
   for name in set(protected_header) & set(unprotected_header):
     if(protected_header[name] != unprotected_header[name]):
       raise ValueError(
-        "{} header parameter: \"{}\" is in both the protected and unprotected"
-        " headers with different values".format(object_label, name))
+        "{} header parameter: \"{}\" is in both the {} and {}"
+        " headers with different values".format(
+        object_label, name, first_header_name, second_header_name))
 
   merged = dict(unprotected_header)
   merged.update(protected_header)
   return(merged)
+
+
+def check_jwe_headers(jwe_complete_serialization : dict) -> None:
+  """
+  Check that no header parameter of a JWE (RFC7516) is in more than one of
+  the protected header, the unprotected header and a recipient header,
+  unless the values are identical.
+
+  Encrypted vCons created by earlier versions of this package repeat enc,
+  with identical values, in all three headers.  These are accepted.
+
+  Parameters:
+    jwe_complete_serialization (dict): JWE General JSON Serialization
+
+  Raises ValueError if a header parameter is in more than one header with different values.
+  """
+  protected_header = decode_jws_protected_header(jwe_complete_serialization.get("protected", None) or "")
+  unprotected_header = jwe_complete_serialization.get("unprotected", None) or {}
+  merge_jose_headers(protected_header, unprotected_header, "JWE")
+
+  for recipient_index, recipient in enumerate(jwe_complete_serialization.get("recipients", None) or []):
+    recipient_header = recipient.get("header", None) or {}
+    label = "recipient[{}]".format(recipient_index)
+    merge_jose_headers(protected_header, recipient_header, label, "protected", "recipient")
+    merge_jose_headers(unprotected_header, recipient_header, label, "unprotected", "recipient")
 
 
 def verify_cert_chain(cert_chain : typing.List[cryptography.x509.Certificate]) -> None:

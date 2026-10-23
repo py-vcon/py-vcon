@@ -747,7 +747,13 @@ Decrypt a vCon using private and public key file.
 
 vCon must be in encrypted state and will be in signed state after decryption.
 
-Parameters:  
+A header parameter may not be in more than one of the protected, unprotected
+and recipient headers.  Encrypted vCons created by earlier versions of this
+package repeat enc in all three with identical values.  These are still
+accepted.  A JWE with a header parameter repeated with different values is
+rejected with InvalidVconJson.
+
+Parameters:
 **private_key_pem_file** (str): file name or PEM string for the private key to use for decrypting the vcon.  
 **cert_pem_file** (str): file name or PEM string for the public key/cert to use for decrypting the vcon.
 

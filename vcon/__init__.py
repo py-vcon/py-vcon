@@ -2937,14 +2937,15 @@ class Vcon():
     plaintext = json.dumps(self._jws_dict, **dumps_options)
 
     jwe_compact_token = jose.jwe.encrypt(plaintext, encryption_key, encryption, encryption_key['alg']).decode('utf-8')
-    jwe_complete_serialization = vcon.security.jwe_compact_token_to_complete_serialization(jwe_compact_token, enc = encryption, x5c = [])
+    # enc and alg are in the protected header of the compact token.  No
+    # header parameter may be repeated in the unprotected or recipient headers.
+    jwe_complete_serialization = vcon.security.jwe_compact_token_to_complete_serialization(jwe_compact_token)
 
     # Add unprotected stuff
     jwe_complete_serialization["unprotected"] = {}
     # Add UUID to unprotected for easy reference
     jwe_complete_serialization["unprotected"]["uuid"] = self.uuid
-    jwe_complete_serialization["unprotected"]["cty"] = Vcon.MEDIATYPE_VCON_JSON
-    jwe_complete_serialization["unprotected"]["enc"] = "A256CBC-HS512"
+    jwe_complete_serialization["unprotected"]["cty"] = Vcon.MEDIATYPE_VCON
 
     self._jwe_dict = jwe_complete_serialization
     self._state = VconStates.ENCRYPTED
@@ -2957,7 +2958,13 @@ class Vcon():
 
     vCon must be in encrypted state and will be in signed state after decryption.
 
-    Parameters:  
+    A header parameter may not be in more than one of the protected, unprotected
+    and recipient headers.  Encrypted vCons created by earlier versions of this
+    package repeat enc in all three with identical values.  These are still
+    accepted.  A JWE with a header parameter repeated with different values is
+    rejected with InvalidVconJson.
+
+    Parameters:
     **private_key_pem_file** (str): file name or PEM string for the private key to use for decrypting the vcon.  
     **cert_pem_file** (str): file name or PEM string for the public key/cert to use for decrypting the vcon.
 
@@ -2969,6 +2976,11 @@ class Vcon():
 
     if(len(self._jwe_dict) < 2):
       raise InvalidVconState("Vcon JWE does not seem valid: {}".format(self._jws_dict))
+
+    try:
+      vcon.security.check_jwe_headers(self._jwe_dict)
+    except ValueError as header_error:
+      raise InvalidVconJson(str(header_error)) from header_error
 
     jwe_compact_token_reconstructed = vcon.security.jwe_complete_serialization_to_compact_token(self._jwe_dict)
 
