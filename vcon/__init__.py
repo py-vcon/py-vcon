@@ -2760,14 +2760,19 @@ class Vcon():
     if(self.uuid is None or len(self.uuid) < 1):
       raise InvalidVconState("vCon has no UUID set.  Use set_uuid method before signing.")
 
-    header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, cert_chain_pem_files)
+    chain_header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, cert_chain_pem_files)
 
-    # dot separated JWS token.  First part is the payload, second part is the signature (both base64url encoded)
-    jws_token = jose.jws.sign(self._vcon_dict, signing_jwk, headers=header, algorithm=signing_jwk["alg"])
-    #print(jws_token.split('.'))
-    protected_header, payload, signature = jws_token.split('.')
-    #print("decoded header: {}".format(jose.utils.base64url_decode(bytes(protected_header, 'utf-8'))))
+    # No header parameter may be in both the protected and unprotected
+    # headers.  alg is integrity protected.  x5c and uuid are in the
+    # unprotected header.
+    protected_header, payload, signature = vcon.security.jws_sign(
+      self._vcon_dict,
+      signing_jwk,
+      {"alg": signing_jwk["alg"]}
+      )
 
+    header = {}
+    header["x5c"] = chain_header["x5c"]
     # For convenience add the uuid to the header
     header[Vcon.UUID] = self.uuid
 
@@ -2798,6 +2803,12 @@ class Vcon():
     Raises exceptions for invalid cert chaind, invalid cert dates or chain not issued by one
     of the given CAs.
 
+    A header parameter may not be in both the protected and unprotected headers
+    of a signature.  Signed vCons created by earlier versions of this package
+    repeat alg and x5c in both headers with identical values.  These are still
+    accepted.  A signature with a header parameter in both headers with
+    different values is rejected.
+
     NOTE:  DOES NOT CHECK REVOKATION LISTS!!!
     """
     if(self._state == VconStates.SIGNED):
@@ -2825,7 +2836,7 @@ class Vcon():
     # assume that the cert chain is trusted?
     last_exception = Exception("Internal error in Vcon.verify this exception should never be thrown")
     chain_count = 0
-    for signature in self._jws_dict['signatures']:
+    for signature_index, signature in enumerate(self._jws_dict['signatures']):
       if('header' in signature):
         if('x5c' in signature['header']):
           x5c = signature['header']['x5c']
@@ -2841,6 +2852,15 @@ class Vcon():
           # even all of the failures.
 
           try:
+            try:
+              signature_header = vcon.security.merge_jose_headers(
+                vcon.security.decode_jws_protected_header(signature.get('protected', None) or ""),
+                signature['header'],
+                "signature[{}]".format(signature_index)
+                )
+            except ValueError as header_error:
+              raise InvalidVconSignature(str(header_error)) from header_error
+
             vcon.security.verify_cert_chain(cert_chain_objects)
 
             # We have a valid chain, check if its from one of the accepted CAs
@@ -2855,7 +2875,7 @@ class Vcon():
                 verification_jwk = {}
                 verification_jwk["kty"] = "RSA"
                 verification_jwk["use"] = "sig"
-                verification_jwk["alg"] = signature['header']['alg']
+                verification_jwk["alg"] = signature_header['alg']
                 verification_jwk["e"] = jose.utils.base64url_encode(jose.utils.
                   long_to_bytes(cert_chain_objects[0].public_key().public_numbers().e)).decode('utf-8')
                 verification_jwk["n"] = jose.utils.base64url_encode(jose.utils.

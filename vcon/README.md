@@ -1113,6 +1113,12 @@ Returns: none
 Raises exceptions for invalid cert chaind, invalid cert dates or chain not issued by one
 of the given CAs.
 
+A header parameter may not be in both the protected and unprotected headers
+of a signature.  Signed vCons created by earlier versions of this package
+repeat alg and x5c in both headers with identical values.  These are still
+accepted.  A signature with a header parameter in both headers with
+different values is rejected.
+
 NOTE:  DOES NOT CHECK REVOKATION LISTS!!!
 
 

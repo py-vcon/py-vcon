@@ -1,6 +1,7 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 
 import os
+import json
 import typing
 import cryptography.hazmat.backends.openssl.backend
 import cryptography.x509
@@ -201,6 +202,106 @@ def build_signing_jwk_from_pem_files(private_key_pem_file: str, cert_chain_pem_f
   signing_key["qi"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().iqmp)).decode('utf-8')
 
   return(header, signing_key)
+
+
+def jws_sign(
+  payload : dict,
+  signing_jwk : dict,
+  protected_header : dict
+  ) -> typing.Tuple[str, str, str]:
+  """
+  Sign the payload as a JWS (RFC7515) with the given protected header.
+
+  Unlike jose.jws.sign, no header parameters are added to the protected
+  header.  jose.jws.sign always adds a typ parameter, which is not defined
+  for vCon.  The protected header and payload are encoded in the same way
+  as jose.jws.sign encodes them.
+
+  Parameters:
+    payload (dict): the payload to be signed
+    signing_jwk (dict): JWK including the private key, as returned by
+      build_signing_jwk_from_pem_files
+    protected_header (dict): header parameters to be integrity protected.
+      Must include alg.
+
+  Returns:
+    Tuple[str, str, str]: base64url encoded protected header, payload and signature
+  """
+  algorithm = protected_header["alg"]
+
+  encoded_header = jose.utils.base64url_encode(json.dumps(
+    protected_header,
+    separators = (",", ":"),
+    sort_keys = True
+    ).encode("utf-8"))
+
+  encoded_payload = jose.utils.base64url_encode(json.dumps(
+    payload,
+    separators = (",", ":")
+    ).encode("utf-8"))
+
+  signing_input = encoded_header + b"." + encoded_payload
+  key = jose.jwk.construct(signing_jwk, algorithm)
+  encoded_signature = jose.utils.base64url_encode(key.sign(signing_input))
+
+  return(
+    encoded_header.decode("utf-8"),
+    encoded_payload.decode("utf-8"),
+    encoded_signature.decode("utf-8")
+    )
+
+
+def decode_jws_protected_header(protected : str) -> dict:
+  """
+  Decode the base64url encoded protected header of a JWS signature.
+
+  Parameters:
+    protected (str): base64url encoded protected header
+
+  Returns:
+    dict containing the protected header parameters, empty if protected is empty
+  """
+  if(protected == ""):
+    return({})
+
+  padding = "=" * (-len(protected) % 4)
+  return(json.loads(jose.utils.base64url_decode(bytes(protected + padding, "utf-8"))))
+
+
+def merge_jose_headers(
+  protected_header : dict,
+  unprotected_header : dict,
+  object_label : str
+  ) -> dict:
+  """
+  Merge the protected and unprotected header parameters of a JWS signature
+  or JWE recipient.
+
+  RFC7515 and RFC7516 do not allow a header parameter in both headers.
+  Signed and encrypted vCons created by earlier versions of this package
+  repeat some header parameters, with identical values, in both headers.
+  A repeated header parameter is accepted only if the values are identical.
+
+  Parameters:
+    protected_header (dict): protected header parameters
+    unprotected_header (dict): unprotected header parameters
+    object_label (str): label for the signature or recipient in error messages
+
+  Returns:
+    dict containing the parameters of both headers
+
+  Raises ValueError if a header parameter is in both headers with different values.
+  """
+  for name in set(protected_header) & set(unprotected_header):
+    if(protected_header[name] != unprotected_header[name]):
+      raise ValueError(
+        "{} header parameter: \"{}\" is in both the protected and unprotected"
+        " headers with different values".format(object_label, name))
+
+  merged = dict(unprotected_header)
+  merged.update(protected_header)
+  return(merged)
+
 
 def verify_cert_chain(cert_chain : typing.List[cryptography.x509.Certificate]) -> None:
   """
