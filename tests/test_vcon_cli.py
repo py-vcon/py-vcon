@@ -46,7 +46,7 @@ async def test_vcon_new(capsys):
     raise e
 
   assert(len(new_vcon.uuid) == 36)
-  assert(new_vcon.vcon is None)
+  assert(new_vcon.vcon == vcon.Vcon.CURRENT_VCON_VERSION)
 
 
 @pytest.mark.asyncio

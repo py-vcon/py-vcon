@@ -223,7 +223,10 @@ def test_external_recording_sha_512(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(new_vcon.dialog[0]['mediatype'] == "audio/x-wav")
   assert(new_vcon.dialog[0]['filename'] == file_name)
   assert(new_vcon.dialog[0]['content_hash'][0:7] == 'sha512-')
-  assert(new_vcon.dialog[0]['originator'] == 1)
+  # originator is applied to the Session Object, not the Dialog Object
+  assert("originator" not in new_vcon.dialog[0])
+  assert(new_vcon.sessions[0]["parties"] == [0, 1])
+  assert(new_vcon.sessions[0]["originator"] == 1)
   assert("body" not in new_vcon.dialog[0])
   assert("key" not in new_vcon.dialog[0])
 

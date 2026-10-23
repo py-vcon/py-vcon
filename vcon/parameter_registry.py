@@ -12,6 +12,9 @@ vCon Object.  For example:
   "parties.civicaddress"  the Civicaddress Object of a Party Object
   "dialog"                a Dialog Object
   "dialog.party_history"  an element of a Dialog Object party_history array
+  "sessions"              a Session Object
+  "sessions.sessions"     a Session_Reference Object of a Session Object
+  "events"                an Event Object
 
 Core parameter names are taken from the IANA registries defined in
 draft-ietf-vcon-vcon-core.  Where the IANA section of that document
@@ -23,6 +26,11 @@ Civicaddress and SessionId Objects have no registry tables at all.
 The group parameter is registered on the vCon Object as it appears in
 the vCon Object Parameter Names Registry, however "group" is not a
 registered path as no Group Object registry is defined.
+
+The Dialog Object parameters and the party_history Object which were
+removed in vCon 0.5.0 are retained so that 0.4.0 vCons, which are
+accepted without conversion, do not appear to use unknown parameters.
+They are to be removed with the 0.4.0 to 0.5.0 converter.
 """
 
 import typing
@@ -44,7 +52,9 @@ CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
     "redacted",
     "amended",
     "group",
+    "sessions",
     "parties",
+    "events",
     "dialog",
     "analysis",
     "attachments"
@@ -61,6 +71,27 @@ CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
     "uuid",
     "url",
     "content_hash"
+    ],
+
+  "sessions": [
+    "start",
+    "duration",
+    "parties",
+    "originator",
+    "session_id",
+    "sessions",
+    "dialog"
+    ],
+
+  "sessions.session_id": [
+    "local",
+    "remote"
+    ],
+
+  "sessions.sessions": [
+    "session",
+    "type",
+    "description"
     ],
 
   "parties": [
@@ -99,12 +130,24 @@ CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
     "pc"
     ],
 
+  "events": [
+    "type",
+    "time",
+    "sessions",
+    "party",
+    "dialog",
+    "button",
+    "transferee",
+    "transfer_target",
+    "consultation",
+    "target_session"
+    ],
+
   "dialog": [
     "type",
     "start",
     "duration",
     "parties",
-    "originator",
     "mediatype",
     "filename",
     "body",
@@ -113,6 +156,10 @@ CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
     "content_hash",
     "disposition",
     "session_id",
+    "application",
+    "message_id",
+    # Removed in vCon 0.5.0, retained until the 0.4.0 converter exists
+    "originator",
     "party_history",
     "transferee",
     "transferor",
@@ -120,8 +167,6 @@ CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
     "original",
     "consultation",
     "target_dialog",
-    "application",
-    "message_id",
     "recordings",
     "recording_set"
     ],
@@ -131,6 +176,7 @@ CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
     "remote"
     ],
 
+  # Removed in vCon 0.5.0, retained until the 0.4.0 converter exists
   "dialog.party_history": [
     "party",
     "time",
@@ -141,7 +187,9 @@ CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
   "analysis": [
     "type",
     "dialog",
+    "session",
     "attachment",
+    "analysis",
     "mediatype",
     "filename",
     "vendor",
@@ -158,6 +206,7 @@ CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
     "start",
     "party",
     "dialog",
+    "session",
     "mediatype",
     "filename",
     "body",

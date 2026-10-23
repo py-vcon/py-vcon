@@ -44,6 +44,7 @@ expected_tags = [
     'meta',
     'party',
     'dialog',
+    'session',
     'analysis',
     'attachment',
     'operation',
@@ -57,6 +58,7 @@ tag_titles = {
     'meta': "access or modify Vcon Meta Data",
     'party': "access or modify Vcon Party objects",
     'dialog': "access or modify Vcon Dialog objects",
+    'session': "access or modify Vcon Session objects",
     'analysis': "access or modify Vcon Analysis objects",
     'attachment': "access or modify Vcon Attachment objects",
     'operation': "perform operations on Vcon's",
@@ -95,15 +97,16 @@ def test_vcon_doc():
       num_tagged_methods += 1
       tagged_method_names.append(name)
 
-    else:
+    # Private methods are not part of the documented API
+    elif(not name.startswith("_")):
       untagged_methods.append(name)
 
   print("got {} tagged of {} methods".format(num_tagged_methods, total_methods))
-  print("untagged methods: {}".format(untagged_methods))
+  print("untagged public methods: {}".format(untagged_methods))
   print("tags: {}".format(list(tagged_methods.keys())))
-  assert(total_methods - num_tagged_methods <= 19)
+  assert(len(untagged_methods) <= 15)
   # if the tags change, may need to check the layout and order
-  assert(len(tagged_methods) == 10)
+  assert(len(tagged_methods) == 11)
 
   TOC = ""
   readme_text = ""

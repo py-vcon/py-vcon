@@ -31,6 +31,12 @@ The following categories of methods are implemented on the Vcon class.
    * [get_dialog_external_recording](#get_dialog_external_recording)
    * [get_dialog_text](#get_dialog_text)
    * [set_dialog_parameter](#set_dialog_parameter)
+ * Methods to access or modify Vcon Session objects
+   * [add_dialog_to_session](#add_dialog_to_session)
+   * [add_session](#add_session)
+   * [add_session_reference](#add_session_reference)
+   * [find_sessions_for_dialog](#find_sessions_for_dialog)
+   * [set_session_parameter](#set_session_parameter)
  * Methods to reference other vCons from a vCon
    * [add_group_object](#add_group_object)
    * [set_amended](#set_amended)
@@ -138,7 +144,7 @@ Returns:
 
 ### add_dialog_external_recording
 
-**add_dialog_external_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', external_url: 'str', media_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None, sign_type: 'typing.Union[str, None]' = 'SHA-512', originator: 'typing.Union[int, None]' = None) -> 'int'
+**add_dialog_external_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', external_url: 'str', media_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None, sign_type: 'typing.Union[str, None]' = 'SHA-512', originator: 'typing.Union[int, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a recording of a portion of the conversation, as a reference via the given
@@ -164,7 +170,9 @@ Parameters:
            However , in some cases, it is difficult to arrange the recording channels with the originator
            as the first party/channel.  In these cases, the originator can be explicitly provided.  The
            value of the originator is the index into the Vcon.parties array of the party that originated
-           this dialog.
+           this dialog.  The originator is applied to the Session Object, not the Dialog Object.  
+**session** (int): index of the Session Object which is to reference the new dialog.  If None,
+           a new Session Object is created to reference it.  See **add_dialog_to_session**.
 
 Returns:  
         Index to the added dialog
@@ -173,7 +181,7 @@ Returns:
 
 ### add_dialog_inline_email_message
 
-**add_dialog_inline_email_message**(self, smtp_message: 'str', file_name: 'typing.Union[str, None]' = None) -> 'int'
+**add_dialog_inline_email_message**(self, smtp_message: 'str', file_name: 'typing.Union[str, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a new text dialog and any attachments for the given SMTP email message.
@@ -183,7 +191,9 @@ include a simple text or MIME body.  Attachments are added to Vcon.
 
 Parameters:  
   **smtp_message** (str) - string containing the contents of a SMTP
-  messages including headers and body.
+  messages including headers and body.  
+  **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
+           a new Session Object is created to reference it.
 
 Returns:  
   index (int) of the dialog added for the text body of the message
@@ -192,7 +202,7 @@ Returns:
 
 ### add_dialog_inline_recording
 
-**add_dialog_inline_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None, originator: 'typing.Union[int, None]' = None) -> 'int'
+**add_dialog_inline_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None, originator: 'typing.Union[int, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a recording of a portion of the conversation, inline (base64 encoded) to the dialog.
@@ -208,20 +218,22 @@ Parameters:
            channel of the recording.  
 **media_type** (str): media type of the recording  
 **file_name** (str): file name of the recording (optional)  
-**originator** (int): by default the originator of the dialog is the first party listed in the parites array.
+**originator** (int): by default the originator is the first party listed in the parites array.
            However , in some cases, it is difficult to arrange the recording channels with the originator
            as the first party/channel.  In these cases, the originator can be explicitly provided.  The
            value of the originator is the index into the Vcon.parties array of the party that originated
-           this dialog.
+           this dialog.  The originator is applied to the Session Object, not the Dialog Object.  
+**session** (int): index of the Session Object which is to reference the new dialog.  If None,
+           a new Session Object is created to reference it.  See **add_dialog_to_session**.
 
 Returns:  
-        Number of bytes read from body.
+        Index to the added dialog
 
 
 
 ### add_dialog_inline_text
 
-**add_dialog_inline_text**(self, body: 'str', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', party: 'typing.Union[int, list[int]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None) -> 'int'
+**add_dialog_inline_text**(self, body: 'str', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', party: 'typing.Union[int, list[int]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a dialog segment for a text chat or email thread.
@@ -236,7 +248,9 @@ Parameters:
            Should be zero if unknown.
   **party** (int) - index into parties object array as to which party sent the text communication.  
   **media_type** (str) - media type of the body (usually MEDIATYPE_TEXT_PLAIN or MEDIATYPE_MULTIPART)  
-  **file_name** (str) - file name of the body if applicable (optional)
+  **file_name** (str) - file name of the body if applicable (optional)  
+  **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
+           a new Session Object is created to reference it.  See **add_dialog_to_session**.
 
 Returns:  
   Index of the new dialog in the Dialog Object array parameter.
@@ -396,8 +410,142 @@ Parameters:
   **dialog_index** (int) - index of dialog to set tel url on
               (-1 indicates a new dialog should be added)
 
+The originator parameter is no longer a Dialog Object parameter.  Setting
+it is applied to the Session Object which references the dialog.  An
+AttributeError is raised if that is ambiguous: the dialog is not
+referenced by exactly one Session Object, or the Session Object has a
+different originator and also references other dialogs.
+
 Returns:
-int: if success, positive int index of party in list
+int: if success, positive int index of dialog in list
+
+
+
+
+## Methods to access or modify Vcon Session objects
+
+
+### add_dialog_to_session
+
+**add_dialog_to_session**(self, session_index: 'int', dialog_index: 'int', receivers: 'typing.Union[typing.List[int], None]' = None, extend_time: 'bool' = True) -> 'None'
+
+
+Add a reference to the Dialog Object to the Session Object dialog parameter
+and add references to the receivers of the dialog to the Session Object
+parties parameter.  The Session Object references the Dialog Object by its
+index in the dialog Object array.  It does not contain the Dialog Object.
+
+Parameters:  
+  **session_index** (int) - index of the Session Object which is to reference the Dialog Object  
+  **dialog_index** (int) - index of the Dialog Object to be referenced by the session.  The
+           reference is not added again if the session already references the Dialog Object.  
+  **receivers** (List[int]) - indices of the parties which are receivers of the dialog.
+           The indices are added to the Session Object parties in order, if not already present.
+           If None, the parties of the Dialog Object are used, which is correct for
+           a normal call recording.  
+  **extend_time** (bool) - if True, the Session Object start is set or moved earlier and
+           the Session Object duration is set or made longer as needed to span the
+           referenced Dialog Object start and duration.  The session start is never moved later and
+           the session duration is never made shorter.  If False, the Session Object
+           start and duration are not changed.  A session may be shorter than the
+           dialog which it references.  In that case, set extend_time to False and
+           set the session start and duration with **set_session_parameter**.
+
+Returns: none
+
+
+
+### add_session
+
+**add_session**(self, dialog: 'typing.Union[typing.List[int], None]' = None, parties: 'typing.Union[typing.List[int], None]' = None, start: 'typing.Union[str, int, float, datetime.datetime, None]' = None, duration: 'typing.Union[int, float, None]' = None, originator: 'typing.Union[int, None]' = None, session_id: 'typing.Union[typing.Dict[str, str], None]' = None, sessions: 'typing.Union[typing.List[typing.Dict[str, typing.Any]], None]' = None) -> 'int'
+
+
+Add a new Session Object to the vCon sessions Object array.
+
+This is the only method which creates a Session Object.  Methods which
+implicitly create a Session Object (e.g. the add_dialog_* methods) call
+this method.  The given parameters are stored as given.  Parameters which
+are None are omitted from the Session Object.  Nothing is derived from the
+referenced Dialog Objects.  Use **add_dialog_to_session** to add references
+to Dialog Objects and derive the Session Object parties, start and duration
+from the referenced Dialog Objects.
+
+Parameters:  
+  **dialog** (List[int]) - indices of the Dialog Objects which this session references  
+  **parties** (List[int]) - indices of the parties which are the receivers of the
+           dialog in this session.  The first party is the implied originator.  
+  **start** (str, int, float, datetime.datetime) - Date, time of the start of the session.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.  
+  **duration** (int or float) - duration of the session in seconds  
+  **originator** (int) - index of the party which originated the session.  Only
+           needed if the first party in parties is not the originator.  
+  **session_id** (Dict[str, str]) - SessionId Object for the session  
+  **sessions** (List[Dict]) - Session_Reference Objects, each of which references another
+           Session Object and gives its relationship to this one.  See **add_session_reference**.
+
+Returns:  
+  Index of the new Session Object in the sessions Object array.
+
+
+
+### add_session_reference
+
+**add_session_reference**(self, session_index: 'int', referenced_session: 'int', ref_type: 'str', description: 'typing.Union[str, None]' = None) -> 'None'
+
+
+Add a Session_Reference Object to the sessions parameter of the given
+Session Object.  The Session_Reference Object references another Session
+Object by its index in the sessions Object array and gives the type of
+its relationship to the given Session Object.  It does not contain the
+referenced Session Object.
+
+Parameters:  
+  **session_index** (int) - index of the Session Object to which the Session_Reference Object is added  
+  **referenced_session** (int) - index of the Session Object which is referenced  
+  **ref_type** (str) - type of relationship to the referenced session.  One of:
+           "child", "peer", "precursor", "breakout" or a type defined in a vCon extension.
+           A warning is logged if the type is not one of the above and this vCon
+           does not list any extensions.  
+  **description** (str) - free form text description of the relationship (optional)
+
+Returns: none
+
+
+
+### find_sessions_for_dialog
+
+**find_sessions_for_dialog**(self, dialog_index: 'int') -> 'typing.List[int]'
+
+
+Find the Session Objects which reference the given Dialog Object.
+
+Parameters:  
+  **dialog_index** (int) - index of the Dialog Object
+
+Returns:  
+  list of the indices of the Session Objects whose dialog parameter contains dialog_index
+
+
+
+### set_session_parameter
+
+**set_session_parameter**(self, parameter_name: 'str', parameter_value: 'typing.Any', session_index: 'int') -> 'int'
+
+
+Set the named parameter for the given Session Object.
+
+Unlike **set_dialog_parameter**, this does not create a new Object.
+Use **add_session** to create a Session Object.  Parameters which
+reference other Objects (e.g. dialog, parties, sessions) take indices.
+
+Parameters:  
+  **parameter_name** (String) - name of the Session Object parameter to be set.  
+  **parameter_value** (Any) - new value to set for the named parameter  
+  **session_index** (int) - index of the Session Object on which to set the parameter
+
+Returns:  
+  index of the Session Object
 
 
 
@@ -763,7 +911,7 @@ Load the vCon from a CBOR bytes array.
 Assumes that this vCon is an empty vCon as it is not cleared.
 
 Decision as to what json form to be deserialized is:
-1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+1) unsigned vcon must have one or more of the following elements: parties, dialog, analysis, attachments, sessions, events
 2) JWS vCon must have a payload and signatures
 3) JWE vCon must have a ciphertext and recipients
 
@@ -783,7 +931,7 @@ Load the vCon from the JSON style dict.
 Assumes that this vCon is an empty vCon as it is not cleared.
 
 Decision as to what json form to be deserialized is:
-1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+1) unsigned vcon must have one or more of the following elements: parties, dialog, analysis, attachments, sessions, events
 2) JWS vCon must have a payload and signatures
 3) JWE vCon must have a ciphertext and recipients
 
@@ -803,7 +951,7 @@ Load the vCon from a JSON string.
 Assumes that this vCon is an empty vCon as it is not cleared.
 
 Decision as to what json form to be deserialized is:
-1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+1) unsigned vcon must have one or more of the following elements: parties, dialog, analysis, attachments, sessions, events
 2) JWS vCon must have a payload and signatures
 3) JWE vCon must have a ciphertext and recipients
 

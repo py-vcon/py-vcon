@@ -104,7 +104,7 @@ def test_dumps(two_party_tel_vcon : vcon.Vcon) -> None:
 
   vcon_dict = json.loads(vcon_json)
 
-  assert(vcon.Vcon.VCON_VERSION not in vcon_dict)
+  assert(vcon_dict[vcon.Vcon.VCON_VERSION] == vcon.Vcon.CURRENT_VCON_VERSION)
   assert_dict_array_size(vcon_dict, VCON_PARTIES, 2)
   assert(vcon_dict['parties'][0]['tel'] == call_data['source'])
   assert(vcon_dict['parties'][1]['tel'] == call_data['destination'])
@@ -132,10 +132,10 @@ def test_add_inline_recording(two_party_tel_vcon : vcon.Vcon, empty_vcon : vcon.
   media_type = vcon.Vcon.MEDIATYPE_AUDIO_WAV
   file_name = "fake.wav"
   duration = 77.4
-  file_length = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
+  dialog_index = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
     duration, [0, 1], media_type, file_name)
 
-  assert(file_length == len(fake_recording_file))
+  assert(dialog_index == 0)
   assert_vcon_array_size(vCon, VCON_DIALOG, 1)
   assert(vCon._vcon_dict[VCON_DIALOG][0]["type"] == "recording")
   assert(vCon._vcon_dict[VCON_DIALOG][0]["start"] == call_data['rfc3339'])
@@ -208,10 +208,10 @@ def test_add_inline_recording_w_originator(two_party_tel_vcon : vcon.Vcon, empty
   media_type = vcon.Vcon.MEDIATYPE_AUDIO_WAV
   file_name = "fake.wav"
   duration = 77.4
-  file_length = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
+  dialog_index = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
     duration, [0, 1], media_type, file_name, originator=1)
 
-  assert(file_length == len(fake_recording_file))
+  assert(dialog_index == 0)
   assert_vcon_array_size(vCon, VCON_DIALOG, 1)
   assert(vCon._vcon_dict[VCON_DIALOG][0]["type"] == "recording")
   assert(vCon._vcon_dict[VCON_DIALOG][0]["start"] == call_data['rfc3339'])
@@ -219,7 +219,10 @@ def test_add_inline_recording_w_originator(two_party_tel_vcon : vcon.Vcon, empty
   assert(vCon._vcon_dict[VCON_DIALOG][0].get("mimetype", None) is None)
   assert(vCon._vcon_dict[VCON_DIALOG][0]["mediatype"] == media_type)
   assert(vCon._vcon_dict[VCON_DIALOG][0]["filename"] == file_name)
-  assert(vCon._vcon_dict[VCON_DIALOG][0].get("originator", None) == 1)
+  # originator is applied to the Session Object, not the Dialog Object
+  assert(vCon._vcon_dict[VCON_DIALOG][0].get("originator", None) is None)
+  assert(vCon.sessions[0]["parties"] == [0, 1])
+  assert(vCon.sessions[0]["originator"] == 1)
   assert(vCon._vcon_dict[VCON_DIALOG][0][VCON_PARTIES][0] == 0)
   assert(vCon._vcon_dict[VCON_DIALOG][0][VCON_PARTIES][1] == 1)
   assert(len(vCon._vcon_dict[VCON_DIALOG][0][VCON_PARTIES]) == 2)

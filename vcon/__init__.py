@@ -194,6 +194,11 @@ def tag_dialog(func):
   func._tag = "dialog"
   return(func)
 
+def tag_session(func):
+  """ decorator to tag with session category """
+  func._tag = "session"
+  return(func)
+
 def tag_analysis(func):
   """ decorator to tag with analysis category """
   func._tag = "analysis"
@@ -365,6 +370,27 @@ class VconDictList(VconAttribute):
     return(got_value)
 
 
+class VconLazyDictList(VconAttribute):
+  """
+  descriptor for Lists of dicts in vcon which are only added to the vCon
+  when they are first modified
+  """
+
+  def __init__(self, doc : typing.Union[str, None] = None):
+    super().__init__(doc = doc)
+    self._type_name = "DictList"
+
+  def __get__(self, instance_object, class_type = None):
+    got_value = super().__get__(instance_object, class_type)
+
+    # Always return a list to avoid having to test for null and empty.
+    # The returned list adds itself to the vCon only if it is modified.
+    if(got_value is None):
+      got_value = _WriteBackList(instance_object._vcon_dict, self.name)
+
+    return(got_value)
+
+
 class VconStringList(VconAttribute):
   """ descriptor for Lists of strings in vcon """
 
@@ -472,7 +498,7 @@ class Vcon():
     "audio/mp4": ".m4a"
   }
 
-  CURRENT_VCON_VERSION = "0.4.0"
+  CURRENT_VCON_VERSION = "0.5.0"
   # vCon syntax versions accepted on import for which a migration to the
   # current syntax is implemented.
   MIGRATABLE_VCON_VERSIONS = ["0.0.1", "0.0.2"]
@@ -493,7 +519,12 @@ class Vcon():
   DIALOG = "dialog"
   ANALYSIS = "analysis"
   ATTACHMENTS = "attachments"
+  SESSIONS = "sessions"
+  EVENTS = "events"
   CREATED_AT = "created_at"
+
+  # Session_Reference Object type tokens defined by the core vCon schema
+  SESSION_REFERENCE_TYPES = ["child", "peer", "precursor", "breakout"]
 
   PARAMETER_CORE = vcon.parameter_registry.PARAMETER_CORE
 
@@ -518,6 +549,10 @@ class Vcon():
     " audio or video (original form of communication) segments for this conversation")
   analysis = VconDictList(doc = "List of Dicts referencing or includeing analysis data for this conversation")
   attachments = VconDictList(doc = "List of Dicts referencing or including ancillary documents to this conversation")
+  sessions = VconLazyDictList(doc = "List of Session Object Dicts, one for each session or sub-conversation" +
+    " of this conversation.  A Session Object references its Dialog Objects by index")
+  events = VconLazyDictList(doc = "List of Event Object Dicts, for the events which occurred in this conversation." +
+    "  An Event Object references the Session Objects in which it occurred by index")
 
   # TODO:  work out states the vcon can be in.  For example:
   """
@@ -588,6 +623,9 @@ class Vcon():
     self._jwe_dict = None
 
     self._vcon_dict = {}
+    # Label vCons created by this package with the syntax version.
+    # Loaded vCons keep the vcon parameter, if any, which they were loaded with.
+    self._vcon_dict[Vcon.VCON_VERSION] = Vcon.CURRENT_VCON_VERSION
     self._vcon_dict[Vcon.PARTIES] = []
     self._vcon_dict[Vcon.DIALOG] = []
     self._vcon_dict[Vcon.ANALYSIS] = []
@@ -800,6 +838,432 @@ class Vcon():
     return(found)
 
 
+  def _check_object_index(self, array_name : str, index : int) -> None:
+    """
+    Raise AttributeError if the Object at the given index of the named
+    Object array does not exist.
+    """
+    array_length = len(self._vcon_dict.get(array_name, None) or [])
+    if(not isinstance(index, int) or
+      isinstance(index, bool) or
+      index < 0 or
+      index >= array_length
+      ):
+      raise AttributeError(
+        "{} index: {} does not exist.  The vCon {} array has {} Object(s).".format(
+        array_name, index, array_name, array_length))
+
+
+  @tag_session
+  def add_session(
+    self,
+    dialog : typing.Union[typing.List[int], None] = None,
+    parties : typing.Union[typing.List[int], None] = None,
+    start : typing.Union[str, int, float, datetime.datetime, None] = None,
+    duration : typing.Union[int, float, None] = None,
+    originator : typing.Union[int, None] = None,
+    session_id : typing.Union[typing.Dict[str, str], None] = None,
+    sessions : typing.Union[typing.List[typing.Dict[str, typing.Any]], None] = None
+    ) -> int:
+    """
+    Add a new Session Object to the vCon sessions Object array.
+
+    This is the only method which creates a Session Object.  Methods which
+    implicitly create a Session Object (e.g. the add_dialog_* methods) call
+    this method.  The given parameters are stored as given.  Parameters which
+    are None are omitted from the Session Object.  Nothing is derived from the
+    referenced Dialog Objects.  Use **add_dialog_to_session** to add references
+    to Dialog Objects and derive the Session Object parties, start and duration
+    from the referenced Dialog Objects.
+
+    Parameters:  
+      **dialog** (List[int]) - indices of the Dialog Objects which this session references  
+      **parties** (List[int]) - indices of the parties which are the receivers of the
+               dialog in this session.  The first party is the implied originator.  
+      **start** (str, int, float, datetime.datetime) - Date, time of the start of the session.
+               String containing RFC 2822 or RFC3339 date time stamp or int/float
+               containing epoch time (since 1970) in seconds.  
+      **duration** (int or float) - duration of the session in seconds  
+      **originator** (int) - index of the party which originated the session.  Only
+               needed if the first party in parties is not the originator.  
+      **session_id** (Dict[str, str]) - SessionId Object for the session  
+      **sessions** (List[Dict]) - Session_Reference Objects, each of which references another
+               Session Object and gives its relationship to this one.  See **add_session_reference**.
+
+    Returns:  
+      Index of the new Session Object in the sessions Object array.
+    """
+    self._attempting_modify()
+
+    for dialog_index in (dialog or []):
+      self._check_object_index(Vcon.DIALOG, dialog_index)
+    for party_index in (parties or []):
+      self._check_object_index(Vcon.PARTIES, party_index)
+    if(originator is not None):
+      self._check_object_index(Vcon.PARTIES, originator)
+
+    new_session: typing.Dict[str, typing.Any] = {}
+    if(start is not None):
+      new_session["start"] = vcon.utils.cannonize_date(start)
+    if(duration is not None):
+      new_session["duration"] = duration
+    if(parties is not None):
+      new_session["parties"] = list(parties)
+    if(originator is not None):
+      new_session["originator"] = originator
+    if(session_id is not None):
+      new_session["session_id"] = session_id
+    if(sessions is not None):
+      new_session["sessions"] = list(sessions)
+    if(dialog is not None):
+      new_session["dialog"] = list(dialog)
+
+    if(self._vcon_dict.get(Vcon.SESSIONS, None) is None):
+      self._vcon_dict[Vcon.SESSIONS] = []
+
+    self._vcon_dict[Vcon.SESSIONS].append(new_session)
+
+    return(len(self._vcon_dict[Vcon.SESSIONS]) - 1)
+
+
+  @tag_session
+  def add_dialog_to_session(
+    self,
+    session_index : int,
+    dialog_index : int,
+    receivers : typing.Union[typing.List[int], None] = None,
+    extend_time : bool = True
+    ) -> None:
+    """
+    Add a reference to the Dialog Object to the Session Object dialog parameter
+    and add references to the receivers of the dialog to the Session Object
+    parties parameter.  The Session Object references the Dialog Object by its
+    index in the dialog Object array.  It does not contain the Dialog Object.
+
+    Parameters:  
+      **session_index** (int) - index of the Session Object which is to reference the Dialog Object  
+      **dialog_index** (int) - index of the Dialog Object to be referenced by the session.  The
+               reference is not added again if the session already references the Dialog Object.  
+      **receivers** (List[int]) - indices of the parties which are receivers of the dialog.
+               The indices are added to the Session Object parties in order, if not already present.
+               If None, the parties of the Dialog Object are used, which is correct for
+               a normal call recording.  
+      **extend_time** (bool) - if True, the Session Object start is set or moved earlier and
+               the Session Object duration is set or made longer as needed to span the
+               referenced Dialog Object start and duration.  The session start is never moved later and
+               the session duration is never made shorter.  If False, the Session Object
+               start and duration are not changed.  A session may be shorter than the
+               dialog which it references.  In that case, set extend_time to False and
+               set the session start and duration with **set_session_parameter**.
+
+    Returns: none
+    """
+    self._attempting_modify()
+    self._check_object_index(Vcon.SESSIONS, session_index)
+    self._check_object_index(Vcon.DIALOG, dialog_index)
+
+    session = self._vcon_dict[Vcon.SESSIONS][session_index]
+    dialog = self._vcon_dict[Vcon.DIALOG][dialog_index]
+
+    # Parties may be added after the dialog which references them.  So only
+    # explicitly given receivers are checked.  Receivers taken from the
+    # Dialog Object parties are used as is.
+    if(receivers is None):
+      receivers = vcon.utils.flatten_party_indices(dialog.get("parties", None))
+    else:
+      for party_index in receivers:
+        self._check_object_index(Vcon.PARTIES, party_index)
+
+    session_dialog = session.get("dialog", None)
+    if(session_dialog is None):
+      session_dialog = []
+      session["dialog"] = session_dialog
+    if(dialog_index not in session_dialog):
+      session_dialog.append(dialog_index)
+
+    if(len(receivers) > 0):
+      session_parties = session.get("parties", None)
+      if(session_parties is None):
+        session_parties = []
+        session["parties"] = session_parties
+      for party_index in receivers:
+        if(party_index not in session_parties):
+          session_parties.append(party_index)
+
+    if(extend_time):
+      Vcon._extend_session_time(session, dialog)
+
+    Vcon._order_session_parameters(session)
+
+
+  @staticmethod
+  def _order_session_parameters(session : typing.Dict[str, typing.Any]) -> None:
+    """
+    Order the core parameters of the Session Object as they are defined in
+    the vCon core schema, followed by any other parameters, for readability.
+    """
+    core_names = vcon.parameter_registry.get_path_parameter_names(Vcon.SESSIONS)
+    ordered_names = [name for name in core_names if name in session]
+    ordered_names += [name for name in session if name not in core_names]
+    for name in ordered_names:
+      session[name] = session.pop(name)
+
+
+  @staticmethod
+  def _extend_session_time(
+    session : typing.Dict[str, typing.Any],
+    dialog : typing.Dict[str, typing.Any]
+    ) -> None:
+    """
+    Set or widen the start and duration of the given Session Object to
+    include the start and duration of the given Dialog Object.
+    """
+    dialog_start_string = dialog.get("start", None)
+    if(dialog_start_string is None):
+      return
+
+    dialog_start = vcon.utils.date_to_datetime(dialog_start_string)
+    dialog_duration = dialog.get("duration", None)
+    dialog_end = dialog_start
+    if(dialog_duration is not None):
+      dialog_end = dialog_start + datetime.timedelta(seconds = dialog_duration)
+
+    session_start_string = session.get("start", None)
+    if(session_start_string is None):
+      session["start"] = vcon.utils.cannonize_date(dialog_start_string)
+      if(dialog_duration is not None and session.get("duration", None) is None):
+        session["duration"] = dialog_duration
+      return
+
+    session_start = vcon.utils.date_to_datetime(session_start_string)
+    session_duration = session.get("duration", None)
+
+    new_start = session_start
+    if(dialog_start < session_start):
+      new_start = dialog_start
+      session["start"] = vcon.utils.cannonize_date(dialog_start_string)
+
+    # With no session duration, the end of the session is not known
+    if(session_duration is None):
+      return
+
+    session_end = session_start + datetime.timedelta(seconds = session_duration)
+    new_end = max(session_end, dialog_end)
+    if(new_start != session_start or new_end != session_end):
+      new_duration = (new_end - new_start).total_seconds()
+      if(float(new_duration).is_integer()):
+        new_duration = int(new_duration)
+      session["duration"] = new_duration
+
+
+  @tag_session
+  def set_session_parameter(
+    self,
+    parameter_name : str,
+    parameter_value : typing.Any,
+    session_index : int
+    ) -> int:
+    """
+    Set the named parameter for the given Session Object.
+
+    Unlike **set_dialog_parameter**, this does not create a new Object.
+    Use **add_session** to create a Session Object.  Parameters which
+    reference other Objects (e.g. dialog, parties, sessions) take indices.
+
+    Parameters:  
+      **parameter_name** (String) - name of the Session Object parameter to be set.  
+      **parameter_value** (Any) - new value to set for the named parameter  
+      **session_index** (int) - index of the Session Object on which to set the parameter
+
+    Returns:  
+      index of the Session Object
+    """
+    self._attempting_modify()
+    self._check_object_index(Vcon.SESSIONS, session_index)
+    self.add_parameter_extension(Vcon.SESSIONS, parameter_name)
+
+    self._vcon_dict[Vcon.SESSIONS][session_index][parameter_name] = parameter_value
+
+    return(session_index)
+
+
+  @tag_session
+  def add_session_reference(
+    self,
+    session_index : int,
+    referenced_session : int,
+    ref_type : str,
+    description : typing.Union[str, None] = None
+    ) -> None:
+    """
+    Add a Session_Reference Object to the sessions parameter of the given
+    Session Object.  The Session_Reference Object references another Session
+    Object by its index in the sessions Object array and gives the type of
+    its relationship to the given Session Object.  It does not contain the
+    referenced Session Object.
+
+    Parameters:  
+      **session_index** (int) - index of the Session Object to which the Session_Reference Object is added  
+      **referenced_session** (int) - index of the Session Object which is referenced  
+      **ref_type** (str) - type of relationship to the referenced session.  One of:
+               "child", "peer", "precursor", "breakout" or a type defined in a vCon extension.
+               A warning is logged if the type is not one of the above and this vCon
+               does not list any extensions.  
+      **description** (str) - free form text description of the relationship (optional)
+
+    Returns: none
+    """
+    self._attempting_modify()
+    self._check_object_index(Vcon.SESSIONS, session_index)
+    self._check_object_index(Vcon.SESSIONS, referenced_session)
+
+    if(ref_type not in Vcon.SESSION_REFERENCE_TYPES and
+      len(self._vcon_dict.get(Vcon.EXTENSIONS, None) or []) == 0
+      ):
+      logger.warning(
+        "Session_Reference type: \"%s\" is not a core type and the vCon lists no extensions",
+        ref_type)
+
+    reference: typing.Dict[str, typing.Any] = {}
+    reference["session"] = referenced_session
+    reference["type"] = ref_type
+    if(description is not None):
+      reference["description"] = description
+
+    session = self._vcon_dict[Vcon.SESSIONS][session_index]
+    if(session.get("sessions", None) is None):
+      session["sessions"] = []
+    session["sessions"].append(reference)
+
+
+  @tag_session
+  def find_sessions_for_dialog(self, dialog_index : int) -> typing.List[int]:
+    """
+    Find the Session Objects which reference the given Dialog Object.
+
+    Parameters:  
+      **dialog_index** (int) - index of the Dialog Object
+
+    Returns:  
+      list of the indices of the Session Objects whose dialog parameter contains dialog_index
+    """
+    found: typing.List[int] = []
+    for session_index, session in enumerate(self._vcon_dict.get(Vcon.SESSIONS, None) or []):
+      if(dialog_index in (session.get("dialog", None) or [])):
+        found.append(session_index)
+
+    return(found)
+
+
+  def _apply_dialog_originator(self, dialog_index : int, originator : int) -> None:
+    """
+    Apply the originator of a Dialog Object to the Session Object which
+    references the Dialog Object.  The originator is never set on the
+    Dialog Object.
+
+    Raises AttributeError if the Dialog Object is not referenced by exactly
+    one Session Object, or if the Session Object has a different originator
+    and also references other Dialog Objects.
+    """
+    self._check_object_index(Vcon.PARTIES, originator)
+
+    session_indices = self.find_sessions_for_dialog(dialog_index)
+    if(len(session_indices) != 1):
+      raise AttributeError(
+        "cannot apply originator: {} for dialog: {}.  The dialog is referenced by {}"
+        " Session Objects: {}.  It must be referenced by exactly one.".format(
+        originator, dialog_index, len(session_indices), session_indices))
+
+    session = self._vcon_dict[Vcon.SESSIONS][session_indices[0]]
+    session_parties = session.get("parties", None)
+    if(session_parties is None or len(session_parties) == 0):
+      session["parties"] = [originator]
+      return
+
+    current_originator = session.get("originator", session_parties[0])
+    if(current_originator == originator):
+      return
+
+    other_dialog = [index for index in (session.get("dialog", None) or []) if index != dialog_index]
+    if(len(other_dialog) > 0):
+      raise AttributeError(
+        "cannot apply originator: {} for dialog: {}.  Session: {} has originator: {}"
+        " and also references dialog: {}".format(
+        originator, dialog_index, session_indices[0], current_originator, other_dialog))
+
+    if(originator not in session_parties):
+      session_parties.append(originator)
+    if(session_parties[0] == originator):
+      session.pop("originator", None)
+    else:
+      session["originator"] = originator
+      Vcon._order_session_parameters(session)
+
+
+  def _check_new_dialog_session(
+    self,
+    session : typing.Union[int, None],
+    originator : typing.Union[int, None] = None
+    ) -> None:
+    """
+    Check, before a new Dialog Object is created, that a reference to it
+    can be added to the given Session Object with the given originator, so
+    that the vCon is not left partially modified.
+
+    Raises AttributeError if the session or originator index does not exist
+    or if the originator conflicts with that of the Session Object.
+    """
+    has_originator = originator is not None and originator >= 0
+    if(has_originator):
+      self._check_object_index(Vcon.PARTIES, originator)
+
+    if(session is None):
+      return
+
+    self._check_object_index(Vcon.SESSIONS, session)
+
+    if(not has_originator):
+      return
+
+    session_object = self._vcon_dict[Vcon.SESSIONS][session]
+    session_parties = session_object.get("parties", None) or []
+    if(len(session_parties) == 0):
+      return
+
+    current_originator = session_object.get("originator", session_parties[0])
+    session_dialog = session_object.get("dialog", None) or []
+    if(current_originator != originator and len(session_dialog) > 0):
+      raise AttributeError(
+        "cannot reference new dialog with originator: {} from session: {}.  The session has"
+        " originator: {} and references dialog: {}".format(
+        originator, session, current_originator, session_dialog))
+
+
+  def _add_new_dialog_to_session(
+    self,
+    dialog_index : int,
+    session : typing.Union[int, None],
+    originator : typing.Union[int, None] = None
+    ) -> int:
+    """
+    Add a reference to a newly created Dialog Object to the given Session
+    Object, or to a new Session Object if session is None, and apply the
+    originator if given.
+
+    Returns:
+      index of the Session Object
+    """
+    if(session is None):
+      session = self.add_session()
+
+    self.add_dialog_to_session(session, dialog_index)
+
+    if(originator is not None and originator >= 0):
+      self._apply_dialog_originator(dialog_index, originator)
+
+    return(session)
+
+
   @tag_dialog
   def add_dialog_inline_text(self,
     body : str,
@@ -807,7 +1271,8 @@ class Vcon():
     duration : typing.Union[int, float],
     party : typing.Union[int, list[int]],
     media_type : str,
-    file_name : typing.Union[str, None] = None) -> int:
+    file_name : typing.Union[str, None] = None,
+    session : typing.Union[int, None] = None) -> int:
     """
     Add a dialog segment for a text chat or email thread.
 
@@ -821,13 +1286,16 @@ class Vcon():
                Should be zero if unknown.
       **party** (int) - index into parties object array as to which party sent the text communication.  
       **media_type** (str) - media type of the body (usually MEDIATYPE_TEXT_PLAIN or MEDIATYPE_MULTIPART)  
-      **file_name** (str) - file name of the body if applicable (optional)
+      **file_name** (str) - file name of the body if applicable (optional)  
+      **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
+               a new Session Object is created to reference it.  See **add_dialog_to_session**.
 
     Returns:  
       Index of the new dialog in the Dialog Object array parameter.
     """
 
     self._attempting_modify()
+    self._check_new_dialog_session(session)
 
     new_dialog: typing.Dict[str, typing.Any] = {}
     new_dialog['type'] = "text"
@@ -845,15 +1313,19 @@ class Vcon():
       self._vcon_dict[Vcon.DIALOG] = []
 
     self._vcon_dict[Vcon.DIALOG].append(new_dialog)
+    dialog_index = len(self.dialog) - 1
 
-    return(len(self.dialog) - 1)
+    self._add_new_dialog_to_session(dialog_index, session)
+
+    return(dialog_index)
 
 
   @tag_dialog
   def add_dialog_inline_email_message(
     self,
     smtp_message: str,
-    file_name : typing.Union[str, None] = None
+    file_name : typing.Union[str, None] = None,
+    session : typing.Union[int, None] = None
     ) -> int:
     """
     Add a new text dialog and any attachments for the given SMTP email message.
@@ -863,11 +1335,16 @@ class Vcon():
 
     Parameters:  
       **smtp_message** (str) - string containing the contents of a SMTP
-      messages including headers and body.
+      messages including headers and body.  
+      **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
+               a new Session Object is created to reference it.
 
     Returns:  
       index (int) of the dialog added for the text body of the message
     """
+
+    self._attempting_modify()
+    self._check_new_dialog_session(session)
 
     email_message = email.message_from_string(smtp_message)
 
@@ -924,7 +1401,7 @@ class Vcon():
     else:
       email_body = email_message.get_payload()
 
-    dialog_index = self.add_dialog_inline_text(email_body, date, 0, party_indices, content_type, file_name)
+    dialog_index = self.add_dialog_inline_text(email_body, date, 0, party_indices, content_type, file_name, session)
 
     # get and save the message-id header as that helps us avoid duplicating
     # a message and gives us a key to refer back to the SMTP message.
@@ -943,7 +1420,8 @@ class Vcon():
     parties : typing.Union[int, typing.List[int], typing.List[typing.List[int]]],
     media_type : str,
     file_name : typing.Union[str, None] = None,
-    originator : typing.Union[int, None] = None) -> int:
+    originator : typing.Union[int, None] = None,
+    session : typing.Union[int, None] = None) -> int:
     """
     Add a recording of a portion of the conversation, inline (base64 encoded) to the dialog.
 
@@ -958,22 +1436,24 @@ class Vcon():
                channel of the recording.  
     **media_type** (str): media type of the recording  
     **file_name** (str): file name of the recording (optional)  
-    **originator** (int): by default the originator of the dialog is the first party listed in the parites array.
+    **originator** (int): by default the originator is the first party listed in the parites array.
                However , in some cases, it is difficult to arrange the recording channels with the originator
                as the first party/channel.  In these cases, the originator can be explicitly provided.  The
                value of the originator is the index into the Vcon.parties array of the party that originated
-               this dialog.
+               this dialog.  The originator is applied to the Session Object, not the Dialog Object.  
+    **session** (int): index of the Session Object which is to reference the new dialog.  If None,
+               a new Session Object is created to reference it.  See **add_dialog_to_session**.
 
     Returns:  
-            Number of bytes read from body.
+            Index to the added dialog
     """
-    # TODO should return dialog index not byte count
 
     # TODO: do we want to know the number of channels?  e.g. to verify party list length
 
     # TODO: should we validate the start time?
 
     self._attempting_modify()
+    self._check_new_dialog_session(session, originator)
 
     new_dialog: typing.Dict[str, typing.Any] = {}
     new_dialog['type'] = "recording"
@@ -990,9 +1470,6 @@ class Vcon():
     if(file_name is not None and len(file_name) > 0):
       new_dialog['filename'] = file_name
 
-    if(originator is not None and originator >= 0):
-      new_dialog['originator'] = originator
-
     new_dialog['encoding'] = "base64url"
     encoded_body = jose.utils.base64url_encode(body).decode('utf-8')
     #print("encoded body type: {}".format(type(encoded_body)))
@@ -1002,8 +1479,11 @@ class Vcon():
       self._vcon_dict[Vcon.DIALOG] = []
 
     self._vcon_dict[Vcon.DIALOG].append(new_dialog)
+    dialog_index = len(self.dialog) - 1
 
-    return(len(body))
+    self._add_new_dialog_to_session(dialog_index, session, originator)
+
+    return(dialog_index)
 
   @deprecated("use Vcon.decode_dialog_inline_body")
   def decode_dialog_inline_recording(self, dialog_index : int) -> bytes:
@@ -1222,7 +1702,8 @@ class Vcon():
     media_type : typing.Union[str, None] = None,
     file_name : typing.Union[str, None] = None,
     sign_type : typing.Union[str, None] = "SHA-512",
-    originator : typing.Union[int, None] = None) -> int:
+    originator : typing.Union[int, None] = None,
+    session : typing.Union[int, None] = None) -> int:
     """
     Add a recording of a portion of the conversation, as a reference via the given
     URL, to the dialog and generate a signature and key for the content.  This
@@ -1247,7 +1728,9 @@ class Vcon():
                However , in some cases, it is difficult to arrange the recording channels with the originator
                as the first party/channel.  In these cases, the originator can be explicitly provided.  The
                value of the originator is the index into the Vcon.parties array of the party that originated
-               this dialog.
+               this dialog.  The originator is applied to the Session Object, not the Dialog Object.  
+    **session** (int): index of the Session Object which is to reference the new dialog.  If None,
+               a new Session Object is created to reference it.  See **add_dialog_to_session**.
 
     Returns:  
             Index to the added dialog
@@ -1256,6 +1739,7 @@ class Vcon():
     # TODO: need a streaming/chunk version of this so that we don't have to have the whole file in memory.
 
     self._attempting_modify()
+    self._check_new_dialog_session(session, originator)
 
     new_dialog: typing.Dict[str, typing.Any] = {}
     new_dialog['type'] = "recording"
@@ -1267,8 +1751,6 @@ class Vcon():
       new_dialog['mediatype'] = media_type
     if(file_name is not None):
       new_dialog['filename'] = file_name
-    if(originator is not None and originator >= 0):
-      new_dialog['originator'] = originator
 
 
     if (body):
@@ -1298,6 +1780,8 @@ class Vcon():
 
     dialog_index = len(self.dialog)
     self._vcon_dict[Vcon.DIALOG].append(new_dialog)
+
+    self._add_new_dialog_to_session(dialog_index, session, originator)
 
     return(dialog_index)
 
@@ -1437,11 +1921,22 @@ class Vcon():
       **dialog_index** (int) - index of dialog to set tel url on
                   (-1 indicates a new dialog should be added)
 
+    The originator parameter is no longer a Dialog Object parameter.  Setting
+    it is applied to the Session Object which references the dialog.  An
+    AttributeError is raised if that is ambiguous: the dialog is not
+    referenced by exactly one Session Object, or the Session Object has a
+    different originator and also references other dialogs.
+
     Returns:
-    int: if success, positive int index of party in list
+    int: if success, positive int index of dialog in list
     """
 
     self._attempting_modify()
+
+    if(parameter_name == "originator"):
+      self._check_object_index(Vcon.DIALOG, dialog_index)
+      self._apply_dialog_originator(dialog_index, parameter_value)
+      return(dialog_index)
 
     dialog_index = self.__add_new_dialog(dialog_index)
     self.add_parameter_extension("dialog", parameter_name)
@@ -1965,7 +2460,7 @@ class Vcon():
     Assumes that this vCon is an empty vCon as it is not cleared.
 
     Decision as to what json form to be deserialized is:
-    1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+    1) unsigned vcon must have one or more of the following elements: parties, dialog, analysis, attachments, sessions, events
     2) JWS vCon must have a payload and signatures
     3) JWE vCon must have a ciphertext and recipients
 
@@ -1989,7 +2484,7 @@ class Vcon():
     Assumes that this vCon is an empty vCon as it is not cleared.
 
     Decision as to what json form to be deserialized is:
-    1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+    1) unsigned vcon must have one or more of the following elements: parties, dialog, analysis, attachments, sessions, events
     2) JWS vCon must have a payload and signatures
     3) JWE vCon must have a ciphertext and recipients
 
@@ -2037,7 +2532,9 @@ class Vcon():
       ('parties' in vcon_dict) or
       ('dialog' in vcon_dict) or
       ('analysis' in vcon_dict) or
-      ('attachments' in vcon_dict)
+      ('attachments' in vcon_dict) or
+      ('sessions' in vcon_dict) or
+      ('events' in vcon_dict)
       ):
 
       # validate version and migrate if needed
@@ -2046,7 +2543,7 @@ class Vcon():
     # Unknown
     else:
       raise InvalidVconJson("Not recognized as a unsigned , signed or encrypted form of JSON vCon." +
-        "  Unsigned vcon must have vcon version and at least one of: parties, dialog, analyisis or attachment object arrays." +
+        "  Unsigned vcon must have at least one of: parties, dialog, analysis, attachments, sessions or events object arrays." +
         "  Signed vcon must have payload and signatures fields." +
         "  Encrypted vcon must have ciphertext and recipients fields."
         )
@@ -2060,7 +2557,7 @@ class Vcon():
     Assumes that this vCon is an empty vCon as it is not cleared.
 
     Decision as to what json form to be deserialized is:
-    1) unsigned vcon must have a vcon and one or more of the following elements: parties, dialog, analysis, attachments
+    1) unsigned vcon must have one or more of the following elements: parties, dialog, analysis, attachments, sessions, events
     2) JWS vCon must have a payload and signatures
     3) JWE vCon must have a ciphertext and recipients
 
@@ -2110,7 +2607,9 @@ class Vcon():
       ('parties' in vcon_dict) or
       ('dialog' in vcon_dict) or
       ('analysis' in vcon_dict) or
-      ('attachments' in vcon_dict)
+      ('attachments' in vcon_dict) or
+      ('sessions' in vcon_dict) or
+      ('events' in vcon_dict)
       )):
 
       # Check for CBOR tags that need to be replaced
@@ -2148,7 +2647,7 @@ class Vcon():
     # Unknown
     else:
       raise InvalidVconJson("Not recognized as a unsigned , signed or encrypted form of JSON vCon." +
-        "  Unsigned vcon must have vcon version and at least one of: parties, dialog, analyisis or attachment object arrays." +
+        "  Unsigned vcon must have at least one of: parties, dialog, analysis, attachments, sessions or events object arrays." +
         "  Signed vcon must have payload and signatures fields." +
         "  Encrypted vcon must have ciphertext and recipients fields."
         )
@@ -2958,6 +3457,7 @@ class Vcon():
 
     The vcon parameter is deprecated.  A vCon with no vcon parameter is
     assumed to be of the current syntax and is passed through unmodified.
+    A vCon of the CURRENT_VCON_VERSION is passed through unmodified.
     A vCon of a version in UNCONVERTED_VCON_VERSIONS is passed through
     unmodified, with its vcon parameter left as is, and a
     UnconvertedVconVersionWarning is emitted.  A vCon of a version in
@@ -2975,6 +3475,10 @@ class Vcon():
 
     # vcon parameter is deprecated.  Assume current syntax.
     if(version_string is None):
+      return(vcon_dict)
+
+    # Current syntax
+    if(version_string == Vcon.CURRENT_VCON_VERSION):
       return(vcon_dict)
 
     # Accepted as is.  No migration implemented, vcon parameter left alone.

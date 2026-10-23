@@ -19,9 +19,8 @@ def test_empty_vcon():
   print("reconstituted: {}".format(reconstituted_vcon.dumps()))
   assert(empty_vcon.uuid == reconstituted_vcon.uuid)
   assert(empty_vcon.created_at == reconstituted_vcon.created_at)
-  # vcon parameter is deprecated and no longer set on construction.  Its
-  # absence must still be recognized as an unsigned vCon by loadc.
-  assert(reconstituted_vcon.vcon is None)
+  # vCons created by this package are labeled with the current syntax version
+  assert(reconstituted_vcon.vcon == vcon.Vcon.CURRENT_VCON_VERSION)
 
 def test_simple_vcon():
   hello_vcon = vcon.Vcon()

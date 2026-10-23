@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Utilities and helper functions for the vcon package """
 
 import datetime
@@ -89,6 +89,58 @@ def cannonize_date(date : typing.Union[int, float, str, datetime.datetime]) -> s
     raise AttributeError("unsupported type: {} value: {} for date".format(type(date), date))
 
   return(date_string)
+
+
+def date_to_datetime(date : typing.Union[int, float, str, datetime.datetime]) -> datetime.datetime:
+  """
+  Convert date to a time zone aware datetime in UTC.
+
+  Parameters:
+    date Union[int, float, str, datetime.datetime]: date to be converted.
+    int or float are seconds since epoch.  String form can be RFC2822 or RFC3339 date string
+
+  Returns:
+    datetime.datetime in UTC
+  """
+  return(datetime.datetime.fromisoformat(cannonize_date(date)))
+
+
+def flatten_party_indices(
+  parties : typing.Union[int, typing.List[typing.Union[int, typing.List[int], None]], None]
+  ) -> typing.List[int]:
+  """
+  Flatten a Dialog Object parties value into a list of party indices.
+
+  The Dialog Object parties value may be an int, a list of ints, or for
+  multi-channel recordings, a list with an int, a list of ints or a null
+  for each channel.  The party indices are returned in order without
+  duplicates and with nulls removed.
+
+  Parameters:
+    parties: Dialog Object parties value
+
+  Returns:
+    list of party indices
+  """
+  flat_parties: typing.List[int] = []
+  if(parties is None):
+    return(flat_parties)
+
+  if(not isinstance(parties, list)):
+    parties = [parties]
+
+  for channel_parties in parties:
+    if(channel_parties is None):
+      continue
+
+    if(not isinstance(channel_parties, list)):
+      channel_parties = [channel_parties]
+
+    for party in channel_parties:
+      if(party is not None and party not in flat_parties):
+        flat_parties.append(party)
+
+  return(flat_parties)
 
 
 def get_recording_duration(
