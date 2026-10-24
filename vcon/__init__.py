@@ -1155,6 +1155,39 @@ class Vcon():
     return(found)
 
 
+  def _find_session_by_parties(self, parties : typing.List[int]) -> typing.Union[int, None]:
+    """
+    Find the last Session Object whose parties are the same set of party
+    indices as the given parties.
+
+    Returns:
+      index of the Session Object or None if not found
+    """
+    found = None
+    for session_index, session in enumerate(self._vcon_dict.get(Vcon.SESSIONS, None) or []):
+      if(set(session.get("parties", None) or []) == set(parties)):
+        found = session_index
+
+    return(found)
+
+
+  def _has_email_session(self) -> bool:
+    """
+    Check if any Session Object references an email text Dialog Object
+    (i.e. a text Dialog Object with a message_id).
+    """
+    dialog_list = self._vcon_dict.get(Vcon.DIALOG, None) or []
+    for session in (self._vcon_dict.get(Vcon.SESSIONS, None) or []):
+      for dialog_index in (session.get("dialog", None) or []):
+        if(dialog_index < len(dialog_list) and
+          dialog_list[dialog_index].get("type", None) == "text" and
+          dialog_list[dialog_index].get("message_id", None) is not None
+          ):
+          return(True)
+
+    return(False)
+
+
   def _apply_dialog_originator(self, dialog_index : int, originator : int) -> None:
     """
     Apply the originator of a Dialog Object to the Session Object which
@@ -1331,13 +1364,22 @@ class Vcon():
     Add a new text dialog and any attachments for the given SMTP email message.
 
     SMTP message should include To, From, Subject, Cc, Date headers and may
-    include a simple text or MIME body.  Attachments are added to Vcon. 
+    include a simple text or MIME body.  Attachments are added to Vcon.
 
-    Parameters:  
+    The parties of the new Dialog Object reference only the sender (From).
+    The receivers of the message, the sender and the To and Cc parties, are
+    referenced by the parties of the Session Object.  Bcc parties are not
+    included.
+
+    Parameters:
       **smtp_message** (str) - string containing the contents of a SMTP
-      messages including headers and body.  
+      messages including headers and body.
       **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
-               a new Session Object is created to reference it.
+               the last Session Object whose parties are the same set of parties as the
+               receivers of this message references the new dialog.  If there is no such
+               Session Object, a new Session Object is created to reference it.  A thread
+               in which the receivers change is not yet represented as a parent Session
+               Object with child Session Objects.  A warning is logged in that case.
 
     Returns:  
       index (int) of the dialog added for the text body of the message
@@ -1382,7 +1424,16 @@ class Vcon():
       if(len(parties_found) > 1):
         logger.warning("Warning: multiple parties found matching {}: at indices: {}".format(email_address, parties_found))
 
-    content_type = email_message.get("content-type")
+    # The sender is first, followed by the To and Cc parties
+    receivers: typing.List[int] = []
+    for party_index in party_indices:
+      if(party_index not in receivers):
+        receivers.append(party_index)
+
+    if(session is None):
+      session = self._find_session_by_parties(receivers)
+
+    content_type = vcon.utils.unfold_header(email_message.get("content-type"))
     file_name = email_message.get_filename()
     #date = time.mktime(email.utils.parsedate(email_message.get("date")))
     date = email.utils.parsedate_to_datetime(email_message.get("date"))
@@ -1401,7 +1452,18 @@ class Vcon():
     else:
       email_body = email_message.get_payload()
 
-    dialog_index = self.add_dialog_inline_text(email_body, date, 0, party_indices, content_type, file_name, session)
+    if(session is None and self._has_email_session()):
+      logger.warning(
+        "email message receivers: %s do not match the parties of any Session Object.  A new"
+        " Session Object is created.  A thread in which the receivers change is not yet"
+        " represented as a parent Session Object with child Session Objects.",
+        receivers)
+
+    dialog_index = self.add_dialog_inline_text(email_body, date, 0, [sender_index], content_type, file_name, session)
+
+    if(session is None):
+      session = self.find_sessions_for_dialog(dialog_index)[0]
+    self.add_dialog_to_session(session, dialog_index, receivers = receivers)
 
     # get and save the message-id header as that helps us avoid duplicating
     # a message and gives us a key to refer back to the SMTP message.

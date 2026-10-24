@@ -187,13 +187,22 @@ Returns:
 Add a new text dialog and any attachments for the given SMTP email message.
 
 SMTP message should include To, From, Subject, Cc, Date headers and may
-include a simple text or MIME body.  Attachments are added to Vcon. 
+include a simple text or MIME body.  Attachments are added to Vcon.
 
-Parameters:  
+The parties of the new Dialog Object reference only the sender (From).
+The receivers of the message, the sender and the To and Cc parties, are
+referenced by the parties of the Session Object.  Bcc parties are not
+included.
+
+Parameters:
   **smtp_message** (str) - string containing the contents of a SMTP
-  messages including headers and body.  
+  messages including headers and body.
   **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
-           a new Session Object is created to reference it.
+           the last Session Object whose parties are the same set of parties as the
+           receivers of this message references the new dialog.  If there is no such
+           Session Object, a new Session Object is created to reference it.  A thread
+           in which the receivers change is not yet represented as a parent Session
+           Object with child Session Objects.  A warning is logged in that case.
 
 Returns:  
   index (int) of the dialog added for the text body of the message

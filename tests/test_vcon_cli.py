@@ -232,9 +232,14 @@ Regards,Bob
   assert(out_vcon.parties[1]["mailto"] == "a@example.com")
   assert(len(out_vcon.dialog) == 1)
   assert(out_vcon.dialog[0]["type"] == "text")
-  assert(out_vcon.dialog[0]["parties"] == [0, 1])
+  # The Dialog Object parties is the sender only, the receivers are the Session Object parties
+  assert(out_vcon.dialog[0]["parties"] == [0])
+  assert(out_vcon.sessions[0]["parties"] == [0, 1])
+  assert(out_vcon.sessions[0]["dialog"] == [0])
   assert(out_vcon.dialog[0].get("mimetype", None) is None)
   assert(out_vcon.dialog[0]["mediatype"][:len(vcon.Vcon.MEDIATYPE_MULTIPART)] == vcon.Vcon.MEDIATYPE_MULTIPART)
+  # folded Content-Type header is unfolded
+  assert("\n" not in out_vcon.dialog[0]["mediatype"])
   assert(out_vcon.dialog[0]["start"] == "2022-09-23T21:44:25.000+00:00")
   assert(out_vcon.dialog[0]["duration"] == 0)
   assert(len(out_vcon.dialog[0]["body"]) == 2048)

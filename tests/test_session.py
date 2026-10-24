@@ -412,3 +412,88 @@ def test_session_registry():
   # removed in 0.5.0, retained until the 0.4.0 converter exists
   assert(vcon.Vcon.get_parameter_extension("dialog", "originator") == vcon.Vcon.PARAMETER_CORE)
   assert(vcon.Vcon.get_parameter_extension("dialog.party_history", "event") == vcon.Vcon.PARAMETER_CORE)
+
+
+def make_smtp_message(
+  sender : str,
+  to : str,
+  message_id : str,
+  cc : str = "",
+  bcc : str = "",
+  content_type : str = "text/plain"
+  ) -> str:
+  headers = "From: {}\r\nTo: {}\r\n".format(sender, to)
+  if(cc != ""):
+    headers += "Cc: {}\r\n".format(cc)
+  if(bcc != ""):
+    headers += "Bcc: {}\r\n".format(bcc)
+  headers += ("Subject: Test\r\nDate: Fri, 23 Sep 2022 21:44:25 +0000\r\n"
+    "Message-ID: {}\r\nContent-Type: {}\r\n".format(message_id, content_type))
+  return(headers + "\r\nHello\r\n")
+
+
+ALICE = "Alice <a@example.com>"
+BOB = "Bob <b@example.com>"
+CAROL = "Carol <c@example.com>"
+DAVE = "Dave <d@example.com>"
+
+
+def test_email_thread_one_session(caplog):
+  v = vcon.Vcon()
+  with caplog.at_level(logging.WARNING):
+    v.add_dialog_inline_email_message(make_smtp_message(BOB, ALICE, "<1@example.com>"))
+    v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<2@example.com>"))
+  assert("do not match" not in caplog.text)
+
+  assert(v.parties[0]["name"] == "Bob")
+  assert(v.parties[1]["name"] == "Alice")
+  # Dialog Object parties reference the sender only
+  assert(v.dialog[0]["parties"] == [0])
+  assert(v.dialog[1]["parties"] == [1])
+  # The Session Object references both dialogs and all of the receivers
+  assert(len(v.sessions) == 1)
+  assert(v.sessions[0]["parties"] == [0, 1])
+  assert(v.sessions[0]["dialog"] == [0, 1])
+
+
+def test_email_cc_receivers_bcc_ignored():
+  v = vcon.Vcon()
+  v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<1@example.com>", cc = CAROL, bcc = DAVE))
+  assert(len(v.parties) == 3)
+  assert(v.dialog[0]["parties"] == [0])
+  assert(v.sessions[0]["parties"] == [0, 1, 2])
+
+
+def test_email_receivers_change_new_session(caplog):
+  v = vcon.Vcon()
+  v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<1@example.com>"))
+  with caplog.at_level(logging.WARNING):
+    v.add_dialog_inline_email_message(make_smtp_message(BOB, ALICE, "<2@example.com>", cc = CAROL))
+  assert("do not match" in caplog.text)
+  assert(len(v.sessions) == 2)
+  assert(v.sessions[0]["dialog"] == [0])
+  assert(v.sessions[1]["dialog"] == [1])
+  assert(v.sessions[1]["parties"] == [1, 0, 2])
+
+
+def test_email_given_session():
+  v = vcon.Vcon()
+  v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<1@example.com>"))
+  v.add_dialog_inline_email_message(make_smtp_message(BOB, ALICE, "<2@example.com>", cc = CAROL), session = 0)
+  assert(len(v.sessions) == 1)
+  assert(v.sessions[0]["dialog"] == [0, 1])
+  assert(v.sessions[0]["parties"] == [0, 1, 2])
+
+
+def test_email_folded_content_type():
+  v = vcon.Vcon()
+  v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<1@example.com>",
+    content_type = "text/plain;\r\n\tcharset=UTF-8"))
+  assert(v.dialog[0]["mediatype"] == "text/plain; charset=UTF-8")
+
+
+def test_unfold_header():
+  assert(vcon.utils.unfold_header(None) is None)
+  assert(vcon.utils.unfold_header("text/plain") == "text/plain")
+  assert(vcon.utils.unfold_header("multipart/mixed; \n\tboundary=\"x\"") == "multipart/mixed; boundary=\"x\"")
+  assert(vcon.utils.unfold_header("a;\r\n  b;\r\n\tc") == "a; b; c")

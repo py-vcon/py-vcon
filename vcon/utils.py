@@ -2,6 +2,7 @@
 """ Utilities and helper functions for the vcon package """
 
 import datetime
+import re
 import os
 import tempfile
 import email.utils
@@ -103,6 +104,25 @@ def date_to_datetime(date : typing.Union[int, float, str, datetime.datetime]) ->
     datetime.datetime in UTC
   """
   return(datetime.datetime.fromisoformat(cannonize_date(date)))
+
+
+def unfold_header(header_value : typing.Union[str, None]) -> typing.Union[str, None]:
+  """
+  Unfold a folded SMTP header value (RFC5322 section 2.2.3).
+
+  Each line break and the white space which follows it, along with any white
+  space which precedes it, are replaced with a single space.
+
+  Parameters:
+    header_value (str): the header value, which may be folded over several lines
+
+  Returns:
+    the unfolded header value, or None if header_value is None
+  """
+  if(header_value is None):
+    return(None)
+
+  return(re.sub(r"[ \t]*\r?\n[ \t]+", " ", str(header_value)))
 
 
 def flatten_party_indices(
