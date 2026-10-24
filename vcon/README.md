@@ -37,6 +37,9 @@ The following categories of methods are implemented on the Vcon class.
    * [add_session_reference](#add_session_reference)
    * [find_sessions_for_dialog](#find_sessions_for_dialog)
    * [set_session_parameter](#set_session_parameter)
+ * Methods to access or modify Vcon Event objects
+   * [add_event](#add_event)
+   * [set_event_parameter](#set_event_parameter)
  * Methods to reference other vCons from a vCon
    * [add_group_object](#add_group_object)
    * [set_amended](#set_amended)
@@ -555,6 +558,71 @@ Parameters:
 
 Returns:  
   index of the Session Object
+
+
+
+
+## Methods to access or modify Vcon Event objects
+
+
+### add_event
+
+**add_event**(self, event_type: 'str', time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int', dialog: 'typing.Union[int, None]' = None, button: 'typing.Union[str, None]' = None, transferee: 'typing.Union[int, None]' = None, transfer_target: 'typing.Union[int, None]' = None, consultation: 'typing.Union[int, None]' = None, target_session: 'typing.Union[int, None]' = None, **other: 'typing.Any') -> 'int'
+
+
+Add a new Event Object to the vCon events Object array.
+
+For the core Event Object types, the parameters are validated against the
+applicability tables of the vCon core schema (see EVENT_PARAMETER_APPLICABILITY).
+Any other type is accepted as it may be defined by a vCon extension.  A warning
+is logged if the type is not a core type and this vCon does not list any extensions.
+The Session Objects are not modified.
+
+Parameters:
+  **event_type** (str) - type of the event.  One of the party types: "join", "drop",
+           "hold", "unhold", "mute", "unmute", the key types: "keydown", "keyup", the
+           transfer types: "consultation-start", "blind-transfer", "consultative-transfer",
+           "transfer-abandoned" or a type defined in a vCon extension.
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.  For the transfer types, it must be
+           the single index of the Session Object for the original call.
+  **party** (int) - index of the party for the event.  For the transfer types, the Transferor.
+  **dialog** (int) - index of the Dialog Object to which the event relates (optional,
+           not allowed for the transfer types)
+  **button** (str) - the key or button pressed or released (required for the key types only)
+  **transferee** (int) - index of the Transferee party (transfer types only)
+  **transfer_target** (int) - index of the Transfer Target party (transfer types only)
+  **consultation** (int) - index of the Session Object for the consultative call (transfer types only)
+  **target_session** (int) - index of the Session Object for the target call (transfer types only)
+  **other** - other Event Object parameters, for example defined by a vCon extension.
+           They are added as given.
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### set_event_parameter
+
+**set_event_parameter**(self, parameter_name: 'str', parameter_value: 'typing.Any', event_index: 'int') -> 'int'
+
+
+Set the named parameter for the given Event Object.
+
+This does not create a new Object.  Use **add_event** to create an Event
+Object.  The value is not validated against the applicability tables
+used by **add_event**.
+
+Parameters:
+  **parameter_name** (String) - name of the Event Object parameter to be set.
+  **parameter_value** (Any) - new value to set for the named parameter
+  **event_index** (int) - index of the Event Object on which to set the parameter
+
+Returns:
+  index of the Event Object
 
 
 

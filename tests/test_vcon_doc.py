@@ -45,6 +45,7 @@ expected_tags = [
     'party',
     'dialog',
     'session',
+    'event',
     'analysis',
     'attachment',
     'operation',
@@ -59,6 +60,7 @@ tag_titles = {
     'party': "access or modify Vcon Party objects",
     'dialog': "access or modify Vcon Dialog objects",
     'session': "access or modify Vcon Session objects",
+    'event': "access or modify Vcon Event objects",
     'analysis': "access or modify Vcon Analysis objects",
     'attachment': "access or modify Vcon Attachment objects",
     'operation': "perform operations on Vcon's",
@@ -106,7 +108,7 @@ def test_vcon_doc():
   print("tags: {}".format(list(tagged_methods.keys())))
   assert(len(untagged_methods) <= 15)
   # if the tags change, may need to check the layout and order
-  assert(len(tagged_methods) == 11)
+  assert(len(tagged_methods) == 12)
 
   TOC = ""
   readme_text = ""

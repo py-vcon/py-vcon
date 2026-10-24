@@ -199,6 +199,11 @@ def tag_session(func):
   func._tag = "session"
   return(func)
 
+def tag_event(func):
+  """ decorator to tag with event category """
+  func._tag = "event"
+  return(func)
+
 def tag_analysis(func):
   """ decorator to tag with analysis category """
   func._tag = "analysis"
@@ -525,6 +530,41 @@ class Vcon():
 
   # Session_Reference Object type tokens defined by the core vCon schema
   SESSION_REFERENCE_TYPES = ["child", "peer", "precursor", "breakout"]
+
+  # Event Object type tokens defined by the core vCon schema
+  EVENT_PARTY_TYPES = ["join", "drop", "hold", "unhold", "mute", "unmute"]
+  EVENT_KEY_TYPES = ["keydown", "keyup"]
+  EVENT_TRANSFER_TYPES = ["consultation-start", "blind-transfer", "consultative-transfer", "transfer-abandoned"]
+
+  # Applicability of the type specific Event Object parameters to the core
+  # Event Object types: "M" MUST be present, "O" optional, "X" MUST NOT be
+  # present.  type, time, sessions and party MUST be present for all types.
+  EVENT_PARAMETER_APPLICABILITY: typing.Dict[str, typing.Dict[str, str]] = {
+    "join":
+      {"dialog": "O", "button": "X", "transferee": "X", "transfer_target": "X", "consultation": "X", "target_session": "X"},
+    "drop":
+      {"dialog": "O", "button": "X", "transferee": "X", "transfer_target": "X", "consultation": "X", "target_session": "X"},
+    "hold":
+      {"dialog": "O", "button": "X", "transferee": "X", "transfer_target": "X", "consultation": "X", "target_session": "X"},
+    "unhold":
+      {"dialog": "O", "button": "X", "transferee": "X", "transfer_target": "X", "consultation": "X", "target_session": "X"},
+    "mute":
+      {"dialog": "O", "button": "X", "transferee": "X", "transfer_target": "X", "consultation": "X", "target_session": "X"},
+    "unmute":
+      {"dialog": "O", "button": "X", "transferee": "X", "transfer_target": "X", "consultation": "X", "target_session": "X"},
+    "keydown":
+      {"dialog": "O", "button": "M", "transferee": "X", "transfer_target": "X", "consultation": "X", "target_session": "X"},
+    "keyup":
+      {"dialog": "O", "button": "M", "transferee": "X", "transfer_target": "X", "consultation": "X", "target_session": "X"},
+    "consultation-start":
+      {"dialog": "X", "button": "X", "transferee": "M", "transfer_target": "M", "consultation": "M", "target_session": "X"},
+    "blind-transfer":
+      {"dialog": "X", "button": "X", "transferee": "M", "transfer_target": "M", "consultation": "X", "target_session": "M"},
+    "consultative-transfer":
+      {"dialog": "X", "button": "X", "transferee": "M", "transfer_target": "M", "consultation": "M", "target_session": "M"},
+    "transfer-abandoned":
+      {"dialog": "X", "button": "X", "transferee": "M", "transfer_target": "O", "consultation": "O", "target_session": "X"}
+    }
 
   PARAMETER_CORE = vcon.parameter_registry.PARAMETER_CORE
 
@@ -1186,6 +1226,151 @@ class Vcon():
           return(True)
 
     return(False)
+
+
+  @tag_event
+  def add_event(
+    self,
+    event_type : str,
+    time : typing.Union[str, int, float, datetime.datetime],
+    sessions : typing.Union[int, typing.List[int]],
+    party : int,
+    dialog : typing.Union[int, None] = None,
+    button : typing.Union[str, None] = None,
+    transferee : typing.Union[int, None] = None,
+    transfer_target : typing.Union[int, None] = None,
+    consultation : typing.Union[int, None] = None,
+    target_session : typing.Union[int, None] = None,
+    **other : typing.Any
+    ) -> int:
+    """
+    Add a new Event Object to the vCon events Object array.
+
+    For the core Event Object types, the parameters are validated against the
+    applicability tables of the vCon core schema (see EVENT_PARAMETER_APPLICABILITY).
+    Any other type is accepted as it may be defined by a vCon extension.  A warning
+    is logged if the type is not a core type and this vCon does not list any extensions.
+    The Session Objects are not modified.
+
+    Parameters:
+      **event_type** (str) - type of the event.  One of the party types: "join", "drop",
+               "hold", "unhold", "mute", "unmute", the key types: "keydown", "keyup", the
+               transfer types: "consultation-start", "blind-transfer", "consultative-transfer",
+               "transfer-abandoned" or a type defined in a vCon extension.
+      **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+               String containing RFC 2822 or RFC3339 date time stamp or int/float
+               containing epoch time (since 1970) in seconds.
+      **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+               occurred.  It is stored in the form given.  For the transfer types, it must be
+               the single index of the Session Object for the original call.
+      **party** (int) - index of the party for the event.  For the transfer types, the Transferor.
+      **dialog** (int) - index of the Dialog Object to which the event relates (optional,
+               not allowed for the transfer types)
+      **button** (str) - the key or button pressed or released (required for the key types only)
+      **transferee** (int) - index of the Transferee party (transfer types only)
+      **transfer_target** (int) - index of the Transfer Target party (transfer types only)
+      **consultation** (int) - index of the Session Object for the consultative call (transfer types only)
+      **target_session** (int) - index of the Session Object for the target call (transfer types only)
+      **other** - other Event Object parameters, for example defined by a vCon extension.
+               They are added as given.
+
+    Returns:
+      Index of the new Event Object in the events Object array.
+    """
+    self._attempting_modify()
+
+    session_list = sessions if isinstance(sessions, list) else [sessions]
+    if(len(session_list) == 0):
+      raise AttributeError("sessions must reference at least one Session Object")
+    for session_index in session_list:
+      self._check_object_index(Vcon.SESSIONS, session_index)
+    self._check_object_index(Vcon.PARTIES, party)
+    if(dialog is not None):
+      self._check_object_index(Vcon.DIALOG, dialog)
+    for party_index in (transferee, transfer_target):
+      if(party_index is not None):
+        self._check_object_index(Vcon.PARTIES, party_index)
+    for session_index in (consultation, target_session):
+      if(session_index is not None):
+        self._check_object_index(Vcon.SESSIONS, session_index)
+
+    type_parameters: typing.Dict[str, typing.Any] = {
+      "dialog": dialog,
+      "button": button,
+      "transferee": transferee,
+      "transfer_target": transfer_target,
+      "consultation": consultation,
+      "target_session": target_session
+      }
+
+    applicability = Vcon.EVENT_PARAMETER_APPLICABILITY.get(event_type, None)
+    if(applicability is None):
+      if(len(self._vcon_dict.get(Vcon.EXTENSIONS, None) or []) == 0):
+        logger.warning(
+          "Event Object type: \"%s\" is not a core type and the vCon lists no extensions",
+          event_type)
+
+    else:
+      if(event_type in Vcon.EVENT_TRANSFER_TYPES and isinstance(sessions, list)):
+        raise AttributeError(
+          "sessions for event type: \"{}\" must be the single index of the Session Object"
+          " for the original call, not a list: {}".format(event_type, sessions))
+
+      for name, rule in applicability.items():
+        if(rule == "M" and type_parameters[name] is None):
+          raise AttributeError("{} is required for event type: \"{}\"".format(name, event_type))
+        if(rule == "X" and type_parameters[name] is not None):
+          raise AttributeError("{} is not allowed for event type: \"{}\"".format(name, event_type))
+
+    new_event: typing.Dict[str, typing.Any] = {}
+    new_event["type"] = event_type
+    new_event["time"] = vcon.utils.cannonize_date(time)
+    new_event["sessions"] = sessions
+    new_event["party"] = party
+    for name, value in type_parameters.items():
+      if(value is not None):
+        new_event[name] = value
+    for name, value in other.items():
+      self.add_parameter_extension(Vcon.EVENTS, name)
+      new_event[name] = value
+
+    if(self._vcon_dict.get(Vcon.EVENTS, None) is None):
+      self._vcon_dict[Vcon.EVENTS] = []
+
+    self._vcon_dict[Vcon.EVENTS].append(new_event)
+
+    return(len(self._vcon_dict[Vcon.EVENTS]) - 1)
+
+
+  @tag_event
+  def set_event_parameter(
+    self,
+    parameter_name : str,
+    parameter_value : typing.Any,
+    event_index : int
+    ) -> int:
+    """
+    Set the named parameter for the given Event Object.
+
+    This does not create a new Object.  Use **add_event** to create an Event
+    Object.  The value is not validated against the applicability tables
+    used by **add_event**.
+
+    Parameters:
+      **parameter_name** (String) - name of the Event Object parameter to be set.
+      **parameter_value** (Any) - new value to set for the named parameter
+      **event_index** (int) - index of the Event Object on which to set the parameter
+
+    Returns:
+      index of the Event Object
+    """
+    self._attempting_modify()
+    self._check_object_index(Vcon.EVENTS, event_index)
+    self.add_parameter_extension(Vcon.EVENTS, parameter_name)
+
+    self._vcon_dict[Vcon.EVENTS][event_index][parameter_name] = parameter_value
+
+    return(event_index)
 
 
   def _apply_dialog_originator(self, dialog_index : int, originator : int) -> None:

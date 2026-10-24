@@ -500,3 +500,57 @@ async def test_post(two_party_tel_vcon, capsys, httpserver: pytest_httpserver.HT
 # vcon -i
 # vcon -o
 
+
+
+# vcon add event
+@pytest.mark.asyncio
+async def test_add_event(capsys, two_party_tel_vcon):
+  import vcon.cli
+
+  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.set_uuid("vcon.dev")
+  sys.stdin = io.StringIO(two_party_tel_vcon.dumps())
+
+  # sessions omitted: the only Session Object is used
+  await vcon.cli.main(["add", "event", "join", '{"time": "2022-06-21T13:53:26-04:00", "party": 1}'])
+
+  out_vcon_json, error = capsys.readouterr()
+  print("stderr: {}".format(error), file=sys.stderr)
+  out_vcon = vcon.Vcon()
+  out_vcon.loads(out_vcon_json)
+  assert(out_vcon.events == [{"type": "join", "time": "2022-06-21T17:53:26.000+00:00", "sessions": 0, "party": 1}])
+
+  sys.stdin = io.StringIO(out_vcon.dumps())
+  await vcon.cli.main(["add", "event", "keydown",
+    '{"time": "2022-06-21T13:53:27-04:00", "sessions": [0], "party": 0, "button": "5"}'])
+  out_vcon_json, error = capsys.readouterr()
+  out_vcon = vcon.Vcon()
+  out_vcon.loads(out_vcon_json)
+  assert(len(out_vcon.events) == 2)
+  assert(out_vcon.events[1]["sessions"] == [0])
+  assert(out_vcon.events[1]["button"] == "5")
+
+
+@pytest.mark.asyncio
+async def test_add_event_errors(capsys, two_party_tel_vcon):
+  import vcon.cli
+
+  two_party_tel_vcon.set_uuid("vcon.dev")
+  vcon_json = two_party_tel_vcon.dumps()
+
+  # no Session Object to imply
+  sys.stdin = io.StringIO(vcon_json)
+  with pytest.raises(AttributeError, match = "0 Session Objects"):
+    await vcon.cli.main(["add", "event", "join", '{"time": "2022-06-21T13:53:26-04:00", "party": 1}'])
+
+  sys.stdin = io.StringIO(vcon_json)
+  with pytest.raises(AttributeError, match = "time"):
+    await vcon.cli.main(["add", "event", "join", '{"party": 1, "sessions": 0}'])
+
+  sys.stdin = io.StringIO(vcon_json)
+  with pytest.raises(AttributeError, match = "event_type argument"):
+    await vcon.cli.main(["add", "event", "join", '{"type": "join", "time": 0, "party": 1, "sessions": 0}'])
+
+  sys.stdin = io.StringIO(vcon_json)
+  with pytest.raises(AttributeError, match = "JSON dict"):
+    await vcon.cli.main(["add", "event", "join", '[1]'])

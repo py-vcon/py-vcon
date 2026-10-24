@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
 Module for vcon command line interface script functions.  Pulled out of vcon CLI
 script file so that it coould more easily be tested with pytest.
@@ -40,6 +40,41 @@ def do_in_email(
     )
 
   return(in_vcon)
+
+
+def do_add_event(
+  args,
+  in_vcon: vcon.Vcon
+  ) -> vcon.Vcon:
+  """
+  Add an Event Object of the given type with the parameters given as a
+  JSON dict.  If sessions is not given and the vCon has exactly one
+  Session Object, sessions is set to 0.
+  """
+  parameters = json.loads(args.parameters[0])
+  if(not isinstance(parameters, dict)):
+    raise AttributeError("Event parameters must be a JSON dict, not: {}".format(args.parameters[0]))
+
+  if("type" in parameters):
+    raise AttributeError("Event type is given as the event_type argument, not in the parameters")
+
+  for required in ("time", "party"):
+    if(required not in parameters):
+      raise AttributeError("Event parameters must include: {}".format(required))
+
+  if("sessions" not in parameters):
+    num_sessions = len(in_vcon.sessions)
+    if(num_sessions != 1):
+      raise AttributeError(
+        "Event parameters do not include sessions and the vCon has {} Session Objects."
+        "  sessions may only be omitted when the vCon has exactly one Session Object.".format(
+        num_sessions))
+    parameters["sessions"] = 0
+
+  in_vcon.add_event(args.event_type[0], **parameters)
+
+  return(in_vcon)
+
 
 def zoom_chat_to_utc(local_time: str, zoom_start_utc: str, zoom_end_utc: str) -> str:
   if(time.daylight):
@@ -551,6 +586,27 @@ async def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
     default=None)
 
 
+  add_event_subparsers = subparsers_add.add_parser(
+    "event",
+    help = "add an Event Object"
+    )
+  add_event_subparsers.add_argument(
+    "event_type",
+    metavar = 'event_type',
+    nargs = 1,
+    type = str,
+    help = "Event Object type, e.g. join, drop, keydown or a type defined in a vCon extension",
+    default = None)
+  add_event_subparsers.add_argument(
+    "parameters",
+    metavar = 'parameters',
+    nargs = 1,
+    type = str,
+    help = "JSON dict of the Event Object parameters other than type, e.g."
+      " '{\"time\": \"2022-06-21T13:53:26-04:00\", \"party\": 0}'.  If sessions is not"
+      " given and the vCon has exactly one Session Object, sessions is set to 0.",
+    default = None)
+
   extractparser = subparsers_command.add_parser("extract")
   subparsers_extract = extractparser.add_subparsers(dest="extract_command")
   extract_dialog_subparsers = subparsers_extract.add_parser("dialog")
@@ -679,7 +735,8 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
   Commands:
     add in-recording <file_name> <start_date> <parties>
     add ex-recording <file_name> <start_date> <parties> <url>
- 
+    add event <event_type> <parameters>
+
     filter filter-name [-fo filter-options-dict] 
 
     sign private_key x5c1[, x5c2]... 
@@ -818,6 +875,9 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
 
     elif(args.add_command == "in-meet"):
       in_vcon = do_in_meet(args, in_vcon)
+
+    elif(args.add_command == "event"):
+      in_vcon = do_add_event(args, in_vcon)
 
 
   elif(args.command == "extract"):
