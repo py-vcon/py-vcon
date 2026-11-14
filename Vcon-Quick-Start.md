@@ -27,7 +27,7 @@ recording_name = "call_recording.wav"
 with open(recording_name, 'rb') as file_handle:
   recording_bytes = file_handle.read()
 
-vCon.add_dialog_inline_recording(
+vCon.add_recording_dialog_inline(
   recording_bytes,
   "Mon, 23 May 2022 20:09:01 -0000",
   23.5, # sec. duration

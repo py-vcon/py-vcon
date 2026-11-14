@@ -1912,7 +1912,7 @@ class Vcon():
 
 
   @tag_dialog
-  def add_dialog_inline_text(self,
+  def add_text_dialog_inline(self,
     body : str,
     start_time : typing.Union[str, int, float, datetime.datetime],
     duration : typing.Union[int, float],
@@ -1968,17 +1968,19 @@ class Vcon():
 
 
   @tag_dialog
-  def add_dialog_inline_email_message(
+  def add_email_dialog_inline(
     self,
     smtp_message: str,
     file_name : typing.Union[str, None] = None,
     session : typing.Union[int, None] = None
     ) -> int:
     """
-    Add a new text dialog and any attachments for the given SMTP email message.
+    Add a new text dialog for the given SMTP email message.
 
-    SMTP message should include To, From, Subject, Cc, Date headers and may
-    include a simple text or MIME body.  Attachments are added to Vcon.
+    Only an SMTP (RFC 5322) message is accepted: a string with the headers
+    and the body.  It should include To, From, Subject, Cc, Date headers and
+    may include a simple text or MIME body.  MIME attachments stay in the
+    Dialog body; no Attachment Objects are added.
 
     The parties of the new Dialog Object reference only the sender (From).
     The receivers of the message, the sender and the To and Cc parties, are
@@ -2073,7 +2075,7 @@ class Vcon():
         " represented as a parent Session Object with child Session Objects.",
         receivers)
 
-    dialog_index = self.add_dialog_inline_text(email_body, date, 0, [sender_index], content_type, file_name, session)
+    dialog_index = self.add_text_dialog_inline(email_body, date, 0, [sender_index], content_type, file_name, session)
 
     if(session is None):
       session = self.find_sessions_for_dialog(dialog_index)[0]
@@ -2088,7 +2090,7 @@ class Vcon():
 
 
   @tag_dialog
-  def add_dialog_inline_recording(
+  def add_recording_dialog_inline(
     self,
     body : bytes,
     start_time : typing.Union[str, int, float, datetime.datetime],
@@ -2373,7 +2375,7 @@ class Vcon():
 
 
   @tag_dialog
-  def add_dialog_external_recording(self, body : bytes,
+  def add_recording_dialog_external(self, body : bytes,
     start_time : typing.Union[str, int, float, datetime.datetime],
     duration : typing.Union[int, float],
     parties : typing.Union[int, typing.List[int], typing.List[typing.List[int]]],
@@ -2698,6 +2700,42 @@ class Vcon():
     dialog["redacted_segments"].append(segment)
 
     return(len(dialog["redacted_segments"]) - 1)
+
+
+  @tag_dialog
+  @deprecated("use add_text_dialog_inline")
+  def add_dialog_inline_text(self, *args, **kwargs) -> int:
+    """
+    Deprecated, use **add_text_dialog_inline**, which this calls with the same arguments.
+    """
+    return(self.add_text_dialog_inline(*args, **kwargs))
+
+
+  @tag_dialog
+  @deprecated("use add_recording_dialog_inline")
+  def add_dialog_inline_recording(self, *args, **kwargs) -> int:
+    """
+    Deprecated, use **add_recording_dialog_inline**, which this calls with the same arguments.
+    """
+    return(self.add_recording_dialog_inline(*args, **kwargs))
+
+
+  @tag_dialog
+  @deprecated("use add_recording_dialog_external")
+  def add_dialog_external_recording(self, *args, **kwargs) -> int:
+    """
+    Deprecated, use **add_recording_dialog_external**, which this calls with the same arguments.
+    """
+    return(self.add_recording_dialog_external(*args, **kwargs))
+
+
+  @tag_dialog
+  @deprecated("use add_email_dialog_inline")
+  def add_dialog_inline_email_message(self, *args, **kwargs) -> int:
+    """
+    Deprecated, use **add_email_dialog_inline**, which this calls with the same arguments.
+    """
+    return(self.add_email_dialog_inline(*args, **kwargs))
 
 
   @tag_dialog

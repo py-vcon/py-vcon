@@ -41,6 +41,10 @@ The following categories of methods are implemented on the Vcon class.
    * [add_dialog_inline_recording](#add_dialog_inline_recording)
    * [add_dialog_inline_text](#add_dialog_inline_text)
    * [add_dialog_redacted_segment](#add_dialog_redacted_segment)
+   * [add_email_dialog_inline](#add_email_dialog_inline)
+   * [add_recording_dialog_external](#add_recording_dialog_external)
+   * [add_recording_dialog_inline](#add_recording_dialog_inline)
+   * [add_text_dialog_inline](#add_text_dialog_inline)
    * [add_transfer_dialog](#add_transfer_dialog)
    * [clear_dialog](#clear_dialog)
    * [decode_dialog_inline_body](#decode_dialog_inline_body)
@@ -529,7 +533,106 @@ Returns:
 
 ### add_dialog_external_recording
 
-**add_dialog_external_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', external_url: 'str', media_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None, sign_type: 'typing.Union[str, None]' = 'SHA-512', originator: 'typing.Union[int, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
+**add_dialog_external_recording**(self, *args, **kwargs) -> 'int'
+
+
+Deprecated, use **add_recording_dialog_external**, which this calls with the same arguments.
+
+
+
+### add_dialog_inline_email_message
+
+**add_dialog_inline_email_message**(self, *args, **kwargs) -> 'int'
+
+
+Deprecated, use **add_email_dialog_inline**, which this calls with the same arguments.
+
+
+
+### add_dialog_inline_recording
+
+**add_dialog_inline_recording**(self, *args, **kwargs) -> 'int'
+
+
+Deprecated, use **add_recording_dialog_inline**, which this calls with the same arguments.
+
+
+
+### add_dialog_inline_text
+
+**add_dialog_inline_text**(self, *args, **kwargs) -> 'int'
+
+
+Deprecated, use **add_text_dialog_inline**, which this calls with the same arguments.
+
+
+
+### add_dialog_redacted_segment
+
+**add_dialog_redacted_segment**(self, dialog_index: 'int', start: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[typing.List[int], None]' = None, channel: 'typing.Union[int, None]' = None) -> 'int'
+
+
+Add a Redacted_segments Object to a recording Dialog Object, for a period
+of the recording in which the audio or video was redacted.
+
+The Redacted_segments Object has start and end; end is computed as start
+plus duration.
+
+Parameters:  
+  **dialog_index** (int) - index of the recording Dialog Object  
+  **start** (str, int, float, datetime.datetime) - Date, time at which the redacted
+           period starts.  String containing RFC 2822 or RFC3339 date time stamp
+           or int/float containing epoch time (since 1970) in seconds.  
+  **duration** (int, float) - length of the redacted period in seconds  
+  **parties** (List[int]) - indices of the parties whose media was redacted (optional)  
+  **channel** (int) - index of the redacted channel of the recording, 0 is the first
+           (optional, proposed for the draft).  It must be less than the number of
+           channels when the Dialog Object parties tell the number (see
+           **add_channel_contributors_event**).
+
+Returns:  
+  index of the new Redacted_segments Object in the Dialog's redacted_segments list
+
+Raises AttributeError if the Dialog Object is not a recording, the duration
+is negative, or a party or the channel does not exist.
+
+
+
+### add_email_dialog_inline
+
+**add_email_dialog_inline**(self, smtp_message: 'str', file_name: 'typing.Union[str, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
+
+
+Add a new text dialog for the given SMTP email message.
+
+Only an SMTP (RFC 5322) message is accepted: a string with the headers
+and the body.  It should include To, From, Subject, Cc, Date headers and
+may include a simple text or MIME body.  MIME attachments stay in the
+Dialog body; no Attachment Objects are added.
+
+The parties of the new Dialog Object reference only the sender (From).
+The receivers of the message, the sender and the To and Cc parties, are
+referenced by the parties of the Session Object.  Bcc parties are not
+included.
+
+Parameters:
+  **smtp_message** (str) - string containing the contents of a SMTP
+  messages including headers and body.
+  **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
+           the last Session Object whose parties are the same set of parties as the
+           receivers of this message references the new dialog.  If there is no such
+           Session Object, a new Session Object is created to reference it.  A thread
+           in which the receivers change is not yet represented as a parent Session
+           Object with child Session Objects.  A warning is logged in that case.
+
+Returns:  
+  index (int) of the dialog added for the text body of the message
+
+
+
+### add_recording_dialog_external
+
+**add_recording_dialog_external**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', external_url: 'str', media_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None, sign_type: 'typing.Union[str, None]' = 'SHA-512', originator: 'typing.Union[int, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a recording of a portion of the conversation, as a reference via the given
@@ -564,39 +667,9 @@ Returns:
 
 
 
-### add_dialog_inline_email_message
+### add_recording_dialog_inline
 
-**add_dialog_inline_email_message**(self, smtp_message: 'str', file_name: 'typing.Union[str, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
-
-
-Add a new text dialog and any attachments for the given SMTP email message.
-
-SMTP message should include To, From, Subject, Cc, Date headers and may
-include a simple text or MIME body.  Attachments are added to Vcon.
-
-The parties of the new Dialog Object reference only the sender (From).
-The receivers of the message, the sender and the To and Cc parties, are
-referenced by the parties of the Session Object.  Bcc parties are not
-included.
-
-Parameters:
-  **smtp_message** (str) - string containing the contents of a SMTP
-  messages including headers and body.
-  **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
-           the last Session Object whose parties are the same set of parties as the
-           receivers of this message references the new dialog.  If there is no such
-           Session Object, a new Session Object is created to reference it.  A thread
-           in which the receivers change is not yet represented as a parent Session
-           Object with child Session Objects.  A warning is logged in that case.
-
-Returns:  
-  index (int) of the dialog added for the text body of the message
-
-
-
-### add_dialog_inline_recording
-
-**add_dialog_inline_recording**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None, originator: 'typing.Union[int, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
+**add_recording_dialog_inline**(self, body: 'bytes', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[int, typing.List[int], typing.List[typing.List[int]]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None, originator: 'typing.Union[int, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a recording of a portion of the conversation, inline (base64 encoded) to the dialog.
@@ -625,9 +698,9 @@ Returns:
 
 
 
-### add_dialog_inline_text
+### add_text_dialog_inline
 
-**add_dialog_inline_text**(self, body: 'str', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', party: 'typing.Union[int, list[int]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
+**add_text_dialog_inline**(self, body: 'str', start_time: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', party: 'typing.Union[int, list[int]]', media_type: 'str', file_name: 'typing.Union[str, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
 
 
 Add a dialog segment for a text chat or email thread.
@@ -648,37 +721,6 @@ Parameters:
 
 Returns:  
   Index of the new dialog in the Dialog Object array parameter.
-
-
-
-### add_dialog_redacted_segment
-
-**add_dialog_redacted_segment**(self, dialog_index: 'int', start: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[typing.List[int], None]' = None, channel: 'typing.Union[int, None]' = None) -> 'int'
-
-
-Add a Redacted_segments Object to a recording Dialog Object, for a period
-of the recording in which the audio or video was redacted.
-
-The Redacted_segments Object has start and end; end is computed as start
-plus duration.
-
-Parameters:  
-  **dialog_index** (int) - index of the recording Dialog Object  
-  **start** (str, int, float, datetime.datetime) - Date, time at which the redacted
-           period starts.  String containing RFC 2822 or RFC3339 date time stamp
-           or int/float containing epoch time (since 1970) in seconds.  
-  **duration** (int, float) - length of the redacted period in seconds  
-  **parties** (List[int]) - indices of the parties whose media was redacted (optional)  
-  **channel** (int) - index of the redacted channel of the recording, 0 is the first
-           (optional, proposed for the draft).  It must be less than the number of
-           channels when the Dialog Object parties tell the number (see
-           **add_channel_contributors_event**).
-
-Returns:  
-  index of the new Redacted_segments Object in the Dialog's redacted_segments list
-
-Raises AttributeError if the Dialog Object is not a recording, the duration
-is negative, or a party or the channel does not exist.
 
 
 

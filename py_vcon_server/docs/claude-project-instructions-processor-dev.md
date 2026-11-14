@@ -346,7 +346,7 @@ def make_test_vcon() -> vcon.Vcon:
     v.set_party_parameter("tel", "+15551234567")
     v.set_party_parameter("name", "Alice", 0)
     v.set_subject("Test conversation")
-    v.add_dialog_inline_text(
+    v.add_text_dialog_inline(
         "Hello, this is a test.",
         "2024-03-06T20:07:43+00:00",
         5.0,
@@ -356,7 +356,7 @@ def make_test_vcon() -> vcon.Vcon:
     return(v)
 ```
 
-Use `add_dialog_inline_text()` rather than `add_dialog_inline_recording()` to
+Use `add_text_dialog_inline()` rather than `add_recording_dialog_inline()` to
 avoid needing audio files.
 
 **Storage setup fixture:**

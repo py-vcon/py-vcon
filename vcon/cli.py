@@ -35,7 +35,7 @@ def do_in_email(
 
   # add the email message as a dialog along with its paties if not
   # already in the vcon
-  in_vcon.add_dialog_inline_email_message(
+  in_vcon.add_email_dialog_inline(
     smtp_message_string,
     os.path.basename(args.emailfile[0])
     )
@@ -261,7 +261,7 @@ def do_in_zoom(
       with open(rec_file, "rb") as video_file_handle:
         body_bytes = video_file_handle.read()
         # The parties of the recording are not known
-        in_vcon.add_dialog_inline_recording(
+        in_vcon.add_recording_dialog_inline(
           body_bytes,
           start,
           duration,
@@ -296,7 +296,7 @@ def do_in_zoom(
           sender_indices.append(in_vcon.set_party_parameter("name", msg_sender))
 
         # Add the text dialog
-        in_vcon.add_dialog_inline_text(
+        in_vcon.add_text_dialog_inline(
           msg_text,
           msg_time,
           0,
@@ -449,7 +449,7 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
   parties = None
   with open(args.meetrec[0], "rb") as recording_handle:
     body_bytes = recording_handle.read()
-    in_vcon.add_dialog_inline_recording(
+    in_vcon.add_recording_dialog_inline(
       body_bytes,
       meeting_date,
       duration,
@@ -478,7 +478,7 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
           sender_indices.append(in_vcon.set_party_parameter("name", sender))
 
         # add a text dialog
-        in_vcon.add_dialog_inline_text(
+        in_vcon.add_text_dialog_inline(
           message,
           timestamp,
           duration,
@@ -888,11 +888,11 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
       parties_object = json.loads(args.parties[0])
 
       if(args.add_command == "in-recording"):
-        in_vcon.add_dialog_inline_recording(body, args.start[0], duration, parties_object,
+        in_vcon.add_recording_dialog_inline(body, args.start[0], duration, parties_object,
           mediatype, str(args.recfile[0]))
 
       elif(args.add_command == "ex-recording"):
-        in_vcon.add_dialog_external_recording(body, args.start[0], duration, parties_object,
+        in_vcon.add_recording_dialog_external(body, args.start[0], duration, parties_object,
           args.url[0], mediatype, str(args.recfile[0]))
 
     elif(args.add_command == "in-email"):
