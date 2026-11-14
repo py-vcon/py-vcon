@@ -13,6 +13,7 @@ import datetime
 import dateutil
 import time
 import json
+import inspect
 import argparse
 import socket
 import pytz
@@ -48,9 +49,13 @@ def do_add_event(
   ) -> vcon.Vcon:
   """
   Add an Event Object of the given type with the parameters given as a
-  JSON dict.  If sessions is not given and the vCon has exactly one
-  Session Object, sessions is set to 0.
+  JSON dict.  For a core Event type the keys are the argument names of its
+  add_*_event method (for example transferor for the transfer types), which
+  is called.  Any other type is added with add_event.  If the method takes
+  sessions, sessions is not given and the vCon has exactly one Session
+  Object, sessions is set to 0.
   """
+  event_type = args.event_type[0]
   parameters = json.loads(args.parameters[0])
   if(not isinstance(parameters, dict)):
     raise AttributeError("Event parameters must be a JSON dict, not: {}".format(args.parameters[0]))
@@ -58,20 +63,20 @@ def do_add_event(
   if("type" in parameters):
     raise AttributeError("Event type is given as the event_type argument, not in the parameters")
 
-  for required in ("time", "party"):
-    if(required not in parameters):
-      raise AttributeError("Event parameters must include: {}".format(required))
+  if(event_type in vcon.Vcon.EVENT_CORE_TYPES):
+    method = getattr(in_vcon, "add_{}_event".format(event_type.replace("-", "_")))
+    if("sessions" in inspect.signature(method).parameters and "sessions" not in parameters):
+      num_sessions = len(in_vcon.sessions)
+      if(num_sessions != 1):
+        raise AttributeError(
+          "Event parameters do not include sessions and the vCon has {} Session Objects."
+          "  sessions may only be omitted when the vCon has exactly one Session Object.".format(
+          num_sessions))
+      parameters["sessions"] = 0
+    method(**parameters)
 
-  if("sessions" not in parameters):
-    num_sessions = len(in_vcon.sessions)
-    if(num_sessions != 1):
-      raise AttributeError(
-        "Event parameters do not include sessions and the vCon has {} Session Objects."
-        "  sessions may only be omitted when the vCon has exactly one Session Object.".format(
-        num_sessions))
-    parameters["sessions"] = 0
-
-  in_vcon.add_event(args.event_type[0], **parameters)
+  else:
+    in_vcon.add_event(event_type, **parameters)
 
   return(in_vcon)
 
@@ -603,8 +608,10 @@ async def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
     nargs = 1,
     type = str,
     help = "JSON dict of the Event Object parameters other than type, e.g."
-      " '{\"time\": \"2022-06-21T13:53:26-04:00\", \"party\": 0}'.  If sessions is not"
-      " given and the vCon has exactly one Session Object, sessions is set to 0.",
+      " '{\"time\": \"2022-06-21T13:53:26-04:00\", \"party\": 0}'.  For a core type the"
+      " keys are the argument names of its add_*_event method (e.g. transferor for the"
+      " transfer types).  If sessions is not given and the vCon has exactly one Session"
+      " Object, sessions is set to 0.",
     default = None)
 
   extractparser = subparsers_command.add_parser("extract")

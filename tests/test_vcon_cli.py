@@ -503,48 +503,86 @@ async def test_post(two_party_tel_vcon, capsys, httpserver: pytest_httpserver.HT
 
 
 # vcon add event
+async def run_add_event(capsys, in_vcon, event_type, parameters):
+  """ run vcon add event with in_vcon on stdin, return the output vCon """
+  import vcon.cli
+  sys.stdin = io.StringIO(in_vcon.dumps())
+  await vcon.cli.main(["add", "event", event_type, parameters])
+  out_vcon_json, error = capsys.readouterr()
+  out_vcon = vcon.Vcon()
+  out_vcon.loads(out_vcon_json)
+  return(out_vcon)
+
+
 @pytest.mark.asyncio
 async def test_add_event(capsys, two_party_tel_vcon):
+  # Importing vcon here so that we catch any junk stdout which will break the CLI
   import vcon.cli
 
   two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   two_party_tel_vcon.set_uuid("vcon.dev")
-  sys.stdin = io.StringIO(two_party_tel_vcon.dumps())
 
-  # sessions omitted: the only Session Object is used
-  await vcon.cli.main(["add", "event", "join", '{"time": "2022-06-21T13:53:26-04:00", "party": 1}'])
-
-  out_vcon_json, error = capsys.readouterr()
-  print("stderr: {}".format(error), file=sys.stderr)
-  out_vcon = vcon.Vcon()
-  out_vcon.loads(out_vcon_json)
+  # sessions omitted: the only Session Object is used (draft examples Makefile form)
+  out_vcon = await run_add_event(capsys, two_party_tel_vcon, "join",
+    '{"time": "2022-06-21T13:53:26-04:00", "party": 1}')
   assert(out_vcon.events == [{"type": "join", "time": "2022-06-21T17:53:26.000+00:00", "sessions": 0, "party": 1}])
 
-  sys.stdin = io.StringIO(out_vcon.dumps())
-  await vcon.cli.main(["add", "event", "keydown",
-    '{"time": "2022-06-21T13:53:27-04:00", "sessions": [0], "party": 0, "button": "5"}'])
-  out_vcon_json, error = capsys.readouterr()
-  out_vcon = vcon.Vcon()
-  out_vcon.loads(out_vcon_json)
+  out_vcon = await run_add_event(capsys, out_vcon, "keydown",
+    '{"time": "2022-06-21T13:53:27-04:00", "sessions": [0], "party": 0, "button": "5"}')
   assert(len(out_vcon.events) == 2)
   assert(out_vcon.events[1]["sessions"] == [0])
   assert(out_vcon.events[1]["button"] == "5")
 
 
 @pytest.mark.asyncio
+async def test_add_event_types(capsys, two_party_tel_vcon):
+  # Importing vcon here so that we catch any junk stdout which will break the CLI
+  import vcon.cli
+
+  two_party_tel_vcon.set_party_parameter("tel", "+15553330000")
+  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.add_dialog_inline_recording(b"\x00", "2022-06-21T13:53:26-04:00", 10, [0, 1],
+    "audio/x-wav", "a.wav")
+  two_party_tel_vcon.set_uuid("vcon.dev")
+  assert(len(two_party_tel_vcon.sessions) == 2)
+
+  # a transfer type: the transferor argument
+  out_vcon = await run_add_event(capsys, two_party_tel_vcon, "blind-transfer",
+    '{"time": 1655833000, "sessions": 0, "transferor": 1, "transferee": 0, "transfer_target": 2, "target_session": 1}')
+  assert(out_vcon.events[0]["party"] == 1)
+  assert(out_vcon.events[0]["target_session"] == 1)
+
+  # channel-contributors takes no sessions, so none is defaulted with two Sessions
+  out_vcon = await run_add_event(capsys, out_vcon, "channel-contributors",
+    '{"time": 1655833001, "dialog": 1, "channel": 1, "contributors": [1, 2]}')
+  assert(out_vcon.events[1] == {"type": "channel-contributors", "time": out_vcon.events[1]["time"],
+    "dialog": 1, "channel": 1, "contributors": [1, 2]})
+
+  # an extension type is added with add_event, as given
+  out_vcon = await run_add_event(capsys, out_vcon, "x-test-paused",
+    '{"time": 1655833002, "sessions": [0, 1], "reason": "privacy"}')
+  assert(out_vcon.events[2]["type"] == "x-test-paused")
+  assert(out_vcon.events[2]["sessions"] == [0, 1])
+  assert(out_vcon.events[2]["reason"] == "privacy")
+
+
+@pytest.mark.asyncio
 async def test_add_event_errors(capsys, two_party_tel_vcon):
   import vcon.cli
 
+  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   two_party_tel_vcon.set_uuid("vcon.dev")
   vcon_json = two_party_tel_vcon.dumps()
 
-  # no Session Object to imply
+  # two Session Objects and no sessions key
   sys.stdin = io.StringIO(vcon_json)
-  with pytest.raises(AttributeError, match = "0 Session Objects"):
+  with pytest.raises(AttributeError, match = "has 2 Session Objects"):
     await vcon.cli.main(["add", "event", "join", '{"time": "2022-06-21T13:53:26-04:00", "party": 1}'])
 
+  # missing argument of the typed method
   sys.stdin = io.StringIO(vcon_json)
-  with pytest.raises(AttributeError, match = "time"):
+  with pytest.raises(TypeError, match = "time"):
     await vcon.cli.main(["add", "event", "join", '{"party": 1, "sessions": 0}'])
 
   sys.stdin = io.StringIO(vcon_json)

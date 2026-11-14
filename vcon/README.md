@@ -19,6 +19,22 @@ The following categories of methods are implemented on the Vcon class.
    * [add_analysis_transcript](#add_analysis_transcript)
  * Methods to access or modify Vcon Attachment objects
    * [add_attachment_inline](#add_attachment_inline)
+ * Methods to access or modify Vcon Event objects
+   * [add_blind_transfer_event](#add_blind_transfer_event)
+   * [add_channel_contributors_event](#add_channel_contributors_event)
+   * [add_consultation_start_event](#add_consultation_start_event)
+   * [add_consultative_transfer_event](#add_consultative_transfer_event)
+   * [add_drop_event](#add_drop_event)
+   * [add_event](#add_event)
+   * [add_hold_event](#add_hold_event)
+   * [add_join_event](#add_join_event)
+   * [add_keydown_event](#add_keydown_event)
+   * [add_keyup_event](#add_keyup_event)
+   * [add_mute_event](#add_mute_event)
+   * [add_transfer_abandoned_event](#add_transfer_abandoned_event)
+   * [add_unhold_event](#add_unhold_event)
+   * [add_unmute_event](#add_unmute_event)
+   * [set_event_parameter](#set_event_parameter)
  * Methods to access or modify Vcon Dialog objects
    * [add_dialog_external_recording](#add_dialog_external_recording)
    * [add_dialog_inline_email_message](#add_dialog_inline_email_message)
@@ -37,9 +53,6 @@ The following categories of methods are implemented on the Vcon class.
    * [add_session_reference](#add_session_reference)
    * [find_sessions_for_dialog](#find_sessions_for_dialog)
    * [set_session_parameter](#set_session_parameter)
- * Methods to access or modify Vcon Event objects
-   * [add_event](#add_event)
-   * [set_event_parameter](#set_event_parameter)
  * Methods to reference other vCons from a vCon
    * [add_group_object](#add_group_object)
    * [set_amended](#set_amended)
@@ -140,6 +153,347 @@ Parameters:
 
 Returns:  
 (int) index of the added attachment
+
+
+
+
+## Methods to access or modify Vcon Event objects
+
+
+### add_blind_transfer_event
+
+**add_blind_transfer_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'int', transferor: 'int', transferee: 'int', transfer_target: 'int', target_session: 'int') -> 'int'
+
+
+Add a "blind-transfer" type Event Object: the Transferor transfers the
+Transferee to the Transfer Target without a consultative call.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int) - index of the Session Object for the original call between the
+           Transferee and the Transferor
+  **transferor** (int) - index of the Transferor party, written as the party parameter
+  **transferee** (int) - index of the Transferee party
+  **transfer_target** (int) - index of the Transfer Target party
+  **target_session** (int) - index of the Session Object for the target call
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_channel_contributors_event
+
+**add_channel_contributors_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', dialog: 'int', channel: 'int', contributors: 'typing.Union[int, typing.List[int], None]' = None) -> 'int'
+
+
+Add a "channel-contributors" type Event Object: the party(s) contributing
+to a channel of a recording change at the given time.  The contributors at
+the start of the recording are given by the parties of the Dialog Object.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **dialog** (int) - index of the recording Dialog Object
+  **channel** (int) - index of the channel in the recording, 0 is the first.  It must
+           be less than the number of channels, when the Dialog Object parties tell
+           the number: an int is one channel, an array containing an array or null
+           has one element per channel.  A flat array of ints may be one mixed
+           channel or one channel per party, so then only a negative channel fails.
+  **contributors** (int, List[int]) - index or indices of the parties contributing to
+           the channel from this time.  None (the default) means no party contributes,
+           and writes no contributors parameter.
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_consultation_start_event
+
+**add_consultation_start_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'int', transferor: 'int', transferee: 'int', transfer_target: 'int', consultation: 'int') -> 'int'
+
+
+Add a "consultation-start" type Event Object: the Transferor starts a
+consultative call with the Transfer Target.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int) - index of the Session Object for the original call between the
+           Transferee and the Transferor
+  **transferor** (int) - index of the Transferor party, written as the party parameter
+  **transferee** (int) - index of the Transferee party
+  **transfer_target** (int) - index of the Transfer Target party
+  **consultation** (int) - index of the Session Object for the consultative call
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_consultative_transfer_event
+
+**add_consultative_transfer_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'int', transferor: 'int', transferee: 'int', transfer_target: 'int', consultation: 'int', target_session: 'int') -> 'int'
+
+
+Add a "consultative-transfer" type Event Object: the Transferor transfers
+the Transferee to the Transfer Target following a consultative call.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int) - index of the Session Object for the original call between the
+           Transferee and the Transferor
+  **transferor** (int) - index of the Transferor party, written as the party parameter
+  **transferee** (int) - index of the Transferee party
+  **transfer_target** (int) - index of the Transfer Target party
+  **consultation** (int) - index of the Session Object for the consultative call
+  **target_session** (int) - index of the Session Object for the target call
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_drop_event
+
+**add_drop_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int') -> 'int'
+
+
+Add a "drop" type Event Object: the party drops out of the session.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.
+  **party** (int) - index of the party
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_event
+
+**add_event**(self, event_type: 'str', time: 'typing.Union[str, int, float, datetime.datetime]', **parameters: 'typing.Any') -> 'int'
+
+
+Add an Event Object of a type defined in a vCon extension.
+
+The core Event types have their own methods, for example **add_join_event**.
+The type is looked up in the parameter registry.  If a registered extension
+defines it, the extension is added to the vCon extensions parameter, and to
+critical if the extension is critical.  An unregistered type is added with a
+warning.  The parameters are added as given, after checking that any of
+sessions, party, dialog, transferee, transfer_target, consultation and
+target_session reference existing Objects.  dialog may be an index or a list
+of indices.
+
+Parameters:
+  **event_type** (str) - the Event type defined in a vCon extension
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **parameters** - the other Event Object parameters
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+Raises AttributeError for a core Event type, naming the method to use.
+
+
+
+### add_hold_event
+
+**add_hold_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int') -> 'int'
+
+
+Add a "hold" type Event Object: the party is put on hold.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.
+  **party** (int) - index of the party
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_join_event
+
+**add_join_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int') -> 'int'
+
+
+Add a "join" type Event Object: the party joins the session.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.
+  **party** (int) - index of the party
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_keydown_event
+
+**add_keydown_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int', button: 'str') -> 'int'
+
+
+Add a "keydown" type Event Object: a DTMF or application key or button was pressed.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.
+  **party** (int) - index of the party which pressed or released the key or button
+  **button** (str) - the key or button label character or string
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_keyup_event
+
+**add_keyup_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int', button: 'str') -> 'int'
+
+
+Add a "keyup" type Event Object: a DTMF or application key or button was released.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.
+  **party** (int) - index of the party which pressed or released the key or button
+  **button** (str) - the key or button label character or string
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_mute_event
+
+**add_mute_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int') -> 'int'
+
+
+Add a "mute" type Event Object: the party is muted.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.
+  **party** (int) - index of the party
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_transfer_abandoned_event
+
+**add_transfer_abandoned_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'int', transferor: 'int', transferee: 'int', transfer_target: 'typing.Union[int, None]' = None, consultation: 'typing.Union[int, None]' = None) -> 'int'
+
+
+Add a "transfer-abandoned" type Event Object: the Transferor abandons an
+attempt to transfer the Transferee without completing the transfer.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int) - index of the Session Object for the original call between the
+           Transferee and the Transferor
+  **transferor** (int) - index of the Transferor party, written as the party parameter
+  **transferee** (int) - index of the Transferee party
+  **transfer_target** (int) - index of the Transfer Target party (optional)
+  **consultation** (int) - index of the Session Object for the consultative call (optional)
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_unhold_event
+
+**add_unhold_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int') -> 'int'
+
+
+Add a "unhold" type Event Object: the party is taken off hold.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.
+  **party** (int) - index of the party
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### add_unmute_event
+
+**add_unmute_event**(self, time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int') -> 'int'
+
+
+Add a "unmute" type Event Object: the party is taken off mute.
+
+Parameters:
+  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
+           String containing RFC 2822 or RFC3339 date time stamp or int/float
+           containing epoch time (since 1970) in seconds.
+  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
+           occurred.  It is stored in the form given.
+  **party** (int) - index of the party
+
+Returns:
+  Index of the new Event Object in the events Object array.
+
+
+
+### set_event_parameter
+
+**set_event_parameter**(self, parameter_name: 'str', parameter_value: 'typing.Any', event_index: 'int') -> 'int'
+
+
+Set the named parameter for the given Event Object.
+
+This does not create a new Object.  Use the add_*_event methods to create
+an Event Object.  The value is not validated.
+
+Parameters:
+  **parameter_name** (String) - name of the Event Object parameter to be set.
+  **parameter_value** (Any) - new value to set for the named parameter
+  **event_index** (int) - index of the Event Object on which to set the parameter
+
+Returns:
+  index of the Event Object
 
 
 
@@ -560,71 +914,6 @@ Parameters:
 
 Returns:  
   index of the Session Object
-
-
-
-
-## Methods to access or modify Vcon Event objects
-
-
-### add_event
-
-**add_event**(self, event_type: 'str', time: 'typing.Union[str, int, float, datetime.datetime]', sessions: 'typing.Union[int, typing.List[int]]', party: 'int', dialog: 'typing.Union[int, None]' = None, button: 'typing.Union[str, None]' = None, transferee: 'typing.Union[int, None]' = None, transfer_target: 'typing.Union[int, None]' = None, consultation: 'typing.Union[int, None]' = None, target_session: 'typing.Union[int, None]' = None, **other: 'typing.Any') -> 'int'
-
-
-Add a new Event Object to the vCon events Object array.
-
-For the core Event Object types, the parameters are validated against the
-applicability tables of the vCon core schema (see EVENT_PARAMETER_APPLICABILITY).
-Any other type is accepted as it may be defined by a vCon extension.  A warning
-is logged if the type is not a core type and this vCon does not list any extensions.
-The Session Objects are not modified.
-
-Parameters:
-  **event_type** (str) - type of the event.  One of the party types: "join", "drop",
-           "hold", "unhold", "mute", "unmute", the key types: "keydown", "keyup", the
-           transfer types: "consultation-start", "blind-transfer", "consultative-transfer",
-           "transfer-abandoned" or a type defined in a vCon extension.
-  **time** (str, int, float, datetime.datetime) - Date, time at which the event occurred.
-           String containing RFC 2822 or RFC3339 date time stamp or int/float
-           containing epoch time (since 1970) in seconds.
-  **sessions** (int, List[int]) - index or indices of the Session Objects in which the event
-           occurred.  It is stored in the form given.  For the transfer types, it must be
-           the single index of the Session Object for the original call.
-  **party** (int) - index of the party for the event.  For the transfer types, the Transferor.
-  **dialog** (int) - index of the Dialog Object to which the event relates (optional,
-           not allowed for the transfer types)
-  **button** (str) - the key or button pressed or released (required for the key types only)
-  **transferee** (int) - index of the Transferee party (transfer types only)
-  **transfer_target** (int) - index of the Transfer Target party (transfer types only)
-  **consultation** (int) - index of the Session Object for the consultative call (transfer types only)
-  **target_session** (int) - index of the Session Object for the target call (transfer types only)
-  **other** - other Event Object parameters, for example defined by a vCon extension.
-           They are added as given.
-
-Returns:
-  Index of the new Event Object in the events Object array.
-
-
-
-### set_event_parameter
-
-**set_event_parameter**(self, parameter_name: 'str', parameter_value: 'typing.Any', event_index: 'int') -> 'int'
-
-
-Set the named parameter for the given Event Object.
-
-This does not create a new Object.  Use **add_event** to create an Event
-Object.  The value is not validated against the applicability tables
-used by **add_event**.
-
-Parameters:
-  **parameter_name** (String) - name of the Event Object parameter to be set.
-  **parameter_value** (Any) - new value to set for the named parameter
-  **event_index** (int) - index of the Event Object on which to set the parameter
-
-Returns:
-  index of the Event Object
 
 
 
