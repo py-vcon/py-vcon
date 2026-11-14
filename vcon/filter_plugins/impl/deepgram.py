@@ -221,7 +221,8 @@ class Deepgram(vcon.filter_plugins.FilterPlugin):
 
     for dialog_index in dialog_indices:
       dialog = in_vcon.dialog[dialog_index]
-      if(dialog["type"] == "recording"):
+      # an empty Dialog Object has no type and is skipped
+      if(dialog.get("type", None) == "recording"):
         transcript_index = in_vcon.find_transcript_for_dialog(
           dialog_index,
           True,

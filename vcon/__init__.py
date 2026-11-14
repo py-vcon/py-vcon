@@ -2166,6 +2166,7 @@ class Vcon():
         * "duration" (int) - optional duration over which the text was typed or spoken
 
       Text dialogs will return a single dict, recording dialogs may return one or more dicts.
+      An empty Dialog Object returns an empty list.
     """
 
     #dialog type    mediatype  action
@@ -2175,7 +2176,9 @@ class Vcon():
     # recording     N/A        find transcript in analysis
 
     dialog = self.dialog[dialog_index]
-    if(dialog["type"] == "text"):
+    # an empty Dialog Object has no type and no text
+    dialog_type = dialog.get("type", None)
+    if(dialog_type == "text"):
       #logger.debug("get_dialog_text media type:{}".format(dialog["mediatype"]))
       text_dict = {}
       if("parties" in dialog):
@@ -2210,7 +2213,7 @@ class Vcon():
           # else:
           #   logger.debug("skipping part mediatype: {}".format(subpart.get_content_type()))
 
-    elif(dialog["type"] == "recording"):
+    elif(dialog_type == "recording"):
       transcript_index = self.find_transcript_for_dialog(dialog_index)
       if(transcript_index is None):
         await self.transcribe({})
@@ -2309,8 +2312,10 @@ class Vcon():
 
     Returns:  
       (bytes): the bytes for the recording file
+
+    Raises AttributeError if the Dialog Object is empty.
     """
-    dialog = self.dialog[dialog_index]
+    dialog = self._get_non_empty_dialog(dialog_index)
     if(dialog["type"] not in ["text", "recording"]):
       raise AttributeError("dialog[{}] type: {} is not supported".format(dialog_index, dialog["type"]))
     if(dialog.get("body") is None):
@@ -2557,7 +2562,7 @@ class Vcon():
       **parameter_name** (String) - name of the Dialog Object parameter to be set.
       **parameter_value** (String) - new value to set for the named parameter
       **dialog_index** (int) - index of dialog to set tel url on
-                  (-1 indicates a new dialog should be added)
+                  (-1 indicates a new dialog should be added, in a new Session Object)
 
     The originator parameter is no longer a Dialog Object parameter.  Setting
     it is applied to the Session Object which references the dialog.  An
@@ -2576,13 +2581,60 @@ class Vcon():
       self._apply_dialog_originator(dialog_index, parameter_value)
       return(dialog_index)
 
+    new_dialog = (dialog_index == -1)
     dialog_index = self.__add_new_dialog(dialog_index)
+    if(new_dialog):
+      self._add_new_dialog_to_session(dialog_index, None)
     self.add_parameter_extension("Dialog", parameter_name)
 
     # TODO parameter specific validation
     self._vcon_dict[Vcon.DIALOG][dialog_index][parameter_name] = parameter_value
 
     return(dialog_index)
+
+
+  @tag_dialog
+  def clear_dialog(
+    self,
+    dialog_index : int,
+    remove_from_sessions : bool = False
+    ) -> None:
+    """
+    Replace the Dialog Object at the given index with an empty Dialog Object
+    ({}), so that the indices of the other Dialog Objects do not change.
+
+    References to the Dialog Object from Analysis and Attachment Objects are
+    left to the caller.  The start and duration of Session Objects are not
+    recomputed.
+
+    Parameters:  
+      **dialog_index** (int) - index of the Dialog Object to clear  
+      **remove_from_sessions** (bool) - also remove the index from the dialog
+               parameter of every Session Object which lists it (default False)
+
+    Returns: none
+
+    Raises AttributeError if there is no Dialog Object at the index.
+    """
+    self._attempting_modify()
+    self._check_object_index(Vcon.DIALOG, dialog_index)
+
+    self._vcon_dict[Vcon.DIALOG][dialog_index] = {}
+
+    if(remove_from_sessions):
+      for session in self._vcon_dict.get(Vcon.SESSIONS, None) or []:
+        session_dialog = session.get("dialog", None)
+        if(isinstance(session_dialog, list) and dialog_index in session_dialog):
+          session["dialog"] = [index for index in session_dialog if index != dialog_index]
+
+
+  def _get_non_empty_dialog(self, dialog_index : int) -> typing.Dict[str, typing.Any]:
+    """ The Dialog Object at the index; raises AttributeError if it is an empty Dialog Object """
+    dialog = self.dialog[dialog_index]
+    if(len(dialog) == 0):
+      raise AttributeError("dialog[{}] is an empty Dialog Object".format(dialog_index))
+
+    return(dialog)
 
 
   @tag_signing
@@ -2599,9 +2651,10 @@ class Vcon():
     Returns: none
 
     Raises exceptions if the signature and public key fail to verify the body.
+    AttributeError if the Dialog Object is empty.
     """
 
-    dialog = self.dialog[dialog_index]
+    dialog = self._get_non_empty_dialog(dialog_index)
 
     if(dialog['type'] != "recording"):
       raise AttributeError("dialog[{}] is of type: {} not recording".format(dialog_index, dialog['type']))

@@ -41,6 +41,7 @@ The following categories of methods are implemented on the Vcon class.
    * [add_dialog_inline_recording](#add_dialog_inline_recording)
    * [add_dialog_inline_text](#add_dialog_inline_text)
    * [add_transfer_dialog](#add_transfer_dialog)
+   * [clear_dialog](#clear_dialog)
    * [decode_dialog_inline_body](#decode_dialog_inline_body)
    * [find_transcript_for_dialog](#find_transcript_for_dialog)
    * [get_dialog_body](#get_dialog_body)
@@ -660,6 +661,29 @@ Returns:
 
 
 
+### clear_dialog
+
+**clear_dialog**(self, dialog_index: 'int', remove_from_sessions: 'bool' = False) -> 'None'
+
+
+Replace the Dialog Object at the given index with an empty Dialog Object
+({}), so that the indices of the other Dialog Objects do not change.
+
+References to the Dialog Object from Analysis and Attachment Objects are
+left to the caller.  The start and duration of Session Objects are not
+recomputed.
+
+Parameters:  
+  **dialog_index** (int) - index of the Dialog Object to clear  
+  **remove_from_sessions** (bool) - also remove the index from the dialog
+           parameter of every Session Object which lists it (default False)
+
+Returns: none
+
+Raises AttributeError if there is no Dialog Object at the index.
+
+
+
 ### decode_dialog_inline_body
 
 **decode_dialog_inline_body**(self, dialog_index: 'int') -> 'typing.Union[str, bytes]'
@@ -672,6 +696,8 @@ Parameters:
 
 Returns:  
   (bytes): the bytes for the recording file
+
+Raises AttributeError if the Dialog Object is empty.
 
 
 
@@ -761,6 +787,7 @@ Returns:
     * "duration" (int) - optional duration over which the text was typed or spoken
 
   Text dialogs will return a single dict, recording dialogs may return one or more dicts.
+  An empty Dialog Object returns an empty list.
 
 
 
@@ -776,7 +803,7 @@ Parameters:
   **parameter_name** (String) - name of the Dialog Object parameter to be set.
   **parameter_value** (String) - new value to set for the named parameter
   **dialog_index** (int) - index of dialog to set tel url on
-              (-1 indicates a new dialog should be added)
+              (-1 indicates a new dialog should be added, in a new Session Object)
 
 The originator parameter is no longer a Dialog Object parameter.  Setting
 it is applied to the Session Object which references the dialog.  An
@@ -1576,6 +1603,7 @@ Parameters:
 Returns: none
 
 Raises exceptions if the signature and public key fail to verify the body.
+AttributeError if the Dialog Object is empty.
 
 
 
