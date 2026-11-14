@@ -379,20 +379,57 @@ class VconUnsignedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
     description = "list of names of the vCon extensions which a consumer must support to process this vCon",
     default = None
     )
-  # subject: str = None
-  # redacted: typing.Optional[typing.Union[typing.List[dict], None]] = None
-  # appended: typing.Optional[typing.Union[typing.List[dict], None]] = None
-  # group: typing.Optional[typing.Union[typing.List[dict], None]] = None
   parties: typing.Optional[typing.Union[typing.List[VconPartiesObject], None]] = None
+  sessions: typing.Optional[typing.List[typing.Dict[str, typing.Any]]] = pydantic.Field(
+    title = "Session Objects",
+    description = "vCon 0.5.0 array of Session Objects",
+    default = None
+    )
+  events: typing.Optional[typing.List[typing.Dict[str, typing.Any]]] = pydantic.Field(
+    title = "Event Objects",
+    description = "vCon 0.5.0 array of Event Objects",
+    default = None
+    )
   dialog: typing.Optional[typing.Union[typing.List[dict], None]] = None
   analysis: typing.Optional[typing.Union[typing.List[dict], None]] = None
   attachments: typing.Optional[typing.Union[typing.List[dict], None]] = None
+  group: typing.Optional[typing.List[typing.Dict[str, typing.Any]]] = pydantic.Field(
+    title = "Group Objects",
+    description = "array of Group Objects referencing other vCons",
+    default = None
+    )
+  redacted_from: typing.Optional[typing.Dict[str, typing.Any]] = pydantic.Field(
+    title = "Redacted_from Object",
+    description = "vCon 0.5.0 reference to the less redacted vCon",
+    default = None
+    )
+  amended_from: typing.Optional[typing.Dict[str, typing.Any]] = pydantic.Field(
+    title = "Amended_from Object",
+    description = "vCon 0.5.0 reference to the prior version of this vCon",
+    default = None
+    )
+  redacted_strings: typing.Optional[typing.List[typing.Dict[str, typing.Any]]] = pydantic.Field(
+    title = "Redacted_string Objects",
+    description = "vCon 0.5.0 array of Redacted_string Objects",
+    default = None
+    )
+  redacted: typing.Optional[typing.Dict[str, typing.Any]] = pydantic.Field(
+    title = "Redacted Object (vCon 0.4.0)",
+    description = "vCon 0.4.0 name of redacted_from, accepted until the vCon is converted",
+    default = None
+    )
+  amended: typing.Optional[typing.Dict[str, typing.Any]] = pydantic.Field(
+    title = "Amended Object (vCon 0.4.0)",
+    description = "vCon 0.4.0 name of amended_from, accepted until the vCon is converted",
+    default = None
+    )
 
 
 class JwsHeader(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
-  alg: str = pydantic.Field(
+  alg: typing.Optional[str] = pydantic.Field(
     title = "JWS algorithm",
-    description = "defined in RFC 7515 section 4.1.1"
+    description = "defined in RFC 7515 section 4.1.1.  May be in the protected header instead.",
+    default = None
     )
 
   x5c: typing.Optional[typing.List[str]] = pydantic.Field(
@@ -401,9 +438,14 @@ class JwsHeader(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
     default = None
     )
 
-  x5u: typing.Optional[typing.List[str]] = pydantic.Field(
-    title = "JWS certificate chain URLs",
-    description = "certifcate chain in the form of an array of HTTPS URLs defined in RFC 7515 section 4.1.6",
+  x5u: typing.Optional[str] = pydantic.Field(
+    title = "JWS certificate chain URL",
+    description = "HTTPS URL of the certificate chain, defined in RFC 7515 section 4.1.5",
+    default = None
+    )
+
+  uuid: typing.Optional[str] = pydantic.Field(
+    title = "vCon uuid",
     default = None
     )
 
@@ -414,9 +456,10 @@ class JwsSignature(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
     description = "defined in RFC 7515 section 7.2.1"
     )
 
-  protected: str = pydantic.Field(
+  protected: typing.Optional[str] = pydantic.Field(
     title = "JWS protected",
-    description = "defined in RFC 7515 section 7.2.1"
+    description = "defined in RFC 7515 section 7.2.1.  Absent when the JWS Protected Header is empty.",
+    default = None
     )
 
   signature: str = pydantic.Field(
@@ -449,15 +492,24 @@ class JweUnprotectedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   cty: typing.Optional[str] = pydantic.Field(
     title = "content/media type of the decrypted ciphertext",
     description = "defined in RFC 7516 section 4.1.12",
+    default = None
     )
 
   uuid: typing.Optional[str] = pydantic.Field(
-    title = "vCon uuid"
+    title = "vCon uuid",
+    default = None
     )
 
   enc: typing.Optional[str] = pydantic.Field(
     title = "encryption algoritym",
-    description = "defined in RFC 7516 section 4.1.2",
+    description = "defined in RFC 7516 section 4.1.2.  May be in the protected header instead.",
+    default = None
+    )
+
+  alg: typing.Optional[str] = pydantic.Field(
+    title = "key management algorithm",
+    description = "defined in RFC 7516 section 4.1.1.  May be in the protected header or a recipient header instead.",
+    default = None
     )
 
 
@@ -466,10 +518,15 @@ class VconEncryptedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   vCon in encrypted form (JWE RFC 7516)
   """
 
+  protected: typing.Optional[str] = pydantic.Field(
+    title = "JWE protected header",
+    description = "defined in RFC 7516 section 7.2.1.  Absent when the JWE Protected Header is empty.",
+    default = None
+    )
+
   unprotected: JweUnprotectedObject = pydantic.Field(
-    title = "JWS Signature Object",
-    description = "defined in RFC 7515 section 7.2.1",
-    default = []
+    title = "JWE Shared Unprotected Header",
+    description = "defined in RFC 7516 section 7.2.1"
     )
 
   recipients: typing.List[typing.Dict[str,typing.Any]] = pydantic.Field(
@@ -491,6 +548,12 @@ class VconEncryptedObject(pydantic.BaseModel, **vcon.pydantic_utils.SET_ALLOW):
   tag: str = pydantic.Field(
     title = "authentication tag",
     description = "defined in RFC 7516 section 7.2.1",
+    )
+
+  aad: typing.Optional[str] = pydantic.Field(
+    title = "additional authenticated data",
+    description = "defined in RFC 7516 section 7.2.1",
+    default = None
     )
 
 
