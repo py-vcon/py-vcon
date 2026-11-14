@@ -1,6 +1,8 @@
 """ Common Vcon unit test fixtures, data and funcitons """
 import os
+import re
 import json
+import typing
 import hashlib
 import urllib.request
 import jsonschema
@@ -17,6 +19,10 @@ CACHE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".cache")
 VCON_SCHEMA_COMMIT = "61edfa1de595b62ca73d8f55f595f18f7fe1de80"
 VCON_SCHEMA_PATH = "vcon_json_schema.json"
 VCON_SCHEMA_SHA256 = "87285e19c3df2520f9c5bf370f7a31aaad1a2f8e882559ef63d6fb1249948f44"
+
+# The draft-ietf-vcon-vcon-core-05 text, for its IANA tables.
+VCON_DRAFT_PATH = "draft-ietf-vcon-vcon-core.md"
+VCON_DRAFT_SHA256 = "f088a16efd6a72851549229ebaef935e9d1d4a80206253363b845a108c85f779"
 
 # vCon 0.4.0 examples, signed and encrypted by py-vcon before 0.5.0 support,
 # with the certificates in certs/.
@@ -103,6 +109,35 @@ def load_draft_file(commit: str, path: str, sha256: str) -> bytes:
 def load_vcon_schema() -> dict:
   """ The vCon JSON Schema (see load_draft_file) """
   return(json.loads(load_draft_file(VCON_SCHEMA_COMMIT, VCON_SCHEMA_PATH, VCON_SCHEMA_SHA256)))
+
+
+def load_iana_tables() -> typing.Dict[str, typing.List[str]]:
+  """
+  The names in each IANA table of draft-ietf-vcon-vcon-core-05 (see
+  load_draft_file), keyed by the registry Object name, for example "Party",
+  or for a value registry, Object name "->" parameter name, for example
+  "Event->type".  The vCon Object is "-".
+  """
+  text = load_draft_file(VCON_SCHEMA_COMMIT, VCON_DRAFT_PATH, VCON_DRAFT_SHA256).decode("utf-8")
+  tables: typing.Dict[str, typing.List[str]] = {}
+  table_name = None
+  for line in text.splitlines():
+    parameter_heading = re.match(r"^### (\S+) Object Parameter Names Registry$", line)
+    value_heading = re.match(r"^##### (\S+) Type Name Registration Initial Values$", line)
+    if(parameter_heading):
+      table_name = "-" if parameter_heading.group(1) == "vCon" else parameter_heading.group(1)
+      tables[table_name] = []
+    elif(value_heading):
+      table_name = "{}->type".format(value_heading.group(1))
+      tables[table_name] = []
+    elif(line.startswith("#")):
+      table_name = None
+    elif(table_name is not None and line.startswith("| ") and not line.startswith("| ---")):
+      name = line.split("|")[1].strip()
+      if(not name.endswith(" Name")):
+        tables[table_name].append(name)
+
+  return(tables)
 
 
 def load_draft_0_4_0_example(path: str) -> dict:

@@ -562,7 +562,7 @@ class Vcon():
 
   PARAMETER_CORE = vcon.parameter_registry.PARAMETER_CORE
 
-  PARTIES_OBJECT_STRING_PARAMETERS = vcon.parameter_registry.get_path_parameter_names("parties")
+  PARTIES_OBJECT_STRING_PARAMETERS = vcon.parameter_registry.get_object_parameter_names("Party")
 
   vcon = VconString(doc = "vCon version string attribute")
 
@@ -799,7 +799,7 @@ class Vcon():
 
     self._attempting_modify()
 
-    self.add_parameter_extension("parties", parameter_name)
+    self.add_parameter_extension("Party", parameter_name)
 
     party_index = self.__add_new_party(party_index)
 
@@ -823,7 +823,7 @@ class Vcon():
     """
     self._attempting_modify()
     for key in party_dict.keys():
-      self.add_parameter_extension("parties", key)
+      self.add_parameter_extension("Party", key)
 
     # TODO parameter specific validation
     self._vcon_dict[Vcon.PARTIES].append(party_dict)
@@ -1036,7 +1036,7 @@ class Vcon():
     Order the core parameters of the Session Object as they are defined in
     the vCon core schema, followed by any other parameters, for readability.
     """
-    core_names = vcon.parameter_registry.get_path_parameter_names(Vcon.SESSIONS)
+    core_names = vcon.parameter_registry.get_object_parameter_names("Session")
     ordered_names = [name for name in core_names if name in session]
     ordered_names += [name for name in session if name not in core_names]
     for name in ordered_names:
@@ -1114,7 +1114,7 @@ class Vcon():
     """
     self._attempting_modify()
     self._check_object_index(Vcon.SESSIONS, session_index)
-    self.add_parameter_extension(Vcon.SESSIONS, parameter_name)
+    self.add_parameter_extension("Session", parameter_name)
 
     self._vcon_dict[Vcon.SESSIONS][session_index][parameter_name] = parameter_value
 
@@ -1325,7 +1325,7 @@ class Vcon():
       if(value is not None):
         new_event[name] = value
     for name, value in other.items():
-      self.add_parameter_extension(Vcon.EVENTS, name)
+      self.add_parameter_extension("Event", name)
       new_event[name] = value
 
     if(self._vcon_dict.get(Vcon.EVENTS, None) is None):
@@ -1360,7 +1360,7 @@ class Vcon():
     """
     self._attempting_modify()
     self._check_object_index(Vcon.EVENTS, event_index)
-    self.add_parameter_extension(Vcon.EVENTS, parameter_name)
+    self.add_parameter_extension("Event", parameter_name)
 
     self._vcon_dict[Vcon.EVENTS][event_index][parameter_name] = parameter_value
 
@@ -2178,7 +2178,7 @@ class Vcon():
       return(dialog_index)
 
     dialog_index = self.__add_new_dialog(dialog_index)
-    self.add_parameter_extension("dialog", parameter_name)
+    self.add_parameter_extension("Dialog", parameter_name)
 
     # TODO parameter specific validation
     self._vcon_dict[Vcon.DIALOG][dialog_index][parameter_name] = parameter_value
@@ -2261,7 +2261,7 @@ class Vcon():
       analysis_element["schema"] = schema
 
     for param, value in optional_parameters.items():
-      self.add_parameter_extension("analysis", param)
+      self.add_parameter_extension("Analysis", param)
       analysis_element[param] = value
 
     if(self.analysis is None):
@@ -2307,7 +2307,7 @@ class Vcon():
       analysis_element["schema"] = schema
 
     for parameter_name, value in optional_parameters.items():
-      self.add_parameter_extension("analysis", parameter_name)
+      self.add_parameter_extension("Analysis", parameter_name)
       analysis_element[parameter_name] = value
 
     if(self.analysis is None):
@@ -3630,64 +3630,64 @@ class Vcon():
 
   @staticmethod
   def get_parameter_extension(
-    path : str,
+    object_name : str,
     parameter_name : str
     ) -> typing.Union[str, None]:
     """
-    Get the vCon extension which defines the given parameter name at the
-    given Object path.
+    Get the vCon extension which defines the given parameter name in the
+    given Object.
 
     Parameters:  
-      **path** (String) - dot separated path to the Object containing the
-                  parameter.  Each segment is the parameter name of the Object
-                  in its parent.  The empty string is the top level vCon Object.
-                  For example: "", "parties", "dialog", "parties.civicaddress",
-                  "dialog.party_history".  
-      **parameter_name** (String) - name of the parameter in the Object at the
-                  given path.
+      **object_name** (String) - name of the Object containing the parameter,
+                  as in draft-ietf-vcon-vcon-core.  "-" is the top level vCon
+                  Object.  For example: "-", "Party", "Dialog", "Session",
+                  "Session_Reference", "Event", "Attachment", "Analysis",
+                  "Civicaddress", "SessionId".
+                  See **vcon.parameter_registry**.  
+      **parameter_name** (String) - name of the parameter in the Object.
 
     Returns:  
       **Vcon.PARAMETER_CORE** if defined by the core vCon schema, the extension
       name token as it is to appear in the vCon extensions parameter if defined
-      by an extension, or None if the name is not registered at the given path.
+      by an extension, or None if the name is not registered in the Object.
 
-    Raises ValueError if the path is not a registered Object path.
+    Raises ValueError if the Object name is not registered.
     """
-    return(vcon.parameter_registry.get_parameter_extension(path, parameter_name))
+    return(vcon.parameter_registry.get_parameter_extension(object_name, parameter_name))
 
 
   @tag_meta
   def add_parameter_extension(
     self,
-    path : str,
+    object_name : str,
     parameter_name : str
     ) -> typing.Union[str, None]:
     """
     Add the name of the vCon extension which defines the given parameter to
-    this vCon's extensions parameter.
+    this vCon's extensions parameter, and also to its critical parameter if
+    the extension is registered as critical.
 
     Has no effect if the parameter is defined by the core vCon schema.  Logs a
     warning and has no effect if the parameter name is not registered.
 
     Parameters:  
-      **path** (String) - dot separated path to the Object containing the
+      **object_name** (String) - name of the Object containing the
                   parameter.  See **Vcon.get_parameter_extension**.  
-      **parameter_name** (String) - name of the parameter in the Object at the
-                  given path.
+      **parameter_name** (String) - name of the parameter in the Object.
 
     Returns:  
       the same value as **Vcon.get_parameter_extension**
 
-    Raises ValueError if the path is not a registered Object path.
+    Raises ValueError if the Object name is not registered.
     """
-    definer = Vcon.get_parameter_extension(path, parameter_name)
+    definer = Vcon.get_parameter_extension(object_name, parameter_name)
 
     if(definer is None):
       logger.warning(
-        "parameter name: \"%s\" at Object path: \"%s\" is not defined by the"
+        "parameter name: \"%s\" in Object: \"%s\" is not defined by the"
         " core vCon schema or any known vCon extension",
         parameter_name,
-        path
+        object_name
         )
       return(None)
 
@@ -3696,13 +3696,18 @@ class Vcon():
 
     self._attempting_modify()
 
-    extensions = self._vcon_dict.get(Vcon.EXTENSIONS, None)
-    if(extensions is None):
-      extensions = []
-      self._vcon_dict[Vcon.EXTENSIONS] = extensions
+    names = [Vcon.EXTENSIONS]
+    if(vcon.parameter_registry.is_critical(definer)):
+      names.append(Vcon.CRITICAL)
 
-    if(definer not in extensions):
-      extensions.append(definer)
+    for name in names:
+      name_list = self._vcon_dict.get(name, None)
+      if(name_list is None):
+        name_list = []
+        self._vcon_dict[name] = name_list
+
+      if(definer not in name_list):
+        name_list.append(definer)
 
     return(definer)
 

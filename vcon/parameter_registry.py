@@ -1,361 +1,615 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """
-Registry of vCon core and extension parameter names.
+Registry of vCon core and extension parameter names and values.
 
-Parameter names are registered per Object path.  A path is a dot
-separated string in which each segment is the parameter name of the
-Object within its parent Object.  The empty string is the top level
-vCon Object.  For example:
+Each registry row is a dict with the fields of the IANA vCon registries:
 
-  ""                      the vCon Object
-  "parties"               a Party Object
-  "parties.civicaddress"  the Civicaddress Object of a Party Object
-  "dialog"                a Dialog Object
-  "dialog.party_history"  an element of a Dialog Object party_history array
-  "sessions"              a Session Object
-  "sessions.sessions"     a Session_Reference Object of a Session Object
-  "events"                an Event Object
+  parent             the Object name, for example "Party", or for a value of
+                     a parameter, the Object name and parameter name joined by
+                     "->", for example "Event->type".  The vCon Object itself
+                     is "-".
+  name               the parameter name, or the value for a value row
+  description        brief description
+  change_controller  for example "IESG"
+  specification      the document which defines it
 
-Core parameter names are taken from the IANA registries defined in
-draft-ietf-vcon-vcon-core.  Where the IANA section of that document
-lags its normative text, the text is used: the Party Object did
-parameter and the party_history Object button parameter are both
-defined in the text but absent from their registry tables, and the
-Civicaddress and SessionId Objects have no registry tables at all.
+and two fields which are not IANA columns:
 
-The group parameter is registered on the vCon Object as it appears in
-the vCon Object Parameter Names Registry, however "group" is not a
-registered path as no Group Object registry is defined.
+  iana               False for a row with no IANA registry behind it (for
+                     example the Civicaddress Object parameters), so that a
+                     tool maintaining the IANA tables skips it
+  legacy             True for a vCon 0.4.0 name which is no longer defined.
+                     Legacy names are recognized as core, so that 0.4.0 vCons
+                     do not appear to use unknown parameters, until the 0.4.0
+                     to 0.5.0 converter exists.
 
-The Dialog Object parameters and the party_history Object which were
-removed in vCon 0.5.0 are retained so that 0.4.0 vCons, which are
-accepted without conversion, do not appear to use unknown parameters.
-They are to be removed with the 0.4.0 to 0.5.0 converter.
+Object names are those used in draft-ietf-vcon-vcon-core: "-" (the vCon
+Object), "Party", "Civicaddress", "Dialog", "SessionId",
+"Redacted_segments", "Session", "Session_Reference", "Event",
+"Attachment", "Analysis", "Redacted_from", "Amended_from" and
+"Redacted_string".  The legacy 0.4.0 Objects are "Party_history",
+"Redacted" and "Amended".
+
+An extension is a dict with the fields of the vCon Extensions Names Registry
+(name, description, change_controller, specification) plus critical: True if
+the extension name is to be listed in the vCon critical parameter whenever
+the extension is used.  An extension which is incompatible only under some
+conditions is not modeled.
 """
 
 import typing
 
 
-# Definer token returned for parameters defined by the core vCon schema.
+# Definer token returned for parameters and values defined by the core vCon schema.
 PARAMETER_CORE = "core"
 
+# The Object name of the top level vCon Object.
+VCON_OBJECT = "-"
 
-CORE_PARAMETERS: typing.Dict[str, typing.List[str]] = {
-  "": [
-    "vcon",
-    "uuid",
-    "extensions",
-    "critical",
-    "created_at",
-    "updated_at",
-    "subject",
-    "redacted",
-    "amended",
-    "group",
-    "sessions",
-    "parties",
-    "events",
-    "dialog",
-    "analysis",
-    "attachments"
-    ],
+# Separates the Object name and parameter name in the parent of a value row.
+VALUE_SEPARATOR = "->"
 
-  "redacted": [
-    "uuid",
-    "type",
-    "url",
-    "content_hash"
-    ],
+CORE_CHANGE_CONTROLLER = "IESG"
+CORE_SPECIFICATION = "RFC XXXX (draft-ietf-vcon-vcon-core)"
 
-  "amended": [
-    "uuid",
-    "url",
-    "content_hash"
-    ],
 
-  "sessions": [
-    "start",
-    "duration",
-    "parties",
-    "originator",
-    "session_id",
-    "sessions",
-    "dialog"
-    ],
+def _make_rows(
+  parent : str,
+  entries : typing.List[typing.Tuple[str, str]],
+  iana : bool = True,
+  legacy : bool = False
+  ) -> typing.List[typing.Dict[str, typing.Any]]:
+  """ build core rows for the given parent from (name, description) pairs """
+  return([{
+      "parent": parent,
+      "name": name,
+      "description": description,
+      "change_controller": CORE_CHANGE_CONTROLLER,
+      "specification": CORE_SPECIFICATION,
+      "iana": iana,
+      "legacy": legacy
+    } for name, description in entries])
 
-  "sessions.session_id": [
-    "local",
-    "remote"
-    ],
 
-  "sessions.sessions": [
-    "session",
-    "type",
-    "description"
-    ],
+ENCODING_VALUES = [
+    ("base64url", "body is Base64Url encoded"),
+    ("json", "body is a JSON value"),
+    ("none", "body is a JSON string included without modification")
+  ]
 
-  "parties": [
-    "tel",
-    "sip",
-    "stir",
-    "mailto",
-    "name",
-    "did",
-    "validation",
-    "gmlpos",
-    "civicaddress",
-    "uuid",
-    "type",
-    "org",
-    "dept"
-    ],
 
-  "parties.civicaddress": [
-    "country",
-    "a1",
-    "a2",
-    "a3",
-    "a4",
-    "a5",
-    "a6",
-    "prd",
-    "pod",
-    "sts",
-    "hno",
-    "hns",
-    "lmk",
-    "loc",
-    "flr",
-    "nam",
-    "pc"
-    ],
+CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
+  # vCon Object Parameter Names Registry
+  _make_rows(VCON_OBJECT, [
+    ("vcon", "Schema version number"),
+    ("uuid", "vCon instance UUID"),
+    ("extensions", "list of extensions used"),
+    ("critical", "list of incompatible extensions used"),
+    ("created_at", "creation date"),
+    ("updated_at", "modification date"),
+    ("subject", "conversation subject"),
+    ("redacted_from", "Redacted Object"),
+    ("amended_from", "Amended Object"),
+    ("group", "reserved for future extension"),
+    ("sessions", "Session Objects array"),
+    ("events", "Event Objects array"),
+    ("parties", "Party Objects array"),
+    ("dialog", "Dialog Objects array"),
+    ("analysis", "Analysis Objects array"),
+    ("attachments", "Attachment Objects array"),
+    ("redacted_strings", "Redacted Strings array")
+    ]) +
+  _make_rows(VCON_OBJECT, [
+    ("redacted", "0.4.0 Redacted Object, now redacted_from"),
+    ("amended", "0.4.0 Amended Object, now amended_from")
+    ], legacy = True) +
 
-  "events": [
-    "type",
-    "time",
-    "sessions",
-    "party",
-    "dialog",
-    "button",
-    "transferee",
-    "transfer_target",
-    "consultation",
-    "target_session"
-    ],
+  # Party Object Parameter Names Registry
+  _make_rows("Party", [
+    ("tel", "tel URL"),
+    ("sip", "SIP URL"),
+    ("stir", "STIR token"),
+    ("mailto", "mailto URL"),
+    ("name", "participant name"),
+    ("validation", "validation method"),
+    ("gmlpos", "participant geolocation"),
+    ("civicaddress", "civic address"),
+    ("uuid", "participant unique identifier"),
+    ("type", "participant type"),
+    ("org", "participant organization"),
+    ("dept", "participant department"),
+    ("did", "decentralized identifier")
+    ]) +
 
-  "dialog": [
-    "type",
-    "start",
-    "duration",
-    "parties",
-    "mediatype",
-    "filename",
-    "body",
-    "encoding",
-    "url",
-    "content_hash",
-    "disposition",
-    "session_id",
-    "application",
-    "message_id",
-    # Removed in vCon 0.5.0, retained until the 0.4.0 converter exists
-    "originator",
-    "party_history",
-    "transferee",
-    "transferor",
-    "transfer_target",
-    "original",
-    "consultation",
-    "target_dialog",
-    "recordings",
-    "recording_set"
-    ],
+  # Civicaddress Object, no IANA registry (GEOPRIV section 2.2.1 names)
+  _make_rows("Civicaddress", [
+    ("country", "country"),
+    ("a1", "national subdivision"),
+    ("a2", "county, parish"),
+    ("a3", "city, township"),
+    ("a4", "city division"),
+    ("a5", "neighborhood"),
+    ("a6", "street"),
+    ("prd", "leading street direction"),
+    ("pod", "trailing street suffix"),
+    ("sts", "street suffix"),
+    ("hno", "house number"),
+    ("hns", "house number suffix"),
+    ("lmk", "landmark"),
+    ("loc", "additional location information"),
+    ("flr", "floor"),
+    ("nam", "name"),
+    ("pc", "postal code")
+    ], iana = False) +
 
-  "dialog.session_id": [
-    "local",
-    "remote"
-    ],
+  # Dialog Object Parameter Names Registry
+  _make_rows("Dialog", [
+    ("type", "dialog type name"),
+    ("start", "dialog start time"),
+    ("duration", "dialog duration period"),
+    ("parties", "dialog parties list"),
+    ("mediatype", "dialog content media type"),
+    ("filename", "dialog content filename"),
+    ("body", "dialog inline content"),
+    ("encoding", "dialog inline content encoding"),
+    ("url", "dialog referenced content URL"),
+    ("content_hash", "dialog content hash"),
+    ("disposition", "dialog disposition"),
+    ("session_id", "RFC7989 session ID"),
+    ("application", "dialog source application"),
+    ("message_id", "dialog message id"),
+    ("redacted_segments", "redacted segments")
+    ]) +
+  _make_rows("Dialog", [
+    ("originator", "0.4.0 originator party, now in the Session"),
+    ("party_history", "0.4.0 party history, now Event Objects"),
+    ("transferee", "0.4.0 transfer Dialog transferee"),
+    ("transferor", "0.4.0 transfer Dialog transferor"),
+    ("transfer_target", "0.4.0 transfer Dialog transfer target"),
+    ("original", "0.4.0 transfer Dialog original Dialog"),
+    ("consultation", "0.4.0 transfer Dialog consultation Dialog"),
+    ("target_dialog", "0.4.0 transfer Dialog target Dialog"),
+    ("recordings", "0.4.0 recording-set recordings"),
+    ("recording_set", "0.4.0 recording-set")
+    ], legacy = True) +
 
-  # Removed in vCon 0.5.0, retained until the 0.4.0 converter exists
-  "dialog.party_history": [
-    "party",
-    "time",
-    "event",
-    "button"
-    ],
+  # Dialog Type Name Registry
+  _make_rows("Dialog->type", [
+    ("text", "text dialog"),
+    ("recording", "recording dialog"),
+    ("incomplete", "incomplete dialog")
+    ]) +
+  _make_rows("Dialog->type", [
+    ("transfer", "0.4.0 transfer dialog, now transfer Event Objects")
+    ], legacy = True) +
 
-  "analysis": [
-    "type",
-    "dialog",
-    "session",
-    "attachment",
-    "analysis",
-    "mediatype",
-    "filename",
-    "vendor",
-    "product",
-    "schema",
-    "body",
-    "encoding",
-    "url",
-    "content_hash"
-    ],
+  # Dialog disposition values, no IANA registry
+  _make_rows("Dialog->disposition", [
+    ("no-answer", "no one answered or accepted the connection"),
+    ("congestion", "unable to be completed due to system load"),
+    ("failed", "the call or connection failed"),
+    ("busy", "the party was busy with another conversation"),
+    ("hung-up", "the party hung-up before any conversation occurred"),
+    ("voicemail-no-message", "voicemail answered, but no message was left")
+    ], iana = False) +
 
-  "attachments": [
-    "purpose",
-    "start",
-    "party",
-    "dialog",
-    "session",
-    "mediatype",
-    "filename",
-    "body",
-    "encoding",
-    "url",
-    "content_hash"
-    ]
+  # encoding values, no IANA registry
+  _make_rows("Dialog->encoding", ENCODING_VALUES, iana = False) +
+
+  # SessionId Object, no IANA registry
+  _make_rows("SessionId", [
+    ("local", "local UUID of the RFC7989 session ID"),
+    ("remote", "remote UUID of the RFC7989 session ID")
+    ], iana = False) +
+
+  # Redacted_segments Object, no IANA registry
+  _make_rows("Redacted_segments", [
+    ("start", "redaction start time"),
+    ("end", "redaction end time"),
+    ("parties", "parties whose media was redacted")
+    ], iana = False) +
+
+  # 0.4.0 Dialog party_history Object
+  _make_rows("Party_history", [
+    ("party", "party index"),
+    ("time", "time of the event"),
+    ("event", "event type"),
+    ("button", "button label")
+    ], legacy = True) +
+
+  # Session Object Parameter Names Registry
+  _make_rows("Session", [
+    ("start", "session start time"),
+    ("duration", "session duration period"),
+    ("parties", "session parties list"),
+    ("originator", "session originator party"),
+    ("session_id", "RFC7989 session ID"),
+    ("sessions", "Session_Reference Objects array"),
+    ("dialog", "session dialog index list")
+    ]) +
+
+  # Session_Reference Object Parameter Names Registry
+  _make_rows("Session_Reference", [
+    ("session", "referenced session index"),
+    ("type", "session relationship type"),
+    ("description", "session relationship description")
+    ]) +
+
+  # Session_Reference Type Name Registry
+  _make_rows("Session_Reference->type", [
+    ("child", "contained session"),
+    ("peer", "parallel or overlapping session"),
+    ("precursor", "preceding session"),
+    ("breakout", "breakout session with a subset of the parties")
+    ]) +
+
+  # Event Object Parameter Names Registry
+  _make_rows("Event", [
+    ("type", "event type name"),
+    ("time", "time event occurred"),
+    ("sessions", "event session indices"),
+    ("party", "event party index"),
+    ("dialog", "event dialog index"),
+    ("channel", "recording channel index"),
+    ("contributors", "recording channel contributor party indices"),
+    ("button", "button label character or string"),
+    ("transferee", "transferee party index"),
+    ("transfer_target", "transfer target party index"),
+    ("consultation", "consultation session index"),
+    ("target_session", "target session index")
+    ]) +
+
+  # Event Type Name Registry
+  _make_rows("Event->type", [
+    ("join", "party join event"),
+    ("drop", "party drop event"),
+    ("hold", "party on hold event"),
+    ("unhold", "party off hold event"),
+    ("mute", "party on mute event"),
+    ("unmute", "party off mute event"),
+    ("keydown", "DTMF/app key/button press event"),
+    ("keyup", "DTMF/app key/button release event"),
+    ("consultation-start", "transfer consultation start event"),
+    ("blind-transfer", "blind transfer event"),
+    ("consultative-transfer", "consultative transfer event"),
+    ("transfer-abandoned", "transfer abandoned event"),
+    ("channel-contributors", "recording channel contributors change event")
+    ]) +
+
+  # Attachment Object Parameter Names Registry
+  _make_rows("Attachment", [
+    ("purpose", "attachment object purpose description"),
+    ("start", "attachment start time"),
+    ("party", "sending party index"),
+    ("dialog", "associated dialog index"),
+    ("session", "associated session index"),
+    ("mediatype", "attachment body media type"),
+    ("filename", "attachment content filename"),
+    ("body", "attachment inline content"),
+    ("encoding", "attachment inline content encoding"),
+    ("url", "attachment referenced content URL"),
+    ("content_hash", "attachment content hash")
+    ]) +
+  _make_rows("Attachment->encoding", ENCODING_VALUES, iana = False) +
+
+  # Analysis Object Parameter Names Registry
+  _make_rows("Analysis", [
+    ("type", "analysis type"),
+    ("dialog", "associated dialog index"),
+    ("sessions", "associated session indices"),
+    ("attachment", "associated attachment index"),
+    ("analysis", "associated analysis index"),
+    ("mediatype", "analysis body media type"),
+    ("filename", "analysis content filename"),
+    ("vendor", "vendor producing content"),
+    ("product", "vendor product producing content"),
+    ("schema", "product schema of content"),
+    ("body", "analysis inline content"),
+    ("encoding", "analysis inline content encoding"),
+    ("url", "analysis referenced content URL"),
+    ("content_hash", "analysis content hash")
+    ]) +
+  _make_rows("Analysis->encoding", ENCODING_VALUES, iana = False) +
+
+  # Redacted_from Object Parameter Names Registry
+  _make_rows("Redacted_from", [
+    ("uuid", "less redacted vCon UUID"),
+    ("type", "redaction type or reason"),
+    ("url", "referenced less redacted vCon URL"),
+    ("content_hash", "less redacted vCon hash")
+    ]) +
+
+  # Amended_from Object Parameter Names Registry
+  _make_rows("Amended_from", [
+    ("uuid", "prior vCon version UUID"),
+    ("url", "referenced prior version vCon URL"),
+    ("content_hash", "prior version vCon hash")
+    ]) +
+
+  # Redacted_string Object, no IANA registry
+  _make_rows("Redacted_string", [
+    ("ref", "reference number of the redacted string"),
+    ("type", "type of information redacted"),
+    ("orig", "the original string before redaction")
+    ], iana = False) +
+
+  # 0.4.0 Redacted and Amended Objects
+  _make_rows("Redacted", [
+    ("uuid", "less redacted vCon UUID"),
+    ("type", "redaction type"),
+    ("url", "referenced less redacted vCon URL"),
+    ("content_hash", "less redacted vCon hash")
+    ], legacy = True) +
+  _make_rows("Amended", [
+    ("uuid", "prior vCon version UUID"),
+    ("url", "referenced prior version vCon URL"),
+    ("content_hash", "prior version vCon hash")
+    ], legacy = True)
+  )
+
+
+CC_EXTENSION = {
+    "name": "CC",
+    "description": "Contact Center",
+    "change_controller": "IESG",
+    "specification": "RFC XXXX (draft-ietf-vcon-cc-extension)",
+    # CC is Compatible: it adds only optional parameters
+    "critical": False
   }
 
+CC_ROWS = [
+    {"parent": "Party", "name": "role", "description": "Agent party role"},
+    {"parent": "Party", "name": "contact_list", "description": "Contact list including this party"},
+    {"parent": "Dialog", "name": "campaign", "description": "Campaign the dialog is part of"},
+    {"parent": "Dialog", "name": "interaction_type", "description": "Dialog interaction type"},
+    {"parent": "Dialog", "name": "interaction_id", "description": "Dialog interaction ID"},
+    {"parent": "Dialog", "name": "skill", "description": "Required skill"}
+  ]
 
-EXTENSION_PARAMETERS: typing.Dict[str, typing.Dict[str, typing.List[str]]] = {
-  "CC": {
-    "parties": [
-      "role",
-      "contact_list"
-      ],
 
-    "dialog": [
-      "campaign",
-      "interaction_type",
-      "interaction_id",
-      "skill"
-      ]
+EXTENSION_FIELDS = ["name", "description", "change_controller", "specification", "critical"]
+
+# Registered extensions by name: the extension fields plus "rows".
+EXTENSIONS: typing.Dict[str, typing.Dict[str, typing.Any]] = {}
+
+# Built by _build_index.
+# parent -> name -> PARAMETER_CORE or the defining extension name
+_INDEX: typing.Dict[str, typing.Dict[str, str]] = {}
+# (parent, name) of each legacy row
+_LEGACY: typing.Set[typing.Tuple[str, str]] = set()
+# Object names (parents of parameter rows)
+OBJECT_NAMES: typing.FrozenSet[str] = frozenset()
+# Value set names (parents of value rows, e.g. "Event->type")
+VALUE_SETS: typing.FrozenSet[str] = frozenset()
+
+
+def _check_rows(
+  definer : str,
+  rows : typing.List[typing.Dict[str, typing.Any]],
+  index : typing.Dict[str, typing.Dict[str, str]]
+  ) -> None:
+  """
+  Check that no row name matches, case insensitively, a name already in the
+  index or another of the rows under the same parent.
+
+  Raises ValueError naming the collision.
+  """
+  lower_index = {
+      parent: {name.lower(): (name, owner) for name, owner in names.items()}
+      for parent, names in index.items()
     }
-  }
+  for row in rows:
+    parent_names = lower_index.setdefault(row["parent"], {})
+    existing = parent_names.get(row["name"].lower(), None)
+    if(existing is not None):
+      raise ValueError(
+        "\"{}\" name: \"{}\" under: \"{}\" collides with: \"{}\" defined by: \"{}\"".format(
+        definer, row["name"], row["parent"], existing[0], existing[1]))
+    parent_names[row["name"].lower()] = (row["name"], definer)
 
 
-# Built by build_index at import.
-_PARAMETER_INDEX: typing.Dict[str, typing.Dict[str, str]] = {}
-PARAMETER_PATHS: typing.FrozenSet[str] = frozenset()
-
-
-def build_index() -> None:
+def _build_index() -> None:
   """
-  Build the parameter index and the set of registered paths from
-  CORE_PARAMETERS and EXTENSION_PARAMETERS.
+  Build the lookup index from CORE_ROWS and EXTENSIONS.
 
-  Called at import.  Call again after modifying either table.
-
-  Raises ValueError if:
-    * a parameter name is duplicated within a single core path
-    * an extension parameter name collides with a core parameter name
-      at the same path
-    * two extensions define the same parameter name at the same path
+  Raises ValueError if names collide (see _check_rows).
   """
-  global _PARAMETER_INDEX
-  global PARAMETER_PATHS
+  global _INDEX
+  global _LEGACY
+  global OBJECT_NAMES
+  global VALUE_SETS
 
   index: typing.Dict[str, typing.Dict[str, str]] = {}
+  legacy: typing.Set[typing.Tuple[str, str]] = set()
 
-  for path, parameter_names in CORE_PARAMETERS.items():
-    path_index: typing.Dict[str, str] = {}
-    for parameter_name in parameter_names:
-      if(parameter_name in path_index):
-        raise ValueError(
-          "duplicate core parameter name: \"{}\" at path: \"{}\"".format(
-          parameter_name, path))
-      path_index[parameter_name] = PARAMETER_CORE
-    index[path] = path_index
+  _check_rows(PARAMETER_CORE, CORE_ROWS, index)
+  for row in CORE_ROWS:
+    index.setdefault(row["parent"], {})[row["name"]] = PARAMETER_CORE
+    if(row["legacy"]):
+      legacy.add((row["parent"], row["name"]))
 
-  # sorted for deterministic collision reporting
-  for extension_name in sorted(EXTENSION_PARAMETERS.keys()):
-    for path, parameter_names in EXTENSION_PARAMETERS[extension_name].items():
-      path_index = index.setdefault(path, {})
-      for parameter_name in parameter_names:
-        if(parameter_name in path_index):
-          raise ValueError(
-            "extension: \"{}\" parameter name: \"{}\" at path: \"{}\""
-            " collides with parameter already defined by: \"{}\"".format(
-            extension_name, parameter_name, path, path_index[parameter_name]))
-        path_index[parameter_name] = extension_name
+  for extension_name, extension in EXTENSIONS.items():
+    _check_rows(extension_name, extension["rows"], index)
+    for row in extension["rows"]:
+      index.setdefault(row["parent"], {})[row["name"]] = extension_name
 
-  _PARAMETER_INDEX = index
-  PARAMETER_PATHS = frozenset(index.keys())
+  _INDEX = index
+  _LEGACY = legacy
+  OBJECT_NAMES = frozenset([parent for parent in index if VALUE_SEPARATOR not in parent])
+  VALUE_SETS = frozenset([parent for parent in index if VALUE_SEPARATOR in parent])
 
 
-def normalize_path(path : str) -> str:
+def register_extension(
+  extension : typing.Dict[str, typing.Any],
+  rows : typing.List[typing.Dict[str, typing.Any]]
+  ) -> None:
   """
-  Normalize an Object path string.
+  Register a vCon extension and the parameter names and values it defines.
 
   Parameters:
-    **path** (String) - the Object path to normalize
+    **extension** (dict) - name, description, change_controller,
+      specification and critical (bool) of the extension
+    **rows** (List[dict]) - parent, name and description of each parameter
+      name or value it defines.  change_controller and specification default
+      to those of the extension.  An extension may define rows under a parent
+      which core does not define, for an Object or value set of its own.
 
-  Returns:
-    the normalized path string
-
-  Raises ValueError if the path has a leading or trailing separator.
+  Raises ValueError if a field is missing, if a name collides with a core or
+  other extension name under the same parent, including names which differ
+  only in case, if the extension name differs only in case from a registered
+  extension name, or if the extension is already registered with different
+  content.  Registering the same extension again with identical content is
+  allowed and has no effect.
   """
-  normalized_path = path.strip()
+  for field in EXTENSION_FIELDS:
+    if(field not in extension):
+      raise ValueError("extension is missing: \"{}\"".format(field))
 
-  if(normalized_path.startswith(".") or
-    normalized_path.endswith(".")
-    ):
+  name = extension["name"]
+  new_extension = {field: extension[field] for field in EXTENSION_FIELDS}
+  new_rows = []
+  for row in rows:
+    for field in ["parent", "name", "description"]:
+      if(field not in row):
+        raise ValueError("extension: \"{}\" row: {} is missing: \"{}\"".format(name, row, field))
+    new_rows.append({
+        "parent": row["parent"],
+        "name": row["name"],
+        "description": row["description"],
+        "change_controller": row.get("change_controller", extension["change_controller"]),
+        "specification": row.get("specification", extension["specification"]),
+        "iana": True,
+        "legacy": False
+      })
+  new_extension["rows"] = new_rows
+
+  for registered_name, registered in EXTENSIONS.items():
+    if(registered_name == name):
+      if(registered == new_extension):
+        return
+      raise ValueError("extension: \"{}\" is already registered with different content".format(name))
+    if(registered_name.lower() == name.lower()):
+      raise ValueError("extension name: \"{}\" differs only in case from registered extension: \"{}\"".format(
+        name, registered_name))
+
+  EXTENSIONS[name] = new_extension
+  try:
+    _build_index()
+  except ValueError:
+    del EXTENSIONS[name]
+    _build_index()
+    raise
+
+
+def unregister_extension(name : str) -> None:
+  """
+  Remove a registered extension and its rows.
+
+  Raises ValueError if the extension is not registered.
+  """
+  if(name not in EXTENSIONS):
+    raise ValueError("extension: \"{}\" is not registered".format(name))
+
+  del EXTENSIONS[name]
+  _build_index()
+
+
+def _check_object_name(object_name : str) -> None:
+  """ Raises ValueError if the Object name is not registered """
+  if(object_name not in OBJECT_NAMES):
     raise ValueError(
-      "invalid Object path: \"{}\".  Path must not begin or end with \".\"".format(
-      path))
-
-  return(normalized_path)
+      "\"{}\" is not a registered vCon Object name.  Must be one of: {}".format(
+      object_name, sorted(OBJECT_NAMES)))
 
 
 def get_parameter_extension(
-  path : str,
+  object_name : str,
   parameter_name : str
   ) -> typing.Union[str, None]:
   """
-  Get the definer of the given parameter name at the given Object path.
+  Get the definer of the given parameter name in the given Object.
 
   Parameters:
-    **path** (String) - the Object path containing the parameter
+    **object_name** (String) - the Object name, for example "-" or "Party"
     **parameter_name** (String) - the parameter name to look up
 
   Returns:
-    PARAMETER_CORE, the defining extension name or None if the parameter
-    name is not registered at the given path.
+    PARAMETER_CORE (also for legacy 0.4.0 names), the defining extension
+    name or None if the parameter name is not registered in the Object.
 
-  Raises ValueError if the path is not a registered Object path.
+  Raises ValueError if the Object name is not registered.
   """
-  normalized_path = normalize_path(path)
-
-  if(normalized_path not in PARAMETER_PATHS):
-    raise ValueError(
-      "\"{}\" is not a registered vCon Object path.  Must be one of: {}".format(
-      normalized_path, sorted(PARAMETER_PATHS)))
-
-  return(_PARAMETER_INDEX[normalized_path].get(parameter_name, None))
+  _check_object_name(object_name)
+  return(_INDEX[object_name].get(parameter_name, None))
 
 
-def get_path_parameter_names(path : str) -> typing.List[str]:
+def get_value_extension(
+  object_name : str,
+  parameter_name : str,
+  value : str
+  ) -> typing.Union[str, None]:
   """
-  Get all registered parameter names, core and extension defined, for the
-  given Object path.
-
-  Parameters:
-    **path** (String) - the Object path
+  Get the definer of the given value of the given parameter in the given
+  Object, for example the Event type value "join".
 
   Returns:
-    list of registered parameter names
+    PARAMETER_CORE (also for legacy 0.4.0 values), the defining extension
+    name or None if the value is not registered.
 
-  Raises ValueError if the path is not a registered Object path.
+  Raises ValueError if the parameter has no registered values.
   """
-  normalized_path = normalize_path(path)
-
-  if(normalized_path not in PARAMETER_PATHS):
+  value_set = "{}{}{}".format(object_name, VALUE_SEPARATOR, parameter_name)
+  if(value_set not in VALUE_SETS):
     raise ValueError(
-      "\"{}\" is not a registered vCon Object path.  Must be one of: {}".format(
-      normalized_path, sorted(PARAMETER_PATHS)))
+      "\"{}\" is not a registered value set.  Must be one of: {}".format(
+      value_set, sorted(VALUE_SETS)))
 
-  return(list(_PARAMETER_INDEX[normalized_path].keys()))
+  return(_INDEX[value_set].get(value, None))
 
 
-build_index()
+def get_object_parameter_names(object_name : str) -> typing.List[str]:
+  """
+  Get all registered parameter names, core (including legacy) and extension
+  defined, of the given Object, core names first in registry order.
 
+  Raises ValueError if the Object name is not registered.
+  """
+  _check_object_name(object_name)
+  return(list(_INDEX[object_name].keys()))
+
+
+def is_legacy(parent : str, name : str) -> bool:
+  """ True if the name under the given parent is a legacy 0.4.0 name """
+  return((parent, name) in _LEGACY)
+
+
+def is_critical(extension_name : str) -> bool:
+  """
+  True if the named extension is registered as critical, i.e. its name is
+  to be listed in critical whenever it is used.  False for an unregistered
+  name.
+  """
+  extension = EXTENSIONS.get(extension_name, None)
+  return(extension is not None and extension["critical"] is True)
+
+
+def get_rows(
+  parent : typing.Union[str, None] = None
+  ) -> typing.List[typing.Dict[str, typing.Any]]:
+  """
+  Get copies of the registry rows, core then extension rows, optionally only
+  those under the given parent.  Extension rows have an added "extension"
+  field with the extension name.
+  """
+  rows = [dict(row) for row in CORE_ROWS]
+  for extension_name, extension in EXTENSIONS.items():
+    rows.extend([dict(row, extension = extension_name) for row in extension["rows"]])
+
+  if(parent is not None):
+    rows = [row for row in rows if row["parent"] == parent]
+
+  return(rows)
+
+
+_build_index()
+register_extension(CC_EXTENSION, CC_ROWS)

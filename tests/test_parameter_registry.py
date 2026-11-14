@@ -5,6 +5,7 @@ import logging
 import pytest
 import vcon
 import vcon.parameter_registry
+import tests.common_utils
 
 UUID_DOMAIN = "py-vcon.dev"
 
@@ -16,175 +17,244 @@ def make_vcon() -> vcon.Vcon:
   return(a_vcon)
 
 
-# ============================================================
-#  get_parameter_extension
-# ============================================================
+TEST_EXTENSION = {
+    "name": "TEST_CRIT",
+    "description": "test critical extension",
+    "change_controller": "py-vcon",
+    "specification": "tests/test_parameter_registry.py",
+    "critical": True
+  }
 
-def test_core_parameter():
-  """ core parameters resolve to Vcon.PARAMETER_CORE """
-  assert(vcon.Vcon.get_parameter_extension("parties", "tel") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("dialog", "start") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("analysis", "vendor") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("attachments", "purpose") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("", "uuid") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("redacted", "type") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("amended", "content_hash") == vcon.Vcon.PARAMETER_CORE)
-
-
-def test_core_parameters_from_draft_text():
-  """ did and button are in the draft text, but absent from its IANA tables """
-  assert(vcon.Vcon.get_parameter_extension("parties", "did") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("dialog.party_history", "button") == vcon.Vcon.PARAMETER_CORE)
+TEST_ROWS = [
+    {"parent": "Party", "name": "test_crit_param", "description": "test parameter"},
+    {"parent": "Event->type", "name": "test-crit-event", "description": "test Event type"}
+  ]
 
 
-def test_extension_parameter():
-  """ CC parameters resolve to the CC extension name token """
-  assert(vcon.Vcon.get_parameter_extension("parties", "role") == "CC")
-  assert(vcon.Vcon.get_parameter_extension("parties", "contact_list") == "CC")
-  assert(vcon.Vcon.get_parameter_extension("dialog", "campaign") == "CC")
-  assert(vcon.Vcon.get_parameter_extension("dialog", "interaction_type") == "CC")
-  assert(vcon.Vcon.get_parameter_extension("dialog", "interaction_id") == "CC")
-  assert(vcon.Vcon.get_parameter_extension("dialog", "skill") == "CC")
-
-
-def test_unregistered_parameter():
-  """ unregistered parameter names resolve to None """
-  assert(vcon.Vcon.get_parameter_extension("parties", "not_a_parameter") is None)
-  assert(vcon.Vcon.get_parameter_extension("dialog", "siprec_session_id") is None)
-
-
-def test_removed_parameters():
-  """ timezone and extension were removed from the party parameters """
-  assert(vcon.Vcon.get_parameter_extension("parties", "timezone") is None)
-  assert(vcon.Vcon.get_parameter_extension("parties", "extension") is None)
-
-
-def test_parameter_is_path_scoped():
-  """ the same name may be core in one Object and unregistered in another """
-  assert(vcon.Vcon.get_parameter_extension("dialog", "originator") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("parties", "originator") is None)
-  assert(vcon.Vcon.get_parameter_extension("parties", "role") == "CC")
-  assert(vcon.Vcon.get_parameter_extension("dialog", "role") is None)
+@pytest.fixture
+def test_extension():
+  """ register TEST_CRIT for one test """
+  vcon.parameter_registry.register_extension(TEST_EXTENSION, TEST_ROWS)
+  yield TEST_EXTENSION["name"]
+  vcon.parameter_registry.unregister_extension(TEST_EXTENSION["name"])
 
 
 # ============================================================
-#  Nested Object paths
+#  core data set against the -05 IANA tables
 # ============================================================
 
-def test_nested_paths():
-  """ parameters of nested Objects resolve at their own path """
-  assert(vcon.Vcon.get_parameter_extension("parties.civicaddress", "country") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("parties.civicaddress", "a1") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("parties.civicaddress", "pc") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("dialog.session_id", "local") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("dialog.session_id", "remote") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("dialog.party_history", "event") == vcon.Vcon.PARAMETER_CORE)
+def test_core_rows_match_draft_iana_tables():
+  """ each -05 IANA table has exactly the draft's names in the core data set (legacy rows excluded) """
+  tables = tests.common_utils.load_iana_tables()
+  assert(set(tables.keys()) == {"-", "Party", "Dialog", "Dialog->type", "Session", "Session_Reference",
+    "Session_Reference->type", "Event", "Event->type", "Attachment", "Analysis", "Redacted_from",
+    "Amended_from"})
+
+  for parent, draft_names in tables.items():
+    core_names = [row["name"] for row in vcon.parameter_registry.CORE_ROWS
+      if(row["parent"] == parent and not row["legacy"])]
+    assert(core_names == draft_names), parent
+    assert(all([row["iana"] for row in vcon.parameter_registry.CORE_ROWS
+      if(row["parent"] == parent and not row["legacy"])])), parent
 
 
-def test_nested_object_name_is_also_a_parent_parameter():
-  """ a nested Object name resolves both as a path and as a parameter of its parent """
-  assert(vcon.Vcon.get_parameter_extension("parties", "civicaddress") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("dialog", "session_id") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("dialog", "party_history") == vcon.Vcon.PARAMETER_CORE)
+def test_value_lists():
+  """ the value registries of -05 """
+  assert(len([row for row in vcon.parameter_registry.get_rows("Dialog->type") if(not row["legacy"])]) == 3)
+  assert(len(vcon.parameter_registry.get_rows("Event->type")) == 13)
+  assert(len(vcon.parameter_registry.get_rows("Session_Reference->type")) == 4)
+
+
+def test_rows_without_iana_registry():
+  """ Objects and values defined in the -05 text with no IANA registry are core with iana False """
+  expected = {
+      "Civicaddress": ["country", "a1", "a2", "a3", "a4", "a5", "a6", "prd", "pod", "sts", "hno",
+        "hns", "lmk", "loc", "flr", "nam", "pc"],
+      "SessionId": ["local", "remote"],
+      "Redacted_string": ["ref", "type", "orig"],
+      "Redacted_segments": ["start", "end", "parties"],
+      "Dialog->disposition": ["no-answer", "congestion", "failed", "busy", "hung-up", "voicemail-no-message"],
+      "Dialog->encoding": ["base64url", "json", "none"],
+      "Attachment->encoding": ["base64url", "json", "none"],
+      "Analysis->encoding": ["base64url", "json", "none"]
+    }
+  for parent, names in expected.items():
+    rows = vcon.parameter_registry.get_rows(parent)
+    assert([row["name"] for row in rows] == names), parent
+    assert(all([row["iana"] is False and row["legacy"] is False for row in rows])), parent
+    for row in rows:
+      if(vcon.parameter_registry.VALUE_SEPARATOR in parent):
+        object_name, parameter_name = parent.split(vcon.parameter_registry.VALUE_SEPARATOR)
+        assert(vcon.parameter_registry.get_value_extension(object_name, parameter_name, row["name"]) ==
+          vcon.Vcon.PARAMETER_CORE)
+      else:
+        assert(vcon.Vcon.get_parameter_extension(parent, row["name"]) == vcon.Vcon.PARAMETER_CORE)
+
+
+def test_analysis_sessions():
+  """ Analysis references Sessions by sessions, not session """
+  assert(vcon.Vcon.get_parameter_extension("Analysis", "sessions") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("Analysis", "session") is None)
+
+
+def test_event_channel_contributors():
+  assert(vcon.Vcon.get_parameter_extension("Event", "channel") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("Event", "contributors") == vcon.Vcon.PARAMETER_CORE)
 
 
 # ============================================================
-#  Path validation
+#  lookups
 # ============================================================
 
-def test_unregistered_path_raises():
-  """ an unregistered Object path raises ValueError """
+def test_parameter_lookup():
+  """ core, extension and unregistered parameter names """
+  assert(vcon.Vcon.get_parameter_extension("Party", "tel") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("-", "uuid") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("Party", "role") == "CC")
+  assert(vcon.Vcon.get_parameter_extension("Party", "contact_list") == "CC")
+  for name in ["campaign", "interaction_type", "interaction_id", "skill"]:
+    assert(vcon.Vcon.get_parameter_extension("Dialog", name) == "CC")
+  assert(vcon.Vcon.get_parameter_extension("Party", "not_a_parameter") is None)
+  # parameter names are scoped to their Object
+  assert(vcon.Vcon.get_parameter_extension("Dialog", "role") is None)
+  assert(vcon.Vcon.get_parameter_extension("Party", "originator") is None)
+  # removed party parameters
+  assert(vcon.Vcon.get_parameter_extension("Party", "timezone") is None)
+
+
+def test_value_lookup(test_extension):
+  assert(vcon.parameter_registry.get_value_extension("Event", "type", "join") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.parameter_registry.get_value_extension("Event", "type", "test-crit-event") == test_extension)
+  assert(vcon.parameter_registry.get_value_extension("Event", "type", "not-an-event") is None)
+
+  with pytest.raises(ValueError, match = "not a registered value set"):
+    vcon.parameter_registry.get_value_extension("Party", "tel", "x")
+
+
+def test_unregistered_object_name_raises():
+  with pytest.raises(ValueError, match = "not a registered vCon Object name"):
+    vcon.Vcon.get_parameter_extension("parties", "tel")
   with pytest.raises(ValueError):
-    vcon.Vcon.get_parameter_extension("not_an_object", "tel")
-
+    vcon.Vcon.get_parameter_extension("Group", "uuid")
   with pytest.raises(ValueError):
-    vcon.Vcon.get_parameter_extension("parties.civicaddres", "country")
+    vcon.parameter_registry.get_object_parameter_names("Dialog->type")
 
 
-def test_group_path_raises():
-  """
-  group is a registered vCon Object parameter name, but no Group Object
-  registry is defined, so "group" is not a registered path.
-  """
-  assert(vcon.Vcon.get_parameter_extension("", "group") == vcon.Vcon.PARAMETER_CORE)
-
-  with pytest.raises(ValueError):
-    vcon.Vcon.get_parameter_extension("group", "uuid")
-
-
-def test_malformed_path_raises():
-  """ leading and trailing path separators raise ValueError """
-  with pytest.raises(ValueError):
-    vcon.Vcon.get_parameter_extension(".parties", "tel")
-
-  with pytest.raises(ValueError):
-    vcon.Vcon.get_parameter_extension("parties.", "tel")
-
-
-def test_path_whitespace_stripped():
-  """ surrounding whitespace on the path is ignored """
-  assert(vcon.Vcon.get_parameter_extension("  parties  ", "tel") == vcon.Vcon.PARAMETER_CORE)
+def test_get_object_parameter_names():
+  names = vcon.parameter_registry.get_object_parameter_names("Session")
+  assert(names == ["start", "duration", "parties", "originator", "session_id", "sessions", "dialog"])
 
 
 # ============================================================
-#  Index build and collision detection
+#  writing extension parameters
 # ============================================================
 
-def test_duplicate_core_name_raises():
-  """ a duplicated name within one core path is a registry error """
-  vcon.parameter_registry.CORE_PARAMETERS["parties"].append("tel")
+def test_cc_parameter_adds_extension_not_critical():
+  a_vcon = make_vcon()
+  a_vcon.set_party_parameter("role", "agent")
+  assert(a_vcon.extensions == ["CC"])
+  assert(vcon.Vcon.CRITICAL not in a_vcon._vcon_dict)
+  assert(vcon.parameter_registry.is_critical("CC") is False)
+
+
+def test_critical_parameter_adds_extension_and_critical(test_extension):
+  a_vcon = make_vcon()
+  a_vcon.set_party_parameter("test_crit_param", "x")
+  assert(a_vcon.extensions == [test_extension])
+  assert(a_vcon.critical == [test_extension])
+
+  # added at most once
+  a_vcon.add_parameter_extension("Party", "test_crit_param")
+  assert(a_vcon.extensions == [test_extension])
+  assert(a_vcon.critical == [test_extension])
+
+
+# ============================================================
+#  registration
+# ============================================================
+
+def test_register_extension(test_extension):
+  assert(test_extension in vcon.parameter_registry.EXTENSIONS)
+  assert(vcon.Vcon.get_parameter_extension("Party", "test_crit_param") == test_extension)
+  assert(vcon.parameter_registry.is_critical(test_extension) is True)
+  rows = [row for row in vcon.parameter_registry.get_rows("Party") if(row.get("extension", None) == test_extension)]
+  assert(rows == [{
+      "parent": "Party",
+      "name": "test_crit_param",
+      "description": "test parameter",
+      "change_controller": "py-vcon",
+      "specification": "tests/test_parameter_registry.py",
+      "iana": True,
+      "legacy": False,
+      "extension": test_extension
+    }])
+
+  # identical re-registration is accepted
+  vcon.parameter_registry.register_extension(TEST_EXTENSION, TEST_ROWS)
+
+  # different re-registration raises
+  with pytest.raises(ValueError, match = "different content"):
+    vcon.parameter_registry.register_extension(dict(TEST_EXTENSION, critical = False), TEST_ROWS)
+
+  # extension name differing only in case raises
+  with pytest.raises(ValueError, match = "differs only in case"):
+    vcon.parameter_registry.register_extension(dict(TEST_EXTENSION, name = "test_crit"), [])
+
+  # an extension Object of its own
+  vcon.parameter_registry.register_extension(dict(TEST_EXTENSION, name = "TEST_OBJECT"),
+    [{"parent": "Test_object", "name": "thing", "description": "a thing"}])
   try:
-    with pytest.raises(ValueError):
-      vcon.parameter_registry.build_index()
-
+    assert(vcon.Vcon.get_parameter_extension("Test_object", "thing") == "TEST_OBJECT")
   finally:
-    vcon.parameter_registry.CORE_PARAMETERS["parties"].remove("tel")
-    vcon.parameter_registry.build_index()
-
-  assert(vcon.Vcon.get_parameter_extension("parties", "tel") == vcon.Vcon.PARAMETER_CORE)
-
-
-def test_extension_colliding_with_core_raises():
-  """ an extension may not redefine a core parameter name at the same path """
-  vcon.parameter_registry.EXTENSION_PARAMETERS["TEST"] = {"parties": ["tel"]}
-  try:
-    with pytest.raises(ValueError):
-      vcon.parameter_registry.build_index()
-
-  finally:
-    del vcon.parameter_registry.EXTENSION_PARAMETERS["TEST"]
-    vcon.parameter_registry.build_index()
-
-  assert(vcon.Vcon.get_parameter_extension("parties", "tel") == vcon.Vcon.PARAMETER_CORE)
-
-
-def test_two_extensions_colliding_raises():
-  """ two extensions may not define the same name at the same path """
-  vcon.parameter_registry.EXTENSION_PARAMETERS["TEST"] = {"parties": ["role"]}
-  try:
-    with pytest.raises(ValueError):
-      vcon.parameter_registry.build_index()
-
-  finally:
-    del vcon.parameter_registry.EXTENSION_PARAMETERS["TEST"]
-    vcon.parameter_registry.build_index()
-
-  assert(vcon.Vcon.get_parameter_extension("parties", "role") == "CC")
-
-
-def test_extension_only_path_is_registered():
-  """ an extension may introduce a path that core does not define """
-  vcon.parameter_registry.EXTENSION_PARAMETERS["TEST"] = {"parties.testobject": ["thing"]}
-  try:
-    vcon.parameter_registry.build_index()
-    assert(vcon.Vcon.get_parameter_extension("parties.testobject", "thing") == "TEST")
-
-  finally:
-    del vcon.parameter_registry.EXTENSION_PARAMETERS["TEST"]
-    vcon.parameter_registry.build_index()
-
+    vcon.parameter_registry.unregister_extension("TEST_OBJECT")
   with pytest.raises(ValueError):
-    vcon.Vcon.get_parameter_extension("parties.testobject", "thing")
+    vcon.Vcon.get_parameter_extension("Test_object", "thing")
+
+
+@pytest.mark.parametrize("label, rows, message", [
+    ("core collision", [{"parent": "Party", "name": "tel", "description": "x"}], "collides with: \"tel\" defined by: \"core\""),
+    ("core collision differing in case", [{"parent": "Party", "name": "Tel", "description": "x"}], "defined by: \"core\""),
+    ("core value collision", [{"parent": "Event->type", "name": "join", "description": "x"}], "defined by: \"core\""),
+    ("other extension collision", [{"parent": "Party", "name": "role", "description": "x"}], "defined by: \"CC\""),
+    ("collision within the extension", [{"parent": "Party", "name": "a", "description": "x"},
+      {"parent": "Party", "name": "A", "description": "y"}], "defined by: \"TEST_BAD\""),
+    ("missing field", [{"parent": "Party", "name": "a"}], "missing")
+  ])
+def test_register_extension_rejected(label, rows, message):
+  with pytest.raises(ValueError, match = message):
+    vcon.parameter_registry.register_extension(dict(TEST_EXTENSION, name = "TEST_BAD"), rows)
+  # nothing is registered
+  assert("TEST_BAD" not in vcon.parameter_registry.EXTENSIONS), label
+  assert(vcon.Vcon.get_parameter_extension("Party", "role") == "CC"), label
+
+
+def test_register_extension_missing_field():
+  with pytest.raises(ValueError, match = "critical"):
+    vcon.parameter_registry.register_extension({"name": "X", "description": "x",
+      "change_controller": "x", "specification": "x"}, [])
+  with pytest.raises(ValueError, match = "not registered"):
+    vcon.parameter_registry.unregister_extension("X")
+
+
+# ============================================================
+#  legacy 0.4.0 names
+# ============================================================
+
+def test_legacy_names(caplog):
+  """ 0.4.0 names are recognized as core without a warning and marked legacy """
+  legacy = [("-", "redacted"), ("-", "amended"), ("Dialog", "originator"), ("Dialog", "party_history"),
+    ("Dialog", "transferee"), ("Dialog", "transferor"), ("Dialog", "transfer_target"), ("Dialog", "original"),
+    ("Dialog", "consultation"), ("Dialog", "target_dialog"), ("Party_history", "event"),
+    ("Redacted", "type"), ("Amended", "uuid")]
+  a_vcon = make_vcon()
+  with caplog.at_level(logging.WARNING):
+    for object_name, name in legacy:
+      assert(a_vcon.add_parameter_extension(object_name, name) == vcon.Vcon.PARAMETER_CORE)
+      assert(vcon.parameter_registry.is_legacy(object_name, name)), name
+  assert(caplog.text == "")
+  assert(vcon.parameter_registry.get_value_extension("Dialog", "type", "transfer") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.parameter_registry.is_legacy("Dialog->type", "transfer"))
+  assert(not vcon.parameter_registry.is_legacy("Dialog", "type"))
 
 
 # ============================================================
@@ -211,29 +281,19 @@ def test_parties_object_string_parameters_derived():
 def test_core_parameter_adds_no_extension():
   """ a core parameter does not add an extensions parameter to the vCon """
   a_vcon = make_vcon()
-  definer = a_vcon.add_parameter_extension("parties", "tel")
+  definer = a_vcon.add_parameter_extension("Party", "tel")
 
   assert(definer == vcon.Vcon.PARAMETER_CORE)
   assert(vcon.Vcon.EXTENSIONS not in a_vcon._vcon_dict)
   assert(a_vcon.extensions == [])
 
 
-def test_extension_parameter_adds_extension():
-  """ an extension parameter adds the extension name to the vCon """
-  a_vcon = make_vcon()
-  definer = a_vcon.add_parameter_extension("parties", "role")
-
-  assert(definer == "CC")
-  assert(a_vcon.extensions == ["CC"])
-  assert(a_vcon._vcon_dict[vcon.Vcon.EXTENSIONS] == ["CC"])
-
-
 def test_add_parameter_extension_is_idempotent():
   """ the extension name is added at most once """
   a_vcon = make_vcon()
-  a_vcon.add_parameter_extension("parties", "role")
-  a_vcon.add_parameter_extension("parties", "contact_list")
-  a_vcon.add_parameter_extension("dialog", "campaign")
+  a_vcon.add_parameter_extension("Party", "role")
+  a_vcon.add_parameter_extension("Party", "contact_list")
+  a_vcon.add_parameter_extension("Dialog", "campaign")
 
   assert(a_vcon.extensions == ["CC"])
 
@@ -243,15 +303,15 @@ def test_unregistered_parameter_warns(caplog):
   a_vcon = make_vcon()
 
   with caplog.at_level(logging.WARNING):
-    definer = a_vcon.add_parameter_extension("parties", "not_a_parameter")
+    definer = a_vcon.add_parameter_extension("Party", "not_a_parameter")
 
   assert(definer is None)
   assert("not_a_parameter" in caplog.text)
   assert(vcon.Vcon.EXTENSIONS not in a_vcon._vcon_dict)
 
 
-def test_add_parameter_extension_bad_path_raises():
-  """ an unregistered path raises rather than warning """
+def test_add_parameter_extension_bad_object_raises():
+  """ an unregistered Object name raises rather than warning """
   a_vcon = make_vcon()
 
   with pytest.raises(ValueError):
@@ -349,6 +409,18 @@ def test_extensions_survives_serialization_round_trip():
 # ============================================================
 #  Setter call sites
 # ============================================================
+
+def test_set_party_parameter_warnings(caplog):
+  """ a core party parameter gives no warning, an unregistered one the unregistered warning """
+  a_vcon = make_vcon()
+  with caplog.at_level(logging.WARNING):
+    a_vcon.set_party_parameter("tel", "+15551110000")
+  assert(caplog.text == "")
+
+  with caplog.at_level(logging.WARNING):
+    a_vcon.set_party_parameter("not_a_parameter", "a value", 0)
+  assert("parameter name: \"not_a_parameter\" in Object: \"Party\" is not defined" in caplog.text)
+
 
 def test_set_party_parameter_permissive():
   """ unregistered party parameters are set rather than raising """

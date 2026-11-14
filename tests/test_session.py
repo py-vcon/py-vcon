@@ -401,22 +401,22 @@ def test_load_sessions_only():
 
 
 def test_session_registry():
-  assert(vcon.Vcon.get_parameter_extension("", "sessions") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("", "events") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("-", "sessions") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("-", "events") == vcon.Vcon.PARAMETER_CORE)
   for name in ["start", "duration", "parties", "originator", "session_id", "sessions", "dialog"]:
-    assert(vcon.Vcon.get_parameter_extension("sessions", name) == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("sessions.session_id", "local") == vcon.Vcon.PARAMETER_CORE)
+    assert(vcon.Vcon.get_parameter_extension("Session", name) == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("SessionId", "local") == vcon.Vcon.PARAMETER_CORE)
   for name in ["session", "type", "description"]:
-    assert(vcon.Vcon.get_parameter_extension("sessions.sessions", name) == vcon.Vcon.PARAMETER_CORE)
+    assert(vcon.Vcon.get_parameter_extension("Session_Reference", name) == vcon.Vcon.PARAMETER_CORE)
   for name in ["type", "time", "sessions", "party", "dialog", "button", "transferee",
     "transfer_target", "consultation", "target_session"]:
-    assert(vcon.Vcon.get_parameter_extension("events", name) == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("analysis", "session") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("analysis", "analysis") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("attachments", "session") == vcon.Vcon.PARAMETER_CORE)
+    assert(vcon.Vcon.get_parameter_extension("Event", name) == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("Analysis", "sessions") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("Analysis", "analysis") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("Attachment", "session") == vcon.Vcon.PARAMETER_CORE)
   # removed in 0.5.0, retained until the 0.4.0 converter exists
-  assert(vcon.Vcon.get_parameter_extension("dialog", "originator") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("dialog.party_history", "event") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("Dialog", "originator") == vcon.Vcon.PARAMETER_CORE)
+  assert(vcon.Vcon.get_parameter_extension("Party_history", "event") == vcon.Vcon.PARAMETER_CORE)
 
 
 def make_smtp_message(

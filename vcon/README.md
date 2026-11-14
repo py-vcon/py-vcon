@@ -682,25 +682,25 @@ Returns:  None
 
 ### add_parameter_extension
 
-**add_parameter_extension**(self, path: 'str', parameter_name: 'str') -> 'typing.Union[str, None]'
+**add_parameter_extension**(self, object_name: 'str', parameter_name: 'str') -> 'typing.Union[str, None]'
 
 
 Add the name of the vCon extension which defines the given parameter to
-this vCon's extensions parameter.
+this vCon's extensions parameter, and also to its critical parameter if
+the extension is registered as critical.
 
 Has no effect if the parameter is defined by the core vCon schema.  Logs a
 warning and has no effect if the parameter name is not registered.
 
 Parameters:  
-  **path** (String) - dot separated path to the Object containing the
+  **object_name** (String) - name of the Object containing the
               parameter.  See **Vcon.get_parameter_extension**.  
-  **parameter_name** (String) - name of the parameter in the Object at the
-              given path.
+  **parameter_name** (String) - name of the parameter in the Object.
 
 Returns:  
   the same value as **Vcon.get_parameter_extension**
 
-Raises ValueError if the path is not a registered Object path.
+Raises ValueError if the Object name is not registered.
 
 
 
