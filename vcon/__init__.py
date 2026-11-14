@@ -3541,22 +3541,19 @@ class Vcon():
 
     # signed (JWS) form of vCon
     if({"payload", "signatures"} <= vcon_dict.keys() and
-       len(vcon_dict["signatures"]) > 0 and
-        "header" in vcon_dict["signatures"][0]
+       len(vcon_dict["signatures"]) > 0
       ):
-      uuid = vcon_dict["signatures"][0]["header"].get("uuid", None)
+      # the unprotected header is optional
+      uuid = (vcon_dict["signatures"][0].get("header", None) or {}).get("uuid", None)
       if(uuid is None):
         # decode the payload and parse JSON to get UUID
         vcon_json_string = vcon.utils.base64url_decode(vcon_dict["payload"])
         payload_vcon_dict = json.loads(vcon_json_string)
         uuid = payload_vcon_dict.get("uuid", None)
 
-    # encrypted (JWE) form of vCon
-    elif({"protected", "ciphertext"} <= vcon_dict.keys()):
-      if("unprotected" in vcon_dict.keys()):
-        uuid = vcon_dict["unprotected"].get("uuid", None)
-      else:
-        uuid = None
+    # encrypted (JWE) form of vCon, the protected and unprotected headers are optional
+    elif({"ciphertext", "recipients"} <= vcon_dict.keys()):
+      uuid = (vcon_dict.get("unprotected", None) or {}).get("uuid", None)
 
     # Unsigned form
     else:
