@@ -72,9 +72,9 @@ signed_vcon.loads(signed_vcon_json)
 
 # NOTE: cannot read signed vCon data until it is verified
 
-# Verify the signed vCon 
+# Verify the signed vCon (verify is a coroutine, so it must be awaited)
 ca_list = ["ca.crt"]
-signed_vcon.verify(ca_list)
+await signed_vcon.verify(ca_list)
 ```
 
 ## Test Certificates

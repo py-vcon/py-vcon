@@ -26,6 +26,7 @@ import pathlib
 import jq
 import jsonpath_rfc9535
 import uuid6
+import cryptography.x509
 import jwcrypto.jwe
 import jwcrypto.jwk
 import jwcrypto.jws
@@ -42,8 +43,12 @@ import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
 import vcon.parameter_registry
+import vcon.http_lb
 
 __version__ = "0.6.14"
+
+# seconds to wait to connect to and read from an x5u URL in Vcon.verify
+X5U_FETCH_TIMEOUT = 10.0
 
 
 try:
@@ -2972,7 +2977,13 @@ class Vcon():
 
 
   @tag_signing
-  def sign(self, private_key_pem_file: str, cert_chain_pem_files : typing.List[str]) -> None:
+  def sign(
+    self,
+    private_key_pem_file: str,
+    cert_chain_pem_files : typing.List[str],
+    x5u : typing.Union[str, None] = None,
+    include_x5c : bool = True
+    ) -> None:
     """
     Sign the vcon using the given private key from the give certificate chain.
 
@@ -2980,9 +2991,16 @@ class Vcon():
     **private_key_pem_file** (str): file name or string containing PEM format private key to use for signing the vcon.  
     **cert_chain_pem_files** (List[str]): file names or PEM strings, for the pem format certicate chain for the
         private key to use for signing.  The cert/public key corresponding to the private key should be the
-        first cert.  THe certificate authority root should be the last cert.
+        first cert.  THe certificate authority root should be the last cert.  
+    **x5u** (str): URL of the PEM format certificate chain (RFC7515 section 4.1.5), added
+        to the signature header if given (optional)  
+    **include_x5c** (bool): add the certificate chain to the signature header as x5c
+        (default True).  If False, x5u must be given.
 
     Returns: none
+
+    Raises ValueError if include_x5c is False and no x5u is given, as the
+    signature would then have no certificate chain.
     """
 
     if(self._state == VconStates.SIGNED):
@@ -2994,15 +3012,21 @@ class Vcon():
     if(self.uuid is None or len(self.uuid) < 1):
       raise InvalidVconState("vCon has no UUID set.  Use set_uuid method before signing.")
 
+    if(not include_x5c and (x5u is None or x5u == "")):
+      raise ValueError("include_x5c is False and no x5u is given.  A signature needs x5c or x5u.")
+
     chain_header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, cert_chain_pem_files)
 
     header = {}
-    header["x5c"] = chain_header["x5c"]
+    if(include_x5c):
+      header["x5c"] = chain_header["x5c"]
+    if(x5u is not None and x5u != ""):
+      header["x5u"] = x5u
     # For convenience add the uuid to the header
     header[Vcon.UUID] = self.uuid
 
     # No header parameter may be in both the protected and unprotected
-    # headers.  alg is integrity protected.  x5c and uuid are in the
+    # headers.  alg is integrity protected.  x5c, x5u and uuid are in the
     # unprotected header.
     jws = jwcrypto.jws.JWS(json.dumps(self._vcon_dict, separators = (",", ":")).encode("utf-8"))
     jws.add_signature(
@@ -3029,24 +3053,43 @@ class Vcon():
 
 
   @tag_signing
-  def verify(self, ca_cert_pem_files : typing.List[str]) -> None:
+  async def verify(
+    self,
+    ca_cert_pem_files : typing.List[str],
+    fetch_x5u : bool = False,
+    cert_chain_pem_files : typing.Union[typing.List[str], None] = None
+    ) -> None:
     """
     Verify the signed vCon and its certificate chain which should be issued by one of the given CAs
 
+    verify is a coroutine and must be awaited.  Calling it without await
+    verifies nothing; Python only warns that the coroutine was never awaited.
+
     Parameters:  
       **ca_cert_pem_files** (List[str]): file name or PEM string list containing Certificate Authority certificates 
-        to verify the vCon's certificate chain.
+        to verify the vCon's certificate chain.  
+      **fetch_x5u** (bool): for a signature with x5u and no x5c header parameter, fetch the
+        certificate chain from the x5u URL (default False)  
+      **cert_chain_pem_files** (List[str]): file names or PEM strings for the certificate chain,
+        signing certificate first, to use for a signature with no x5c header parameter
+        (optional).  Used in place of fetching x5u.
 
     Returns: none
 
     Raises exceptions for invalid cert chaind, invalid cert dates or chain not issued by one
-    of the given CAs.
+    of the given CAs.  InvalidVconSignature if a signature has no alg or its
+    certificate chain is not available.
 
-    A header parameter may not be in both the protected and unprotected headers
-    of a signature.  Signed vCons created by earlier versions of this package
-    repeat alg and x5c in both headers with identical values.  These are still
-    accepted.  A signature with a header parameter in both headers with
-    different values is rejected.
+    The header parameters may be in the protected header, the unprotected
+    header or both.  A header parameter may not be in both the protected and
+    unprotected headers of a signature.  Signed vCons created by earlier
+    versions of this package repeat alg and x5c in both headers with identical
+    values.  These are still accepted.  A signature with a header parameter in
+    both headers with different values is rejected.
+
+    The certificate chain is taken from x5c, else cert_chain_pem_files, else
+    x5u if fetch_x5u is True.  A supplied or fetched chain must still be issued
+    by one of the given CAs.
 
     NOTE:  DOES NOT CHECK REVOKATION LISTS!!!
     """
@@ -3074,77 +3117,114 @@ class Vcon():
     # TODO: what does it mean if ca_cert_pem_files is empty?  Should we verify and
     # assume that the cert chain is trusted?
     last_exception = Exception("Internal error in Vcon.verify this exception should never be thrown")
-    chain_count = 0
     for signature_index, signature in enumerate(self._jws_dict['signatures']):
-      if('header' in signature):
-        if('x5c' in signature['header']):
-          x5c = signature['header']['x5c']
-          chain_count += 1
+      label = "signature[{}]".format(signature_index)
 
-          cert_chain_objects = vcon.security.der_to_certs(x5c)
+      # TODO: need to do something a little smarter on the exception raise to
+      # give a clue of the best/closest chain and CA that failed.  Perhaps
+      # even all of the failures.
 
-          # TODO: some of this should be move to the security submodule
-          # e.g. the iterating over CAs
+      try:
+        try:
+          signature_header = vcon.security.merge_jose_headers(
+            vcon.security.decode_jws_protected_header(signature.get('protected', None) or ""),
+            signature.get('header', None) or {},
+            label
+            )
+        except ValueError as header_error:
+          raise InvalidVconSignature(str(header_error)) from header_error
 
-          # TODO: need to do something a little smarter on the exception raise to
-          # give a clue of the best/closest chain and CA that failed.  Perhaps
-          # even all of the failures.
+        if(signature_header.get('alg', None) is None):
+          raise InvalidVconSignature("{} has no alg header parameter".format(label))
 
+        cert_chain_objects = await Vcon._signature_cert_chain(
+          signature_header,
+          label,
+          fetch_x5u,
+          cert_chain_pem_files
+          )
+
+        vcon.security.verify_cert_chain(cert_chain_objects)
+
+        # We have a valid chain, check if its from one of the accepted CAs
+        for ca_object in ca_cert_object_list:
           try:
-            try:
-              signature_header = vcon.security.merge_jose_headers(
-                vcon.security.decode_jws_protected_header(signature.get('protected', None) or ""),
-                signature['header'],
-                "signature[{}]".format(signature_index)
-                )
-            except ValueError as header_error:
-              raise InvalidVconSignature(str(header_error)) from header_error
+            vcon.security.verify_cert(cert_chain_objects[len(cert_chain_objects) - 1], ca_object)
 
-            vcon.security.verify_cert_chain(cert_chain_objects)
+            # IF we get here, we have a valid chain: cert_chain_objects issued from one of our accepted
+            # CAs: ca_object.
+            # The assumtion is that it is safe to trust this cert chain.  So we
+            # can use it to build a JWK and verify the signature.
+            verification_jwk = jwcrypto.jwk.JWK.from_pyca(cert_chain_objects[0].public_key())
 
-            # We have a valid chain, check if its from one of the accepted CAs
-            for ca_object in ca_cert_object_list:
-              try:
-                vcon.security.verify_cert(cert_chain_objects[len(cert_chain_objects) - 1], ca_object)
+            # Verify this signature alone, in the flattened JSON
+            # serialization, without the identical header parameters
+            # repeated by earlier versions of this package.
+            flattened = vcon.security.remove_jws_repeated_headers(signature)
+            flattened["payload"] = self._jws_dict['payload']
+            jws = jwcrypto.jws.JWS()
+            jws.deserialize(json.dumps(flattened), verification_jwk, signature_header['alg'])
+            verified_payload = jws.payload
 
-                # IF we get here, we have a valid chain: cert_chain_objects issued from one of our accepted
-                # CAs: ca_object.
-                # The assumtion is that it is safe to trust this cert chain.  So we
-                # can use it to build a JWK and verify the signature.
-                verification_jwk = jwcrypto.jwk.JWK.from_pyca(cert_chain_objects[0].public_key())
+            # If we get here, the payload was verified
+            vcon_dict = json.loads(verified_payload.decode('utf-8'))
+            self._vcon_dict = Vcon.check_and_migrate_version(vcon_dict)
+            self._state = VconStates.VERIFIED
 
-                # Verify this signature alone, in the flattened JSON
-                # serialization, without the identical header parameters
-                # repeated by earlier versions of this package.
-                flattened = vcon.security.remove_jws_repeated_headers(signature)
-                flattened["payload"] = self._jws_dict['payload']
-                jws = jwcrypto.jws.JWS()
-                jws.deserialize(json.dumps(flattened), verification_jwk, signature_header['alg'])
-                verified_payload = jws.payload
+            return(None)
 
-                # If we get here, the payload was verified
-                #print("verified payload: {}".format(verified_payload))
-                #print("verified payload type: {}".format(type(verified_payload)))
-                vcon_dict = json.loads(verified_payload.decode('utf-8'))
-                self._vcon_dict = Vcon.check_and_migrate_version(vcon_dict)
-                self._state = VconStates.VERIFIED
-
-                return(None)
-
-              # This valid chain, is not issued from the CA for this ca_objjwk
-              except Exception as e:
-                last_exception = e
-                # Keep trying other CAs until we run out or succeed
-
-          # Invalid chain
+          # This valid chain, is not issued from the CA for this ca_objjwk
           except Exception as e:
             last_exception = e
-            # Keep trying other chains until we run out or succeed
+            # Keep trying other CAs until we run out or succeed
 
-    if(chain_count == 0):
-      raise InvalidVconSignature("None of the signatures contain the x5c chain, which this implementation currenlty requires.")
+      # Invalid chain or headers
+      except Exception as e:
+        last_exception = e
+        # Keep trying other signatures until we run out or succeed
 
     raise last_exception
+
+
+  @staticmethod
+  async def _signature_cert_chain(
+    signature_header : dict,
+    label : str,
+    fetch_x5u : bool,
+    cert_chain_pem_files : typing.Union[typing.List[str], None]
+    ) -> typing.List[cryptography.x509.Certificate]:
+    """
+    The certificate chain for a signature: from x5c, else the supplied chain,
+    else fetched from x5u if fetch_x5u is True.
+
+    Raises InvalidVconSignature if no chain is available.
+    """
+    if("x5c" in signature_header):
+      return(vcon.security.der_to_certs(signature_header["x5c"]))
+
+    if(cert_chain_pem_files is not None and len(cert_chain_pem_files) > 0):
+      return([vcon.security.load_pem_cert(pem)[0] for pem in cert_chain_pem_files])
+
+    x5u = signature_header.get("x5u", None)
+    if(x5u is None):
+      raise InvalidVconSignature("{} has no x5c or x5u header parameter and no"
+        " cert_chain_pem_files were given".format(label))
+
+    if(not fetch_x5u):
+      raise InvalidVconSignature("{} certificate chain is only available by x5u: {}."
+        "  Set fetch_x5u to fetch it or give cert_chain_pem_files.".format(label, x5u))
+
+    try:
+      response = await vcon.http_lb.HttpLb.get(
+        x5u,
+        connect_timeout = X5U_FETCH_TIMEOUT,
+        read_timeout = X5U_FETCH_TIMEOUT
+        )
+      response.raise_for_status()
+      return(vcon.security.pem_chain_to_certs(response.content))
+    except Exception as fetch_error:
+      raise InvalidVconSignature("{} certificate chain could not be fetched from x5u: {}: {}: {}".format(
+        label, x5u, type(fetch_error).__name__, fetch_error)) from fetch_error
 
 
   @tag_encrypting

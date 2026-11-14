@@ -51,12 +51,14 @@ def trusted_ca_pems() -> typing.List[str]:
   return(pems)
 
 
-def verify_for_read(a_vcon: vcon.Vcon) -> bool:
+async def verify_for_read(a_vcon: vcon.Vcon) -> bool:
   """
   Make the content of a vCon read from storage readable.
 
-  An unsigned vCon is already readable.  A signed one is verified with the
-  trusted CA certificates, which is what allows its payload to be read.  An
+  An unsigned vCon is already readable.  A signed one is verified, with the
+  verify filter, against the trusted CA certificates, which is what allows its
+  payload to be read.  The certificate chain is fetched from x5u only if
+  VCON_VERIFY_FETCH_X5U is set.  An
   encrypted one cannot be read without the recipient's private key, which the
   server does not hold.
 
@@ -89,7 +91,13 @@ def verify_for_read(a_vcon: vcon.Vcon) -> bool:
       )
 
   try:
-    a_vcon.verify(ca_pems)
+    await a_vcon.filter(
+        "verifyfilter",
+        {
+          "allowed_ca_cert_pems": ca_pems,
+          "fetch_x5u": py_vcon_server.settings.VCON_VERIFY_FETCH_X5U
+        }
+      )
   except Exception as e:
     # some verification failures raise with no message, so name the exception
     reason = "{}: {}".format(type(e).__name__, e) if str(e) else type(e).__name__

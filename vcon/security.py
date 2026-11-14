@@ -82,6 +82,26 @@ def load_pem_cert(cert_file : str) -> typing.Tuple[cryptography.x509.Certificate
   return(cert_object, der)
 
 
+def pem_chain_to_certs(pem_chain : typing.Union[str, bytes]) -> typing.List[cryptography.x509.Certificate]:
+  """
+  Construct the certificate objects for a PEM certificate chain, as fetched
+  from a JWS x5u URL (RFC7515 section 4.1.5).
+
+  Parameters:
+    pem_chain (Union[str, bytes]): one or more PEM format certificates, the
+      signing certificate first
+
+  Returns:
+    List of certificate objects in the order given
+
+  Raises ValueError if pem_chain contains no certificate.
+  """
+  if(isinstance(pem_chain, str)):
+    pem_chain = pem_chain.encode("utf-8")
+
+  return(cryptography.x509.load_pem_x509_certificates(pem_chain))
+
+
 def load_x5c_from_pem_certs(cert_pem_files : typing.List[str]) -> typing.List[str]:
   """
   Construct a x5c compatible list (RFC7515,RFC7517,RFC7518) from certifcate PEM files.

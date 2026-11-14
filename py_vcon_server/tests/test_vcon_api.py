@@ -9,6 +9,7 @@ import py_vcon_server.db
 import py_vcon_server.settings
 import vcon
 import fastapi.testclient
+import pytest_httpserver
 from common_setup import UUID, make_2_party_tel_vcon
 
 @pytest.mark.asyncio
@@ -176,6 +177,44 @@ async def test_jsonpath_signed_vcon(make_2_party_tel_vcon: vcon.Vcon, monkeypatc
     assert(len(query_list) == 2)
     assert(query_list[0]["tel"] == "1234")
     assert(query_list[1]["tel"] == "5678")
+
+
+@pytest.mark.asyncio
+async def test_read_signed_vcon_x5u(make_2_party_tel_vcon: vcon.Vcon, monkeypatch,
+  httpserver: pytest_httpserver.HTTPServer):
+  """ A vCon signed with only x5u is readable only when VCON_VERIFY_FETCH_X5U is set """
+  chain = b""
+  for cert_file in [GROUP_CERT, DIVISION_CERT, CA_CERT]:
+    with open(cert_file, "rb") as pem_file:
+      chain += pem_file.read()
+  httpserver.expect_request("/chain.pem").respond_with_data(chain)
+
+  vCon = make_2_party_tel_vcon
+  vCon.sign(GROUP_PRIVATE_KEY, [GROUP_CERT, DIVISION_CERT, CA_CERT],
+    x5u = httpserver.url_for("/chain.pem"), include_x5c = False)
+
+  with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
+    monkeypatch.setattr(py_vcon_server.db, "VCON_STORAGE", SignedVconStorage(vCon.dumpd()))
+    monkeypatch.setattr(py_vcon_server.settings, "VCON_CA_CERT_PEMS", [CA_CERT])
+
+    # fetching off (the default): the chain is only available by x5u
+    monkeypatch.setattr(py_vcon_server.settings, "VCON_VERIFY_FETCH_X5U", False)
+    response = client.get("/vcon/{}/jq".format(UUID), params = {"jq_transform": ".parties[]"})
+    assert(response.status_code == 422), response.text
+    assert("only available by x5u" in response.json()["detail"])
+    response = client.get("/vcon/{}/jsonpath".format(UUID), params = {"path_string": "$.parties[*].tel"})
+    assert(response.status_code == 422), response.text
+    assert(len(httpserver.log) == 0)
+
+    # fetching on: the chain is fetched and leads to the trusted CA
+    monkeypatch.setattr(py_vcon_server.settings, "VCON_VERIFY_FETCH_X5U", True)
+    response = client.get("/vcon/{}/jq".format(UUID), params = {"jq_transform": ".parties[]"})
+    assert(response.status_code == 200), response.text
+    assert([party["tel"] for party in response.json()] == ["1234", "5678"])
+    response = client.get("/vcon/{}/jsonpath".format(UUID), params = {"path_string": "$.parties[*].tel"})
+    assert(response.status_code == 200), response.text
+    assert(response.json() == ["1234", "5678"])
+    assert(len(httpserver.log) == 2)
 
 
 @pytest.mark.asyncio

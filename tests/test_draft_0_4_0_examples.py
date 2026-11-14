@@ -5,6 +5,7 @@ by py-vcon with python-jose, still verify and decrypt.
 """
 
 import os
+import pytest
 import vcon
 import vcon.security
 import tests.common_utils
@@ -17,7 +18,8 @@ ENCRYPTED = "examples/ab_call_ext_rec_encrypted.vcon"
 UUID = "01a07da8-c2bb-83e5-b9a2-279e0d16bc46"
 
 
-def test_signed_0_4_0_example_verifies():
+@pytest.mark.asyncio
+async def test_signed_0_4_0_example_verifies():
   signed_dict = tests.common_utils.load_draft_0_4_0_example(SIGNED)
   signature = signed_dict["signatures"][0]
   protected = vcon.security.decode_jws_protected_header(signature["protected"])
@@ -28,13 +30,14 @@ def test_signed_0_4_0_example_verifies():
 
   signed = vcon.Vcon()
   signed.loadd(signed_dict)
-  signed.verify([CA_CERT])
+  await signed.verify([CA_CERT])
   assert(signed.uuid == UUID)
   assert([party["name"] for party in signed.parties] == ["Alice", "Bob"])
   assert(signed.dialog[0]["type"] == "recording")
 
 
-def test_encrypted_0_4_0_example_decrypts_and_verifies():
+@pytest.mark.asyncio
+async def test_encrypted_0_4_0_example_decrypts_and_verifies():
   encrypted_dict = tests.common_utils.load_draft_0_4_0_example(ENCRYPTED)
   # the 0.4.0 form: enc in all three headers
   protected = vcon.security.decode_jws_protected_header(encrypted_dict["protected"])
@@ -46,7 +49,7 @@ def test_encrypted_0_4_0_example_decrypts_and_verifies():
   encrypted = vcon.Vcon()
   encrypted.loadd(encrypted_dict)
   encrypted.decrypt(GROUP_PRIVATE_KEY, GROUP_CERT)
-  encrypted.verify([CA_CERT])
+  await encrypted.verify([CA_CERT])
   assert(encrypted.uuid == UUID)
   assert([party["name"] for party in encrypted.parties] == ["Alice", "Bob"])
 

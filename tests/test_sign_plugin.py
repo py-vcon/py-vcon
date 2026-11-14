@@ -61,7 +61,7 @@ async def test_sign_2party(two_party_tel_vcon : vcon.Vcon) -> None:
       raise already_signed_error
 
   try:
-    two_party_tel_vcon.verify([ca_cert_string])
+    await two_party_tel_vcon.verify([ca_cert_string])
     raise Exception("Should have thrown an exception as this vcon was signed locally")
 
   except vcon.InvalidVconState as locally_signed_error:

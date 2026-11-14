@@ -1165,7 +1165,7 @@ Raises jsonpath_rfc9535.JSONPathError (JSONPathSyntaxError for a malformed query
 
 ### sign
 
-**sign**(self, private_key_pem_file: 'str', cert_chain_pem_files: 'typing.List[str]') -> 'None'
+**sign**(self, private_key_pem_file: 'str', cert_chain_pem_files: 'typing.List[str]', x5u: 'typing.Union[str, None]' = None, include_x5c: 'bool' = True) -> 'None'
 
 
 Sign the vcon using the given private key from the give certificate chain.
@@ -1174,33 +1174,54 @@ Parameters:
 **private_key_pem_file** (str): file name or string containing PEM format private key to use for signing the vcon.  
 **cert_chain_pem_files** (List[str]): file names or PEM strings, for the pem format certicate chain for the
     private key to use for signing.  The cert/public key corresponding to the private key should be the
-    first cert.  THe certificate authority root should be the last cert.
+    first cert.  THe certificate authority root should be the last cert.  
+**x5u** (str): URL of the PEM format certificate chain (RFC7515 section 4.1.5), added
+    to the signature header if given (optional)  
+**include_x5c** (bool): add the certificate chain to the signature header as x5c
+    (default True).  If False, x5u must be given.
 
 Returns: none
+
+Raises ValueError if include_x5c is False and no x5u is given, as the
+signature would then have no certificate chain.
 
 
 
 ### verify
 
-**verify**(self, ca_cert_pem_files: 'typing.List[str]') -> 'None'
+**verify**(self, ca_cert_pem_files: 'typing.List[str]', fetch_x5u: 'bool' = False, cert_chain_pem_files: 'typing.Union[typing.List[str], None]' = None) -> 'None'
 
 
 Verify the signed vCon and its certificate chain which should be issued by one of the given CAs
 
+verify is a coroutine and must be awaited.  Calling it without await
+verifies nothing; Python only warns that the coroutine was never awaited.
+
 Parameters:  
   **ca_cert_pem_files** (List[str]): file name or PEM string list containing Certificate Authority certificates 
-    to verify the vCon's certificate chain.
+    to verify the vCon's certificate chain.  
+  **fetch_x5u** (bool): for a signature with x5u and no x5c header parameter, fetch the
+    certificate chain from the x5u URL (default False)  
+  **cert_chain_pem_files** (List[str]): file names or PEM strings for the certificate chain,
+    signing certificate first, to use for a signature with no x5c header parameter
+    (optional).  Used in place of fetching x5u.
 
 Returns: none
 
 Raises exceptions for invalid cert chaind, invalid cert dates or chain not issued by one
-of the given CAs.
+of the given CAs.  InvalidVconSignature if a signature has no alg or its
+certificate chain is not available.
 
-A header parameter may not be in both the protected and unprotected headers
-of a signature.  Signed vCons created by earlier versions of this package
-repeat alg and x5c in both headers with identical values.  These are still
-accepted.  A signature with a header parameter in both headers with
-different values is rejected.
+The header parameters may be in the protected header, the unprotected
+header or both.  A header parameter may not be in both the protected and
+unprotected headers of a signature.  Signed vCons created by earlier
+versions of this package repeat alg and x5c in both headers with identical
+values.  These are still accepted.  A signature with a header parameter in
+both headers with different values is rejected.
+
+The certificate chain is taken from x5c, else cert_chain_pem_files, else
+x5u if fetch_x5u is True.  A supplied or fetched chain must still be issued
+by one of the given CAs.
 
 NOTE:  DOES NOT CHECK REVOKATION LISTS!!!
 

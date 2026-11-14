@@ -43,7 +43,8 @@ def test_jq_dict(two_party_tel_vcon):
   assert(result_dict["subject"] is None)
 
 
-def test_jq_signed(two_party_tel_vcon):
+@pytest.mark.asyncio
+async def test_jq_signed(two_party_tel_vcon):
   """ A signed vCon is queried on its content, like attribute access, not its JWS form """
   a_vcon = two_party_tel_vcon
   a_vcon.set_uuid("py-vcon.org")
@@ -59,7 +60,7 @@ def test_jq_signed(two_party_tel_vcon):
   unverified.loadd(a_vcon.dumpd())
   with pytest.raises(vcon.InvalidVconState):
     unverified.jq(".parties")
-  unverified.verify([CA_CERT])
+  await unverified.verify([CA_CERT])
   assert(unverified.jq(".parties[0].tel")[0] == call_data['source'])
 
   # an encrypted vCon cannot be queried at all

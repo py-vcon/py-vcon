@@ -93,7 +93,8 @@ def test_x5c_encrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(plaintext == plaintext_decrypted)
 
 
-def test_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
+@pytest.mark.asyncio
+async def test_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   try:
     two_party_tel_vcon.encrypt(DIVISION_CERT)
     raise Exception("Should have thrown an exception as this vcon was not yet signed")
@@ -116,7 +117,7 @@ def test_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(reconstituted_vcon._state == vcon.VconStates.ENCRYPTED)
 
   try:
-    reconstituted_vcon.verify([CA_CERT])
+    await reconstituted_vcon.verify([CA_CERT])
     raise Exception("Should have thrown an exception as this vcon is still encrypted")
 
   except vcon.InvalidVconState as encrypted_not_signed_error:
@@ -126,14 +127,15 @@ def test_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   reconstituted_vcon.decrypt(DIVISION_PRIVATE_KEY, DIVISION_CERT)
   assert(reconstituted_vcon._state == vcon.VconStates.UNVERIFIED)
 
-  reconstituted_vcon.verify([CA_CERT])
+  await reconstituted_vcon.verify([CA_CERT])
   assert(reconstituted_vcon._state == vcon.VconStates.VERIFIED)
 
   assert(reconstituted_vcon.parties[0]['tel'] == call_data['source'])
   assert(reconstituted_vcon.parties[1]['tel'] == call_data['destination'])
 
 
-def test_pem_strings_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
+@pytest.mark.asyncio
+async def test_pem_strings_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   division_cert_string = vcon.security.load_string_from_file(DIVISION_CERT)
   division_private_key_string = vcon.security.load_string_from_file(DIVISION_PRIVATE_KEY)
   group_private_key_string = vcon.security.load_string_from_file(GROUP_PRIVATE_KEY)
@@ -162,7 +164,7 @@ def test_pem_strings_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   assert(reconstituted_vcon._state == vcon.VconStates.ENCRYPTED)
 
   try:
-    reconstituted_vcon.verify([ca_cert_string])
+    await reconstituted_vcon.verify([ca_cert_string])
     raise Exception("Should have thrown an exception as this vcon is still encrypted")
 
   except vcon.InvalidVconState as encrypted_not_signed_error:
@@ -172,14 +174,15 @@ def test_pem_strings_encrypt_decrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   reconstituted_vcon.decrypt(division_private_key_string, division_cert_string)
   assert(reconstituted_vcon._state == vcon.VconStates.UNVERIFIED)
 
-  reconstituted_vcon.verify([ca_cert_string])
+  await reconstituted_vcon.verify([ca_cert_string])
   assert(reconstituted_vcon._state == vcon.VconStates.VERIFIED)
 
   assert(reconstituted_vcon.parties[0]['tel'] == call_data['source'])
   assert(reconstituted_vcon.parties[1]['tel'] == call_data['destination'])
 
 
-def test_encrypt_decrypt_serialization(two_party_tel_vcon : vcon.Vcon) -> None:
+@pytest.mark.asyncio
+async def test_encrypt_decrypt_serialization(two_party_tel_vcon : vcon.Vcon) -> None:
 
   two_party_tel_vcon.sign(GROUP_PRIVATE_KEY, [GROUP_CERT, DIVISION_CERT, CA_CERT])
   assert(two_party_tel_vcon._state == vcon.VconStates.SIGNED)
@@ -190,7 +193,7 @@ def test_encrypt_decrypt_serialization(two_party_tel_vcon : vcon.Vcon) -> None:
   reconstituted_signed_vcon = vcon.Vcon()
   reconstituted_signed_vcon.loads(signed_serialized_vcon)
   assert(reconstituted_signed_vcon._state == vcon.VconStates.UNVERIFIED)
-  reconstituted_signed_vcon.verify([CA_CERT])
+  await reconstituted_signed_vcon.verify([CA_CERT])
   assert(reconstituted_signed_vcon._state == vcon.VconStates.VERIFIED)
 
   assert(reconstituted_signed_vcon.parties[0]['tel'] == call_data['source'])
@@ -214,13 +217,13 @@ def test_encrypt_decrypt_serialization(two_party_tel_vcon : vcon.Vcon) -> None:
   reconstituted_decrypted_signed_vcon.loads(serialized_decrypted_signed_vcon)
   assert(reconstituted_decrypted_signed_vcon._state == vcon.VconStates.UNVERIFIED)
 
-  reconstituted_decrypted_signed_vcon.verify([CA_CERT])
+  await reconstituted_decrypted_signed_vcon.verify([CA_CERT])
   assert(reconstituted_decrypted_signed_vcon._state == vcon.VconStates.VERIFIED)
 
   assert(reconstituted_decrypted_signed_vcon.parties[0]['tel'] == call_data['source'])
   assert(reconstituted_decrypted_signed_vcon.parties[1]['tel'] == call_data['destination'])
 
-  reconstituted_encrypted_vcon.verify([CA_CERT])
+  await reconstituted_encrypted_vcon.verify([CA_CERT])
   assert(reconstituted_encrypted_vcon._state == vcon.VconStates.VERIFIED)
 
   assert(reconstituted_encrypted_vcon.parties[0]['tel'] == call_data['source'])

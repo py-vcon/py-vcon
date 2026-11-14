@@ -26,11 +26,11 @@ def make_encrypted_dict() -> dict:
   return(v.dumpd())
 
 
-def decrypt_verify(encrypted_dict : dict) -> vcon.Vcon:
+async def decrypt_verify(encrypted_dict : dict) -> vcon.Vcon:
   v = vcon.Vcon()
   v.loadd(encrypted_dict)
   v.decrypt(DIVISION_PRIVATE_KEY, DIVISION_CERT)
-  v.verify([CA_CERT])
+  await v.verify([CA_CERT])
   return(v)
 
 
@@ -48,20 +48,22 @@ def test_encrypted_headers():
   assert(set(protected) & set(encrypted_dict["unprotected"]) == set())
 
 
-def test_encrypt_decrypt_verify():
-  v = decrypt_verify(make_encrypted_dict())
+@pytest.mark.asyncio
+async def test_encrypt_decrypt_verify():
+  v = await decrypt_verify(make_encrypted_dict())
   assert(v.parties[0]["tel"] == "+15551110000")
   assert(v.sessions[0]["dialog"] == [0])
 
 
-def test_decrypt_0_4_0_identical_repeats():
+@pytest.mark.asyncio
+async def test_decrypt_0_4_0_identical_repeats():
   # vCon 0.4.0 form: enc repeated in the unprotected and recipient headers
   encrypted_dict = make_encrypted_dict()
   encrypted_dict["unprotected"]["enc"] = "A256CBC-HS512"
   encrypted_dict["unprotected"]["cty"] = "application/vcon+json"
   encrypted_dict["recipients"][0]["header"] = {"enc": "A256CBC-HS512"}
 
-  v = decrypt_verify(encrypted_dict)
+  v = await decrypt_verify(encrypted_dict)
   assert(v.parties[1]["tel"] == "+15552220000")
 
 
@@ -121,7 +123,8 @@ def test_decrypt_wrong_key_rejected():
     v.decrypt(GROUP_PRIVATE_KEY, GROUP_CERT)
 
 
-def test_large_inline_recording():
+@pytest.mark.asyncio
+async def test_large_inline_recording():
   """ no size limit on the JWS payload or JWE plaintext (python-jose limited JWE to 250 KB) """
   body = bytes(range(256)) * 4096
   v = vcon.Vcon()
@@ -131,7 +134,7 @@ def test_large_inline_recording():
   v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
   v.encrypt(DIVISION_CERT)
 
-  decrypted = decrypt_verify(v.dumpd())
+  decrypted = await decrypt_verify(v.dumpd())
   assert(decrypted.decode_dialog_inline_body(0) == body)
 
 

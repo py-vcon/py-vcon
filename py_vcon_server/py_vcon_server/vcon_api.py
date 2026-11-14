@@ -125,7 +125,7 @@ def init(restapi):
     try:
       logger.info("vcon UID: {} jq transform string: {}".format(vcon_uuid, jq_transform))
       a_vcon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
-      py_vcon_server.certs.verify_for_read(a_vcon)
+      await py_vcon_server.certs.verify_for_read(a_vcon)
       transform_result = a_vcon.jq(jq_transform)
       logger.debug("jq  transform result: {}".format(transform_result))
 
@@ -159,7 +159,7 @@ def init(restapi):
     try:
       logger.info("vcon UID: {} jsonpath query string: {}".format(vcon_uuid, path_string))
       a_vcon = await py_vcon_server.db.VCON_STORAGE.get(vcon_uuid)
-      py_vcon_server.certs.verify_for_read(a_vcon)
+      await py_vcon_server.certs.verify_for_read(a_vcon)
       query_result = a_vcon.jsonpath(path_string)
       logger.debug("jsonpath query result: {}".format(query_result))
 

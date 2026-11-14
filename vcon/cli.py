@@ -649,6 +649,8 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
   sign_parser.add_argument("pubkey", metavar='public_key_file', nargs='+', type=pathlib.Path, default=None)
 
   verify_parser = subparsers_command.add_parser("verify")
+  verify_parser.add_argument("--fetch-x5u", dest = "fetch_x5u", action = "store_true",
+    help = "fetch the certificate chain from x5u for a signature with no x5c")
   verify_parser.add_argument("pubkey", metavar='public_key_file', nargs='+', type=pathlib.Path, default=None)
 
   encrypt_parser = subparsers_command.add_parser("encrypt")
@@ -741,7 +743,7 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
 
     sign private_key x5c1[, x5c2]... 
   
-    verify ca_cert
+    verify [--fetch-x5u] ca_cert
   
     encrypt x5c1[, x5c2]... signing_private_key
   
@@ -786,7 +788,7 @@ Name of filter plugin (e.g. {}) or default type filter plugin name (e.g. {})
 
   elif(args.command == "verify"):
     print("state: {}".format(in_vcon._state), file=sys.stderr)
-    in_vcon.verify(args.pubkey)
+    await in_vcon.verify(args.pubkey, fetch_x5u = args.fetch_x5u)
 
     # Assuming that generally if someone is verifying the vCon, they want the
     # unsigned JSON version as output.

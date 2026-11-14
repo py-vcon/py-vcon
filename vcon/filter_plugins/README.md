@@ -1270,6 +1270,18 @@ example:
 
 default: []
 
+##### fetch_x5u (bool)
+fetch the certificate chain from x5u
+
+For a signature with an x5u and no x5c header parameter, fetch the
+certificate chain from the x5u URL.  The fetched chain must still be
+issued by one of the trusted CAs.
+
+
+example:
+
+default: False
+
 ## vcon.filter_plugins.impl.whisper.WhisperOptions
  - WhisperOptions
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ FilterPlugin for JWS verification of vCon """
 import typing
 import pydantic
@@ -47,6 +47,16 @@ this is not the case.
     default = []
     )
 
+  fetch_x5u: bool = pydantic.Field(
+    title = "fetch the certificate chain from x5u",
+    description = """
+For a signature with an x5u and no x5c header parameter, fetch the
+certificate chain from the x5u URL.  The fetched chain must still be
+issued by one of the trusted CAs.
+""",
+    default = False
+    )
+
 
 class VerifyFilterPlugin(vcon.filter_plugins.FilterPlugin):
   """
@@ -89,7 +99,7 @@ class VerifyFilterPlugin(vcon.filter_plugins.FilterPlugin):
     if(ca_list is None or len(ca_list) == 0):
       ca_list = self._init_options.allowed_ca_cert_pems
 
-    out_vcon.verify(ca_list)
+    await out_vcon.verify(ca_list, fetch_x5u = options.fetch_x5u)
     return(out_vcon)
 
 

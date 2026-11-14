@@ -93,6 +93,10 @@ if(isinstance(ENABLE_PROMETHEUS, str)):
   else:
     ENABLE_PROMETHEUS = False
 
+# Fetch the certificate chain from x5u when verifying a signed vCon whose
+# signature has no x5c
+VCON_VERIFY_FETCH_X5U = os.getenv("VCON_VERIFY_FETCH_X5U", "false").strip().lower() == "true"
+
 INSTANCE_ID = os.getenv("INSTANCE_ID", "")
 
 SERVICE_NAME = "py_vcon_server"

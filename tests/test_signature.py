@@ -228,7 +228,8 @@ def test_expired_cert_chain(expired_cert : typing.Tuple[cryptography.x509.Certif
   except vcon.security.InvalidCertDate as invalid_error:
     pass
 
-def test_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
+@pytest.mark.asyncio
+async def test_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
   try:
     two_party_tel_vcon.sign(GROUP_PRIVATE_KEY, [GROUP_CERT, DIVISION_CERT, CA_CERT])
     raise Exception("Expected exception as sign was attempted with UUID not set.")
@@ -253,7 +254,7 @@ def test_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
       raise already_signed_error
 
   try:
-    two_party_tel_vcon.verify([CA_CERT])
+    await two_party_tel_vcon.verify([CA_CERT])
     raise Exception("Should have thrown an exception as this vcon was signed locally")
 
   except vcon.InvalidVconState as locally_signed_error:
@@ -288,14 +289,15 @@ def test_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
     # Should get here
     pass
 
-  deserialized_signed_vcon.verify([CA_CERT])
+  await deserialized_signed_vcon.verify([CA_CERT])
   assert(len(deserialized_signed_vcon.parties) == 2)
   assert(deserialized_signed_vcon.parties[0]['tel'] == call_data['source'])
   assert(deserialized_signed_vcon.parties[1]['tel'] == call_data['destination'])
   assert(uuid == deserialized_signed_vcon.uuid)
 
 
-def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
+@pytest.mark.asyncio
+async def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
   group_private_key_string = vcon.security.load_string_from_file(GROUP_PRIVATE_KEY)
   group_cert_string = vcon.security.load_string_from_file(GROUP_CERT)
   division_cert_string = vcon.security.load_string_from_file(DIVISION_CERT)
@@ -334,7 +336,7 @@ def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
       raise already_signed_error
 
   try:
-    two_party_tel_vcon.verify([ca_cert_string])
+    await two_party_tel_vcon.verify([ca_cert_string])
     raise Exception("Should have thrown an exception as this vcon was signed locally")
 
   except vcon.InvalidVconState as locally_signed_error:
@@ -370,7 +372,7 @@ def test_strings_sign_vcon(two_party_tel_vcon : vcon.Vcon) -> None:
     # Should get here
     pass
 
-  deserialized_signed_vcon.verify([ca_cert_string])
+  await deserialized_signed_vcon.verify([ca_cert_string])
   assert(len(deserialized_signed_vcon.parties) == 2)
   assert(deserialized_signed_vcon.parties[0]['tel'] == call_data['source'])
   assert(deserialized_signed_vcon.parties[1]['tel'] == call_data['destination'])

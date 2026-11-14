@@ -50,7 +50,8 @@ def test_jsonpath_syntax_error(two_party_tel_vcon):
     a_vcon.jsonpath('$.parties[*] ? (@.tel == "1234")')
 
 
-def test_jsonpath_signed(two_party_tel_vcon):
+@pytest.mark.asyncio
+async def test_jsonpath_signed(two_party_tel_vcon):
   """ A signed vCon is queried on its content, like attribute access, not its JWS form """
   a_vcon = two_party_tel_vcon
   a_vcon.set_uuid("py-vcon.org")
@@ -66,7 +67,7 @@ def test_jsonpath_signed(two_party_tel_vcon):
   unverified.loadd(a_vcon.dumpd())
   with pytest.raises(vcon.InvalidVconState):
     unverified.jsonpath("$.parties")
-  unverified.verify([CA_CERT])
+  await unverified.verify([CA_CERT])
   assert(unverified.jsonpath("$.parties[0].tel") == [call_data['source']])
 
   # an encrypted vCon cannot be queried at all

@@ -66,18 +66,20 @@ def test_signed_headers():
   assert(payload["sessions"][0]["dialog"] == [0])
 
 
-def test_sign_verify():
+@pytest.mark.asyncio
+async def test_sign_verify():
   v = make_vcon()
   v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
 
   signed = vcon.Vcon()
   signed.loads(v.dumps())
-  signed.verify([CA_CERT])
+  await signed.verify([CA_CERT])
   assert(signed.parties[0]["tel"] == "+15551110000")
   assert(signed.sessions[0]["dialog"] == [0])
 
 
-def test_verify_0_4_0_identical_repeats():
+@pytest.mark.asyncio
+async def test_verify_0_4_0_identical_repeats():
   signed_dict = make_0_4_0_signed_dict(make_vcon())
   signature = signed_dict["signatures"][0]
   protected = vcon.security.decode_jws_protected_header(signature["protected"])
@@ -88,18 +90,19 @@ def test_verify_0_4_0_identical_repeats():
 
   signed = vcon.Vcon()
   signed.loadd(signed_dict)
-  signed.verify([CA_CERT])
+  await signed.verify([CA_CERT])
   assert(signed.parties[1]["tel"] == "+15552220000")
 
 
-def test_verify_differing_repeats_rejected():
+@pytest.mark.asyncio
+async def test_verify_differing_repeats_rejected():
   signed_dict = make_0_4_0_signed_dict(make_vcon())
   signed_dict["signatures"][0]["header"]["alg"] = "RS512"
 
   signed = vcon.Vcon()
   signed.loadd(signed_dict)
   with pytest.raises(vcon.InvalidVconSignature, match = "alg"):
-    signed.verify([CA_CERT])
+    await signed.verify([CA_CERT])
 
 
 def test_signed_payload_bytes():
@@ -117,7 +120,8 @@ def test_signed_payload_bytes():
     json.dumps(unsigned_dict, separators = (",", ":")).encode("utf-8"))
 
 
-def test_verify_tampered_payload_rejected():
+@pytest.mark.asyncio
+async def test_verify_tampered_payload_rejected():
   v = make_vcon()
   v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
   signed_dict = v.dumpd()
@@ -128,18 +132,19 @@ def test_verify_tampered_payload_rejected():
   signed = vcon.Vcon()
   signed.loadd(signed_dict)
   with pytest.raises(jwcrypto.jws.InvalidJWSSignature):
-    signed.verify([CA_CERT])
+    await signed.verify([CA_CERT])
   assert(signed._state == vcon.VconStates.UNVERIFIED)
 
 
-def test_verify_wrong_ca_rejected():
+@pytest.mark.asyncio
+async def test_verify_wrong_ca_rejected():
   v = make_vcon()
   v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
 
   signed = vcon.Vcon()
   signed.loadd(v.dumpd())
   with pytest.raises(cryptography.exceptions.InvalidSignature):
-    signed.verify([CA2_CERT])
+    await signed.verify([CA2_CERT])
   assert(signed._state == vcon.VconStates.UNVERIFIED)
 
 
