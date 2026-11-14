@@ -415,7 +415,6 @@ Install the py_vcon_server package:
     pip3 uninstall --yes cryptography
     pip3 install 'cryptography<45.0.0'
 
-  python-jose version 3.5.x is not supported on Python 3.8.
   To avoid an undefined RAND_bytes exception, you need to hold back to Cryptograhy version 44.X.X.
 
 If you are running the vCon server directly from the package, setup your environment like the following:

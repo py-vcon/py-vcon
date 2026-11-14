@@ -9,8 +9,8 @@ import pprint
 import cryptography.x509
 import base64
 
-import jose.jwk
-import jose.jws
+import jwcrypto.jwk
+import jwcrypto.jws
 import datetime
 
 CA_CERT = "certs/fake_ca_root.crt"
@@ -109,8 +109,8 @@ def test_key(div_cert: typing.Tuple[cryptography.x509.Certificate, str], div_key
   print("cert_object valid end: {}".format(cert_object.not_valid_after))
   print("cert_object pub nums dir: {}".format(dir(cert_object.public_key().public_numbers())))
   print("cert_object pub key dir: {}".format((cert_object.public_key().public_numbers().public_key)))
-  print("cert_object n: {}".format(jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().n))))
-  print("cert_object e: {}".format(jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().e))))
+  print("cert_object n: {}".format(cert_object.public_key().public_numbers().n))
+  print("cert_object e: {}".format(cert_object.public_key().public_numbers().e))
   #print("cert_object dir: {}".format(dir(cert_object)))
   #print("cert_object issuer: {}".format(cert_object.issuer.rfc4514_string()))
   #print("cert_object subject: {}".format(cert_object.subject.rfc4514_string()))
@@ -134,62 +134,30 @@ def test_key(div_cert: typing.Tuple[cryptography.x509.Certificate, str], div_key
     print("issuer {:20} {:20} {:22} {}".format(field.rfc4514_attribute_name, field.oid.dotted_string, field.oid._name, field.value))
 
   algorithm = "RS256"
-  #crypt_key = jose.jwk.construct(cert_object.public_key(), algorithm)
 
-  #print(crypt_key)
-  #print(dir(crypt_key))
-
-  signing_key = {}
-  signing_key["kty"] = "RSA"
-  signing_key["use"] = "sig"
-  signing_key["alg"] = algorithm
-  signing_key["n"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().n)).decode('utf-8')
-  signing_key["e"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().e)).decode('utf-8')
-  signing_key["d"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().d)).decode('utf-8')
-
-  # if missing, can be computed using:
-  # (p,p) = cryptography.hazmat.primitives.asymmetric.rsa.rsa_recover_prime_factors(n, e, d)
-  signing_key["p"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().p)).decode('utf-8')
-  signing_key["q"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().q)).decode('utf-8')
-
-  # if missing, can be computed using:
-  # cryptography.hazmat.primitives.asymmetric.rsa.rsa_crt_dmp1(d, p)
-  signing_key["dp"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().dmp1)).decode('utf-8')
-
-  # if missing, can be computed using:
-  # cryptography.hazmat.primitives.asymmetric.rsa.rsa_crt_dmq1(d, q)
-  signing_key["dq"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().dmq1)).decode('utf-8')
-
-  # if missing, can be computed using:
-  # cryptography.hazmat.primitives.asymmetric.rsa.rsa_crt_iqmp(p,q)
-  signing_key["qi"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().iqmp)).decode('utf-8')
-
+  signing_key = jwcrypto.jwk.JWK.from_pyca(private_key_object)
   print("signing key:")
-  pprint.pprint(signing_key)
+  pprint.pprint(signing_key.export_public(as_dict = True))
 
-  verification_key = {}
-  verification_key["kty"] = "RSA"
-  verification_key["use"] = "sig"
-  verification_key["alg"] = algorithm
-  verification_key["n"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().n)).decode('utf-8')
-  verification_key["e"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().e)).decode('utf-8')
-  #jwk["e"] = "AQAB"
-
-  header = {}
-  header["x5c"] = [ cert_der ]
+  verification_key = jwcrypto.jwk.JWK.from_pyca(cert_object.public_key())
   print("\nverification key:")
-  pprint.pprint(verification_key)
+  pprint.pprint(verification_key.export_public(as_dict = True))
+  # The private key and the cert are a pair
+  assert(signing_key.thumbprint() == verification_key.thumbprint())
+  assert(not verification_key.has_private)
 
-  #x5c_key = jose.jwk.construct(jwk, algorithm=algorithm)
   payload = { "mything" : "data to sign"}
-  #jws_token = x5c_key.sign(payload)
-  jws_token = jose.jws.sign(payload, signing_key, algorithm=signing_key["alg"])
+  jws = jwcrypto.jws.JWS(json.dumps(payload).encode("utf-8"))
+  jws.add_signature(signing_key, algorithm, json.dumps({"alg": algorithm}))
+  jws_token = jws.serialize(compact = True)
 
   print(jws_token)
 
-  verification_key["n"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().n)).decode('utf-8')
-  verified_payload = jose.jws.verify(jws_token, verification_key, algorithm)
+  verified = jwcrypto.jws.JWS()
+  verified.deserialize(jws_token, verification_key)
+  verified_payload = verified.payload
   print("verified: {}".format(verified_payload))
+  assert(json.loads(verified_payload) == payload)
 
 def test_verify_cert(div_cert : typing.Tuple[cryptography.x509.Certificate, str],
   ca_cert : typing.Tuple[cryptography.x509.Certificate, str]) -> None:

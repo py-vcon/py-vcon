@@ -38,39 +38,33 @@ def two_party_tel_vcon(empty_vcon : vcon.Vcon) -> vcon.Vcon:
   vCon.set_uuid("vcon.dev")
   return(vCon)
 
-import jose.jwe
 import jwcrypto.jwe
+import jwcrypto.jwk
 import secrets
 import cryptography.x509
+import vcon.utils
 
 def test_encrypt(two_party_tel_vcon : vcon.Vcon) -> None:
   plaintext = two_party_tel_vcon.dumps()
 
-  symmetric_key = jose.utils.base64url_encode(secrets.token_bytes(nbytes=int(256/8))).decode("utf-8")
+  symmetric_key = vcon.utils.base64url_encode(secrets.token_bytes(nbytes=int(256/8)))
   print("sym key: {}".format(symmetric_key))
 
-  content_key = {}
-  content_key["kty"] = "oct"
-  content_key["k"] = symmetric_key
-  content_key["enc"] = "A256GCM"
+  content_key = jwcrypto.jwk.JWK(kty = "oct", k = symmetric_key)
 
-  jwe_content_token = jose.jwe.encrypt(plaintext,
-    jose.utils.base64url_decode(bytes(content_key["k"], "utf-8")),
-    encryption=content_key['enc'],
-    algorithm="dir",
-    cty="application/vcon").decode('utf-8')
+  jwe = jwcrypto.jwe.JWE(plaintext.encode("utf-8"),
+    protected = json.dumps({"alg": "dir", "enc": "A256GCM", "cty": "application/vcon"}))
+  jwe.add_recipient(content_key)
+  jwe_content_token = jwe.serialize(compact = True)
   print("token: {}".format(jwe_content_token))
   (protected, content_encrypted_key, iv, cyphertext, authentication_tag) = jwe_content_token.split('.')
-  print("protected: {}".format(jose.utils.base64url_decode(bytes(protected, 'utf-8'))))
-  print("content enc key: {}".format(content_encrypted_key))
+  print("protected: {}".format(vcon.utils.base64url_decode(protected)))
+  # direct encryption has no encrypted key
+  assert(content_encrypted_key == "")
 
-
-  decrypt_content_token = ".".join([protected, "", iv, cyphertext, authentication_tag])
-  print("decrypt token: {}".format(decrypt_content_token))
-
-  decrypted_plaintext = jose.jwe.decrypt(decrypt_content_token,
-    jose.utils.base64url_decode(bytes(content_key["k"], "utf-8")))
-  assert(decrypted_plaintext.decode("utf-8") == plaintext)
+  decrypted = jwcrypto.jwe.JWE()
+  decrypted.deserialize(jwe_content_token, content_key)
+  assert(decrypted.payload.decode("utf-8") == plaintext)
 
 
 def test_x5c_encrypt(two_party_tel_vcon : vcon.Vcon) -> None:

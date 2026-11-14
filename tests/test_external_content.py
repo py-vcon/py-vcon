@@ -12,7 +12,7 @@ import vcon
 import vcon.security
 import hsslms
 import hashlib
-import jose.utils
+import vcon.utils
 import warnings
 import pytest_httpserver
 
@@ -176,13 +176,13 @@ def test_sha512():
   hasher.update(data1)
   hasher.update(data2)
 
-  sig_hash = jose.utils.base64url_encode(hasher.digest())
+  sig_hash = vcon.utils.base64url_encode(hasher.digest())
 
   validater = hashlib.sha512()
 
   validater.update(data1 + data2)
 
-  validate_hash = jose.utils.base64url_encode(validater.digest())
+  validate_hash = vcon.utils.base64url_encode(validater.digest())
 
   assert(sig_hash == validate_hash)
 

@@ -4,9 +4,9 @@
 import json
 import os
 #import pprint
-import jose.utils
 import time
 import vcon
+import vcon.utils
 from tests.common_utils import call_data , empty_vcon, two_party_tel_vcon
 
 VCON_PARTIES = "parties"
@@ -148,9 +148,7 @@ def test_add_inline_recording(two_party_tel_vcon : vcon.Vcon, empty_vcon : vcon.
   assert(vCon._vcon_dict[VCON_DIALOG][0][VCON_PARTIES][1] == 1)
   assert(len(vCon._vcon_dict[VCON_DIALOG][0][VCON_PARTIES]) == 2)
 
-  # This is wrong.  decode should take a string not bytes, but it fails without the bytes conversion
-  # this is a bug in jose.baseurl_decode
-  decoded_file = jose.utils.base64url_decode(bytes(vCon._vcon_dict[VCON_DIALOG][0]["body"], 'utf-8'))
+  decoded_file = vcon.utils.base64url_decode(vCon._vcon_dict[VCON_DIALOG][0]["body"])
   assert(decoded_file == fake_recording_file)
 
   # Test real accessor
@@ -168,9 +166,7 @@ def test_add_inline_recording(two_party_tel_vcon : vcon.Vcon, empty_vcon : vcon.
   vcon_json = vCon.dumps()
   #pprint.pprint(vcon_json)
   deserialized_vcon.loads(vcon_json)
-  # This is wrong.  decode should take a string not bytes, but it fails without the bytes conversion
-  # this is a bug in jose.baseurl_decode
-  decoded_file = jose.utils.base64url_decode(bytes(deserialized_vcon._vcon_dict[VCON_DIALOG][0]["body"], 'utf-8'))
+  decoded_file = vcon.utils.base64url_decode(deserialized_vcon._vcon_dict[VCON_DIALOG][0]["body"])
   assert(decoded_file == fake_recording_file)
 
   # TODO check other recording fields
