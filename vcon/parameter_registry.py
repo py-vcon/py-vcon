@@ -206,7 +206,8 @@ CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
   _make_rows("Redacted_segments", [
     ("start", "redaction start time"),
     ("end", "redaction end time"),
-    ("parties", "parties whose media was redacted")
+    ("parties", "parties whose media was redacted"),
+    ("channel", "index of the redacted recording channel (proposed, not in -05)")
     ], iana = False) +
 
   # 0.4.0 Dialog party_history Object

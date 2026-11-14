@@ -2630,6 +2630,77 @@ class Vcon():
 
 
   @tag_dialog
+  def add_dialog_redacted_segment(
+    self,
+    dialog_index : int,
+    start : typing.Union[str, int, float, datetime.datetime],
+    duration : typing.Union[int, float],
+    parties : typing.Union[typing.List[int], None] = None,
+    channel : typing.Union[int, None] = None
+    ) -> int:
+    """
+    Add a Redacted_segments Object to a recording Dialog Object, for a period
+    of the recording in which the audio or video was redacted.
+
+    The Redacted_segments Object has start and end; end is computed as start
+    plus duration.
+
+    Parameters:  
+      **dialog_index** (int) - index of the recording Dialog Object  
+      **start** (str, int, float, datetime.datetime) - Date, time at which the redacted
+               period starts.  String containing RFC 2822 or RFC3339 date time stamp
+               or int/float containing epoch time (since 1970) in seconds.  
+      **duration** (int, float) - length of the redacted period in seconds  
+      **parties** (List[int]) - indices of the parties whose media was redacted (optional)  
+      **channel** (int) - index of the redacted channel of the recording, 0 is the first
+               (optional, proposed for the draft).  It must be less than the number of
+               channels when the Dialog Object parties tell the number (see
+               **add_channel_contributors_event**).
+
+    Returns:  
+      index of the new Redacted_segments Object in the Dialog's redacted_segments list
+
+    Raises AttributeError if the Dialog Object is not a recording, the duration
+    is negative, or a party or the channel does not exist.
+    """
+    self._attempting_modify()
+    self._check_object_index(Vcon.DIALOG, dialog_index)
+    dialog = self._vcon_dict[Vcon.DIALOG][dialog_index]
+    if(dialog.get("type", None) != "recording"):
+      raise AttributeError(
+        "dialog[{}] is not a recording Dialog Object, its type is: {}".format(
+        dialog_index, dialog.get("type", None)))
+
+    if(not isinstance(duration, (int, float)) or isinstance(duration, bool) or duration < 0):
+      raise AttributeError("duration: {} must be a non-negative number of seconds".format(duration))
+
+    if(parties is not None):
+      if(not isinstance(parties, list)):
+        raise AttributeError("parties: {} must be a list of party indices".format(parties))
+      for party_index in parties:
+        self._check_object_index(Vcon.PARTIES, party_index)
+
+    if(channel is not None):
+      self._check_channel(dialog_index, channel)
+
+    start_time = vcon.utils.cannonize_date(start)
+    end_time = vcon.utils.cannonize_date(
+      vcon.utils.date_to_datetime(start_time) + datetime.timedelta(seconds = duration))
+
+    segment: typing.Dict[str, typing.Any] = {"start": start_time, "end": end_time}
+    if(parties is not None):
+      segment["parties"] = parties
+    if(channel is not None):
+      segment["channel"] = channel
+
+    if(dialog.get("redacted_segments", None) is None):
+      dialog["redacted_segments"] = []
+    dialog["redacted_segments"].append(segment)
+
+    return(len(dialog["redacted_segments"]) - 1)
+
+
+  @tag_dialog
   def clear_dialog(
     self,
     dialog_index : int,

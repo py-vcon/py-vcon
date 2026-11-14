@@ -73,7 +73,8 @@ def test_rows_without_iana_registry():
       "SessionId": ["local", "remote"],
       # marker is proposed for the draft (see tests/test_redacted_strings.py)
       "Redacted_string": ["ref", "type", "orig", "marker"],
-      "Redacted_segments": ["start", "end", "parties"],
+      # channel is proposed for the draft (see tests/test_redacted_segments.py)
+      "Redacted_segments": ["start", "end", "parties", "channel"],
       "Dialog->disposition": ["no-answer", "congestion", "failed", "busy", "hung-up", "voicemail-no-message"],
       "Dialog->encoding": ["base64url", "json", "none"],
       "Attachment->encoding": ["base64url", "json", "none"],

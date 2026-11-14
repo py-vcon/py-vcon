@@ -40,6 +40,7 @@ The following categories of methods are implemented on the Vcon class.
    * [add_dialog_inline_email_message](#add_dialog_inline_email_message)
    * [add_dialog_inline_recording](#add_dialog_inline_recording)
    * [add_dialog_inline_text](#add_dialog_inline_text)
+   * [add_dialog_redacted_segment](#add_dialog_redacted_segment)
    * [add_transfer_dialog](#add_transfer_dialog)
    * [clear_dialog](#clear_dialog)
    * [decode_dialog_inline_body](#decode_dialog_inline_body)
@@ -629,6 +630,37 @@ Parameters:
 
 Returns:  
   Index of the new dialog in the Dialog Object array parameter.
+
+
+
+### add_dialog_redacted_segment
+
+**add_dialog_redacted_segment**(self, dialog_index: 'int', start: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float]', parties: 'typing.Union[typing.List[int], None]' = None, channel: 'typing.Union[int, None]' = None) -> 'int'
+
+
+Add a Redacted_segments Object to a recording Dialog Object, for a period
+of the recording in which the audio or video was redacted.
+
+The Redacted_segments Object has start and end; end is computed as start
+plus duration.
+
+Parameters:  
+  **dialog_index** (int) - index of the recording Dialog Object  
+  **start** (str, int, float, datetime.datetime) - Date, time at which the redacted
+           period starts.  String containing RFC 2822 or RFC3339 date time stamp
+           or int/float containing epoch time (since 1970) in seconds.  
+  **duration** (int, float) - length of the redacted period in seconds  
+  **parties** (List[int]) - indices of the parties whose media was redacted (optional)  
+  **channel** (int) - index of the redacted channel of the recording, 0 is the first
+           (optional, proposed for the draft).  It must be less than the number of
+           channels when the Dialog Object parties tell the number (see
+           **add_channel_contributors_event**).
+
+Returns:  
+  index of the new Redacted_segments Object in the Dialog's redacted_segments list
+
+Raises AttributeError if the Dialog Object is not a recording, the duration
+is negative, or a party or the channel does not exist.
 
 
 
