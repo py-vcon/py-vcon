@@ -10,6 +10,7 @@ import os.path
 import pytest_httpserver
 import pytest
 from tests.common_utils import empty_vcon, two_party_tel_vcon, call_data
+import tests.common_utils
 
 IN_VCON_JSON = """
 {"uuid": "0183878b-dacf-8e27-973a-91e26eb8001b", "vcon": "0.0.1", "attachments": [], "parties": [{"name": "Alice", "tel": "+12345678901"}, {"name": "Bob", "tel": "+19876543210"}]}
@@ -308,6 +309,37 @@ async def test_in_meet(capsys):
   assert(out_vcon.dialog[3]["mediatype"] == vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(out_vcon.dialog[3]["body"] == "test message 2")
 
+  # one Session for the meeting: the recording and each chat Dialog, parties are the chat senders
+  assert(len(out_vcon.sessions) == 1)
+  assert(out_vcon.sessions[0]["dialog"] == [0, 1, 2, 3])
+  assert(out_vcon.sessions[0]["parties"] == [0])
+  assert(out_vcon.sessions[0]["start"] == "2023-09-07T00:27:00.000+00:00")
+  if(out_vcon.uuid is None):
+    out_vcon.set_uuid("vcon.dev")
+  tests.common_utils.assert_valid_vcon(out_vcon.dumpd())
+
+
+@pytest.mark.asyncio
+async def test_in_meet_existing_session(capsys, two_party_tel_vcon):
+  """ an import adds its own Session, leaving an existing one unchanged """
+  import vcon.cli
+
+  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.set_uuid("vcon.dev")
+  first_session = dict(two_party_tel_vcon.sessions[0])
+  sys.stdin = io.StringIO(two_party_tel_vcon.dumps())
+
+  await vcon.cli.main(["add", "in-meet", GOOGLE_MEET_RECORDING])
+
+  out_vcon_json, error = capsys.readouterr()
+  out_vcon = vcon.Vcon()
+  out_vcon.loads(out_vcon_json)
+  assert(len(out_vcon.sessions) == 2)
+  assert(out_vcon.sessions[0] == first_session)
+  assert(out_vcon.sessions[1]["dialog"] == [1, 2, 3, 4])
+  # the chat sender is a new party
+  assert(out_vcon.sessions[1]["parties"] == [2])
+
 
 @pytest.mark.asyncio
 async def test_zoom(capsys):
@@ -370,6 +402,15 @@ async def test_zoom(capsys):
   assert(out_vcon.dialog[6]["parties"] == 1)
   assert(out_vcon.dialog[6]["start"] == "2023-09-19T02:37:25.000+00:00")
   assert(out_vcon.dialog[6]["body"] == 'Reacted to "What ever fruit I ha..." with 😃')
+
+  # one Session for the meeting: the recording (no parties) and each chat Dialog
+  assert("parties" not in out_vcon.dialog[0])
+  assert(len(out_vcon.sessions) == 1)
+  assert(sorted(out_vcon.sessions[0]["dialog"]) == [0, 1, 2, 3, 4, 5, 6])
+  assert(out_vcon.sessions[0]["parties"] == [0, 1])
+  if(out_vcon.uuid is None):
+    out_vcon.set_uuid("vcon.dev")
+  tests.common_utils.assert_valid_vcon(out_vcon.dumpd())
 
 
 @pytest.mark.asyncio

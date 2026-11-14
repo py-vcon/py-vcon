@@ -214,6 +214,9 @@ def do_in_zoom(
   if(not args.zoomdir[0].exists()):
     raise Exception("Zoom directory: {} does not exist".format(args.zoomdir[0]))
 
+  # One Session Object for the meeting, which references all of its Dialog Objects
+  session = in_vcon.add_session()
+
   ignore_extensions = [ "..", ".", ".conf"]
   conf_file = next(args.zoomdir[0].glob("*.conf"))
   if(conf_file is not None and conf_file != ""):
@@ -256,13 +259,15 @@ def do_in_zoom(
       duration = float(video_meta["streams"][0]['duration'])
       with open(rec_file, "rb") as video_file_handle:
         body_bytes = video_file_handle.read()
-        in_vcon .add_dialog_inline_recording(
+        # The parties of the recording are not known
+        in_vcon.add_dialog_inline_recording(
           body_bytes,
           start,
           duration,
-          -1, # TODO: can we get parties?
+          None,
           vcon.Vcon.MEDIATYPE_VIDEO_MP4,
-          filebase
+          filebase,
+          session = session
           )
 
     elif(filebase == "chat.txt"):
@@ -303,7 +308,8 @@ def do_in_zoom(
           msg_time,
           0,
           sender_indices[0],
-          vcon.Vcon.MEDIATYPE_TEXT_PLAIN
+          vcon.Vcon.MEDIATYPE_TEXT_PLAIN,
+          session = session
           )
 
   return(in_vcon)
@@ -428,6 +434,9 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
     ):
     in_vcon.set_subject(meeting_name)
 
+  # One Session Object for the meeting, which references all of its Dialog Objects
+  session = in_vcon.add_session()
+
   # parties unknown
   parties = None
   with open(args.meetrec[0], "rb") as recording_handle:
@@ -438,7 +447,8 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
       duration,
       parties,
       vcon.Vcon.MEDIATYPE_VIDEO_MP4,
-      os.path.basename(str(args.meetrec[0]))
+      os.path.basename(str(args.meetrec[0])),
+      session = session
       )
 
   # Try to find the chat file
@@ -465,7 +475,8 @@ def do_in_meet(args, in_vcon: vcon.Vcon) -> vcon.Vcon:
           timestamp,
           duration,
           sender_indices[0],
-          vcon.Vcon.MEDIATYPE_TEXT_PLAIN
+          vcon.Vcon.MEDIATYPE_TEXT_PLAIN,
+          session = session
           )
 
   return(in_vcon)
