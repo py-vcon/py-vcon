@@ -46,9 +46,11 @@ The following categories of methods are implemented on the Vcon class.
    * [set_redacted](#set_redacted)
  * Methods to access or modify Vcon Meta Data
    * [add_parameter_extension](#add_parameter_extension)
+   * [check_extensions](#check_extensions)
    * [set_created_at](#set_created_at)
    * [set_subject](#set_subject)
    * [set_uuid](#set_uuid)
+   * [update_extensions](#update_extensions)
  * Methods to access or modify Vcon Party objects
    * [add_party](#add_party)
    * [find_parties_by_parameter](#find_parties_by_parameter)
@@ -704,6 +706,25 @@ Raises ValueError if the Object name is not registered.
 
 
 
+### check_extensions
+
+**check_extensions**(self) -> 'typing.Dict[str, typing.List[str]]'
+
+
+Find the extensions this vCon uses, and those it uses but does not list
+in its extensions and critical parameters.
+
+The setters add the extension name when they write an extension
+parameter.  This checks the whole vCon, which catches what bypasses
+them: vCons that were loaded, edited with jq or changed through
+_vcon_dict.  Nothing is changed.  See **Vcon.update_extensions**.
+
+Returns:  
+  see **vcon.parameter_registry.find_extensions**: the lists used,
+  unlisted, critical_unlisted and unregistered
+
+
+
 ### set_created_at
 
 **set_created_at**(self, create_date: 'typing.Union[int, float, str, None]') -> 'None'
@@ -749,6 +770,21 @@ Returns:
   UUID version 8 string
   (vCon uuid parameter is also set)
 
+
+
+
+### update_extensions
+
+**update_extensions**(self) -> 'typing.Dict[str, typing.List[str]]'
+
+
+Add the extensions this vCon uses but does not list to its extensions
+parameter, and those registered as critical also to its critical
+parameter.  Unregistered parameters and values are reported, not
+assigned to an extension.
+
+Returns:  
+  the result of **Vcon.check_extensions** before the update
 
 
 
@@ -851,6 +887,10 @@ Parameters:
 **cert_pem_file** (str): file name or PEM string for the public key/cert to use for encrypting the vcon.
 
 Returns: none
+
+Logs a warning if the vCon uses extensions which it does not list in its
+extensions or critical parameters (see **Vcon.check_extensions**).  The
+vCon is encrypted unchanged.
 
 
 
@@ -1181,6 +1221,10 @@ Parameters:
     (default True).  If False, x5u must be given.
 
 Returns: none
+
+Logs a warning if the vCon uses extensions which it does not list in its
+extensions or critical parameters (see **Vcon.check_extensions**).  The
+vCon is signed unchanged.
 
 Raises ValueError if include_x5c is False and no x5u is given, as the
 signature would then have no certificate chain.

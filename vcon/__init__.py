@@ -2999,6 +2999,10 @@ class Vcon():
 
     Returns: none
 
+    Logs a warning if the vCon uses extensions which it does not list in its
+    extensions or critical parameters (see **Vcon.check_extensions**).  The
+    vCon is signed unchanged.
+
     Raises ValueError if include_x5c is False and no x5u is given, as the
     signature would then have no certificate chain.
     """
@@ -3014,6 +3018,8 @@ class Vcon():
 
     if(not include_x5c and (x5u is None or x5u == "")):
       raise ValueError("include_x5c is False and no x5u is given.  A signature needs x5c or x5u.")
+
+    self._warn_unlisted_extensions("sign")
 
     chain_header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, cert_chain_pem_files)
 
@@ -3238,6 +3244,10 @@ class Vcon():
     **cert_pem_file** (str): file name or PEM string for the public key/cert to use for encrypting the vcon.
 
     Returns: none
+
+    Logs a warning if the vCon uses extensions which it does not list in its
+    extensions or critical parameters (see **Vcon.check_extensions**).  The
+    vCon is encrypted unchanged.
     """
 
     if(self._state not in [VconStates.SIGNED, VconStates.UNVERIFIED]):
@@ -3245,6 +3255,8 @@ class Vcon():
 
     if(len(self._jws_dict) < 2):
       raise InvalidVconState("Vcon signature does not seem valid: {}".format(self._jws_dict))
+
+    self._warn_unlisted_extensions("encrypt")
 
     # both of these work
     #encryption = "A256GCM"
@@ -3710,6 +3722,63 @@ class Vcon():
         name_list.append(definer)
 
     return(definer)
+
+
+  @tag_meta
+  def check_extensions(self) -> typing.Dict[str, typing.List[str]]:
+    """
+    Find the extensions this vCon uses, and those it uses but does not list
+    in its extensions and critical parameters.
+
+    The setters add the extension name when they write an extension
+    parameter.  This checks the whole vCon, which catches what bypasses
+    them: vCons that were loaded, edited with jq or changed through
+    _vcon_dict.  Nothing is changed.  See **Vcon.update_extensions**.
+
+    Returns:  
+      see **vcon.parameter_registry.find_extensions**: the lists used,
+      unlisted, critical_unlisted and unregistered
+    """
+    return(vcon.parameter_registry.find_extensions(self._vcon_dict))
+
+
+  @tag_meta
+  def update_extensions(self) -> typing.Dict[str, typing.List[str]]:
+    """
+    Add the extensions this vCon uses but does not list to its extensions
+    parameter, and those registered as critical also to its critical
+    parameter.  Unregistered parameters and values are reported, not
+    assigned to an extension.
+
+    Returns:  
+      the result of **Vcon.check_extensions** before the update
+    """
+    self._attempting_modify()
+    report = self.check_extensions()
+
+    for name, missing in [(Vcon.EXTENSIONS, report["unlisted"]), (Vcon.CRITICAL, report["critical_unlisted"])]:
+      if(len(missing) > 0):
+        name_list = self._vcon_dict.get(name, None)
+        if(name_list is None):
+          name_list = []
+          self._vcon_dict[name] = name_list
+        name_list.extend(missing)
+
+    return(report)
+
+
+  def _warn_unlisted_extensions(self, operation : str) -> None:
+    """ Log a warning naming any extension used but not listed (see check_extensions) """
+    report = self.check_extensions()
+    if(len(report["unlisted"]) > 0 or len(report["critical_unlisted"]) > 0):
+      logger.warning(
+        "%s vCon UUID: %s uses extensions not listed in extensions: %s, critical: %s."
+        "  Use update_extensions to add them.",
+        operation,
+        self.uuid,
+        report["unlisted"],
+        report["critical_unlisted"]
+        )
 
 
   @staticmethod

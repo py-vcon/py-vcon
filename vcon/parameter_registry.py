@@ -611,5 +611,113 @@ def get_rows(
   return(rows)
 
 
+# Where each Object appears in the vCon JSON: Object name -> list of
+# (containing Object name, parameter name).  The parameter value is the
+# Object, an array of the Objects or, for SessionId, nested arrays of them.
+OBJECT_LOCATIONS: typing.Dict[str, typing.List[typing.Tuple[str, str]]] = {
+    "Party": [(VCON_OBJECT, "parties")],
+    "Civicaddress": [("Party", "civicaddress")],
+    "Dialog": [(VCON_OBJECT, "dialog")],
+    "SessionId": [("Dialog", "session_id"), ("Session", "session_id")],
+    "Redacted_segments": [("Dialog", "redacted_segments")],
+    "Party_history": [("Dialog", "party_history")],
+    "Session": [(VCON_OBJECT, "sessions")],
+    "Session_Reference": [("Session", "sessions")],
+    "Event": [(VCON_OBJECT, "events")],
+    "Attachment": [(VCON_OBJECT, "attachments")],
+    "Analysis": [(VCON_OBJECT, "analysis")],
+    "Redacted_from": [(VCON_OBJECT, "redacted_from")],
+    "Amended_from": [(VCON_OBJECT, "amended_from")],
+    "Redacted_string": [(VCON_OBJECT, "redacted_strings")],
+    "Redacted": [(VCON_OBJECT, "redacted")],
+    "Amended": [(VCON_OBJECT, "amended")]
+  }
+
+
+def _contained_objects(
+  object_name : str
+  ) -> typing.List[typing.Tuple[str, str]]:
+  """ (parameter name, Object name) of the Objects contained in the given Object """
+  return([(parameter_name, contained_name)
+    for contained_name, locations in OBJECT_LOCATIONS.items()
+    for container_name, parameter_name in locations
+    if(container_name == object_name)])
+
+
+def find_extensions(vcon_dict : typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.List[str]]:
+  """
+  Find the extensions used in an unsigned vCon dict, and those it uses but
+  does not list in its extensions and critical parameters.
+
+  Every parameter name in each Object, and each value of a parameter with
+  registered values (for example the Event type), is looked up in the
+  registry.  Names and values in no registry are reported as unregistered
+  with their location; they are never assigned to an extension.  The
+  parameters of Objects defined by an extension are not looked into.
+
+  Parameters:
+    **vcon_dict** (dict) - the unsigned vCon, as a plain dict
+
+  Returns:
+    dict with the lists:
+      **used** - names of the extensions used, in the order found
+      **unlisted** - extensions used but not in the vCon extensions parameter
+      **critical_unlisted** - extensions registered as critical which are
+        used but not in the vCon critical parameter
+      **unregistered** - location and name of each parameter or value in no
+        registry, for example: '$.parties[0]: "my_param"' or
+        '$.events[2].type: "my-event"'
+  """
+  used: typing.List[str] = []
+  unregistered: typing.List[str] = []
+
+  def add_used(definer : str) -> None:
+    if(definer not in used):
+      used.append(definer)
+
+  def check_object(object_name : str, an_object : typing.Any, location : str) -> None:
+    if(isinstance(an_object, list)):
+      # an array of the Objects or, for SessionId, nested arrays
+      for index, element in enumerate(an_object):
+        check_object(object_name, element, "{}[{}]".format(location, index))
+      return
+
+    if(not isinstance(an_object, dict)):
+      return
+
+    object_index = _INDEX.get(object_name, {})
+    for parameter_name, value in an_object.items():
+      definer = object_index.get(parameter_name, None)
+      if(definer is None):
+        unregistered.append("{}: \"{}\"".format(location, parameter_name))
+        continue
+      if(definer != PARAMETER_CORE):
+        add_used(definer)
+
+      value_set = "{}{}{}".format(object_name, VALUE_SEPARATOR, parameter_name)
+      if(value_set in VALUE_SETS and isinstance(value, str)):
+        value_definer = _INDEX[value_set].get(value, None)
+        if(value_definer is None):
+          unregistered.append("{}.{}: \"{}\"".format(location, parameter_name, value))
+        elif(value_definer != PARAMETER_CORE):
+          add_used(value_definer)
+
+    for parameter_name, contained_name in _contained_objects(object_name):
+      if(parameter_name in an_object):
+        check_object(contained_name, an_object[parameter_name],
+          "{}.{}".format(location, parameter_name))
+
+  check_object(VCON_OBJECT, vcon_dict, "$")
+
+  listed = vcon_dict.get("extensions", None) or []
+  listed_critical = vcon_dict.get("critical", None) or []
+  return({
+      "used": used,
+      "unlisted": [name for name in used if(name not in listed)],
+      "critical_unlisted": [name for name in used if(is_critical(name) and name not in listed_critical)],
+      "unregistered": unregistered
+    })
+
+
 _build_index()
 register_extension(CC_EXTENSION, CC_ROWS)
