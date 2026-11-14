@@ -56,6 +56,10 @@ The following categories of methods are implemented on the Vcon class.
    * [set_session_parameter](#set_session_parameter)
  * Methods to reference other vCons from a vCon
    * [add_group_object](#add_group_object)
+   * [add_redacted_string](#add_redacted_string)
+   * [find_redacted_strings](#find_redacted_strings)
+   * [redact_text](#redact_text)
+   * [redacted_string_marker](#redacted_string_marker)
    * [set_amended](#set_amended)
    * [set_amended_from](#set_amended_from)
    * [set_redacted](#set_redacted)
@@ -965,6 +969,82 @@ Parameters:
 
 Returns:  None
 
+
+
+### add_redacted_string
+
+**add_redacted_string**(self, redaction_type: 'typing.Union[str, None]' = None, orig: 'typing.Union[str, None]' = None, avoid_text: 'str' = '') -> 'int'
+
+
+Add a Redacted_string Object for a string which is to be redacted, or find
+the one already added for the same original string.
+
+The Redacted_string gets the next ref after the highest existing ref, and
+the marker parameter: the string which replaces the redacted string, e.g.
+"__REDACTED_REF_1__".  The marker parameter is proposed for the draft; the
+non-digit suffix ends the number, so refs have no upper limit (the -05
+JSON Schema caps ref at 99999).
+
+Parameters:  
+  **redaction_type** (str) - the type of information redacted, e.g. "PHONE_NUMBER" (optional)  
+  **orig** (str) - the original string (optional).  If a Redacted_string with
+           the same orig exists, its ref is returned and nothing is added.  
+  **avoid_text** (str) - text in which the new marker must not already appear
+           literally; a ref whose marker appears in it is skipped.
+
+Returns:  
+  the ref of the Redacted_string
+
+
+
+### find_redacted_strings
+
+**find_redacted_strings**(self, text: 'str') -> 'typing.List[typing.Dict[str, typing.Any]]'
+
+
+Find the Redacted_string Objects referenced by the markers in a string.
+
+A Redacted_string with a marker parameter is matched by its exact marker
+string.  One without a marker (from another -05 producer) is matched by
+"__REDACTED_REF_" followed by up to 5 digits anywhere in the string, taking
+the longest leading run of those digits which is the ref of such a
+Redacted_string.  Text which matches none is literal text.
+
+Parameters:  
+  **text** (str) - the string to search
+
+Returns:  
+  the Redacted_string for each marker found, in the order found
+
+
+
+### redact_text
+
+**redact_text**(self, text: 'str', spans: 'typing.List[typing.Tuple[int, int, str]]') -> 'str'
+
+
+Replace each labeled span of the text with the marker of its Redacted_string
+(see **add_redacted_string**), adding the Redacted_string Objects with the
+label as type and the replaced string as orig.  The same string gets the
+same ref wherever it appears in this vCon, with the type of its first label.
+A new ref is not used if its marker already appears in the text.
+
+Parameters:  
+  **text** (str) - the text to redact  
+  **spans** (List[Tuple[int, int, str]]) - start index, end index (exclusive) and
+           label of each string to redact.  A span which overlaps an earlier
+           span is ignored.
+
+Returns:  
+  the redacted text
+
+
+
+### redacted_string_marker
+
+**redacted_string_marker**(ref: 'int') -> 'str'
+
+The marker string for the given Redacted_string ref, e.g. "__REDACTED_REF_1__" 
 
 
 ### set_amended

@@ -85,6 +85,14 @@ async def test_text_pii_redactor_processor() -> None:
 
   assert(out_redacted_vcon.redacted_from == {"uuid": out_unredacted_vcon.uuid, "type": redaction_type})
 
+  # the redacted strings are replaced by markers; orig is removed from the redacted vCon
+  redacted_text = " ".join([text_dict["text"] for text_dict in out_redacted_vcon.analysis[0]["body"]])
+  assert("{{" not in redacted_text)
+  assert(len(out_redacted_vcon.redacted_strings) > 0)
+  for redacted_string in out_redacted_vcon.redacted_strings:
+    assert("orig" not in redacted_string)
+    assert(redacted_string["marker"] in redacted_text)
+
 
 @pytest.mark.asyncio
 async def test_text_pii_redactor_processor_api() -> None:

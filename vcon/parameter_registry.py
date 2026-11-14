@@ -330,7 +330,8 @@ CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
   _make_rows("Redacted_string", [
     ("ref", "reference number of the redacted string"),
     ("type", "type of information redacted"),
-    ("orig", "the original string before redaction")
+    ("orig", "the original string before redaction"),
+    ("marker", "the marker string which replaced the redacted string (proposed, not in -05)")
     ], iana = False) +
 
   # 0.4.0 Redacted and Amended Objects

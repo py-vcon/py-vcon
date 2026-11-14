@@ -466,6 +466,11 @@ not redacted.
 Parameters:
   options (RedactPiiOptions)
 
+Each labeled string is replaced by the marker of a Redacted_string
+Object (e.g. "__REDACTED_REF_1__") added to the vCon, with the label as
+type and the original string as orig.  The same string gets the same
+marker in every dialog.
+
 Returns:
   The input vCon with the generated, redacted transcript(s) in the
   added.  DOES NOT remove the original, non-redacted transcripts.
@@ -1020,6 +1025,17 @@ None
 example:
 
 default: None
+
+##### keep_redacted_string_orig (bool)
+keep the orig parameter of the Redacted_string Objects
+the orig parameter of a Redacted_string Object holds the
+        original string which was redacted.  By default it is removed from the
+        redacted vCon.  Set to true to keep it, e.g. for further processing
+        before the final redaction.
+
+example:
+
+default: False
 
 ## vcon.filter_plugins.impl.openai.OpenAIChatCompletionOptions
  - OpenAI Chat Completion filter method options

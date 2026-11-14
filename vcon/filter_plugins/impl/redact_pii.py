@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 import typing
 import tempfile
 import csv
@@ -64,29 +64,6 @@ class RedactPii(vcon.filter_plugins.FilterPlugin):
       init_options,
       RedactPiiOptions)
 
-  # Function to redact dialog text based on PII labels
-  def redact_text_helper(self, dialog, labels):
-    redacted_dialog = dialog.text
-    index_adjuster = 0
-    for label_info in labels:
-      # start of sensitive data
-      s = label_info[0] + index_adjuster
-      # end of sensitive data
-      e = label_info[1] + index_adjuster
-      if e >= len(redacted_dialog):
-        e = len(redacted_dialog) - 1
-      # redact sensitive data. For example, 
-      # text "my email is test@mail.com and number is 617 555 1234" 
-      # becomes "my email is {{EMAIL}} and number is {{PHONE}}"
-      redacted_dialog = redacted_dialog[:s] + "{{" + label_info[2] + "}}" + redacted_dialog[e:]
-      # adjust the index for the next iteration as the original text has changed
-      diff =e - s - len(label_info[2]) - 4
-      if diff < 0:
-        diff = diff * -1
-      index_adjuster = index_adjuster + diff
-
-    return(redacted_dialog)
-
   async def filter(
       self,
       in_vcon: vcon.Vcon,
@@ -102,6 +79,11 @@ class RedactPii(vcon.filter_plugins.FilterPlugin):
 
     Parameters:
       options (RedactPiiOptions)
+
+    Each labeled string is replaced by the marker of a Redacted_string
+    Object (e.g. "__REDACTED_REF_1__") added to the vCon, with the label as
+    type and the original string as orig.  The same string gets the same
+    marker in every dialog.
 
     Returns:
       The input vCon with the generated, redacted transcript(s) in the
@@ -178,7 +160,12 @@ class RedactPii(vcon.filter_plugins.FilterPlugin):
       logger.debug('redacting dialog text')
       redacted_texts = []
       for i, dialog in data.data.iterrows():
-        redacted_dialog = self.redact_text_helper(dialog, predictions['pred'][i])
+        # Each labeled span is replaced by the marker of its Redacted_string, e.g.
+        # "my number is 617 555 1234" becomes "my number is __REDACTED_REF_1__"
+        redacted_dialog = out_vcon.redact_text(
+          dialog.text,
+          [(label_info[0], label_info[1], label_info[2]) for label_info in predictions['pred'][i]]
+          )
         dialog_texts[i]['text'] = redacted_dialog
         #if redacted_dialog != dialog.text:
         # Copy chunks containing no redacted as well

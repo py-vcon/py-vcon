@@ -71,7 +71,8 @@ def test_rows_without_iana_registry():
       "Civicaddress": ["country", "a1", "a2", "a3", "a4", "a5", "a6", "prd", "pod", "sts", "hno",
         "hns", "lmk", "loc", "flr", "nam", "pc"],
       "SessionId": ["local", "remote"],
-      "Redacted_string": ["ref", "type", "orig"],
+      # marker is proposed for the draft (see tests/test_redacted_strings.py)
+      "Redacted_string": ["ref", "type", "orig", "marker"],
       "Redacted_segments": ["start", "end", "parties"],
       "Dialog->disposition": ["no-answer", "congestion", "failed", "busy", "hung-up", "voicemail-no-message"],
       "Dialog->encoding": ["base64url", "json", "none"],

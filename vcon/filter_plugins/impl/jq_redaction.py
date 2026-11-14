@@ -43,6 +43,15 @@ class JqRedactionOptions(
       default = None
     )
 
+  keep_redacted_string_orig: bool = pydantic.Field(
+      title = "keep the orig parameter of the Redacted_string Objects",
+      description = """the orig parameter of a Redacted_string Object holds the
+        original string which was redacted.  By default it is removed from the
+        redacted vCon.  Set to true to keep it, e.g. for further processing
+        before the final redaction.""",
+      default = False
+    )
+
 class JqRedaction(vcon.filter_plugins.FilterPlugin):
   """
   Create a redacted vCon referencing the input vCon and use the
@@ -106,6 +115,11 @@ class JqRedaction(vcon.filter_plugins.FilterPlugin):
       if(options.uuid_domain in (None, "")):
         raise Exception("JqRedaction options.uuid_domain MUST be set")
       out_vcon.set_uuid(options.uuid_domain, True)
+
+    # The redacted vCon does not carry the redacted strings
+    if(not options.keep_redacted_string_orig):
+      for redacted_string in out_vcon._vcon_dict.get(vcon.Vcon.REDACTED_STRINGS, None) or []:
+        redacted_string.pop("orig", None)
 
     # Set the redacted object and reference the original, less redacted vCon
     redaction_type_label = options.redaction_type_label

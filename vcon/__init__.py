@@ -9,6 +9,7 @@ from __future__ import annotations
 import importlib
 import pkgutil
 import typing
+import re
 import sys
 import os
 import copy
@@ -543,6 +544,11 @@ class Vcon():
   ATTACHMENTS = "attachments"
   SESSIONS = "sessions"
   EVENTS = "events"
+  REDACTED_STRINGS = "redacted_strings"
+  # A Redacted_string marker is the prefix, the ref and the suffix, e.g. __REDACTED_REF_1__.
+  # The non-digit suffix ends the number.
+  REDACTED_REF_PREFIX = "__REDACTED_REF_"
+  REDACTED_REF_SUFFIX = "__"
   CREATED_AT = "created_at"
 
   # Session_Reference Object type tokens defined by the core vCon schema
@@ -586,6 +592,8 @@ class Vcon():
   attachments = VconDictList(doc = "List of Dicts referencing or including ancillary documents to this conversation")
   sessions = VconLazyDictList(doc = "List of Session Object Dicts, one for each session or sub-conversation" +
     " of this conversation.  A Session Object references its Dialog Objects by index")
+  redacted_strings = VconLazyDictList(doc = "List of Redacted_string Object Dicts, one for each"
+    " redacted string, referenced from the redacted text by its marker")
   events = VconLazyDictList(doc = "List of Event Object Dicts, for the events which occurred in this conversation." +
     "  An Event Object references the Session Objects in which it occurred by index")
 
@@ -4155,6 +4163,148 @@ class Vcon():
 
     self._vcon_dict.pop(old_name, None)
     self._vcon_dict[name] = reference
+
+
+  @tag_vcon_references
+  def add_redacted_string(
+    self,
+    redaction_type : typing.Union[str, None] = None,
+    orig : typing.Union[str, None] = None,
+    avoid_text : str = ""
+    ) -> int:
+    """
+    Add a Redacted_string Object for a string which is to be redacted, or find
+    the one already added for the same original string.
+
+    The Redacted_string gets the next ref after the highest existing ref, and
+    the marker parameter: the string which replaces the redacted string, e.g.
+    "__REDACTED_REF_1__".  The marker parameter is proposed for the draft; the
+    non-digit suffix ends the number, so refs have no upper limit (the -05
+    JSON Schema caps ref at 99999).
+
+    Parameters:  
+      **redaction_type** (str) - the type of information redacted, e.g. "PHONE_NUMBER" (optional)  
+      **orig** (str) - the original string (optional).  If a Redacted_string with
+               the same orig exists, its ref is returned and nothing is added.  
+      **avoid_text** (str) - text in which the new marker must not already appear
+               literally; a ref whose marker appears in it is skipped.
+
+    Returns:  
+      the ref of the Redacted_string
+    """
+    self._attempting_modify()
+    redacted_strings = self._vcon_dict.get(Vcon.REDACTED_STRINGS, None) or []
+
+    if(orig is not None):
+      for redacted_string in redacted_strings:
+        if(redacted_string.get("orig", None) == orig):
+          return(redacted_string["ref"])
+
+    ref = max([redacted_string.get("ref", 0) for redacted_string in redacted_strings] + [0]) + 1
+    while(Vcon.redacted_string_marker(ref) in avoid_text):
+      ref += 1
+
+    new_redacted_string: typing.Dict[str, typing.Any] = {"ref": ref}
+    if(redaction_type is not None):
+      new_redacted_string["type"] = redaction_type
+    if(orig is not None):
+      new_redacted_string["orig"] = orig
+    new_redacted_string["marker"] = Vcon.redacted_string_marker(ref)
+
+    if(self._vcon_dict.get(Vcon.REDACTED_STRINGS, None) is None):
+      self._vcon_dict[Vcon.REDACTED_STRINGS] = []
+    self._vcon_dict[Vcon.REDACTED_STRINGS].append(new_redacted_string)
+
+    return(ref)
+
+
+  @staticmethod
+  @tag_vcon_references
+  def redacted_string_marker(ref : int) -> str:
+    """ The marker string for the given Redacted_string ref, e.g. "__REDACTED_REF_1__" """
+    return("{}{}{}".format(Vcon.REDACTED_REF_PREFIX, ref, Vcon.REDACTED_REF_SUFFIX))
+
+
+  @tag_vcon_references
+  def redact_text(
+    self,
+    text : str,
+    spans : typing.List[typing.Tuple[int, int, str]]
+    ) -> str:
+    """
+    Replace each labeled span of the text with the marker of its Redacted_string
+    (see **add_redacted_string**), adding the Redacted_string Objects with the
+    label as type and the replaced string as orig.  The same string gets the
+    same ref wherever it appears in this vCon, with the type of its first label.
+    A new ref is not used if its marker already appears in the text.
+
+    Parameters:  
+      **text** (str) - the text to redact  
+      **spans** (List[Tuple[int, int, str]]) - start index, end index (exclusive) and
+               label of each string to redact.  A span which overlaps an earlier
+               span is ignored.
+
+    Returns:  
+      the redacted text
+    """
+    pieces = []
+    position = 0
+    for start, end, label in sorted(spans, key = lambda span: span[0]):
+      end = min(end, len(text))
+      if(start < position or start >= end):
+        continue
+      ref = self.add_redacted_string(label, text[start:end], avoid_text = text)
+      pieces.append(text[position:start])
+      pieces.append(Vcon.redacted_string_marker(ref))
+      position = end
+
+    pieces.append(text[position:])
+    return("".join(pieces))
+
+
+  @tag_vcon_references
+  def find_redacted_strings(self, text : str) -> typing.List[typing.Dict[str, typing.Any]]:
+    """
+    Find the Redacted_string Objects referenced by the markers in a string.
+
+    A Redacted_string with a marker parameter is matched by its exact marker
+    string.  One without a marker (from another -05 producer) is matched by
+    "__REDACTED_REF_" followed by up to 5 digits anywhere in the string, taking
+    the longest leading run of those digits which is the ref of such a
+    Redacted_string.  Text which matches none is literal text.
+
+    Parameters:  
+      **text** (str) - the string to search
+
+    Returns:  
+      the Redacted_string for each marker found, in the order found
+    """
+    redacted_strings = self.redacted_strings
+    found = []
+    covered = []
+    for redacted_string in redacted_strings:
+      marker = redacted_string.get("marker", None)
+      if(marker is None or marker == ""):
+        continue
+      position = text.find(marker)
+      while(position >= 0):
+        found.append((position, redacted_string))
+        covered.append((position, position + len(marker)))
+        position = text.find(marker, position + len(marker))
+
+    by_ref = {redacted_string.get("ref", None): redacted_string
+      for redacted_string in redacted_strings if(redacted_string.get("marker", None) in (None, ""))}
+    for match in re.finditer(re.escape(Vcon.REDACTED_REF_PREFIX) + r"(\d{1,5})", text):
+      if(any([start <= match.start() < end for start, end in covered])):
+        continue
+      digits = match.group(1)
+      for length in range(len(digits), 0, -1):
+        redacted_string = by_ref.get(int(digits[:length]), None)
+        if(redacted_string is not None):
+          found.append((match.start(), redacted_string))
+          break
+
+    return([redacted_string for position, redacted_string in sorted(found, key = lambda item: item[0])])
 
 
   @tag_vcon_references
