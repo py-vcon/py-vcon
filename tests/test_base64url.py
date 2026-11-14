@@ -43,7 +43,8 @@ def test_inline_attachment_base64url_body():
   body = b"\x89PNG\r\n\x1a\n\xfb\xff"
   v = vcon.Vcon()
   v.set_party_parameter("tel", "+15551110000")
-  index = v.add_attachment_inline(body, "2022-06-21T13:53:26-04:00", 0, "image/png", "a.png")
+  v.add_session()
+  index = v.add_attachment_inline(body, "2022-06-21T13:53:26-04:00", 0, "image/png", "a.png", session = 0)
   attachment = v.attachments[index]
   assert(attachment["encoding"] == "base64url")
   assert(attachment["body"] == "iVBORw0KGgr7_w")

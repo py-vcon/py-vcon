@@ -2882,10 +2882,14 @@ class Vcon():
     sent_time : typing.Union[str, int, float, datetime.datetime],
     party : int,
     media_type : typing.Union[str, None] = None,
-    file_name : typing.Union[str, None] = None
+    file_name : typing.Union[str, None] = None,
+    dialog : typing.Union[int, None] = None,
+    session : typing.Union[int, typing.List[int], None] = None,
+    purpose : typing.Union[str, None] = None
     ) -> int:
     """
-    Add an attachment object for the given file body
+    Add an attachment object for the given file body.  The attachment must
+    reference a Dialog Object, Session Object(s) or both.
 
     Parameters:  
     **body** (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).  
@@ -2894,17 +2898,42 @@ class Vcon():
                containing epoch time (since 1970) in seconds.  
     **party** (int): party index of the sender  
     **media_type** (str): media type of the recording  
-    **file_name** (str): file name of the recording (optional)
+    **file_name** (str): file name of the recording (optional)  
+    **dialog** (int): index of the Dialog Object the attachment is part of (optional)  
+    **session** (int, List[int]): index or indices of the Session Object(s) the attachment
+               is related to (optional, written as given)  
+    **purpose** (str): text describing what the attachment is for (optional)
 
     Returns:  
     (int) index of the added attachment
+
+    Raises AttributeError if neither dialog nor session is given, or if the
+    party, dialog or a session does not exist.
     """
 
     self._attempting_modify()
 
+    if(dialog is None and session is None):
+      raise AttributeError("an attachment must reference a dialog, a session or both")
+    self._check_object_index(Vcon.PARTIES, party)
+    if(dialog is not None):
+      self._check_object_index(Vcon.DIALOG, dialog)
+    if(session is not None):
+      session_list = session if isinstance(session, list) else [session]
+      if(len(session_list) == 0):
+        raise AttributeError("session must reference at least one Session Object")
+      for session_index in session_list:
+        self._check_object_index(Vcon.SESSIONS, session_index)
+
     new_attachment: typing.Dict[str, typing.Any] = {}
+    if(purpose is not None):
+      new_attachment['purpose'] = purpose
     new_attachment['start'] = vcon.utils.cannonize_date(sent_time)
     new_attachment['party'] = party
+    if(dialog is not None):
+      new_attachment['dialog'] = dialog
+    if(session is not None):
+      new_attachment['session'] = session
     if(media_type is not None and
       media_type != ""):
       new_attachment['mediatype'] = media_type

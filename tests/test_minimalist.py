@@ -269,6 +269,7 @@ def test_attachments(two_party_tel_vcon: vcon.Vcon):
   file_name = "tests/bar.py"
   now = time.time()
 
+  session_index = two_party_tel_vcon.add_session()
   with open(file_name, "rt") as file_handle:
     body_bytes = file_handle.read()
     attachment_index = two_party_tel_vcon.add_attachment_inline(
@@ -276,7 +277,8 @@ def test_attachments(two_party_tel_vcon: vcon.Vcon):
       now,
       0,
       vcon.Vcon.MEDIATYPE_TEXT_PLAIN,
-      os.path.basename(file_name)
+      os.path.basename(file_name),
+      session = session_index
       )
 
   assert(attachment_index == 0)

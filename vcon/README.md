@@ -145,10 +145,11 @@ Return: none
 
 ### add_attachment_inline
 
-**add_attachment_inline**(self, body: 'bytes', sent_time: 'typing.Union[str, int, float, datetime.datetime]', party: 'int', media_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None) -> 'int'
+**add_attachment_inline**(self, body: 'bytes', sent_time: 'typing.Union[str, int, float, datetime.datetime]', party: 'int', media_type: 'typing.Union[str, None]' = None, file_name: 'typing.Union[str, None]' = None, dialog: 'typing.Union[int, None]' = None, session: 'typing.Union[int, typing.List[int], None]' = None, purpose: 'typing.Union[str, None]' = None) -> 'int'
 
 
-Add an attachment object for the given file body
+Add an attachment object for the given file body.  The attachment must
+reference a Dialog Object, Session Object(s) or both.
 
 Parameters:  
 **body** (bytes): bytes for the audio or video recording (e.g. wave or MP3 file).  
@@ -157,10 +158,17 @@ Parameters:
            containing epoch time (since 1970) in seconds.  
 **party** (int): party index of the sender  
 **media_type** (str): media type of the recording  
-**file_name** (str): file name of the recording (optional)
+**file_name** (str): file name of the recording (optional)  
+**dialog** (int): index of the Dialog Object the attachment is part of (optional)  
+**session** (int, List[int]): index or indices of the Session Object(s) the attachment
+           is related to (optional, written as given)  
+**purpose** (str): text describing what the attachment is for (optional)
 
 Returns:  
 (int) index of the added attachment
+
+Raises AttributeError if neither dialog nor session is given, or if the
+party, dialog or a session does not exist.
 
 
 

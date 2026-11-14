@@ -228,6 +228,7 @@ def do_in_zoom(
   start = None
   duration = None
   chatfile = None
+  attachment_files = []
   for rec_file in args.zoomdir[0].glob("*"):
     filebase = os.path.basename(rec_file)
     file_ext = rec_file.suffix
@@ -274,17 +275,9 @@ def do_in_zoom(
       # need to skip until we have start and end to the recording
       chatfile = rec_file
 
-    # All other files are attachments
+    # All other files are attachments, added once the recording start is known
     else:
-      with open(rec_file, "rb") as attachment_handle:
-        body_bytes = attachment_handle.read()
-        in_vcon.add_attachment_inline(
-          body_bytes,
-          start,
-          -1,
-          vcon.Vcon.get_media_type(filebase),
-          filebase
-          )
+      attachment_files.append((rec_file, filebase))
 
   if(chatfile is not None):
     with open(chatfile, "r") as chatfile_handle:
@@ -309,6 +302,21 @@ def do_in_zoom(
           0,
           sender_indices[0],
           vcon.Vcon.MEDIATYPE_TEXT_PLAIN,
+          session = session
+          )
+
+  # The party which distributed the files is not known, an empty Party Object stands for it
+  if(len(attachment_files) > 0):
+    unknown_party = in_vcon.add_party({})
+    for rec_file, filebase in attachment_files:
+      with open(rec_file, "rb") as attachment_handle:
+        body_bytes = attachment_handle.read()
+        in_vcon.add_attachment_inline(
+          body_bytes,
+          start,
+          unknown_party,
+          vcon.Vcon.get_media_type(filebase),
+          filebase,
           session = session
           )
 

@@ -54,7 +54,7 @@ def make_vcon() -> vcon.Vcon:
   v.add_session()
   v.add_session_reference(0, 1, "child")
   v.add_join_event(START, 0, 1)
-  v.add_attachment_inline(b"notes", START, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_attachment_inline(b"notes", START, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, dialog = 0)
   v.add_analysis(0, "summary", "a summary", "test_vendor", None, "none")
   vcon_dict = v.dumpd()
   vcon_dict["parties"][0]["civicaddress"] = {"country": "US", "a1": "MA"}
