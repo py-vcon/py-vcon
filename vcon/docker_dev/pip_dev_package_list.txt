@@ -1,6 +1,7 @@
 # Dev stuff:
 build
 flake8
+jsonschema
 mypy
 pylint
 pytest

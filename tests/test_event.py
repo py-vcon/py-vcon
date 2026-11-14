@@ -4,6 +4,7 @@
 import logging
 import pytest
 import vcon
+import tests.common_utils
 
 
 START = "2022-06-21T13:53:26-04:00"
@@ -34,6 +35,8 @@ def test_add_party_event():
   assert(v.add_event("drop", START, [0], 1, dialog = 0) == 1)
   assert(v.events[1]["sessions"] == [0])
   assert(v.events[1]["dialog"] == 0)
+  v.set_uuid("example.com")
+  tests.common_utils.assert_valid_vcon(v.dumpd())
 
 
 def test_event_multiple_sessions():
@@ -46,6 +49,8 @@ def test_key_event():
   v = make_vcon()
   v.add_event("keydown", START, 0, 0, button = "5")
   assert(v.events[0]["button"] == "5")
+  v.set_uuid("example.com")
+  tests.common_utils.assert_valid_vcon(v.dumpd())
 
   with pytest.raises(AttributeError, match = "button is required"):
     v.add_event("keyup", START, 0, 0)
@@ -63,6 +68,8 @@ def test_transfer_events():
   assert(len(v.events) == 4)
   assert(list(v.events[1].keys()) ==
     ["type", "time", "sessions", "party", "transferee", "transfer_target", "consultation", "target_session"])
+  v.set_uuid("example.com")
+  tests.common_utils.assert_valid_vcon(v.dumpd())
 
   with pytest.raises(AttributeError, match = "transferee is required"):
     v.add_event("blind-transfer", START, 0, 1, transfer_target = 2, target_session = 2)

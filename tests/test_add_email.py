@@ -3,6 +3,7 @@
 import os
 import vcon
 import pytest
+import tests.common_utils
 
 
 SMTP_MESSAGE_W_IMAGE_FILE_NAME = "tests/email_acct_prob_bob_image.txt"
@@ -50,6 +51,7 @@ async def test_add_email_multipart():
   assert(len(out_vcon.dialog[0]["body"]) == 2048)
   assert(out_vcon.dialog[0]["encoding"] is None or
     out_vcon.dialog[0]["encoding"].lower() == "none")
+  tests.common_utils.assert_valid_vcon(out_vcon.dumpd())
   # TODO: fix:
   #assert(len(out_vcon.attachments) == 1)
   #assert(out_vcon.attachments[0]["mediatype"] == vcon.Vcon.MEDIATYPE_IMAGE_PNG)

@@ -21,3 +21,6 @@ server/.vscode
 dump.rdb
 .data
 tmp
+
+# test fixtures fetched on first use (vCon JSON Schema, draft examples)
+tests/.cache

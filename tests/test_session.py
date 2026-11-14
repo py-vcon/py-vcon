@@ -7,6 +7,7 @@ import warnings
 import cbor2
 import pytest
 import vcon
+import tests.common_utils
 
 
 START_1 = "2022-06-21T13:53:26-04:00"
@@ -111,6 +112,8 @@ def test_add_dialog_creates_session():
   assert(dialog_index == 3)
   assert(len(v.sessions) == 4)
   assert(v.sessions[3]["dialog"] == [3])
+  v.set_uuid("example.com")
+  tests.common_utils.assert_valid_vcon(v.dumpd())
 
 
 def test_add_dialog_to_given_session():
@@ -124,6 +127,8 @@ def test_add_dialog_to_given_session():
   assert(v.sessions[0]["parties"] == [0, 1])
   assert(v.sessions[0]["start"] == START_1_UTC)
   assert(v.sessions[0]["duration"] == 34)
+  v.set_uuid("example.com")
+  tests.common_utils.assert_valid_vcon(v.dumpd())
 
 
 def test_add_dialog_invalid_session_does_not_modify():
@@ -454,6 +459,8 @@ def test_email_thread_one_session(caplog):
   assert(len(v.sessions) == 1)
   assert(v.sessions[0]["parties"] == [0, 1])
   assert(v.sessions[0]["dialog"] == [0, 1])
+  v.set_uuid("example.com")
+  tests.common_utils.assert_valid_vcon(v.dumpd())
 
 
 def test_email_cc_receivers_bcc_ignored():
@@ -462,6 +469,8 @@ def test_email_cc_receivers_bcc_ignored():
   assert(len(v.parties) == 3)
   assert(v.dialog[0]["parties"] == [0])
   assert(v.sessions[0]["parties"] == [0, 1, 2])
+  v.set_uuid("example.com")
+  tests.common_utils.assert_valid_vcon(v.dumpd())
 
 
 def test_email_receivers_change_new_session(caplog):
@@ -474,6 +483,8 @@ def test_email_receivers_change_new_session(caplog):
   assert(v.sessions[0]["dialog"] == [0])
   assert(v.sessions[1]["dialog"] == [1])
   assert(v.sessions[1]["parties"] == [1, 0, 2])
+  v.set_uuid("example.com")
+  tests.common_utils.assert_valid_vcon(v.dumpd())
 
 
 def test_email_given_session():
