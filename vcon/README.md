@@ -105,20 +105,30 @@ The following categories of methods are implemented on the Vcon class.
 
 ### add_analysis
 
-**add_analysis**(self, dialog_index: 'typing.Union[int, typing.List[int]]', analysis_type: 'str', body: 'typing.Union[str, None]' = None, vendor: 'typing.Union[str, None]' = None, schema: 'typing.Union[str, None]' = None, encoding: 'str' = 'json', **optional_parameters) -> 'None'
+**add_analysis**(self, dialog_index: 'typing.Union[int, typing.List[int], None]', analysis_type: 'str', body: 'typing.Union[str, None]' = None, vendor: 'typing.Union[str, None]' = None, schema: 'typing.Union[str, None]' = None, encoding: 'str' = 'json', sessions: 'typing.Union[int, typing.List[int], None]' = None, attachment: 'typing.Union[int, typing.List[int], None]' = None, analysis: 'typing.Union[int, typing.List[int], None]' = None, **optional_parameters) -> 'int'
 
 
-Add a generic analysis for the indicated dialog.
+Add a generic analysis for the indicated dialog(s), session(s), attachment(s)
+or other analysis.
 
 Parameters:  
-**dialog_index** (Union[int, list[int]]): index or list of indices to the dialog in the vCon dialog
-  list that this analysis was generated from.  
+**dialog_index** (Union[int, list[int], None]): index or list of indices to the dialog in the vCon dialog
+  list that this analysis was generated from, None if it was not generated from dialogs.  
 **vendor** (str): string token for the vendor of the audio to text transcription service  
 **schema** (str): schema label for the transcription data.  Used to identify data format of the transcription
               for vendors that have more than one format or version.  
+**sessions** (Union[int, list[int]]): index or indices of the Session Objects analysed (optional)  
+**attachment** (Union[int, list[int]]): index or indices of the Attachment Objects analysed (optional)  
+**analysis** (Union[int, list[int]]): index or indices of the existing Analysis Objects analysed
+  (optional).  An Analysis Object may not reference itself.  
 **optional_parameters** (dict[str, Any]) - additional parameters to add to the analysis object.
 
-Return: none
+A warning is logged if none of dialog_index, sessions, attachment and analysis
+is given, as an Analysis Object SHOULD reference what it was generated from.
+
+Return: index of the new Analysis Object
+
+Raises AttributeError if an index does not exist.
 
 
 

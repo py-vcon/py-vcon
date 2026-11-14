@@ -476,7 +476,7 @@ def test_add_analysis_optional_parameters():
   """ add_analysis registers extensions for its optional parameters """
   a_vcon = make_vcon()
   a_vcon.add_analysis(
-    0,
+    None,
     "summary",
     "a summary",
     "test_vendor",

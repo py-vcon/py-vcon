@@ -208,7 +208,8 @@ class JinjaReport(py_vcon_server.processor.VconProcessor):
         elif(num_dialogs == 1):
           dialog_index = 0
         else:
-          dialog_index = 0
+          # no dialogs to reference
+          dialog_index = None
 
       # Build optional parameters for add_analysis
       extra_params = {}

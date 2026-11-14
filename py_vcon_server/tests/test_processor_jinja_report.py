@@ -195,6 +195,31 @@ async def test_jinja_report_analysis_output():
 
 
 # ============================================================
+#  Test: analysis of a vCon with no dialogs
+# ============================================================
+@pytest.mark.asyncio
+async def test_jinja_report_analysis_no_dialogs():
+  """ With no dialogs and no explicit index, the analysis references no dialog """
+  v = make_1_dialog_vcon()
+  v._vcon_dict["dialog"] = []
+  v._vcon_dict["sessions"] = []
+
+  proc_input = py_vcon_server.processor.VconProcessorIO(VCON_STORAGE)
+  await proc_input.add_vcon(v, "fake_lock", False)
+
+  jinja_proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("jinja_report")
+  jinja_options = jinja_proc_inst.processor_options_class()(
+      template = "Report",
+      analysis_type = "report"
+    )
+  proc_output = await jinja_proc_inst.process(proc_input, jinja_options)
+
+  out_vcon = await proc_output.get_vcon(0)
+  assert(len(out_vcon.analysis) == 1)
+  assert("dialog" not in out_vcon.analysis[0])
+
+
+# ============================================================
 #  Test: analysis with default dialog index (all dialogs)
 # ============================================================
 @pytest.mark.asyncio
