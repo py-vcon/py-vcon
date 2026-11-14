@@ -351,6 +351,26 @@ class VconDict(VconAttribute):
     super().__init__(doc = doc)
     self._type_name = "Dict"
 
+class VconDeprecatedDict(VconDict):
+  """ descriptor for a deprecated Dict attribute, which names its replacement """
+
+  def __init__(self, replacement : str, doc : typing.Union[str, None] = None):
+    super().__init__(doc = doc)
+    self._replacement = replacement
+
+  def __get__(self, instance_object, class_type = None):
+    if(instance_object is None):
+      return(self)
+
+    warnings.simplefilter('always', DeprecationWarning)
+    warnings.warn(
+      "the {} attribute is deprecated, use {}".format(self.name, self._replacement),
+      category = DeprecationWarning,
+      stacklevel = 2)
+    warnings.simplefilter('default', DeprecationWarning)
+    return(super().__get__(instance_object, class_type))
+
+
 class VconDictList(VconAttribute):
   """ descriptor for Lists of dicts in vcon """
 
@@ -511,6 +531,9 @@ class Vcon():
   CRITICAL = "critical"
   UUID = "uuid"
   SUBJECT = "subject"
+  REDACTED_FROM = "redacted_from"
+  AMENDED_FROM = "amended_from"
+  # vCon 0.4.0 names of redacted_from and amended_from
   REDACTED = "redacted"
   AMENDED = "amended"
   GROUP = "group"
@@ -547,8 +570,13 @@ class Vcon():
   created_at = VconString(doc = "vCon creation date string attribute")
   subject = VconString(doc = "vCon subject string attribute")
 
-  redacted = VconDict(doc = "redacted Dict for reference or inclusion of less redacted signed or encrypted version of this vCon")
-  amended = VconDict(doc = "amended Dict for reference or includsion of signed or encrypted vCon to which this vCon amends data")
+  redacted_from = VconDict(doc = "Redacted_from Object Dict referencing the less redacted version of this vCon")
+  amended_from = VconDict(doc = "Amended_from Object Dict referencing the prior version of this vCon, to which this vCon adds data")
+
+  redacted = VconDeprecatedDict("redacted_from",
+    doc = "deprecated vCon 0.4.0 redacted Dict of a loaded vCon, use redacted_from")
+  amended = VconDeprecatedDict("amended_from",
+    doc = "deprecated vCon 0.4.0 amended Dict of a loaded vCon, use amended_from")
 
   group = VconDictList(doc = "List of Dicts referencing or including other vCons to be aggregated by this vCon")
   parties = VconDictList(doc = "List of Dicts, one for each party to this conversation")
@@ -2965,13 +2993,13 @@ class Vcon():
     # TODO: would be better not to deep copy the dict
     vcon_dict = self.dumpd(False, True) # deep copy as we modify the copy and do not want this to be permient
 
-    # Iterate body parameters in redacted and amended
-    for reference in [Vcon.REDACTED, Vcon.AMENDED]:
+    # Iterate body parameters in redacted_from and amended_from (and their 0.4.0 names)
+    for reference in [Vcon.REDACTED_FROM, Vcon.AMENDED_FROM, Vcon.REDACTED, Vcon.AMENDED]:
       # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
       if(reference in vcon_dict and
-          Vcon.VconBase64Bytes.isBase64Object(vcon_dict[Vcon.REDACTED])
+          Vcon.VconBase64Bytes.isBase64Object(vcon_dict[reference])
         ):
-        Vcon.VconBase64Bytes.objectizeBase64Object(vcon_dict["redacted"])
+        Vcon.VconBase64Bytes.objectizeBase64Object(vcon_dict[reference])
 
     # Iterate body parameters in objects in group, parties, dialog, attachments and analysis arrays
     for object_array_name in [Vcon.GROUP, Vcon.DIALOG, Vcon.ATTACHMENTS, Vcon.ANALYSIS]:
@@ -3306,8 +3334,8 @@ class Vcon():
       # Check for CBOR tags that need to be replaced
       # This is not easily done with hooks int the CBOR parser as we need to change the body and the encoding parameters.
 
-      # Iterate body parameters in redacted and amended
-      for reference in [Vcon.REDACTED, Vcon.AMENDED]:
+      # Iterate body parameters in redacted_from and amended_from (and their 0.4.0 names)
+      for reference in [Vcon.REDACTED_FROM, Vcon.AMENDED_FROM, Vcon.REDACTED, Vcon.AMENDED]:
         # change the base64 encoded bodies to an object so that it will be tagged and change the encoding label to "binary"
         if(reference in vcon_dict and
            "body" in vcon_dict[reference] and
@@ -4027,9 +4055,113 @@ class Vcon():
 
 
   @tag_vcon_references
+  def set_redacted_from(
+    self,
+    uuid : typing.Union[str, None],
+    redaction_type : str,
+    url : typing.Union[str, None] = None,
+    content_hash : typing.Union[str, typing.List[str], None] = None
+    ) -> None:
+    """
+    Set/replace the Redacted_from Object, which references the less redacted
+    version of this vCon.
+
+    Parameters:  
+      **uuid** (str) - the UUID of the less redacted vCon.  None if it is not
+               available.  
+      **redaction_type** (str) - text describing the redaction, for example the type of
+               information that was redacted  
+      **url** (str) - URL from which the less redacted vCon may be retrieved (optional)  
+      **content_hash** (str, List[str]) - content hash(es) of the vCon at url (required with url)
+
+    Returns:  None
+
+    Raises AttributeError if url is given without content_hash, or if this
+    vCon has an amended_from (or 0.4.0 amended) parameter, which is mutually
+    exclusive with redacted_from.
+    """
+    self._attempting_modify()
+    self._check_vcon_reference(Vcon.REDACTED_FROM, url, content_hash, [Vcon.AMENDED_FROM, Vcon.AMENDED])
+
+    new_redacted_from: typing.Dict[str, typing.Any] = {}
+    if(uuid is not None):
+      new_redacted_from["uuid"] = uuid
+    new_redacted_from["type"] = redaction_type
+    self._set_vcon_reference(Vcon.REDACTED_FROM, Vcon.REDACTED, new_redacted_from, url, content_hash)
+
+
+  @tag_vcon_references
+  def set_amended_from(
+    self,
+    uuid : typing.Union[str, None],
+    url : typing.Union[str, None] = None,
+    content_hash : typing.Union[str, typing.List[str], None] = None
+    ) -> None:
+    """
+    Set/replace the Amended_from Object, which references the prior version
+    of this vCon, to which this vCon adds data.
+
+    Parameters:  
+      **uuid** (str) - the UUID of the prior vCon version (may be None if url is given)  
+      **url** (str) - URL from which the prior vCon version may be retrieved (optional)  
+      **content_hash** (str, List[str]) - content hash(es) of the vCon at url (required with url)
+
+    Returns:  None
+
+    Raises AttributeError if neither uuid nor url is given, if url is given
+    without content_hash, or if this vCon has a redacted_from (or 0.4.0
+    redacted) parameter, which is mutually exclusive with amended_from.
+    """
+    self._attempting_modify()
+    if(uuid is None and url is None):
+      raise AttributeError("amended_from needs a uuid or a url")
+    self._check_vcon_reference(Vcon.AMENDED_FROM, url, content_hash, [Vcon.REDACTED_FROM, Vcon.REDACTED])
+
+    new_amended_from: typing.Dict[str, typing.Any] = {}
+    if(uuid is not None):
+      new_amended_from["uuid"] = uuid
+    self._set_vcon_reference(Vcon.AMENDED_FROM, Vcon.AMENDED, new_amended_from, url, content_hash)
+
+
+  def _check_vcon_reference(
+    self,
+    name : str,
+    url : typing.Union[str, None],
+    content_hash : typing.Union[str, typing.List[str], None],
+    exclusive_names : typing.List[str]
+    ) -> None:
+    """ Raise AttributeError if url has no content_hash or a mutually exclusive parameter is present """
+    if(url is not None and (content_hash is None or len(content_hash) == 0)):
+      raise AttributeError("{} url: {} needs a content_hash".format(name, url))
+
+    for exclusive_name in exclusive_names:
+      if(exclusive_name in self._vcon_dict):
+        raise AttributeError("{} cannot be set, the vCon has {}, which is mutually exclusive with it".format(
+          name, exclusive_name))
+
+
+  def _set_vcon_reference(
+    self,
+    name : str,
+    old_name : str,
+    reference : typing.Dict[str, typing.Any],
+    url : typing.Union[str, None],
+    content_hash : typing.Union[str, typing.List[str], None]
+    ) -> None:
+    """ Set the reference Object, replacing it and any member with its 0.4.0 name """
+    if(url is not None):
+      reference["url"] = url
+      reference["content_hash"] = content_hash
+
+    self._vcon_dict.pop(old_name, None)
+    self._vcon_dict[name] = reference
+
+
+  @tag_vcon_references
+  @deprecated("use set_redacted_from")
   def set_redacted(self, uuid: str, redacted_type: str) -> None:
     """
-    Set/replace the parameters of the Redacted Object for reference by UUID
+    Deprecated, use **set_redacted_from**, which this calls.
 
     Parameters:  
       **uuid** - the UUID of the less redacted form of this vCon
@@ -4037,33 +4169,21 @@ class Vcon():
 
     Returns:  None
     """
-
-    self._attempting_modify()
-
-    new_redacted = {}
-    new_redacted["type"] = redacted_type
-    new_redacted["uuid"] = uuid
-
-    self._vcon_dict[Vcon.REDACTED] = new_redacted
+    self.set_redacted_from(uuid, redacted_type)
 
 
   @tag_vcon_references
+  @deprecated("use set_amended_from")
   def set_amended(self, uuid: str) -> None:
     """
-    Set/replace the parameters of the Amended Object for reference by UUID
+    Deprecated, use **set_amended_from**, which this calls.
 
     Parameters:  
       **uuid** - the UUID of the vCon that this vCon amends content to
 
     Returns:  None
     """
-
-    self._attempting_modify()
-
-    new_amended = {}
-    new_amended["uuid"] = uuid
-
-    self._vcon_dict[Vcon.AMENDED] = new_amended
+    self.set_amended_from(uuid)
 
 
   @tag_vcon_references

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit tests for signing filter plugin """
 import pytest
 import json
@@ -111,8 +111,7 @@ async def test_sign_2party(two_party_tel_vcon : vcon.Vcon) -> None:
     pass
 
   amendable_vcon = await deserialized_signed_vcon.create_amended({})
-  # print("amended: {}".format(amendable_vcon.amended))
+  # print("amended_from: {}".format(amendable_vcon.amended_from))
   assert(amendable_vcon.uuid != deserialized_signed_vcon.uuid)
-  assert("uuid" in amendable_vcon.amended)
-  assert(amendable_vcon.amended["uuid"] == deserialized_signed_vcon.uuid)
+  assert(amendable_vcon.amended_from == {"uuid": deserialized_signed_vcon.uuid})
 

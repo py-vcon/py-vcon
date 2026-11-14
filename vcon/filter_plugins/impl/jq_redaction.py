@@ -97,6 +97,9 @@ class JqRedaction(vcon.filter_plugins.FilterPlugin):
 
     redacted_uuid = query_result.get("uuid", None)
 
+    # The redacted vCon references only the vCon it was redacted from
+    for reference in [vcon.Vcon.REDACTED_FROM, vcon.Vcon.AMENDED_FROM, vcon.Vcon.REDACTED, vcon.Vcon.AMENDED]:
+      query_result.pop(reference, None)
     out_vcon.loadd(query_result)
     # cannot use same UUID
     if(redacted_uuid in (None, in_vcon.uuid)):
@@ -106,7 +109,7 @@ class JqRedaction(vcon.filter_plugins.FilterPlugin):
 
     # Set the redacted object and reference the original, less redacted vCon
     redaction_type_label = options.redaction_type_label
-    out_vcon.set_redacted(in_vcon.uuid, redaction_type_label)
+    out_vcon.set_redacted_from(in_vcon.uuid, redaction_type_label)
 
     return(out_vcon)
 

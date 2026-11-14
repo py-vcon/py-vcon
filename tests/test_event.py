@@ -190,7 +190,7 @@ def test_add_event_extension_type(event_extensions, caplog):
   v = make_vcon(2)
   with caplog.at_level(logging.WARNING):
     assert(v.add_event("test-paused", START, sessions = 0, party = 0, reason = "privacy") == 0)
-  assert(caplog.text == "")
+  assert([record for record in caplog.records if(record.levelno >= logging.WARNING)] == [])
   assert(v.events[0] == {"type": "test-paused", "time": START_UTC, "sessions": 0, "party": 0, "reason": "privacy"})
   assert(v.extensions == ["TEST_EVENTS"])
   assert("critical" not in v._vcon_dict)

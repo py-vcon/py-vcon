@@ -509,7 +509,8 @@ async def test_sign_pipeline(make_inline_audio_vcon: vcon.Vcon):
 
       assert(modified_vcon.uuid == UUID)
       assert(pipeline_out_dict["vcons"][1]["uuid"] != UUID)
-      assert(pipeline_out_dict["vcons"][1]["amended"]["uuid"] == UUID)
+      assert(pipeline_out_dict["vcons"][1]["amended_from"]["uuid"] == UUID)
+      assert("amended" not in pipeline_out_dict["vcons"][1])
       print("analysis keys: {}".format(pipeline_out_dict["vcons"][1]["analysis"][0].keys()))
       assert(pipeline_out_dict["vcons"][1]["analysis"][0]["vendor"] == "openai")
 

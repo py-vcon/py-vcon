@@ -251,7 +251,7 @@ def test_legacy_names(caplog):
     for object_name, name in legacy:
       assert(a_vcon.add_parameter_extension(object_name, name) == vcon.Vcon.PARAMETER_CORE)
       assert(vcon.parameter_registry.is_legacy(object_name, name)), name
-  assert(caplog.text == "")
+  assert([record for record in caplog.records if(record.levelno >= logging.WARNING)] == [])
   assert(vcon.parameter_registry.get_value_extension("Dialog", "type", "transfer") == vcon.Vcon.PARAMETER_CORE)
   assert(vcon.parameter_registry.is_legacy("Dialog->type", "transfer"))
   assert(not vcon.parameter_registry.is_legacy("Dialog", "type"))
@@ -415,7 +415,7 @@ def test_set_party_parameter_warnings(caplog):
   a_vcon = make_vcon()
   with caplog.at_level(logging.WARNING):
     a_vcon.set_party_parameter("tel", "+15551110000")
-  assert(caplog.text == "")
+  assert([record for record in caplog.records if(record.levelno >= logging.WARNING)] == [])
 
   with caplog.at_level(logging.WARNING):
     a_vcon.set_party_parameter("not_a_parameter", "a value", 0)
@@ -488,23 +488,22 @@ def test_add_analysis_optional_parameters():
 
 
 # ============================================================
-#  redacted no longer eagerly created
+#  redacted_from not eagerly created
 # ============================================================
 
-def test_redacted_absent_by_default():
-  """ a new vCon has no redacted parameter """
+def test_redacted_from_absent_by_default():
+  """ a new vCon has no redacted_from parameter """
   a_vcon = make_vcon()
 
-  assert(a_vcon.redacted is None)
-  assert(vcon.Vcon.REDACTED not in a_vcon._vcon_dict)
-  assert(vcon.Vcon.REDACTED not in a_vcon.dumpd())
+  assert(a_vcon.redacted_from is None)
+  assert(vcon.Vcon.REDACTED_FROM not in a_vcon._vcon_dict)
+  assert(vcon.Vcon.REDACTED_FROM not in a_vcon.dumpd())
 
 
-def test_set_redacted_still_works():
-  """ set_redacted assigns a fresh dict """
+def test_set_redacted_from_assigns_a_dict():
+  """ set_redacted_from assigns a fresh dict """
   a_vcon = make_vcon()
-  a_vcon.set_redacted("1234", "PII")
+  a_vcon.set_redacted_from("1234", "PII")
 
-  assert(a_vcon.redacted["uuid"] == "1234")
-  assert(a_vcon.redacted["type"] == "PII")
-
+  assert(a_vcon.redacted_from["uuid"] == "1234")
+  assert(a_vcon.redacted_from["type"] == "PII")

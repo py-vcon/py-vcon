@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit tests for text_pii_redactor processor """
 import pydantic
 import pytest
@@ -83,8 +83,7 @@ async def test_text_pii_redactor_processor() -> None:
   assert(out_redacted_vcon.dialog[0].get("body", None) is None)
   assert(out_redacted_vcon.dialog[0].get("url", None) is None)
 
-  assert(out_redacted_vcon.redacted["uuid"] == out_unredacted_vcon.uuid)
-  assert(out_redacted_vcon.redacted["type"] == redaction_type)
+  assert(out_redacted_vcon.redacted_from == {"uuid": out_unredacted_vcon.uuid, "type": redaction_type})
 
 
 @pytest.mark.asyncio
@@ -152,6 +151,5 @@ async def test_text_pii_redactor_processor_api() -> None:
     assert(out_redacted_vcon.dialog[0].get("body", None) is None)
     assert(out_redacted_vcon.dialog[0].get("url", None) is None)
 
-    assert(out_redacted_vcon.redacted["uuid"] == out_unredacted_vcon.uuid)
-    assert(out_redacted_vcon.redacted["type"] == redaction_type)
+    assert(out_redacted_vcon.redacted_from == {"uuid": out_unredacted_vcon.uuid, "type": redaction_type})
 

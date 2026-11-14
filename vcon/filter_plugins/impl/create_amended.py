@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ FilterPlugin for JWE encryption of vCon """
 import typing
 import pydantic
@@ -69,6 +69,11 @@ class AmendedFilterPlugin(vcon.filter_plugins.FilterPlugin):
     # Serialize unsigned, verified data, don't deep copy as
     # it will get desrialized in loadd
     vcon_dict = in_vcon.dumpd(False, False);
+    # The amended vCon references only the prior version it was created from.
+    # Copy the top level so that the input vCon is not changed.
+    vcon_dict = dict(vcon_dict)
+    for reference in [vcon.Vcon.REDACTED_FROM, vcon.Vcon.AMENDED_FROM, vcon.Vcon.REDACTED, vcon.Vcon.AMENDED]:
+      vcon_dict.pop(reference, None)
 
     out_vcon = vcon.Vcon()
     out_vcon.loadd(vcon_dict)
@@ -77,7 +82,7 @@ class AmendedFilterPlugin(vcon.filter_plugins.FilterPlugin):
     out_vcon.set_uuid("py-test.org", True)
 
     # Set amended properties for prior version of vCon
-    out_vcon.set_amended(in_vcon.uuid)
+    out_vcon.set_amended_from(in_vcon.uuid)
 
     return(out_vcon)
 

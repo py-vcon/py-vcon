@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 SIPez LLC.  All rights reserved.
+# Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Unit test for jq_redaction plugin """
 import vcon
 import pytest
@@ -42,12 +42,10 @@ async def test_jq_redaction():
 
   assert(len(redacted.attachments) == 0)
 
-  assert(redacted.redacted["uuid"] == unredacted.uuid)
+  assert(redacted.redacted_from == {"uuid": unredacted.uuid, "type": "Test Redaction"})
   assert(redacted.uuid != unredacted.uuid)
 
-  assert(unredacted.redacted is None or
-      unredacted.redacted == {}
-    )
+  assert(unredacted.redacted_from is None)
   assert(len(unredacted.dialog) == 1)
   assert(len(unredacted.analysis) == 3)
 

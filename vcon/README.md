@@ -57,7 +57,9 @@ The following categories of methods are implemented on the Vcon class.
  * Methods to reference other vCons from a vCon
    * [add_group_object](#add_group_object)
    * [set_amended](#set_amended)
+   * [set_amended_from](#set_amended_from)
    * [set_redacted](#set_redacted)
+   * [set_redacted_from](#set_redacted_from)
  * Methods to access or modify Vcon Meta Data
    * [add_parameter_extension](#add_parameter_extension)
    * [check_extensions](#check_extensions)
@@ -970,7 +972,7 @@ Returns:  None
 **set_amended**(self, uuid: 'str') -> 'None'
 
 
-Set/replace the parameters of the Amended Object for reference by UUID
+Deprecated, use **set_amended_from**, which this calls.
 
 Parameters:  
   **uuid** - the UUID of the vCon that this vCon amends content to
@@ -979,18 +981,63 @@ Returns:  None
 
 
 
+### set_amended_from
+
+**set_amended_from**(self, uuid: 'typing.Union[str, None]', url: 'typing.Union[str, None]' = None, content_hash: 'typing.Union[str, typing.List[str], None]' = None) -> 'None'
+
+
+Set/replace the Amended_from Object, which references the prior version
+of this vCon, to which this vCon adds data.
+
+Parameters:  
+  **uuid** (str) - the UUID of the prior vCon version (may be None if url is given)  
+  **url** (str) - URL from which the prior vCon version may be retrieved (optional)  
+  **content_hash** (str, List[str]) - content hash(es) of the vCon at url (required with url)
+
+Returns:  None
+
+Raises AttributeError if neither uuid nor url is given, if url is given
+without content_hash, or if this vCon has a redacted_from (or 0.4.0
+redacted) parameter, which is mutually exclusive with amended_from.
+
+
+
 ### set_redacted
 
 **set_redacted**(self, uuid: 'str', redacted_type: 'str') -> 'None'
 
 
-Set/replace the parameters of the Redacted Object for reference by UUID
+Deprecated, use **set_redacted_from**, which this calls.
 
 Parameters:  
   **uuid** - the UUID of the less redacted form of this vCon
   **redacted_type** - the reason or content that was redacted from the referenced vCon
 
 Returns:  None
+
+
+
+### set_redacted_from
+
+**set_redacted_from**(self, uuid: 'typing.Union[str, None]', redaction_type: 'str', url: 'typing.Union[str, None]' = None, content_hash: 'typing.Union[str, typing.List[str], None]' = None) -> 'None'
+
+
+Set/replace the Redacted_from Object, which references the less redacted
+version of this vCon.
+
+Parameters:  
+  **uuid** (str) - the UUID of the less redacted vCon.  None if it is not
+           available.  
+  **redaction_type** (str) - text describing the redaction, for example the type of
+           information that was redacted  
+  **url** (str) - URL from which the less redacted vCon may be retrieved (optional)  
+  **content_hash** (str, List[str]) - content hash(es) of the vCon at url (required with url)
+
+Returns:  None
+
+Raises AttributeError if url is given without content_hash, or if this
+vCon has an amended_from (or 0.4.0 amended) parameter, which is mutually
+exclusive with redacted_from.
 
 
 
