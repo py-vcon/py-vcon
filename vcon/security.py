@@ -7,10 +7,11 @@ import cryptography.hazmat.backends.openssl.backend
 import cryptography.x509
 #import re
 import base64
-import jose
+import jwcrypto.jwk
 import datetime
 import hsslms
 import hashlib
+import vcon.utils
 
 CERT_PARTIAL_PREFIX = "--BEGIN CERTIFICATE--"
 CERT_PARTIAL_SUFFIX = "--END CERTIFICATE--"
@@ -145,7 +146,10 @@ def load_pem_key(key_file: str) -> cryptography.hazmat.primitives.asymmetric.rsa
 
   return(private_key_object)
 
-def build_signing_jwk_from_pem_files(private_key_pem_file: str, cert_chain_pem_files: typing.List[str]) -> typing.Tuple[dict, dict]:
+def build_signing_jwk_from_pem_files(
+  private_key_pem_file: str,
+  cert_chain_pem_files: typing.List[str]
+  ) -> typing.Tuple[dict, jwcrypto.jwk.JWK]:
   """
   Read PEM files for pricate key and certificate chain all in PEM format and construct header and JWK for signing
 
@@ -157,98 +161,21 @@ def build_signing_jwk_from_pem_files(private_key_pem_file: str, cert_chain_pem_f
       first cert.  THe certificate authority root should be the last cert.
 
   Returns:
-    Tuple[dict, dict]: header, JWK
+    Tuple[dict, jwcrypto.jwk.JWK]: header, JWK
         - header appropriate for including in JWS including x5c and alg
-        - JWK including private key info for signing a JWS
+        - JWK including private key info for signing a JWS or decrypting a JWE
 
   """
   # Load the cert chain into a x5c compatible array
   x5c = load_x5c_from_pem_certs(cert_chain_pem_files)
 
-  algorithm = "RS256"
-
   header = {}
   header['x5c'] = x5c
-  header["alg"] = algorithm
+  header["alg"] = "RS256"
 
-  private_key_object = load_pem_key(private_key_pem_file)
-
-  # Only need the public key/object for the first/signing cert
-  cert_object = der_to_certs([x5c[0]])[0]
-
-  signing_key = {}
-  signing_key["kty"] = "RSA"
-  signing_key["use"] = "sig"
-  signing_key["alg"] = algorithm
-  signing_key["n"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().n)).decode('utf-8')
-  signing_key["e"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(cert_object.public_key().public_numbers().e)).decode('utf-8')
-  signing_key["d"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().d)).decode('utf-8')
-
-  # if missing, can be computed using:
-  # (p,p) = cryptography.hazmat.primitives.asymmetric.rsa.rsa_recover_prime_factors(n, e, d)
-  signing_key["p"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().p)).decode('utf-8')
-  signing_key["q"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().q)).decode('utf-8')
-
-  # if missing, can be computed using:
-  # cryptography.hazmat.primitives.asymmetric.rsa.rsa_crt_dmp1(d, p)
-  signing_key["dp"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().dmp1)).decode('utf-8')
-
-  # if missing, can be computed using:
-  # cryptography.hazmat.primitives.asymmetric.rsa.rsa_crt_dmq1(d, q)
-  signing_key["dq"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().dmq1)).decode('utf-8')
-
-  # if missing, can be computed using:
-  # cryptography.hazmat.primitives.asymmetric.rsa.rsa_crt_iqmp(p,q)
-  signing_key["qi"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(private_key_object.private_numbers().iqmp)).decode('utf-8')
+  signing_key = jwcrypto.jwk.JWK.from_pyca(load_pem_key(private_key_pem_file))
 
   return(header, signing_key)
-
-
-def jws_sign(
-  payload : dict,
-  signing_jwk : dict,
-  protected_header : dict
-  ) -> typing.Tuple[str, str, str]:
-  """
-  Sign the payload as a JWS (RFC7515) with the given protected header.
-
-  Unlike jose.jws.sign, no header parameters are added to the protected
-  header.  jose.jws.sign always adds a typ parameter, which is not defined
-  for vCon.  The protected header and payload are encoded in the same way
-  as jose.jws.sign encodes them.
-
-  Parameters:
-    payload (dict): the payload to be signed
-    signing_jwk (dict): JWK including the private key, as returned by
-      build_signing_jwk_from_pem_files
-    protected_header (dict): header parameters to be integrity protected.
-      Must include alg.
-
-  Returns:
-    Tuple[str, str, str]: base64url encoded protected header, payload and signature
-  """
-  algorithm = protected_header["alg"]
-
-  encoded_header = jose.utils.base64url_encode(json.dumps(
-    protected_header,
-    separators = (",", ":"),
-    sort_keys = True
-    ).encode("utf-8"))
-
-  encoded_payload = jose.utils.base64url_encode(json.dumps(
-    payload,
-    separators = (",", ":")
-    ).encode("utf-8"))
-
-  signing_input = encoded_header + b"." + encoded_payload
-  key = jose.jwk.construct(signing_jwk, algorithm)
-  encoded_signature = jose.utils.base64url_encode(key.sign(signing_input))
-
-  return(
-    encoded_header.decode("utf-8"),
-    encoded_payload.decode("utf-8"),
-    encoded_signature.decode("utf-8")
-    )
 
 
 def decode_jws_protected_header(protected : str) -> dict:
@@ -264,8 +191,7 @@ def decode_jws_protected_header(protected : str) -> dict:
   if(protected == ""):
     return({})
 
-  padding = "=" * (-len(protected) % 4)
-  return(json.loads(jose.utils.base64url_decode(bytes(protected + padding, "utf-8"))))
+  return(json.loads(vcon.utils.base64url_decode(protected)))
 
 
 def merge_jose_headers(
@@ -331,6 +257,78 @@ def check_jwe_headers(jwe_complete_serialization : dict) -> None:
     label = "recipient[{}]".format(recipient_index)
     merge_jose_headers(protected_header, recipient_header, label, "protected", "recipient")
     merge_jose_headers(unprotected_header, recipient_header, label, "unprotected", "recipient")
+
+
+def remove_jws_repeated_headers(signature : dict) -> dict:
+  """
+  Remove the header parameters of a JWS signature which are repeated in
+  the unprotected header and also in the protected header.
+
+  Signed vCons created by earlier versions of this package repeat alg and
+  x5c in both headers.  RFC7515 does not allow this and JOSE libraries
+  reject it.  Use merge_jose_headers first to check that the repeated values
+  are identical.
+
+  Parameters:
+    signature (dict): JWS signature with protected, header and signature members
+
+  Returns:
+    copy of the signature with the repeated parameters removed from header.
+    header is omitted if it becomes empty.
+  """
+  protected_header = decode_jws_protected_header(signature.get("protected", None) or "")
+  new_signature = dict(signature)
+  header = {name: value for name, value in (signature.get("header", None) or {}).items()
+    if(name not in protected_header)}
+  new_signature.pop("header", None)
+  if(len(header) > 0):
+    new_signature["header"] = header
+
+  return(new_signature)
+
+
+def remove_jwe_repeated_headers(jwe_complete_serialization : dict) -> dict:
+  """
+  Remove the header parameters of a JWE which are repeated in the unprotected
+  header or a recipient header and also in a header with higher precedence
+  (protected, then unprotected).
+
+  Encrypted vCons created by earlier versions of this package repeat enc in
+  the protected, unprotected and recipient headers.  RFC7516 does not allow
+  this and JOSE libraries reject it.  Use check_jwe_headers first to check
+  that the repeated values are identical.
+
+  Parameters:
+    jwe_complete_serialization (dict): JWE General JSON Serialization
+
+  Returns:
+    copy of the JWE with the repeated parameters removed.  unprotected and
+    recipient header members are omitted if they become empty.
+  """
+  protected_header = decode_jws_protected_header(jwe_complete_serialization.get("protected", None) or "")
+  new_jwe = dict(jwe_complete_serialization)
+
+  unprotected_header = {name: value for name, value in
+    (jwe_complete_serialization.get("unprotected", None) or {}).items()
+    if(name not in protected_header)}
+  new_jwe.pop("unprotected", None)
+  if(len(unprotected_header) > 0):
+    new_jwe["unprotected"] = unprotected_header
+
+  new_recipients = []
+  for recipient in jwe_complete_serialization.get("recipients", None) or []:
+    new_recipient = dict(recipient)
+    recipient_header = {name: value for name, value in (recipient.get("header", None) or {}).items()
+      if(name not in protected_header and name not in unprotected_header)}
+    new_recipient.pop("header", None)
+    if(len(recipient_header) > 0):
+      new_recipient["header"] = recipient_header
+    new_recipients.append(new_recipient)
+
+  if("recipients" in jwe_complete_serialization):
+    new_jwe["recipients"] = new_recipients
+
+  return(new_jwe)
 
 
 def verify_cert_chain(cert_chain : typing.List[cryptography.x509.Certificate]) -> None:
@@ -411,83 +409,19 @@ def verify_cert(cert_to_verify : cryptography.x509.Certificate, issuer_cert : cr
 
 # =============================== JOSE JWE Helper Functions ===========================
 
-def build_encryption_jwk_from_pem_file(cert_pem_file: str) -> dict:
+def build_encryption_jwk_from_pem_file(cert_pem_file: str) -> jwcrypto.jwk.JWK:
   """
-  Build a Jose JWK from a PEM file.
+  Build a JWK from the public key in a certificate PEM file.
 
   Parameters:
-    cert_pem_file (str) - file name or PEM string containing the PEM key
+    cert_pem_file (str) - file name or PEM string containing the PEM certificate
 
   Returns:
     JWK useful for JWE encryption
   """
-  if(isinstance(cert_pem_file, str) and
-     cert_pem_file.find(CERT_PARTIAL_PREFIX) >= 0 and
-     cert_pem_file.find(CERT_PARTIAL_SUFFIX) >= 0):
-    pem_string = cert_pem_file
-  else:
-    pem_string = load_string_from_file(cert_pem_file)
+  cert_object = load_pem_cert(cert_pem_file)[0]
 
-  public_key_object = cryptography.x509.load_pem_x509_certificate(bytes(pem_string, "utf-8"))
-
-  #algorithm = "RS256"
-  #algorithm = "RSA1_5"
-  algorithm = "RSA-OAEP"
-
-  encryption_key = {}
-  encryption_key["kty"] = "RSA"
-  encryption_key["alg"] = algorithm
-  encryption_key["n"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(public_key_object.public_key().public_numbers().n)).decode('utf-8')
-  encryption_key["e"] = jose.utils.base64url_encode(jose.utils.long_to_bytes(public_key_object.public_key().public_numbers().e)).decode('utf-8')
-  encryption_key["kid"] = public_key_object.subject.get_attributes_for_oid(cryptography.x509.NameOID.COMMON_NAME)[0].value
-
-  return(encryption_key)
-
-def jwe_compact_token_to_complete_serialization(jwe_token : str, enc : str = "", x5c : typing.List[str] = []) -> dict:
-  """
-  Convert a JWE dot separated token to a JWE complete serialization
-
-  Returns:
-    dict containing Complete JWE JSON Serialization Representation
-  """
-
-  (protected, content_encrypted_key, iv, ciphertext, authentication_tag) = jwe_token.split('.')
-  #(header, encrypted_key, recip_iv, recip_ciphertext, recip_authentication_tag) = jwe_token.split('.')
-
-  jwe_complete_serialization = {}
-  jwe_complete_serialization["protected"] = protected
-  jwe_complete_serialization["iv"] =  iv
-  jwe_complete_serialization["ciphertext"] =  ciphertext
-  jwe_complete_serialization["tag"] =  authentication_tag
-  jwe_complete_serialization["recipients"] =  []
-
-  recipient = {}
-
-  header = {}
-  if(len(enc)):
-    header['enc'] = enc
-  if(len(x5c)):
-    header['x5c'] = x5c
-  if(len(header)):
-    recipient["header"] = header
-
-  recipient["encrypted_key"] = content_encrypted_key
-  jwe_complete_serialization["recipients"].append(recipient)
-
-  return(jwe_complete_serialization)
-
-def jwe_complete_serialization_to_compact_token(jwe_complete_serialization : dict) -> str:
-
-  jwe_vector = []
-  jwe_vector.append(jwe_complete_serialization["protected"])
-  jwe_vector.append(jwe_complete_serialization["recipients"][0]["encrypted_key"])
-  jwe_vector.append(jwe_complete_serialization["iv"])
-  jwe_vector.append(jwe_complete_serialization["ciphertext"])
-  jwe_vector.append(jwe_complete_serialization["tag"])
-
-  jwe_compact_token = ".".join(jwe_vector)
-
-  return(jwe_compact_token)
+  return(jwcrypto.jwk.JWK.from_pyca(cert_object.public_key()))
 
 # =============================== SHA-512 Hash Helper Functions ===========================
 #                            SHA-512 Hash (RFC6234)
@@ -508,7 +442,7 @@ def sha_512_hash(data : bytes) -> str:
 
   hasher.update(data)
 
-  sig_hash = jose.utils.base64url_encode(hasher.digest()).decode('utf-8')
+  sig_hash = vcon.utils.base64url_encode(hasher.digest())
 
   #print("sha_512_hash: {}".format(sig_hash))
   return(sig_hash)
@@ -526,9 +460,9 @@ def lm_one_time_signature(data : bytes) -> typing.Tuple[str, str]:
   one_time_private_key = hsslms.LM_OTS_Priv(
     hsslms.LMOTS_ALGORITHM_TYPE.LMOTS_SHA256_N32_W8, os.urandom(16), 0, os.urandom(32))
 
-  signature = jose.utils.base64url_encode(one_time_private_key.sign(data)).decode('utf-8')
+  signature = vcon.utils.base64url_encode(one_time_private_key.sign(data))
 
-  public_key = jose.utils.base64url_encode(one_time_private_key.gen_pub().pubkey).decode('utf-8')
+  public_key = vcon.utils.base64url_encode(one_time_private_key.gen_pub().pubkey)
 
   #print("public_key: {}".format(public_key))
   #print("sig: {}".format(signature))
@@ -541,11 +475,11 @@ def verify_lm_one_time_signature(data : bytes, signature : str, public_key : str
 
   Raises: exceptions if the signature fails to verify
   """
-  public_key_bytes = jose.utils.base64url_decode(bytes(public_key, 'utf-8'))
+  public_key_bytes = vcon.utils.base64url_decode(public_key)
 
   public_key_object = hsslms.LM_OTS_Pub(public_key_bytes)
 
-  signature_bytes = jose.utils.base64url_decode(bytes(signature, 'utf-8'))
+  signature_bytes = vcon.utils.base64url_decode(signature)
 
   public_key_object.verify(data, signature_bytes)
 

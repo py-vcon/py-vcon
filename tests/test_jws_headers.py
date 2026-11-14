@@ -2,13 +2,17 @@
 """ Unit tests for the JWS header parameters of signed vCons """
 
 import json
-import jose.jws
-import jose.utils
+import subprocess
+import sys
+import cryptography.exceptions
+import jwcrypto.jws
 import pytest
 import vcon
 import vcon.security
+import vcon.utils
 
 CA_CERT = "certs/fake_ca_root.crt"
+CA2_CERT = "certs/fake_ca2_root.crt"
 DIVISION_CERT = "certs/fake_div.crt"
 GROUP_CERT = "certs/fake_grp.crt"
 GROUP_PRIVATE_KEY = "certs/fake_grp.key"
@@ -31,12 +35,15 @@ def make_0_4_0_signed_dict(v : vcon.Vcon) -> dict:
   header.
   """
   header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(GROUP_PRIVATE_KEY, CERT_CHAIN)
-  jws_token = jose.jws.sign(v.dumpd(), signing_jwk, headers = header, algorithm = signing_jwk["alg"])
-  protected_header, payload, signature = jws_token.split(".")
+  protected_header = dict(header)
+  protected_header["typ"] = "JWT"
+  jws = jwcrypto.jws.JWS(json.dumps(v.dumpd(), separators = (",", ":")).encode("utf-8"))
+  jws.add_signature(signing_jwk, None, json.dumps(protected_header, separators = (",", ":"), sort_keys = True))
+  flattened = json.loads(jws.serialize())
   header["uuid"] = v.uuid
   return({
-    "payload": payload,
-    "signatures": [{"header": header, "signature": signature, "protected": protected_header}]
+    "payload": flattened["payload"],
+    "signatures": [{"header": header, "signature": flattened["signature"], "protected": flattened["protected"]}]
     })
 
 
@@ -54,7 +61,7 @@ def test_signed_headers():
   assert(set(protected) & set(signature["header"]) == set())
 
   # payload is the unsigned vCon
-  payload = json.loads(jose.utils.base64url_decode(bytes(signed_dict["payload"] + "==", "utf-8")))
+  payload = json.loads(vcon.utils.base64url_decode(signed_dict["payload"]))
   assert(payload["uuid"] == v.uuid)
   assert(payload["sessions"][0]["dialog"] == [0])
 
@@ -95,19 +102,50 @@ def test_verify_differing_repeats_rejected():
     signed.verify([CA_CERT])
 
 
-def test_jws_sign():
-  header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(GROUP_PRIVATE_KEY, CERT_CHAIN)
-  protected, payload, signature = vcon.security.jws_sign({"a": 1}, signing_jwk, {"alg": "RS256"})
-  assert(vcon.security.decode_jws_protected_header(protected) == {"alg": "RS256"})
+def test_signed_payload_bytes():
+  """ protected header and payload are encoded exactly as before the switch to jwcrypto """
+  v = make_vcon()
+  unsigned_dict = v.dumpd()
+  v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
+  signed_dict = v.dumpd()
 
-  verification_jwk = {name: signing_jwk[name] for name in ("kty", "use", "alg", "n", "e")}
-  verified = jose.jws.verify(protected + "." + payload + "." + signature, verification_jwk, "RS256")
-  assert(json.loads(verified) == {"a": 1})
+  assert(set(signed_dict.keys()) == {"payload", "signatures"})
+  assert(len(signed_dict["signatures"]) == 1)
+  assert(list(signed_dict["signatures"][0].keys()) == ["header", "signature", "protected"])
+  assert(signed_dict["signatures"][0]["protected"] == vcon.utils.base64url_encode(b'{"alg":"RS256"}'))
+  assert(vcon.utils.base64url_decode(signed_dict["payload"]) ==
+    json.dumps(unsigned_dict, separators = (",", ":")).encode("utf-8"))
+
+
+def test_verify_tampered_payload_rejected():
+  v = make_vcon()
+  v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
+  signed_dict = v.dumpd()
+  payload = json.loads(vcon.utils.base64url_decode(signed_dict["payload"]))
+  payload["parties"][0]["tel"] = "+15559990000"
+  signed_dict["payload"] = vcon.utils.base64url_encode(json.dumps(payload).encode("utf-8"))
+
+  signed = vcon.Vcon()
+  signed.loadd(signed_dict)
+  with pytest.raises(jwcrypto.jws.InvalidJWSSignature):
+    signed.verify([CA_CERT])
+  assert(signed._state == vcon.VconStates.UNVERIFIED)
+
+
+def test_verify_wrong_ca_rejected():
+  v = make_vcon()
+  v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
+
+  signed = vcon.Vcon()
+  signed.loadd(v.dumpd())
+  with pytest.raises(cryptography.exceptions.InvalidSignature):
+    signed.verify([CA2_CERT])
+  assert(signed._state == vcon.VconStates.UNVERIFIED)
 
 
 def test_decode_jws_protected_header():
   assert(vcon.security.decode_jws_protected_header("") == {})
-  encoded = jose.utils.base64url_encode(b'{"alg":"RS256"}').decode("utf-8")
+  encoded = vcon.utils.base64url_encode(b'{"alg":"RS256"}')
   assert(vcon.security.decode_jws_protected_header(encoded) == {"alg": "RS256"})
 
 
@@ -120,3 +158,29 @@ def test_merge_jose_headers():
 
   with pytest.raises(ValueError, match = "alg"):
     vcon.security.merge_jose_headers({"alg": "RS256"}, {"alg": "RS512"}, "test")
+
+
+def test_remove_jws_repeated_headers():
+  protected = vcon.utils.base64url_encode(b'{"alg":"RS256","x5c":["a"]}')
+  signature = {"protected": protected, "header": {"alg": "RS256", "x5c": ["a"], "uuid": "u"}, "signature": "s"}
+  assert(vcon.security.remove_jws_repeated_headers(signature) ==
+    {"protected": protected, "header": {"uuid": "u"}, "signature": "s"})
+  # the signature passed in is not changed
+  assert(signature["header"] == {"alg": "RS256", "x5c": ["a"], "uuid": "u"})
+
+  signature = {"protected": protected, "header": {"alg": "RS256"}, "signature": "s"}
+  assert(vcon.security.remove_jws_repeated_headers(signature) == {"protected": protected, "signature": "s"})
+
+  signature = {"header": {"alg": "RS256"}, "signature": "s"}
+  assert(vcon.security.remove_jws_repeated_headers(signature) == signature)
+
+
+def test_import_vcon_does_not_load_jose():
+  """ python-jose is no longer used by the vcon package """
+  completed = subprocess.run(
+    [sys.executable, "-c", "import sys, vcon; print(sorted(m for m in sys.modules if m == 'jose' or m.startswith('jose.')))"],
+    capture_output = True,
+    text = True,
+    check = True
+    )
+  assert(completed.stdout.strip().splitlines()[-1] == "[]")

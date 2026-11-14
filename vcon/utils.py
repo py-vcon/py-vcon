@@ -1,6 +1,7 @@
 # Copyright (C) 2023-2026 SIPez LLC.  All rights reserved.
 """ Utilities and helper functions for the vcon package """
 
+import base64
 import datetime
 import re
 import os
@@ -104,6 +105,37 @@ def date_to_datetime(date : typing.Union[int, float, str, datetime.datetime]) ->
     datetime.datetime in UTC
   """
   return(datetime.datetime.fromisoformat(cannonize_date(date)))
+
+
+def base64url_encode(data : bytes) -> str:
+  """
+  Encode bytes as base64url (RFC4648 section 5) without padding, as used by
+  JOSE (RFC7515) and for vCon bodies with encoding base64url.
+
+  Parameters:
+    data (bytes): the bytes to be encoded
+
+  Returns:
+    str containing the base64url encoding of data with no "=" padding
+  """
+  return(base64.urlsafe_b64encode(data).decode("utf-8").rstrip("="))
+
+
+def base64url_decode(data : typing.Union[str, bytes]) -> bytes:
+  """
+  Decode base64url (RFC4648 section 5) encoded data, with or without padding.
+
+  Parameters:
+    data (Union[str, bytes]): the base64url encoded data
+
+  Returns:
+    the decoded bytes
+  """
+  if(isinstance(data, str)):
+    data = data.encode("utf-8")
+
+  data = data.rstrip(b"=")
+  return(base64.urlsafe_b64decode(data + b"=" * (-len(data) % 4)))
 
 
 def unfold_header(header_value : typing.Union[str, None]) -> typing.Union[str, None]:

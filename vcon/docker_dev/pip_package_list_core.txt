@@ -7,6 +7,9 @@ hsslms
 jq
 # JSONPath (RFC 9535) for Vcon.jsonpath
 jsonpath-rfc9535
+# JOSE (JWS and JWE) for sign, verify, encrypt and decrypt.  1.6 needs Python 3.9
+jwcrypto >= 1.5.6, < 1.6 ; python_version < "3.9"
+jwcrypto >= 1.5.6 ; python_version >= "3.9"
 pydantic
 # 3.4.x caused some problems with REAND_bytes
 python-jose !=3.4.*

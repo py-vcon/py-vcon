@@ -14,7 +14,6 @@ import os
 import copy
 import logging
 import enum
-import jose.constants
 import cbor2
 import time
 import hashlib
@@ -27,6 +26,9 @@ import pathlib
 import jq
 import jsonpath_rfc9535
 import uuid6
+import jwcrypto.jwe
+import jwcrypto.jwk
+import jwcrypto.jws
 import vcon.logging_utils
 # TODO:  remove this and reference vcon.build_logger directly in vcon.* modules
 build_logger = vcon.logging_utils.build_logger
@@ -43,19 +45,6 @@ import vcon.parameter_registry
 
 __version__ = "0.6.14"
 
-
-# TODO: this should be a setting
-# Max payload sizes for JWE and JWS.  Default is now 250000
-if(hasattr(jose.constants, "JWE_SIZE_LIMIT")):
-  jose.constants.JWE_SIZE_LIMIT = 25000000
-  logger.debug("Set JWE_SIZE_LIMIT to: {}".format(jose.constants.JWE_SIZE_LIMIT))
-else:
-  logger.debug("JWE_SIZE_LIMIT not supported")
-
-# Delay import the rest of jose stuff until we set the size limit
-import jose.utils
-import jose.jws
-import jose.jwe
 
 try:
   import simplejson as json
@@ -1718,7 +1707,7 @@ class Vcon():
       new_dialog['filename'] = file_name
 
     new_dialog['encoding'] = "base64url"
-    encoded_body = jose.utils.base64url_encode(body).decode('utf-8')
+    encoded_body = vcon.utils.base64url_encode(body)
     #print("encoded body type: {}".format(type(encoded_body)))
     new_dialog['body'] = encoded_body
 
@@ -1926,9 +1915,7 @@ class Vcon():
     encoding = Vcon.get_object_encoding(dialog, "dialog[{}]".format(dialog_index))
 
     if(encoding == "base64url"):
-      # This is wrong.  decode should take a string not bytes, but it fails without the bytes conversion
-      # this is a bug in jose.baseurl_decode
-      decoded_body = jose.utils.base64url_decode(bytes(dialog["body"], 'utf-8'))
+      decoded_body = vcon.utils.base64url_decode(dialog["body"])
 
     # No encoding
     elif(encoding == "none"):
@@ -2376,7 +2363,7 @@ class Vcon():
       else:
         encoded_body = body.decode('utf-8')
     else:
-      encoded_body = jose.utils.base64url_encode(body).decode('utf-8')
+      encoded_body = vcon.utils.base64url_encode(body)
     #print("encoded body type: {}".format(type(encoded_body)))
     new_attachment['body'] = encoded_body
 
@@ -2445,7 +2432,7 @@ class Vcon():
       return(self._base64url)
 
     def bytes(self) -> bytes:
-      return(jose.utils.base64url_decode(bytes(self._base64url, 'utf-8')))
+      return(vcon.utils.base64url_decode(self._base64url))
 
     @staticmethod
     def isBase64Object(dict_object: dict) -> bool:
@@ -2885,7 +2872,7 @@ class Vcon():
                     object_array_name
                   ))
 
-              reference_object["body"] = jose.utils.base64url_encode(reference_object["body"].value).decode('utf-8')
+              reference_object["body"] = vcon.utils.base64url_encode(reference_object["body"].value)
               reference_object["encoding"] = "base64url"
 
       # validate version and migrate if needed
@@ -3009,27 +2996,32 @@ class Vcon():
 
     chain_header, signing_jwk = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, cert_chain_pem_files)
 
-    # No header parameter may be in both the protected and unprotected
-    # headers.  alg is integrity protected.  x5c and uuid are in the
-    # unprotected header.
-    protected_header, payload, signature = vcon.security.jws_sign(
-      self._vcon_dict,
-      signing_jwk,
-      {"alg": signing_jwk["alg"]}
-      )
-
     header = {}
     header["x5c"] = chain_header["x5c"]
     # For convenience add the uuid to the header
     header[Vcon.UUID] = self.uuid
 
+    # No header parameter may be in both the protected and unprotected
+    # headers.  alg is integrity protected.  x5c and uuid are in the
+    # unprotected header.
+    jws = jwcrypto.jws.JWS(json.dumps(self._vcon_dict, separators = (",", ":")).encode("utf-8"))
+    jws.add_signature(
+      signing_jwk,
+      None,
+      json.dumps({"alg": chain_header["alg"]}, separators = (",", ":")),
+      header
+      )
+    # jwcrypto creates the flattened JSON serialization for a single
+    # signature.  vCon uses the general JSON serialization.
+    flattened = json.loads(jws.serialize())
+
     jws_serialization = {}
-    jws_serialization['payload'] = payload
+    jws_serialization['payload'] = flattened["payload"]
     jws_serialization['signatures'] = []
     first_sig = {}
     first_sig['header'] = header
-    first_sig['signature'] = signature
-    first_sig['protected'] = protected_header
+    first_sig['signature'] = flattened["signature"]
+    first_sig['protected'] = flattened["protected"]
     jws_serialization['signatures'].append(first_sig)
 
     self._jws_dict = jws_serialization
@@ -3119,17 +3111,16 @@ class Vcon():
                 # CAs: ca_object.
                 # The assumtion is that it is safe to trust this cert chain.  So we
                 # can use it to build a JWK and verify the signature.
-                verification_jwk = {}
-                verification_jwk["kty"] = "RSA"
-                verification_jwk["use"] = "sig"
-                verification_jwk["alg"] = signature_header['alg']
-                verification_jwk["e"] = jose.utils.base64url_encode(jose.utils.
-                  long_to_bytes(cert_chain_objects[0].public_key().public_numbers().e)).decode('utf-8')
-                verification_jwk["n"] = jose.utils.base64url_encode(jose.utils.
-                  long_to_bytes(cert_chain_objects[0].public_key().public_numbers().n)).decode('utf-8')
+                verification_jwk = jwcrypto.jwk.JWK.from_pyca(cert_chain_objects[0].public_key())
 
-                jws_token = signature['protected'] + "." + self._jws_dict['payload'] + "." + signature['signature']
-                verified_payload = jose.jws.verify(jws_token, verification_jwk, verification_jwk["alg"])
+                # Verify this signature alone, in the flattened JSON
+                # serialization, without the identical header parameters
+                # repeated by earlier versions of this package.
+                flattened = vcon.security.remove_jws_repeated_headers(signature)
+                flattened["payload"] = self._jws_dict['payload']
+                jws = jwcrypto.jws.JWS()
+                jws.deserialize(json.dumps(flattened), verification_jwk, signature_header['alg'])
+                verified_payload = jws.payload
 
                 # If we get here, the payload was verified
                 #print("verified payload: {}".format(verified_payload))
@@ -3183,16 +3174,30 @@ class Vcon():
 
     plaintext = json.dumps(self._jws_dict, **dumps_options)
 
-    jwe_compact_token = jose.jwe.encrypt(plaintext, encryption_key, encryption, encryption_key['alg']).decode('utf-8')
-    # enc and alg are in the protected header of the compact token.  No
-    # header parameter may be repeated in the unprotected or recipient headers.
-    jwe_complete_serialization = vcon.security.jwe_compact_token_to_complete_serialization(jwe_compact_token)
-
-    # Add unprotected stuff
-    jwe_complete_serialization["unprotected"] = {}
+    unprotected = {}
     # Add UUID to unprotected for easy reference
-    jwe_complete_serialization["unprotected"]["uuid"] = self.uuid
-    jwe_complete_serialization["unprotected"]["cty"] = Vcon.MEDIATYPE_VCON
+    unprotected["uuid"] = self.uuid
+    unprotected["cty"] = Vcon.MEDIATYPE_VCON
+
+    # enc and alg are in the protected header.  No header parameter may be
+    # repeated in the unprotected or recipient headers.
+    jwe = jwcrypto.jwe.JWE(
+      plaintext.encode("utf-8"),
+      protected = json.dumps({"alg": "RSA-OAEP", "enc": encryption}, separators = (",", ":")),
+      unprotected = json.dumps(unprotected)
+      )
+    jwe.add_recipient(encryption_key)
+    # jwcrypto creates the flattened JSON serialization for a single
+    # recipient.  vCon uses the general JSON serialization.
+    flattened = json.loads(jwe.serialize())
+
+    jwe_complete_serialization = {}
+    jwe_complete_serialization["protected"] = flattened["protected"]
+    jwe_complete_serialization["iv"] = flattened["iv"]
+    jwe_complete_serialization["ciphertext"] = flattened["ciphertext"]
+    jwe_complete_serialization["tag"] = flattened["tag"]
+    jwe_complete_serialization["recipients"] = [{"encrypted_key": flattened["encrypted_key"]}]
+    jwe_complete_serialization["unprotected"] = unprotected
 
     self._jwe_dict = jwe_complete_serialization
     self._state = VconStates.ENCRYPTED
@@ -3229,13 +3234,11 @@ class Vcon():
     except ValueError as header_error:
       raise InvalidVconJson(str(header_error)) from header_error
 
-    jwe_compact_token_reconstructed = vcon.security.jwe_complete_serialization_to_compact_token(self._jwe_dict)
+    (header, decryption_key) = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, [cert_pem_file])
 
-    (header, signing_key) = vcon.security.build_signing_jwk_from_pem_files(private_key_pem_file, [cert_pem_file])
-    #signing_key['alg'] = encryption_key['alg']
-
-    logger.debug("JWE size: {} key size: {}".format(len(jwe_compact_token_reconstructed), len(signing_key)))
-    plaintext_decrypted = jose.jwe.decrypt(jwe_compact_token_reconstructed, signing_key).decode('utf-8')
+    jwe = jwcrypto.jwe.JWE()
+    jwe.deserialize(json.dumps(vcon.security.remove_jwe_repeated_headers(self._jwe_dict)), decryption_key)
+    plaintext_decrypted = jwe.payload.decode('utf-8')
     # let loads figure out if this is an encrypted JWS vCon or just a vCon
     current_state = self._state
     # Fool loads into thinking this is a raw vCon and its safe to load.  Save state incase we barf.
@@ -3464,7 +3467,7 @@ class Vcon():
       uuid = vcon_dict["signatures"][0]["header"].get("uuid", None)
       if(uuid is None):
         # decode the payload and parse JSON to get UUID
-        vcon_json_string = jose.utils.base64url_decode(bytes(vcon_dict["payload"], 'utf-8'))
+        vcon_json_string = vcon.utils.base64url_decode(vcon_dict["payload"])
         payload_vcon_dict = json.loads(vcon_json_string)
         uuid = payload_vcon_dict.get("uuid", None)
 
