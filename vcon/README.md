@@ -42,6 +42,7 @@ The following categories of methods are implemented on the Vcon class.
    * [add_dialog_inline_text](#add_dialog_inline_text)
    * [add_dialog_redacted_segment](#add_dialog_redacted_segment)
    * [add_email_dialog_inline](#add_email_dialog_inline)
+   * [add_incomplete_dialog](#add_incomplete_dialog)
    * [add_recording_dialog_external](#add_recording_dialog_external)
    * [add_recording_dialog_inline](#add_recording_dialog_inline)
    * [add_text_dialog_inline](#add_text_dialog_inline)
@@ -627,6 +628,40 @@ Parameters:
 
 Returns:  
   index (int) of the dialog added for the text body of the message
+
+
+
+### add_incomplete_dialog
+
+**add_incomplete_dialog**(self, disposition: 'str', start_time: 'typing.Union[str, int, float, datetime.datetime, None]' = None, duration: 'typing.Union[int, float, None]' = None, caller: 'typing.Union[int, None]' = None, receivers: 'typing.Union[typing.List[int], None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
+
+
+Add an incomplete Dialog Object, for a call or conversation which failed
+to be set up.  It has no Dialog Content.
+
+Parameters:  
+  **disposition** (str) - why the call failed.  One of Vcon.DIALOG_DISPOSITIONS
+           ("no-answer", "congestion", "failed", "busy", "hung-up",
+           "voicemail-no-message") or a value defined in a vCon extension.
+           "failed" is used when the reason is not known, e.g. in a placeholder.  
+  **start_time** (str, int, float, datetime.datetime) - Date, time of the call attempt
+           (optional, e.g. not known for a placeholder)  
+  **duration** (int, float) - duration of the attempt in seconds (optional)  
+  **caller** (int) - index of the party which attempted the call, written as the Dialog
+           parties and applied as the Session originator (optional)  
+  **receivers** (List[int]) - indices of the parties which were called, added to the
+           Session parties (optional)  
+  **session** (int) - index of the Session Object which is to reference the new dialog.
+           If None, a new Session Object is created.
+
+Returns:  
+  index of the new Dialog Object
+
+Raises AttributeError if the caller, a receiver or the session does not exist,
+the duration is negative, or the caller cannot become the originator of the
+given session because it has a different originator and other dialogs.  A disposition defined by a registered extension
+adds the extension to the vCon; an unregistered disposition is written with a
+warning.
 
 
 

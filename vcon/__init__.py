@@ -554,6 +554,9 @@ class Vcon():
   # Session_Reference Object type tokens defined by the core vCon schema
   SESSION_REFERENCE_TYPES = ["child", "peer", "precursor", "breakout"]
 
+  # disposition values of an incomplete Dialog Object defined by the core vCon schema
+  DIALOG_DISPOSITIONS = ["no-answer", "congestion", "failed", "busy", "hung-up", "voicemail-no-message"]
+
   # Event Object type tokens defined by the core vCon schema
   EVENT_PARTY_TYPES = ["join", "drop", "hold", "unhold", "mute", "unmute"]
   EVENT_KEY_TYPES = ["keydown", "keyup"]
@@ -1890,12 +1893,14 @@ class Vcon():
     self,
     dialog_index : int,
     session : typing.Union[int, None],
-    originator : typing.Union[int, None] = None
+    originator : typing.Union[int, None] = None,
+    receivers : typing.Union[typing.List[int], None] = None
     ) -> int:
     """
     Add a reference to a newly created Dialog Object to the given Session
     Object, or to a new Session Object if session is None, and apply the
-    originator if given.
+    originator if given.  receivers are added to the Session parties; if
+    None, the Dialog parties are (see add_dialog_to_session).
 
     Returns:
       index of the Session Object
@@ -1903,7 +1908,7 @@ class Vcon():
     if(session is None):
       session = self.add_session()
 
-    self.add_dialog_to_session(session, dialog_index)
+    self.add_dialog_to_session(session, dialog_index, receivers)
 
     if(originator is not None and originator >= 0):
       self._apply_dialog_originator(dialog_index, originator)
@@ -1963,6 +1968,94 @@ class Vcon():
     dialog_index = len(self.dialog) - 1
 
     self._add_new_dialog_to_session(dialog_index, session)
+
+    return(dialog_index)
+
+
+  @tag_dialog
+  def add_incomplete_dialog(
+    self,
+    disposition : str,
+    start_time : typing.Union[str, int, float, datetime.datetime, None] = None,
+    duration : typing.Union[int, float, None] = None,
+    caller : typing.Union[int, None] = None,
+    receivers : typing.Union[typing.List[int], None] = None,
+    session : typing.Union[int, None] = None
+    ) -> int:
+    """
+    Add an incomplete Dialog Object, for a call or conversation which failed
+    to be set up.  It has no Dialog Content.
+
+    Parameters:  
+      **disposition** (str) - why the call failed.  One of Vcon.DIALOG_DISPOSITIONS
+               ("no-answer", "congestion", "failed", "busy", "hung-up",
+               "voicemail-no-message") or a value defined in a vCon extension.
+               "failed" is used when the reason is not known, e.g. in a placeholder.  
+      **start_time** (str, int, float, datetime.datetime) - Date, time of the call attempt
+               (optional, e.g. not known for a placeholder)  
+      **duration** (int, float) - duration of the attempt in seconds (optional)  
+      **caller** (int) - index of the party which attempted the call, written as the Dialog
+               parties and applied as the Session originator (optional)  
+      **receivers** (List[int]) - indices of the parties which were called, added to the
+               Session parties (optional)  
+      **session** (int) - index of the Session Object which is to reference the new dialog.
+               If None, a new Session Object is created.
+
+    Returns:  
+      index of the new Dialog Object
+
+    Raises AttributeError if the caller, a receiver or the session does not exist,
+    the duration is negative, or the caller cannot become the originator of the
+    given session because it has a different originator and other dialogs.  A disposition defined by a registered extension
+    adds the extension to the vCon; an unregistered disposition is written with a
+    warning.
+    """
+    self._attempting_modify()
+
+    if(caller is not None):
+      self._check_object_index(Vcon.PARTIES, caller)
+    for party_index in receivers or []:
+      self._check_object_index(Vcon.PARTIES, party_index)
+    if(session is not None):
+      self._check_object_index(Vcon.SESSIONS, session)
+      # the caller must be able to become the Session originator (see _apply_dialog_originator)
+      session_object = self._vcon_dict[Vcon.SESSIONS][session]
+      session_parties = session_object.get("parties", None) or []
+      if(caller is not None and len(session_parties) > 0):
+        current_originator = session_object.get("originator", session_parties[0])
+        if(current_originator != caller and len(session_object.get("dialog", None) or []) > 0):
+          raise AttributeError(
+            "cannot add incomplete dialog with caller: {}.  Session: {} has originator: {}"
+            " and also references dialog: {}".format(
+            caller, session, current_originator, session_object["dialog"]))
+    if(duration is not None and
+      (not isinstance(duration, (int, float)) or isinstance(duration, bool) or duration < 0)):
+      raise AttributeError("duration: {} must be a non-negative number of seconds".format(duration))
+
+    definer = vcon.parameter_registry.get_value_extension("Dialog", "disposition", disposition)
+    if(definer is None):
+      logger.warning(
+        "Dialog disposition: \"%s\" is not defined by the core vCon schema or any known vCon extension",
+        disposition)
+    elif(definer != Vcon.PARAMETER_CORE):
+      self._add_extension_name(definer)
+
+    new_dialog: typing.Dict[str, typing.Any] = {"type": "incomplete"}
+    if(start_time is not None):
+      new_dialog["start"] = vcon.utils.cannonize_date(start_time)
+    if(duration is not None):
+      new_dialog["duration"] = duration
+    if(caller is not None):
+      new_dialog["parties"] = caller
+    new_dialog["disposition"] = disposition
+
+    if(self._vcon_dict.get(Vcon.DIALOG, None) is None):
+      self._vcon_dict[Vcon.DIALOG] = []
+    self._vcon_dict[Vcon.DIALOG].append(new_dialog)
+    dialog_index = len(self._vcon_dict[Vcon.DIALOG]) - 1
+
+    session_parties = ([caller] if caller is not None else []) + (receivers or [])
+    self._add_new_dialog_to_session(dialog_index, session, caller, session_parties)
 
     return(dialog_index)
 
