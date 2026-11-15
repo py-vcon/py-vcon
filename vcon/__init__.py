@@ -2561,6 +2561,7 @@ class Vcon():
 
 
   @tag_dialog
+  @deprecated("transfer Dialog Objects were removed in vCon 0.5.0; transfer Event Objects are added instead")
   def add_transfer_dialog(
       self,
       transferee: int,
@@ -2569,56 +2570,155 @@ class Vcon():
       original_dialog: int,
       target_dialog: typing.Union[int, None],
       consultative_dialog: typing.Union[int, None] = None
-    ) -> int:
+    ) -> typing.List[int]:
     """
-     A **transfer** type dialog Object shows the relationship of
-     dialogs and the role of parties in the transfer of call or conversation
-     from one party to another.  There are two types of transfer: blind and consultative.
-     With a blind transfer, there are only 2 dialogs: the orginal call and the target or
-     resulting call.  In a consultative call there are 3 dialogs, the two as in a blind trasnfer
-     and a consultative dialog which occurs before the transfer is completed.
+    Deprecated: vCon 0.5.0 has no transfer Dialog Object.  The transfer is
+    captured in transfer Event Objects, which this adds (see
+    **add_blind_transfer_event**, **add_consultation_start_event**,
+    **add_consultative_transfer_event** and **add_transfer_abandoned_event**).
 
-     This method constructs a **transfer** type dialog.
+    The Events reference the Sessions of the given Dialogs:
+
+      * target, no consultation: blind-transfer at the target Dialog start
+      * consultation and target: consultation-start at the consultation Dialog
+        start, consultative-transfer at the target Dialog start
+      * consultation, no target: consultation-start, then transfer-abandoned
+        at the end of the consultation Dialog
+      * neither: transfer-abandoned at the end of the original Dialog
 
     Parameters:
       **transferee** (int): party index for the party from the original call that gets
                 transfered to the target call
       **transferor** (int): party index for the party from the original call that performs
-                or actuates the transfer.  It th transfer is no actually initiated by a party,
-                (e.g system or applications initiated), this is the party from the original
-                call that particiaptes in the consultation if one occurs and is not a party
-                to the target or resulting outcome call.
+                or actuates the transfer.
       **transfer_target** (int): party index to the new party introduced in the target call
       **original_dialog** (int): the index to the original call dialog
-      **target_dialog** (int, None): the index to the target or resulting outcome call.  The
-                transferor may decide not to complete the transfer after the consultation.
-                In this case, the transfer_dialog may be None.
+      **target_dialog** (int, None): the index to the target or resulting outcome call, None
+                if the transfer was not completed
       **consultative_dialog** (int, None): the index to the consultative dialog if one
                 occurred.
 
     Returns:
-            Index to the added dialog
+      list of the indices of the Event Objects added
+
+    Raises AttributeError, before anything is added, if a Dialog does not exist, is
+    not referenced by exactly one Session Object, shares its Session Object with
+    another of the Dialogs, a party does not exist, or a needed start or duration
+    is missing.
     """
     self._attempting_modify()
 
-    # Should we validate that the party and dialog indices
-    # are valid and exists???  All of the dialogs may not be
-    # created yet.
-    new_dialog: typing.Dict[str, typing.Any] = {}
-    new_dialog['type'] = "transfer"
-    new_dialog['transferee'] = transferee
-    new_dialog['transferor'] = transferor
-    new_dialog['transfer_target'] = transfer_target
-    new_dialog['original'] = original_dialog
-    if(target_dialog is not None):
-      new_dialog['target_dialog'] = target_dialog
-    if(consultative_dialog is not None):
-      new_dialog['consultation'] = consultative_dialog
+    planned_events = Vcon._plan_transfer_events(
+      self._vcon_dict,
+      transferee,
+      transferor,
+      transfer_target,
+      original_dialog,
+      target_dialog,
+      consultative_dialog
+      )
 
-    dialog_index = len(self.dialog)
-    self._vcon_dict[Vcon.DIALOG].append(new_dialog)
+    methods = {
+        "blind-transfer": self.add_blind_transfer_event,
+        "consultation-start": self.add_consultation_start_event,
+        "consultative-transfer": self.add_consultative_transfer_event,
+        "transfer-abandoned": self.add_transfer_abandoned_event
+      }
+    event_indices = []
+    for event in planned_events:
+      arguments = {name: value for name, value in event.items() if(name not in ("type", "party"))}
+      event_indices.append(methods[event["type"]](transferor = event["party"], **arguments))
 
-    return(dialog_index)
+    return(event_indices)
+
+
+  @staticmethod
+  def _plan_transfer_events(
+    vcon_dict : typing.Dict[str, typing.Any],
+    transferee : int,
+    transferor : int,
+    transfer_target : int,
+    original_dialog : int,
+    target_dialog : typing.Union[int, None],
+    consultative_dialog : typing.Union[int, None]
+    ) -> typing.List[typing.Dict[str, typing.Any]]:
+    """
+    The transfer Event Objects which capture a 0.4.0 transfer Dialog Object
+    (see **add_transfer_dialog**), as dicts of the Event parameters with the
+    time canonized, in the order they occurred.  Works on a plain vCon dict
+    (also used to convert 0.4.0 vCons).
+
+    Raises AttributeError if a Dialog does not exist, is not referenced by
+    exactly one Session Object, shares its Session Object with another of the
+    Dialogs, a party does not exist, or a needed start or duration is missing.
+    """
+    dialogs = vcon_dict.get(Vcon.DIALOG, None) or []
+    sessions = vcon_dict.get(Vcon.SESSIONS, None) or []
+    num_parties = len(vcon_dict.get(Vcon.PARTIES, None) or [])
+
+    for role, party_index in [("transferee", transferee), ("transferor", transferor),
+      ("transfer_target", transfer_target)]:
+      if(not isinstance(party_index, int) or isinstance(party_index, bool) or
+        party_index < 0 or party_index >= num_parties):
+        raise AttributeError("{} party: {} does not exist.  The vCon has {} parties.".format(
+          role, party_index, num_parties))
+
+    session_of = {}
+    for role, dialog_index in [("original", original_dialog), ("target", target_dialog),
+      ("consultation", consultative_dialog)]:
+      if(dialog_index is None):
+        continue
+      if(not isinstance(dialog_index, int) or isinstance(dialog_index, bool) or
+        dialog_index < 0 or dialog_index >= len(dialogs)):
+        raise AttributeError("{} dialog: {} does not exist.  The vCon has {} dialogs.".format(
+          role, dialog_index, len(dialogs)))
+      session_indices = [session_index for session_index, session in enumerate(sessions)
+        if(dialog_index in (session.get("dialog", None) or []))]
+      if(len(session_indices) != 1):
+        raise AttributeError("{} dialog: {} is referenced by {} Session Objects: {}.  It must be"
+          " referenced by exactly one.".format(role, dialog_index, len(session_indices), session_indices))
+      if(session_indices[0] in session_of.values()):
+        raise AttributeError("{} dialog: {} is in Session: {}, which another of the transfer dialogs"
+          " is also in.  Each role needs its own Session.".format(role, dialog_index, session_indices[0]))
+      session_of[role] = session_indices[0]
+
+    def dialog_time(role : str, dialog_index : int, at_end : bool) -> str:
+      dialog = dialogs[dialog_index]
+      if(dialog.get("start", None) is None or (at_end and dialog.get("duration", None) is None)):
+        raise AttributeError("{} dialog: {} needs a start{} for the transfer event time".format(
+          role, dialog_index, " and duration" if at_end else ""))
+      if(not at_end):
+        return(vcon.utils.cannonize_date(dialog["start"]))
+      return(vcon.utils.cannonize_date(vcon.utils.date_to_datetime(dialog["start"]) +
+        datetime.timedelta(seconds = dialog["duration"])))
+
+    common = {"sessions": session_of["original"], "party": transferor, "transferee": transferee}
+    events = []
+    if(consultative_dialog is None and target_dialog is not None):
+      events.append(dict(common, type = "blind-transfer", time = dialog_time("target", target_dialog, False),
+        transfer_target = transfer_target, target_session = session_of["target"]))
+
+    elif(consultative_dialog is not None):
+      consultation_start = dialog_time("consultation", consultative_dialog, False)
+      if(target_dialog is not None):
+        target_start = dialog_time("target", target_dialog, False)
+        events.append(dict(common, type = "consultation-start", time = consultation_start,
+          transfer_target = transfer_target, consultation = session_of["consultation"]))
+        events.append(dict(common, type = "consultative-transfer", time = target_start,
+          transfer_target = transfer_target, consultation = session_of["consultation"],
+          target_session = session_of["target"]))
+      else:
+        consultation_end = dialog_time("consultation", consultative_dialog, True)
+        events.append(dict(common, type = "consultation-start", time = consultation_start,
+          transfer_target = transfer_target, consultation = session_of["consultation"]))
+        events.append(dict(common, type = "transfer-abandoned", time = consultation_end,
+          transfer_target = transfer_target, consultation = session_of["consultation"]))
+
+    else:
+      events.append(dict(common, type = "transfer-abandoned",
+        time = dialog_time("original", original_dialog, True), transfer_target = transfer_target))
+
+    return(events)
 
 
   @tag_dialog

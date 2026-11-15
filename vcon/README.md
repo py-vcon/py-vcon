@@ -761,36 +761,42 @@ Returns:
 
 ### add_transfer_dialog
 
-**add_transfer_dialog**(self, transferee: 'int', transferor: 'int', transfer_target: 'int', original_dialog: 'int', target_dialog: 'typing.Union[int, None]', consultative_dialog: 'typing.Union[int, None]' = None) -> 'int'
+**add_transfer_dialog**(self, transferee: 'int', transferor: 'int', transfer_target: 'int', original_dialog: 'int', target_dialog: 'typing.Union[int, None]', consultative_dialog: 'typing.Union[int, None]' = None) -> 'typing.List[int]'
 
 
- A **transfer** type dialog Object shows the relationship of
- dialogs and the role of parties in the transfer of call or conversation
- from one party to another.  There are two types of transfer: blind and consultative.
- With a blind transfer, there are only 2 dialogs: the orginal call and the target or
- resulting call.  In a consultative call there are 3 dialogs, the two as in a blind trasnfer
- and a consultative dialog which occurs before the transfer is completed.
+Deprecated: vCon 0.5.0 has no transfer Dialog Object.  The transfer is
+captured in transfer Event Objects, which this adds (see
+**add_blind_transfer_event**, **add_consultation_start_event**,
+**add_consultative_transfer_event** and **add_transfer_abandoned_event**).
 
- This method constructs a **transfer** type dialog.
+The Events reference the Sessions of the given Dialogs:
+
+  * target, no consultation: blind-transfer at the target Dialog start
+  * consultation and target: consultation-start at the consultation Dialog
+    start, consultative-transfer at the target Dialog start
+  * consultation, no target: consultation-start, then transfer-abandoned
+    at the end of the consultation Dialog
+  * neither: transfer-abandoned at the end of the original Dialog
 
 Parameters:
   **transferee** (int): party index for the party from the original call that gets
             transfered to the target call
   **transferor** (int): party index for the party from the original call that performs
-            or actuates the transfer.  It th transfer is no actually initiated by a party,
-            (e.g system or applications initiated), this is the party from the original
-            call that particiaptes in the consultation if one occurs and is not a party
-            to the target or resulting outcome call.
+            or actuates the transfer.
   **transfer_target** (int): party index to the new party introduced in the target call
   **original_dialog** (int): the index to the original call dialog
-  **target_dialog** (int, None): the index to the target or resulting outcome call.  The
-            transferor may decide not to complete the transfer after the consultation.
-            In this case, the transfer_dialog may be None.
+  **target_dialog** (int, None): the index to the target or resulting outcome call, None
+            if the transfer was not completed
   **consultative_dialog** (int, None): the index to the consultative dialog if one
             occurred.
 
 Returns:
-        Index to the added dialog
+  list of the indices of the Event Objects added
+
+Raises AttributeError, before anything is added, if a Dialog does not exist, is
+not referenced by exactly one Session Object, shares its Session Object with
+another of the Dialogs, a party does not exist, or a needed start or duration
+is missing.
 
 
 
