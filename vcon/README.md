@@ -1899,8 +1899,9 @@ Parameters:
 Returns: none
 
 Raises exceptions for invalid cert chaind, invalid cert dates or chain not issued by one
-of the given CAs.  InvalidVconSignature if a signature has no alg or its
-certificate chain is not available.
+of the given CAs.  InvalidVconSignature if a signature has no alg, has alg
+"none" (an unsecured JWS, which a vCon must not use) or its certificate
+chain is not available.
 
 The header parameters may be in the protected header, the unprotected
 header or both.  A header parameter may not be in both the protected and

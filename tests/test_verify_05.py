@@ -124,6 +124,43 @@ async def test_no_alg_rejected():
     await load(signed_dict).verify([CA_CERT])
 
 
+def set_alg_none(signed_dict : dict, where : str) -> dict:
+  """ put alg "none" in the given header of the first signature, removing it from the other """
+  signature = signed_dict["signatures"][0]
+  protected = vcon.security.decode_jws_protected_header(signature.get("protected", None) or "")
+  header = signature.get("header", None) or {}
+  protected.pop("alg", None)
+  header.pop("alg", None)
+  if(where == "protected"):
+    protected["alg"] = "none"
+  else:
+    header["alg"] = "none"
+  signature["protected"] = vcon.utils.base64url_encode(json.dumps(protected).encode("utf-8")) if(len(protected) > 0) else ""
+  signature["header"] = header
+  return(signed_dict)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("where", ["protected", "header"])
+async def test_alg_none_rejected(where):
+  signed = load(set_alg_none(signed_today(), where))
+  with pytest.raises(vcon.InvalidVconSignature, match = r'signature\[0\] has alg "none"'):
+    await signed.verify([CA_CERT])
+  assert(signed.state == vcon.VconStates.UNVERIFIED)
+
+
+@pytest.mark.asyncio
+async def test_alg_none_rejected_before_x5u_fetch():
+  """ an alg "none" signature is refused without fetching its x5u chain """
+  signed_dict = signed_today()
+  header = signed_dict["signatures"][0]["header"]
+  del header["x5c"]
+  header["x5u"] = "http://localhost:1/never_fetched.pem"
+  signed = load(set_alg_none(signed_dict, "header"))
+  with pytest.raises(vcon.InvalidVconSignature, match = 'alg "none"'):
+    await signed.verify([CA_CERT], fetch_x5u = True)
+
+
 @pytest.mark.asyncio
 async def test_no_chain_rejected():
   signed_dict = signed_today()

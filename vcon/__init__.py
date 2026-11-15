@@ -4207,8 +4207,9 @@ class Vcon():
     Returns: none
 
     Raises exceptions for invalid cert chaind, invalid cert dates or chain not issued by one
-    of the given CAs.  InvalidVconSignature if a signature has no alg or its
-    certificate chain is not available.
+    of the given CAs.  InvalidVconSignature if a signature has no alg, has alg
+    "none" (an unsecured JWS, which a vCon must not use) or its certificate
+    chain is not available.
 
     The header parameters may be in the protected header, the unprotected
     header or both.  A header parameter may not be in both the protected and
@@ -4266,6 +4267,10 @@ class Vcon():
 
         if(signature_header.get('alg', None) is None):
           raise InvalidVconSignature("{} has no alg header parameter".format(label))
+
+        # checked before any certificate chain is fetched
+        if(signature_header['alg'] == "none"):
+          raise InvalidVconSignature("{} has alg \"none\", which a vCon must not use".format(label))
 
         cert_chain_objects = await Vcon._signature_cert_chain(
           signature_header,
