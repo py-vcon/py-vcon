@@ -1912,7 +1912,8 @@ class Vcon():
       **duration** (int or float) - duration in time the sender completed typing in seconds.
                Should be zero if unknown.
       **party** (int) - index into parties object array as to which party sent the text communication.  
-      **media_type** (str) - media type of the body (usually MEDIATYPE_TEXT_PLAIN or MEDIATYPE_MULTIPART)  
+      **media_type** (str) - media type of the body (usually MEDIATYPE_TEXT_PLAIN or MEDIATYPE_MULTIPART).
+               A value folded over several lines (as in an email header) is unfolded.  
       **file_name** (str) - file name of the body if applicable (optional)  
       **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
                a new Session Object is created to reference it.  See **add_dialog_to_session**.
@@ -1929,7 +1930,7 @@ class Vcon():
     new_dialog['start'] = vcon.utils.cannonize_date(start_time)
     new_dialog['duration'] = duration
     new_dialog['parties'] = party
-    new_dialog['mediatype'] = media_type
+    new_dialog['mediatype'] = vcon.utils.unfold_header(media_type)
     if(file_name is not None and len(file_name) > 0):
       new_dialog['filename'] = file_name
 
@@ -2376,7 +2377,7 @@ class Vcon():
     **duration** (int or float): duration of the recording in seconds  
     **parties** (int, List[int], List[List[int]]): party indices speaking in each
                channel of the recording.  
-    **media_type** (str): media type of the recording  
+    **media_type** (str): media type of the recording.  A folded value is unfolded.  
     **file_name** (str): file name of the recording (optional)  
     **originator** (int): by default the originator is the first party listed in the parites array.
                However , in some cases, it is difficult to arrange the recording channels with the originator
@@ -2407,7 +2408,7 @@ class Vcon():
       ):
       new_dialog['parties'] = parties
 
-    new_dialog['mediatype'] = media_type
+    new_dialog['mediatype'] = vcon.utils.unfold_header(media_type)
 
     if(file_name is not None and len(file_name) > 0):
       new_dialog['filename'] = file_name
@@ -2774,7 +2775,7 @@ class Vcon():
     **parties** (int, List[int], List[List[int]]): party indices speaking in each
                channel of the recording.  
     **external_url** (string): https URL where the body is stored securely  
-    **media_type** (str): media type of the recording (optional)  
+    **media_type** (str): media type of the recording (optional).  A folded value is unfolded.  
     **file_name** (str): file name of the recording (optional)  
     **sign_type** (str): signature type to create for external signature
                      default= "SHA-512" use SHA 512 bit hash (RFC6234)
@@ -2803,7 +2804,7 @@ class Vcon():
     new_dialog['parties'] = parties
     new_dialog['url'] = external_url
     if(media_type is not None):
-      new_dialog['mediatype'] = media_type
+      new_dialog['mediatype'] = vcon.utils.unfold_header(media_type)
     if(file_name is not None):
       new_dialog['filename'] = file_name
 
@@ -3314,7 +3315,9 @@ class Vcon():
     **dialog_index** (str): index to the dialog in the vCon dialog list that this trascript corresponds to.  
     **vendor** (str): string token for the vendor of the audio to text transcription service.  
     **schema** (str): schema label for the transcription data.  Used to identify data format of the transcription
-                  for vendors that have more than one format or version.
+                  for vendors that have more than one format or version.  
+    **optional_parameters** (dict[str, Any]) - additional parameters to add to the analysis object.
+      A folded mediatype value is unfolded.
 
     Return: none
     """
@@ -3333,6 +3336,8 @@ class Vcon():
 
     for param, value in optional_parameters.items():
       self.add_parameter_extension("Analysis", param)
+      if(param == "mediatype" and isinstance(value, str)):
+        value = vcon.utils.unfold_header(value)
       analysis_element[param] = value
 
     if(self.analysis is None):
@@ -3368,6 +3373,7 @@ class Vcon():
     **analysis** (Union[int, list[int]]): index or indices of the existing Analysis Objects analysed
       (optional).  An Analysis Object may not reference itself.  
     **optional_parameters** (dict[str, Any]) - additional parameters to add to the analysis object.
+      A folded mediatype value is unfolded.
 
     A warning is logged if none of dialog_index, sessions, attachment and analysis
     is given, as an Analysis Object SHOULD reference what it was generated from.
@@ -3409,6 +3415,8 @@ class Vcon():
 
     for parameter_name, value in optional_parameters.items():
       self.add_parameter_extension("Analysis", parameter_name)
+      if(parameter_name == "mediatype" and isinstance(value, str)):
+        value = vcon.utils.unfold_header(value)
       analysis_element[parameter_name] = value
 
     if(self.analysis is None):
@@ -3441,7 +3449,7 @@ class Vcon():
                string containing RFC 2822 or RFC3339 date time stamp or int/float
                containing epoch time (since 1970) in seconds.  
     **party** (int): party index of the sender  
-    **media_type** (str): media type of the recording  
+    **media_type** (str): media type of the recording.  A folded value is unfolded.  
     **file_name** (str): file name of the recording (optional)  
     **dialog** (int): index of the Dialog Object the attachment is part of (optional)  
     **session** (int, List[int]): index or indices of the Session Object(s) the attachment
@@ -3459,6 +3467,7 @@ class Vcon():
 
     if(dialog is None and session is None):
       raise AttributeError("an attachment must reference a dialog, a session or both")
+    media_type = vcon.utils.unfold_header(media_type)
     self._check_object_index(Vcon.PARTIES, party)
     if(dialog is not None):
       self._check_object_index(Vcon.DIALOG, dialog)

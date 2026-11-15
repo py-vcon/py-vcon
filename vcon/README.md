@@ -129,6 +129,7 @@ Parameters:
 **analysis** (Union[int, list[int]]): index or indices of the existing Analysis Objects analysed
   (optional).  An Analysis Object may not reference itself.  
 **optional_parameters** (dict[str, Any]) - additional parameters to add to the analysis object.
+  A folded mediatype value is unfolded.
 
 A warning is logged if none of dialog_index, sessions, attachment and analysis
 is given, as an Analysis Object SHOULD reference what it was generated from.
@@ -150,7 +151,9 @@ Parameters:
 **dialog_index** (str): index to the dialog in the vCon dialog list that this trascript corresponds to.  
 **vendor** (str): string token for the vendor of the audio to text transcription service.  
 **schema** (str): schema label for the transcription data.  Used to identify data format of the transcription
-              for vendors that have more than one format or version.
+              for vendors that have more than one format or version.  
+**optional_parameters** (dict[str, Any]) - additional parameters to add to the analysis object.
+  A folded mediatype value is unfolded.
 
 Return: none
 
@@ -174,7 +177,7 @@ Parameters:
            string containing RFC 2822 or RFC3339 date time stamp or int/float
            containing epoch time (since 1970) in seconds.  
 **party** (int): party index of the sender  
-**media_type** (str): media type of the recording  
+**media_type** (str): media type of the recording.  A folded value is unfolded.  
 **file_name** (str): file name of the recording (optional)  
 **dialog** (int): index of the Dialog Object the attachment is part of (optional)  
 **session** (int, List[int]): index or indices of the Session Object(s) the attachment
@@ -716,7 +719,7 @@ Parameters:
 **parties** (int, List[int], List[List[int]]): party indices speaking in each
            channel of the recording.  
 **external_url** (string): https URL where the body is stored securely  
-**media_type** (str): media type of the recording (optional)  
+**media_type** (str): media type of the recording (optional).  A folded value is unfolded.  
 **file_name** (str): file name of the recording (optional)  
 **sign_type** (str): signature type to create for external signature
                  default= "SHA-512" use SHA 512 bit hash (RFC6234)
@@ -750,7 +753,7 @@ Parameters:
 **duration** (int or float): duration of the recording in seconds  
 **parties** (int, List[int], List[List[int]]): party indices speaking in each
            channel of the recording.  
-**media_type** (str): media type of the recording  
+**media_type** (str): media type of the recording.  A folded value is unfolded.  
 **file_name** (str): file name of the recording (optional)  
 **originator** (int): by default the originator is the first party listed in the parites array.
            However , in some cases, it is difficult to arrange the recording channels with the originator
@@ -781,7 +784,8 @@ Parameters:
   **duration** (int or float) - duration in time the sender completed typing in seconds.
            Should be zero if unknown.
   **party** (int) - index into parties object array as to which party sent the text communication.  
-  **media_type** (str) - media type of the body (usually MEDIATYPE_TEXT_PLAIN or MEDIATYPE_MULTIPART)  
+  **media_type** (str) - media type of the body (usually MEDIATYPE_TEXT_PLAIN or MEDIATYPE_MULTIPART).
+           A value folded over several lines (as in an email header) is unfolded.  
   **file_name** (str) - file name of the body if applicable (optional)  
   **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
            a new Session Object is created to reference it.  See **add_dialog_to_session**.

@@ -8,7 +8,8 @@ Event Objects, transfer Dialog Objects become transfer Event Objects and
 empty Dialog Objects, the parties of text and incomplete Dialog Objects are
 reduced to the sender, email threads whose receivers change get child
 Session Objects, originator moves to the Session Objects, and redacted and
-amended are renamed redacted_from and amended_from.
+amended are renamed redacted_from and amended_from.  A mediatype folded
+over several lines (copied from an email header) is unfolded.
 
 A recording-set Dialog Object is not converted: VconConversionError is
 raised.  Each case where the result is knowingly invalid or loses
@@ -116,6 +117,7 @@ def migrate_0_4_0_vcon(vcon_dict : typing.Dict[str, typing.Any]) -> typing.Dict[
   converter.reduce_text_parties()
   converter.fill_sessions()
   converter.remove_references()
+  converter.unfold_mediatypes()
   converter.rename_and_label()
   return(result)
 
@@ -507,6 +509,14 @@ class _Converter():
         obj["dialog"] = kept
     elif(reference in self.transfers):
       del obj["dialog"]
+
+
+  def unfold_mediatypes(self) -> None:
+    """ A mediatype copied from an email header may be folded over several lines """
+    for array_name in ("dialog", "attachments", "analysis"):
+      for obj in self.result.get(array_name, None) or []:
+        if(isinstance(obj.get("mediatype", None), str)):
+          obj["mediatype"] = vcon.utils.unfold_header(obj["mediatype"])
 
 
   def rename_and_label(self) -> None:
