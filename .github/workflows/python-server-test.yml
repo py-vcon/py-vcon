@@ -191,7 +191,7 @@ jobs:
           echo "Reason: avoid worker-startup OOM on GitHub runners (7GB)."
           echo "Server will log 'module load failed' for whisper-related"
           echo "plugins; tolerated by import_bindings try_all=True."
-          pip3 uninstall -y stable-ts whisper
+          pip3 uninstall -y stable-ts openai-whisper
           pip3 freeze | grep -iE "whisper|stable" || echo "whisper/stable packages removed"
 
       - name: Run multi-worker integration tests
