@@ -37,7 +37,7 @@ class WhisperTranscriptAccessor(vcon.accessors.TranscriptAccessor):
       text_dict = {}
       text_dict["parties"] = self._dialog_dict["parties"]
       text_dict["text"] = self._analysis_dict["body"]["text"]
-      dialog_start = datetime.datetime.fromisoformat(vcon.utils.cannonize_date(self._dialog_dict["start"]))
+      dialog_start = vcon.utils.date_to_datetime(self._dialog_dict["start"])
       relative_start = self._analysis_dict["body"]["segments"][0]["start"]
       text_dict["start"] = (dialog_start + datetime.timedelta(0, relative_start)).isoformat()
       relative_end = self._analysis_dict["body"]["segments"][-1]["end"]

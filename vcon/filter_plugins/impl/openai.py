@@ -538,7 +538,7 @@ class OpenAIChatCompletion(vcon.filter_plugins.FilterPlugin):
         if(text_dict["duration"] is not None and
           text_dict["duration"] > 0
           ):
-          call_end = datetime.datetime.fromisoformat(vcon.utils.cannonize_date(text_dict["start"])) +\
+          call_end = vcon.utils.date_to_datetime(text_dict["start"]) +\
             datetime.timedelta(0, text_dict["duration"])
           call_end_string = " to " + call_end.isoformat()
         else:

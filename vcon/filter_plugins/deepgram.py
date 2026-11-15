@@ -37,7 +37,7 @@ class DeepgramTranscriptAccessor(vcon.accessors.TranscriptAccessor):
       ):
 
       text_list = []
-      dialog_start = datetime.datetime.fromisoformat(vcon.utils.cannonize_date(self._dialog_dict["start"]))
+      dialog_start = vcon.utils.date_to_datetime(self._dialog_dict["start"])
 
       num_channels = len(self._analysis_dict["body"]["results"]["channels"])
       for channel_index in range(num_channels):
