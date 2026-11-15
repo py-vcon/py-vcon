@@ -341,10 +341,10 @@ def test_deepgram_transcript_accessor_multichannel_parties():
   text_list = accessor.get_text()
   assert([(t["parties"], t["text"]) for t in text_list] == [(1, "Hello"), ([2, 3], "Hi there")])
 
-  # dialog parties without an entry for a channel falls back to the channel index
+  # dialog parties without an entry for a channel: no party for that channel
   dialog_dict["parties"] = [1]
   text_list = accessor.get_text()
-  assert([t["parties"] for t in text_list] == [1, 1])
+  assert([t["parties"] for t in text_list] == [1, None])
 
 
 @pytest.mark.asyncio

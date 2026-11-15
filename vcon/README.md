@@ -51,6 +51,7 @@ The following categories of methods are implemented on the Vcon class.
    * [clear_dialog](#clear_dialog)
    * [decode_dialog_inline_body](#decode_dialog_inline_body)
    * [find_transcript_for_dialog](#find_transcript_for_dialog)
+   * [get_channel_contributors](#get_channel_contributors)
    * [get_dialog_body](#get_dialog_body)
    * [get_dialog_external_recording](#get_dialog_external_recording)
    * [get_dialog_text](#get_dialog_text)
@@ -886,6 +887,44 @@ Parameters:
 Returns:  
   (int or None) - index of the transcript type analysis object in this Vcon or
     None if not found.
+
+
+
+### get_channel_contributors
+
+**get_channel_contributors**(self, dialog_index: 'int', channel: 'int', num_channels: 'int', start: 'typing.Union[str, int, float, datetime.datetime]', duration: 'typing.Union[int, float, None]' = None) -> 'typing.Union[int, typing.List[int], None]'
+
+
+Get the party(s) heard on a channel of a recording Dialog Object from
+the given time, for the given duration.
+
+The contributors at the start of the recording are given by the Dialog
+Object parties: the whole parties value for a single channel recording,
+else the element of the parties array for the channel.  A channel-contributors
+Event Object for the Dialog and channel replaces the contributors from its
+time.  The latest such Event at or before start gives the contributors
+at start.  The contributors of the Events after start and before the end
+of the duration are added.  A null or absent contributors parameter
+means no party contributes.
+
+Parameters:  
+  **dialog_index** (int) - index of the recording Dialog Object  
+  **channel** (int) - index of the channel in the recording, 0 is the first  
+  **num_channels** (int) - number of channels in the recording  
+  **start** (str, int, float, datetime.datetime) - Date, time from which the party(s)
+           are wanted.  String containing RFC 2822 or RFC3339 date time stamp or
+           int/float containing epoch time (since 1970) in seconds.  
+  **duration** (int, float) - seconds from start over which the party(s) are wanted.
+           None (the default) gives the party(s) at start.
+
+Returns:  
+  the party index (int) if one party, list of party indices if more than one,
+  None if no party contributes.  With no change over the period, the Dialog
+  parties element or Event contributors value is returned as found.
+
+Raises AttributeError if the dialog_index is out of range, the Dialog Object
+is not a recording, the channel is not less than num_channels or the
+duration is negative.
 
 
 

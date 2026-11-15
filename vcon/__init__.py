@@ -2431,6 +2431,112 @@ class Vcon():
 
 
   @tag_dialog
+  def get_channel_contributors(
+    self,
+    dialog_index : int,
+    channel : int,
+    num_channels : int,
+    start : typing.Union[str, int, float, datetime.datetime],
+    duration : typing.Union[int, float, None] = None
+    ) -> typing.Union[int, typing.List[int], None]:
+    """
+    Get the party(s) heard on a channel of a recording Dialog Object from
+    the given time, for the given duration.
+
+    The contributors at the start of the recording are given by the Dialog
+    Object parties: the whole parties value for a single channel recording,
+    else the element of the parties array for the channel.  A channel-contributors
+    Event Object for the Dialog and channel replaces the contributors from its
+    time.  The latest such Event at or before start gives the contributors
+    at start.  The contributors of the Events after start and before the end
+    of the duration are added.  A null or absent contributors parameter
+    means no party contributes.
+
+    Parameters:  
+      **dialog_index** (int) - index of the recording Dialog Object  
+      **channel** (int) - index of the channel in the recording, 0 is the first  
+      **num_channels** (int) - number of channels in the recording  
+      **start** (str, int, float, datetime.datetime) - Date, time from which the party(s)
+               are wanted.  String containing RFC 2822 or RFC3339 date time stamp or
+               int/float containing epoch time (since 1970) in seconds.  
+      **duration** (int, float) - seconds from start over which the party(s) are wanted.
+               None (the default) gives the party(s) at start.
+
+    Returns:  
+      the party index (int) if one party, list of party indices if more than one,
+      None if no party contributes.  With no change over the period, the Dialog
+      parties element or Event contributors value is returned as found.
+
+    Raises AttributeError if the dialog_index is out of range, the Dialog Object
+    is not a recording, the channel is not less than num_channels or the
+    duration is negative.
+    """
+    dialogs = self._vcon_dict.get(Vcon.DIALOG, None) or []
+    if(not isinstance(dialog_index, int) or isinstance(dialog_index, bool) or
+      dialog_index < 0 or dialog_index >= len(dialogs)):
+      raise AttributeError("dialog index: {} out of range, there are {} Dialog Objects".format(
+        dialog_index, len(dialogs)))
+
+    dialog = dialogs[dialog_index]
+    if(dialog.get("type", None) != "recording"):
+      raise AttributeError(
+        "dialog[{}] is not a recording Dialog Object, its type is: {}".format(
+        dialog_index, dialog.get("type", None)))
+
+    if(not isinstance(num_channels, int) or isinstance(num_channels, bool) or num_channels < 1):
+      raise AttributeError("num_channels: {} must be a positive int".format(num_channels))
+
+    if(not isinstance(channel, int) or isinstance(channel, bool) or
+      channel < 0 or channel >= num_channels):
+      raise AttributeError("channel: {} is not in dialog[{}], which has {} channel(s)".format(
+        channel, dialog_index, num_channels))
+
+    if(duration is not None and duration < 0):
+      raise AttributeError("duration: {} must not be negative".format(duration))
+
+    parties = dialog.get("parties", None)
+    if(num_channels == 1):
+      contributors = parties
+    elif(isinstance(parties, list) and channel < len(parties)):
+      contributors = parties[channel]
+    else:
+      contributors = None
+
+    start_time = vcon.utils.date_to_datetime(start)
+    end_time = start_time + datetime.timedelta(seconds = duration or 0)
+
+    changes = []
+    for event in self._vcon_dict.get(Vcon.EVENTS, None) or []:
+      if(event.get("type", None) == Vcon.EVENT_CHANNEL_CONTRIBUTORS_TYPE and
+        event.get("dialog", None) == dialog_index and event.get("channel", None) == channel and
+        event.get("time", None) is not None):
+        changes.append((vcon.utils.date_to_datetime(event["time"]), event.get("contributors", None)))
+    changes.sort(key = lambda change: change[0])
+
+    added = []
+    for change_time, change_contributors in changes:
+      if(change_time <= start_time):
+        contributors = change_contributors
+      elif(change_time < end_time):
+        added.append(change_contributors)
+
+    if(len(added) == 0):
+      return(contributors)
+
+    party_indices = vcon.utils.flatten_party_indices(contributors)
+    for change_contributors in added:
+      for party_index in vcon.utils.flatten_party_indices(change_contributors):
+        if(party_index not in party_indices):
+          party_indices.append(party_index)
+
+    if(len(party_indices) == 0):
+      return(None)
+    if(len(party_indices) == 1):
+      return(party_indices[0])
+    return(party_indices)
+
+
+  @tag_dialog
   async def get_dialog_text(
     self,
     dialog_index: int,
@@ -2521,6 +2627,10 @@ class Vcon():
           analysis["schema"].lower(),
           )]
         accessor = accessor_class(dialog, analysis)
+        # the contributors of a channel come from the Dialog parties and
+        # the channel-contributors Events of this vCon
+        accessor.channel_contributors = (lambda channel, num_channels, start, duration = None:
+          self.get_channel_contributors(dialog_index, channel, num_channels, start, duration))
         return(accessor.get_text())
 
     return([])
