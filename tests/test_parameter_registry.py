@@ -44,7 +44,7 @@ def test_extension():
 # ============================================================
 
 def test_core_rows_match_draft_iana_tables():
-  """ each -05 IANA table has exactly the draft's names in the core data set (legacy rows excluded) """
+  """ each -05 IANA table has exactly the draft's names in the core data set (legacy and proposed rows excluded) """
   tables = tests.common_utils.load_iana_tables()
   assert(set(tables.keys()) == {"-", "Party", "Dialog", "Dialog->type", "Session", "Session_Reference",
     "Session_Reference->type", "Event", "Event->type", "Attachment", "Analysis", "Redacted_from",
@@ -52,10 +52,13 @@ def test_core_rows_match_draft_iana_tables():
 
   for parent, draft_names in tables.items():
     core_names = [row["name"] for row in vcon.parameter_registry.CORE_ROWS
-      if(row["parent"] == parent and not row["legacy"])]
+      if(row["parent"] == parent and row["iana"] and not row["legacy"])]
     assert(core_names == draft_names), parent
-    assert(all([row["iana"] for row in vcon.parameter_registry.CORE_ROWS
-      if(row["parent"] == parent and not row["legacy"])])), parent
+
+  # proposed rows on Objects with an IANA table (see tests/test_email_threads.py)
+  proposed = [(row["parent"], row["name"]) for row in vcon.parameter_registry.CORE_ROWS
+    if(row["parent"] in tables and not row["iana"])]
+  assert(proposed == [("Dialog", "in_reply_to"), ("Dialog", "references")])
 
 
 def test_value_lists():

@@ -37,7 +37,8 @@ def do_in_email(
   # already in the vcon
   in_vcon.add_email_dialog_inline(
     smtp_message_string,
-    os.path.basename(args.emailfile[0])
+    os.path.basename(args.emailfile[0]),
+    include_bcc = args.include_bcc
     )
 
   return(in_vcon)
@@ -580,6 +581,8 @@ async def main(argv : typing.Optional[typing.Sequence[str]] = None) -> int:
     type=pathlib.Path,
     help = "path to SMTP email message file to add as text dialog",
     default=None)
+  add_in_email_subparsers.add_argument("--include-bcc", dest = "include_bcc", action = "store_true",
+    help = "make the Bcc addresses parties and receivers of the message")
   # not needed as they come from the SMTP message:
   # add_in_email_subparsers.add_argument("start", metavar='start_time', nargs="?", type=str, default=None)
   # add_in_email_subparsers.add_argument("parties", metavar='parties', nargs="?", type=str, default=None)

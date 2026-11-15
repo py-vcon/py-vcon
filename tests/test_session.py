@@ -425,13 +425,16 @@ def make_smtp_message(
   message_id : str,
   cc : str = "",
   bcc : str = "",
-  content_type : str = "text/plain"
+  content_type : str = "text/plain",
+  in_reply_to : str = ""
   ) -> str:
   headers = "From: {}\r\nTo: {}\r\n".format(sender, to)
   if(cc != ""):
     headers += "Cc: {}\r\n".format(cc)
   if(bcc != ""):
     headers += "Bcc: {}\r\n".format(bcc)
+  if(in_reply_to != ""):
+    headers += "In-Reply-To: {}\r\n".format(in_reply_to)
   headers += ("Subject: Test\r\nDate: Fri, 23 Sep 2022 21:44:25 +0000\r\n"
     "Message-ID: {}\r\nContent-Type: {}\r\n".format(message_id, content_type))
   return(headers + "\r\nHello\r\n")
@@ -447,8 +450,8 @@ def test_email_thread_one_session(caplog):
   v = vcon.Vcon()
   with caplog.at_level(logging.WARNING):
     v.add_email_dialog_inline(make_smtp_message(BOB, ALICE, "<1@example.com>"))
-    v.add_email_dialog_inline(make_smtp_message(ALICE, BOB, "<2@example.com>"))
-  assert("do not match" not in caplog.text)
+    v.add_email_dialog_inline(make_smtp_message(ALICE, BOB, "<2@example.com>", in_reply_to = "<1@example.com>"))
+  assert(len([record for record in caplog.records if(record.levelno >= logging.WARNING)]) == 0)
 
   assert(v.parties[0]["name"] == "Bob")
   assert(v.parties[1]["name"] == "Alice")
@@ -473,12 +476,12 @@ def test_email_cc_receivers_bcc_ignored():
   tests.common_utils.assert_valid_vcon(v.dumpd())
 
 
-def test_email_receivers_change_new_session(caplog):
+def test_email_not_in_thread_new_session(caplog):
   v = vcon.Vcon()
   v.add_email_dialog_inline(make_smtp_message(ALICE, BOB, "<1@example.com>"))
   with caplog.at_level(logging.WARNING):
     v.add_email_dialog_inline(make_smtp_message(BOB, ALICE, "<2@example.com>", cc = CAROL))
-  assert("do not match" in caplog.text)
+  assert(len([record for record in caplog.records if(record.levelno >= logging.WARNING)]) == 0)
   assert(len(v.sessions) == 2)
   assert(v.sessions[0]["dialog"] == [0])
   assert(v.sessions[1]["dialog"] == [1])

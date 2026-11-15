@@ -1201,39 +1201,6 @@ class Vcon():
     return(found)
 
 
-  def _find_session_by_parties(self, parties : typing.List[int]) -> typing.Union[int, None]:
-    """
-    Find the last Session Object whose parties are the same set of party
-    indices as the given parties.
-
-    Returns:
-      index of the Session Object or None if not found
-    """
-    found = None
-    for session_index, session in enumerate(self._vcon_dict.get(Vcon.SESSIONS, None) or []):
-      if(set(session.get("parties", None) or []) == set(parties)):
-        found = session_index
-
-    return(found)
-
-
-  def _has_email_session(self) -> bool:
-    """
-    Check if any Session Object references an email text Dialog Object
-    (i.e. a text Dialog Object with a message_id).
-    """
-    dialog_list = self._vcon_dict.get(Vcon.DIALOG, None) or []
-    for session in (self._vcon_dict.get(Vcon.SESSIONS, None) or []):
-      for dialog_index in (session.get("dialog", None) or []):
-        if(dialog_index < len(dialog_list) and
-          dialog_list[dialog_index].get("type", None) == "text" and
-          dialog_list[dialog_index].get("message_id", None) is not None
-          ):
-          return(True)
-
-    return(False)
-
-
   @tag_event
   def add_join_event(
     self,
@@ -2065,7 +2032,8 @@ class Vcon():
     self,
     smtp_message: str,
     file_name : typing.Union[str, None] = None,
-    session : typing.Union[int, None] = None
+    session : typing.Union[int, None] = None,
+    include_bcc : bool = False
     ) -> int:
     """
     Add a new text dialog for the given SMTP email message.
@@ -2076,28 +2044,39 @@ class Vcon():
     Dialog body; no Attachment Objects are added.
 
     The parties of the new Dialog Object reference only the sender (From).
-    The receivers of the message, the sender and the To and Cc parties, are
-    referenced by the parties of the Session Object.  Bcc parties are not
-    included.
+    The receivers of the message, the sender and the To and Cc parties (and
+    Bcc parties if include_bcc), are referenced by the parties of the Session
+    Object.  The Message-ID is written as message_id, and the Message-IDs of
+    the In-Reply-To and References headers as in_reply_to and references
+    (proposed Dialog parameters), when present.
+
+    Unless session is given, the message joins the email thread of any email
+    Dialog with which it shares a Message-ID (its own, In-Reply-To or
+    References), in any arrival order.  A message which shares none starts a
+    new thread in a new Session Object.  While the receivers of a thread stay
+    the same, it is one Session Object.  When they change, the thread Session
+    Object becomes the parent of child Session Objects, one for each run of
+    messages, in Date order, with the same receivers.  A message which matches
+    two threads joins the earliest and a warning is logged.
 
     Parameters:
       **smtp_message** (str) - string containing the contents of a SMTP
       messages including headers and body.
-      **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
-               the last Session Object whose parties are the same set of parties as the
-               receivers of this message references the new dialog.  If there is no such
-               Session Object, a new Session Object is created to reference it.  A thread
-               in which the receivers change is not yet represented as a parent Session
-               Object with child Session Objects.  A warning is logged in that case.
+      **session** (int) - index of the Session Object which is to reference the new dialog,
+               with no thread logic.  If None, see above.
+      **include_bcc** (bool) - make the Bcc addresses parties and receivers (default False)
 
     Returns:  
       index (int) of the dialog added for the text body of the message
+
+    Raises ValueError, before the vCon is changed, if the message has no
+    parseable From address or Date header.
     """
 
     self._attempting_modify()
-    self._check_new_dialog_session(session)
-
     email_message = email.message_from_string(smtp_message)
+    sender, date = Vcon._check_smtp_message(email_message)
+    self._check_new_dialog_session(session)
 
     # Set subject if its not already set
     if(self.subject is None or len(self.subject) == 0):
@@ -2106,11 +2085,10 @@ class Vcon():
         self.set_subject(subject)
 
     # Get tuple(s) of (name, email_uri) for sender and recipients
-    sender = email.utils.parseaddr(email_message.get("from"))
-    recipients = email.utils.getaddresses(email_message.get_all("to", []) +
-      email_message.get_all("cc", []) +
-      email_message.get_all("recent-to", []) +
-      email_message.get_all("recent-cc", []))
+    receiver_headers = ["to", "cc", "recent-to", "recent-cc"]
+    if(include_bcc):
+      receiver_headers.append("bcc")
+    recipients = email.utils.getaddresses(sum([email_message.get_all(name, []) for name in receiver_headers], []))
 
     party_indices = []
     sender_index = None
@@ -2139,13 +2117,8 @@ class Vcon():
       if(party_index not in receivers):
         receivers.append(party_index)
 
-    if(session is None):
-      session = self._find_session_by_parties(receivers)
-
     content_type = vcon.utils.unfold_header(email_message.get("content-type"))
     file_name = email_message.get_filename()
-    #date = time.mktime(email.utils.parsedate(email_message.get("date")))
-    date = email.utils.parsedate_to_datetime(email_message.get("date"))
 
     email_body = ""
 
@@ -2161,25 +2134,215 @@ class Vcon():
     else:
       email_body = email_message.get_payload()
 
-    if(session is None and self._has_email_session()):
-      logger.warning(
-        "email message receivers: %s do not match the parties of any Session Object.  A new"
-        " Session Object is created.  A thread in which the receivers change is not yet"
-        " represented as a parent Session Object with child Session Objects.",
-        receivers)
-
-    dialog_index = self.add_text_dialog_inline(email_body, date, 0, [sender_index], content_type, file_name, session)
-
-    if(session is None):
-      session = self.find_sessions_for_dialog(dialog_index)[0]
-    self.add_dialog_to_session(session, dialog_index, receivers = receivers)
-
     # get and save the message-id header as that helps us avoid duplicating
     # a message and gives us a key to refer back to the SMTP message.
-    message_id = email_message.get("message-id")
-    self.set_dialog_parameter("message_id", message_id, dialog_index)
+    message_id = (email_message.get("message-id") or "").strip()
+    in_reply_to = Vcon._header_message_ids(email_message.get("in-reply-to"))
+    references = Vcon._header_message_ids(email_message.get("references"))
+
+    thread = None
+    thread_items = []
+    if(session is None):
+      thread = self._find_email_thread(set(([message_id] if message_id != "" else []) + in_reply_to + references))
+      if(thread is not None):
+        thread_items = self._email_thread_items(thread)
+
+    dialog_index = self.add_text_dialog_inline(email_body, date, 0, [sender_index], content_type, file_name,
+      session if session is not None else thread)
+
+    if(message_id != ""):
+      self.set_dialog_parameter("message_id", message_id, dialog_index)
+    if(len(in_reply_to) > 0):
+      self.set_dialog_parameter("in_reply_to", in_reply_to, dialog_index)
+    if(len(references) > 0):
+      self.set_dialog_parameter("references", references, dialog_index)
+
+    if(session is None and thread is not None):
+      self._regroup_email_thread(thread, thread_items + [(dialog_index, receivers)])
+    else:
+      self.add_dialog_to_session(self.find_sessions_for_dialog(dialog_index)[0], dialog_index, receivers = receivers)
 
     return(dialog_index)
+
+
+  @tag_dialog
+  def add_email_dialogs_inline(
+    self,
+    smtp_messages : typing.List[str],
+    include_bcc : bool = False
+    ) -> typing.List[int]:
+    """
+    Add the given SMTP email messages, in Date order, with **add_email_dialog_inline**.
+
+    Parameters:
+      **smtp_messages** (List[str]) - the SMTP messages, in any order
+      **include_bcc** (bool) - make the Bcc addresses parties and receivers (default False)
+
+    Returns:
+      the index of the dialog added for each message, in the order given
+
+    Raises ValueError, before the vCon is changed, if a message has no
+    parseable From address or Date header.
+    """
+    dates = [Vcon._check_smtp_message(email.message_from_string(smtp_message))[1]
+      for smtp_message in smtp_messages]
+    dialog_indices: typing.List[typing.Union[int, None]] = [None] * len(smtp_messages)
+    for message_index in sorted(range(len(smtp_messages)), key = lambda index: dates[index]):
+      dialog_indices[message_index] = self.add_email_dialog_inline(smtp_messages[message_index],
+        include_bcc = include_bcc)
+
+    return(typing.cast(typing.List[int], dialog_indices))
+
+
+  @staticmethod
+  def _check_smtp_message(email_message : email.message.Message) -> typing.Tuple[typing.Tuple[str, str], datetime.datetime]:
+    """
+    The sender (name, address) and Date of an SMTP message.
+
+    Raises ValueError if it has no parseable From address or Date header.
+    """
+    sender = email.utils.parseaddr(email_message.get("from") or "")
+    if(sender[1] == "" or "@" not in sender[1]):
+      raise ValueError("email message has no parseable From address: {}".format(email_message.get("from")))
+
+    date_header = email_message.get("date")
+    try:
+      date = email.utils.parsedate_to_datetime(date_header)
+    except (TypeError, ValueError, IndexError):
+      date = None
+    if(date is None):
+      raise ValueError("email message has no parseable Date header: {}".format(date_header))
+    if(date.tzinfo is None):
+      date = date.replace(tzinfo = datetime.timezone.utc)
+
+    return(sender, date)
+
+
+  @staticmethod
+  def _header_message_ids(header_value : typing.Union[str, None]) -> typing.List[str]:
+    """ The Message-IDs (with angle brackets) in an In-Reply-To or References header value """
+    if(header_value is None):
+      return([])
+    return(re.findall(r"<[^<>\s]+>", vcon.utils.unfold_header(str(header_value))))
+
+
+  def _email_thread_root(self, session_index : int) -> int:
+    """ The thread Session: the parent of the given Session if it is a child, else itself """
+    for parent_index, parent in enumerate(self._vcon_dict.get(Vcon.SESSIONS, None) or []):
+      for reference in parent.get("sessions", None) or []:
+        if(reference.get("type", None) == "child" and reference.get("session", None) == session_index):
+          return(parent_index)
+
+    return(session_index)
+
+
+  def _email_thread_children(self, thread : int) -> typing.List[int]:
+    """ The child Session indices of the thread Session, in its order """
+    return([reference["session"] for reference in self._vcon_dict[Vcon.SESSIONS][thread].get("sessions", None) or []
+      if(reference.get("type", None) == "child")])
+
+
+  def _find_email_thread(self, message_ids : typing.Set[str]) -> typing.Union[int, None]:
+    """
+    The thread Session of the email Dialogs which share a Message-ID with the
+    given set, None if none does.  If they are in more than one thread, the
+    earliest (lowest index) is returned and a warning is logged.
+    """
+    if(len(message_ids) == 0):
+      return(None)
+
+    threads: typing.List[int] = []
+    for dialog_index, dialog in enumerate(self._vcon_dict.get(Vcon.DIALOG, None) or []):
+      if(dialog.get("type", None) != "text" or dialog.get("message_id", None) in (None, "")):
+        continue
+      dialog_ids = set([dialog["message_id"]] + (dialog.get("in_reply_to", None) or []) +
+        (dialog.get("references", None) or []))
+      if(len(dialog_ids & message_ids) > 0):
+        for session_index in self.find_sessions_for_dialog(dialog_index):
+          thread = self._email_thread_root(session_index)
+          if(thread not in threads):
+            threads.append(thread)
+
+    if(len(threads) == 0):
+      return(None)
+
+    threads.sort()
+    if(len(threads) > 1):
+      logger.warning("email message matches the threads of Sessions: %s.  It joins Session: %s",
+        threads, threads[0])
+
+    return(threads[0])
+
+
+  def _email_thread_items(self, thread : int) -> typing.List[typing.Tuple[int, typing.List[int]]]:
+    """ (dialog index, receivers) of each Dialog in the thread """
+    sessions = self._vcon_dict[Vcon.SESSIONS]
+    holders = self._email_thread_children(thread) or [thread]
+    return([(dialog_index, list(sessions[holder].get("parties", None) or []))
+      for holder in holders for dialog_index in (sessions[holder].get("dialog", None) or [])])
+
+
+  def _regroup_email_thread(
+    self,
+    thread : int,
+    items : typing.List[typing.Tuple[int, typing.List[int]]]
+    ) -> None:
+    """
+    Group the Dialogs of an email thread into runs, in Date order, of the
+    same receivers.  One run: the thread is one Session.  More: the thread
+    Session is the parent of a child Session for each run.  A child keeps
+    its index for the run holding its earliest Dialog; new children are
+    added as needed.  The parent and child start and duration are recomputed.
+    """
+    sessions = self._vcon_dict[Vcon.SESSIONS]
+    dialogs = self._vcon_dict[Vcon.DIALOG]
+    parent = sessions[thread]
+    children = self._email_thread_children(thread)
+
+    ordered = sorted(items, key = lambda item: (vcon.utils.date_to_datetime(dialogs[item[0]]["start"]), item[0]))
+    runs: typing.List[typing.List[typing.Tuple[int, typing.List[int]]]] = []
+    for item in ordered:
+      if(len(runs) > 0 and set(runs[-1][0][1]) == set(item[1])):
+        runs[-1].append(item)
+      else:
+        runs.append([item])
+
+    if(len(runs) == 1 and len(children) == 0):
+      self.add_dialog_to_session(thread, items[-1][0], receivers = items[-1][1])
+      return
+
+    child_of_dialog = {dialog_index: child for child in children
+      for dialog_index in (sessions[child].get("dialog", None) or [])}
+    assigned: typing.List[int] = []
+    for run in runs:
+      held = [child_of_dialog[dialog_index] for dialog_index, receivers in run if(dialog_index in child_of_dialog)]
+      child = held[0] if(len(held) > 0 and held[0] not in assigned) else None
+      if(child is None):
+        child = self.add_session()
+      assigned.append(child)
+
+      child_session = sessions[child]
+      for name in ["dialog", "parties", "start", "duration"]:
+        child_session.pop(name, None)
+      for dialog_index, receivers in run:
+        self.add_dialog_to_session(child, dialog_index, receivers = receivers)
+
+    # the parent: all receivers, the children in Date order and the time they span
+    parent.pop("dialog", None)
+    for name in ["start", "duration"]:
+      parent.pop(name, None)
+    parent_parties = parent.get("parties", None) or []
+    for dialog_index, receivers in ordered:
+      for party_index in receivers:
+        if(party_index not in parent_parties):
+          parent_parties.append(party_index)
+    parent["parties"] = parent_parties
+    other_references = [reference for reference in parent.get("sessions", None) or []
+      if(reference.get("type", None) != "child")]
+    parent["sessions"] = other_references + [{"session": child, "type": "child"} for child in assigned]
+    for dialog_index, receivers in ordered:
+      Vcon._extend_session_time(parent, dialogs[dialog_index])
+    Vcon._order_session_parameters(parent)
 
 
   @tag_dialog

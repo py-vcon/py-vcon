@@ -161,6 +161,10 @@ CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
     ("redacted_segments", "redacted segments")
     ]) +
   _make_rows("Dialog", [
+    ("in_reply_to", "Message-IDs of the In-Reply-To email header (proposed, not in -05)"),
+    ("references", "Message-IDs of the References email header (proposed, not in -05)")
+    ], iana = False) +
+  _make_rows("Dialog", [
     ("originator", "0.4.0 originator party, now in the Session"),
     ("party_history", "0.4.0 party history, now Event Objects"),
     ("transferee", "0.4.0 transfer Dialog transferee"),

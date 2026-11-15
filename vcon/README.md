@@ -42,6 +42,7 @@ The following categories of methods are implemented on the Vcon class.
    * [add_dialog_inline_text](#add_dialog_inline_text)
    * [add_dialog_redacted_segment](#add_dialog_redacted_segment)
    * [add_email_dialog_inline](#add_email_dialog_inline)
+   * [add_email_dialogs_inline](#add_email_dialogs_inline)
    * [add_incomplete_dialog](#add_incomplete_dialog)
    * [add_recording_dialog_external](#add_recording_dialog_external)
    * [add_recording_dialog_inline](#add_recording_dialog_inline)
@@ -601,7 +602,7 @@ is negative, or a party or the channel does not exist.
 
 ### add_email_dialog_inline
 
-**add_email_dialog_inline**(self, smtp_message: 'str', file_name: 'typing.Union[str, None]' = None, session: 'typing.Union[int, None]' = None) -> 'int'
+**add_email_dialog_inline**(self, smtp_message: 'str', file_name: 'typing.Union[str, None]' = None, session: 'typing.Union[int, None]' = None, include_bcc: 'bool' = False) -> 'int'
 
 
 Add a new text dialog for the given SMTP email message.
@@ -612,22 +613,52 @@ may include a simple text or MIME body.  MIME attachments stay in the
 Dialog body; no Attachment Objects are added.
 
 The parties of the new Dialog Object reference only the sender (From).
-The receivers of the message, the sender and the To and Cc parties, are
-referenced by the parties of the Session Object.  Bcc parties are not
-included.
+The receivers of the message, the sender and the To and Cc parties (and
+Bcc parties if include_bcc), are referenced by the parties of the Session
+Object.  The Message-ID is written as message_id, and the Message-IDs of
+the In-Reply-To and References headers as in_reply_to and references
+(proposed Dialog parameters), when present.
+
+Unless session is given, the message joins the email thread of any email
+Dialog with which it shares a Message-ID (its own, In-Reply-To or
+References), in any arrival order.  A message which shares none starts a
+new thread in a new Session Object.  While the receivers of a thread stay
+the same, it is one Session Object.  When they change, the thread Session
+Object becomes the parent of child Session Objects, one for each run of
+messages, in Date order, with the same receivers.  A message which matches
+two threads joins the earliest and a warning is logged.
 
 Parameters:
   **smtp_message** (str) - string containing the contents of a SMTP
   messages including headers and body.
-  **session** (int) - index of the Session Object which is to reference the new dialog.  If None,
-           the last Session Object whose parties are the same set of parties as the
-           receivers of this message references the new dialog.  If there is no such
-           Session Object, a new Session Object is created to reference it.  A thread
-           in which the receivers change is not yet represented as a parent Session
-           Object with child Session Objects.  A warning is logged in that case.
+  **session** (int) - index of the Session Object which is to reference the new dialog,
+           with no thread logic.  If None, see above.
+  **include_bcc** (bool) - make the Bcc addresses parties and receivers (default False)
 
 Returns:  
   index (int) of the dialog added for the text body of the message
+
+Raises ValueError, before the vCon is changed, if the message has no
+parseable From address or Date header.
+
+
+
+### add_email_dialogs_inline
+
+**add_email_dialogs_inline**(self, smtp_messages: 'typing.List[str]', include_bcc: 'bool' = False) -> 'typing.List[int]'
+
+
+Add the given SMTP email messages, in Date order, with **add_email_dialog_inline**.
+
+Parameters:
+  **smtp_messages** (List[str]) - the SMTP messages, in any order
+  **include_bcc** (bool) - make the Bcc addresses parties and receivers (default False)
+
+Returns:
+  the index of the dialog added for each message, in the order given
+
+Raises ValueError, before the vCon is changed, if a message has no
+parseable From address or Date header.
 
 
 
