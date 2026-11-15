@@ -4,6 +4,9 @@ import re
 import json
 import typing
 import hashlib
+import shutil
+import subprocess
+import tempfile
 import urllib.request
 import jsonschema
 import pytest
@@ -21,6 +24,16 @@ VCON_SCHEMA_PATH = "vcon_json_schema.json"
 VCON_SCHEMA_SHA256 = "87285e19c3df2520f9c5bf370f7a31aaad1a2f8e882559ef63d6fb1249948f44"
 
 # The draft-ietf-vcon-vcon-core-05 text, for its IANA tables.
+# The vCon CDDL at the same commit, checked with the cddl tool (Ruby gem)
+VCON_CDDL_PATH = "vcon.cddl"
+VCON_CDDL_SHA256 = "23cbe72b7826d9a38c780a52581ba00bd8fa7a68e7cf02dd623ed468e830e90b"
+# The parameters py-vcon writes which are proposed but not in -05, see the file
+VCON_PROPOSED_CDDL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vcon_proposed.cddl")
+CDDL_SKIP_VARIABLE = "VCON_SKIP_CDDL"
+CDDL_INSTALL_HELP = ("The cddl command (Ruby cddl gem) is not installed.  Install it with:"
+  "  sudo apt-get install -y ruby && sudo gem install cddl"
+  "  or set {}=1 to skip the CDDL checks.")
+
 VCON_DRAFT_PATH = "draft-ietf-vcon-vcon-core.md"
 VCON_DRAFT_SHA256 = "f088a16efd6a72851549229ebaef935e9d1d4a80206253363b845a108c85f779"
 
@@ -96,8 +109,7 @@ def load_draft_file(commit: str, path: str, sha256: str) -> bytes:
   not match.  The test is never skipped.
   """
   url = DRAFT_URL.format(commit, path)
-  base_name, extension = os.path.splitext(os.path.basename(path))
-  cache_file = os.path.join(CACHE_DIR, "{}_{}{}".format(base_name, commit, extension))
+  cache_file = draft_cache_file(commit, path)
   if(os.path.exists(cache_file)):
     with open(cache_file, "rb") as cached_file:
       file_bytes = cached_file.read()
@@ -117,6 +129,12 @@ def load_draft_file(commit: str, path: str, sha256: str) -> bytes:
       cache_file, file_sha256, sha256))
 
   return(file_bytes)
+
+
+def draft_cache_file(commit: str, path: str) -> str:
+  """ The cache file name of a file from the draft repository at the given commit """
+  base_name, extension = os.path.splitext(os.path.basename(path))
+  return(os.path.join(CACHE_DIR, "{}_{}{}".format(base_name, commit, extension)))
 
 
 def load_vcon_schema() -> dict:
@@ -169,3 +187,41 @@ def assert_valid_vcon(vcon_dict: dict) -> None:
   if(len(errors) > 0):
     raise AssertionError("vCon is not valid against the vCon JSON Schema:\n" +
       "\n".join(["  {}: {}".format(error.json_path, error.message) for error in errors]))
+
+  assert_valid_cddl(vcon_dict)
+
+
+def assert_valid_cddl(vcon_form: dict) -> None:
+  """
+  Assert that the given vCon, in the unsigned, signed or encrypted form,
+  is valid against the vCon CDDL, using the cddl command (Ruby cddl gem).
+  The -05 vcon.cddl is used with tests/vcon_proposed.cddl appended, which
+  defines the proposed parameters that py-vcon writes.
+
+  Does nothing if the VCON_SKIP_CDDL environment variable is 1.
+
+  Raises AssertionError with the tool output if the vCon is not valid, or
+  saying how to install the tool if the cddl command is not found.
+  """
+  if(os.environ.get(CDDL_SKIP_VARIABLE, "") == "1"):
+    return
+
+  cddl_command = shutil.which("cddl")
+  if(cddl_command is None):
+    raise AssertionError(CDDL_INSTALL_HELP.format(CDDL_SKIP_VARIABLE))
+
+  cddl = load_draft_file(VCON_SCHEMA_COMMIT, VCON_CDDL_PATH, VCON_CDDL_SHA256).decode("utf-8")
+  with open(VCON_PROPOSED_CDDL_FILE, "r") as proposed_file:
+    cddl += "\n" + proposed_file.read()
+  with tempfile.TemporaryDirectory() as temp_dir:
+    cddl_file_name = os.path.join(temp_dir, "vcon.cddl")
+    json_file_name = os.path.join(temp_dir, "vcon.json")
+    with open(cddl_file_name, "w") as cddl_file:
+      cddl_file.write(cddl)
+    with open(json_file_name, "w") as json_file:
+      json.dump(vcon_form, json_file)
+    result = subprocess.run([cddl_command, cddl_file_name, "validate", json_file_name],
+      stdout = subprocess.PIPE, stderr = subprocess.STDOUT, universal_newlines = True, timeout = 60)
+
+  if(result.returncode != 0):
+    raise AssertionError("vCon is not valid against the vCon CDDL:\n{}".format(result.stdout[:3000]))

@@ -62,6 +62,8 @@ jobs:
         apt-cache depends intel-media-va-driver
         echo "Installing apt packages: " $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3 | tr "\n" " ")
         sudo apt-get install -y --fix-missing $(grep -vE "^\s*#" vcon/docker_dev/apt_package_list.txt | grep -v python3 | tr "\n" " ")
+        sudo gem install cddl
+        gem list cddl
         apt show openssl
         echo "ssl.OPENSSL_VERSION: "`python3 -c "import ssl;print(ssl.OPENSSL_VERSION)"`
         echo "test openssl rand: " `openssl rand -hex 16`

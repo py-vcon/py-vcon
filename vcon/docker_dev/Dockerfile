@@ -14,6 +14,8 @@ RUN dos2unix /root/install/apt_package_list.txt
 ENV TZ=America/New_York
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get install -y $(grep -vE "^\s*#" /root/install/apt_package_list.txt | tr "\n" " ")
+# test only: CDDL validation in the unit tests
+RUN gem install cddl
 
 # pip stuff
 RUN /usr/bin/python3 -m pip install --upgrade pip

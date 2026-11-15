@@ -77,6 +77,20 @@ ENCODING_VALUES = [
   ]
 
 
+# Parameters which py-vcon writes, proposed to the vCon working group but
+# not defined in draft-ietf-vcon-vcon-core-05 (vcon-core draft issues 9, 13
+# and 14).  They are core rows below, with iana False, as they are expected
+# to become core rather than an extension.  As -05 does not define them, a
+# vCon which uses them does not pass a strict -05 CDDL validator; the unit
+# tests add them to the -05 CDDL with tests/vcon_proposed.cddl.
+PROPOSED_PARAMETERS: typing.List[typing.Tuple[str, str]] = [
+  ("Dialog", "in_reply_to"),
+  ("Dialog", "references"),
+  ("Redacted_string", "marker"),
+  ("Redacted_segments", "channel")
+  ]
+
+
 CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
   # vCon Object Parameter Names Registry
   _make_rows(VCON_OBJECT, [

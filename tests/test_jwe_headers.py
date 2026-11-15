@@ -6,6 +6,7 @@ import jwcrypto.jwe
 import vcon
 import vcon.security
 import vcon.utils
+import tests.common_utils
 
 CA_CERT = "certs/fake_ca_root.crt"
 DIVISION_CERT = "certs/fake_div.crt"
@@ -36,6 +37,7 @@ async def decrypt_verify(encrypted_dict : dict) -> vcon.Vcon:
 
 def test_encrypted_headers():
   encrypted_dict = make_encrypted_dict()
+  tests.common_utils.assert_valid_cddl(encrypted_dict)
 
   assert(list(encrypted_dict.keys()) == ["protected", "iv", "ciphertext", "tag", "recipients", "unprotected"])
   protected = vcon.security.decode_jws_protected_header(encrypted_dict["protected"])

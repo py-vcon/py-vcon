@@ -10,6 +10,7 @@ import jwcrypto.jwe
 import pytest
 import vcon
 import vcon.security
+import tests.common_utils
 
 CA_CERT = "certs/fake_ca_root.crt"
 DIVISION_CERT = "certs/fake_div.crt"
@@ -56,6 +57,10 @@ def encrypt_layout(protected, unprotected, recipients) -> dict:
   return(jwe_dict)
 
 
+# cty is mandatory in the -05 Unprotected Object, though RFC7516 does not
+# require it; decrypt accepts its absence
+NOT_05_LAYOUTS = ["enc unprotected, alg in the recipient header"]
+
 LAYOUTS = [
     ("alg and enc protected", {"alg": ALG, "enc": ENC}, {"cty": "application/vcon"}, None),
     ("alg and enc unprotected, no protected", None, {"alg": ALG, "enc": ENC, "cty": "application/vcon"}, None),
@@ -69,6 +74,11 @@ LAYOUTS = [
 async def test_layout_decrypts(label, protected, unprotected, recipient_header):
   jwe_dict = encrypt_layout(protected, unprotected, [(DIVISION_CERT, recipient_header)])
   assert(("protected" in jwe_dict) == (protected is not None)), label
+  if(label in NOT_05_LAYOUTS):
+    with pytest.raises(AssertionError, match = "not valid against the vCon CDDL"):
+      tests.common_utils.assert_valid_cddl(jwe_dict)
+  else:
+    tests.common_utils.assert_valid_cddl(jwe_dict)
 
   encrypted = vcon.Vcon()
   encrypted.loadd(jwe_dict)

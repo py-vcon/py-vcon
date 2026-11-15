@@ -29,6 +29,9 @@ ffmpeg
 #libcairo2-dev
 
 
+# test only: cddl gem for CDDL validation in the unit tests
+ruby
+
 # needed to build pyjq
 autoconf
 libtool

@@ -317,12 +317,12 @@ def test_texts_grouped_by_start_not_array_order():
 # Renames, extensions, version
 
 def test_redacted_and_amended_renamed():
-  redacted = {"uuid": "x", "type": "PII"}
+  redacted = {"uuid": UUID, "type": "PII"}
   result = convert(make([], redacted = redacted))
   assert(result["redacted_from"] == redacted)
   assert("redacted" not in result)
-  result = convert(make([], amended = {"uuid": "x"}))
-  assert(result["amended_from"] == {"uuid": "x"})
+  result = convert(make([], amended = {"uuid": UUID}))
+  assert(result["amended_from"] == {"uuid": UUID})
   tests.common_utils.assert_valid_vcon(result)
 
 

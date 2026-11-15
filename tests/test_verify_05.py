@@ -15,6 +15,7 @@ import pytest_httpserver
 import vcon
 import vcon.security
 import vcon.utils
+import tests.common_utils
 
 CA_CERT = "certs/fake_ca_root.crt"
 CA2_CERT = "certs/fake_ca2_root.crt"
@@ -79,6 +80,10 @@ def signed_alg_unprotected() -> dict:
   return(sign_layout({"x5c": "X5C"}, {"alg": "RS256"}))
 
 
+# x5c must be in the unprotected header in -05, though RFC7515 allows it in
+# either; verify accepts both
+NOT_05_LAYOUTS = ["alg unprotected, x5c protected"]
+
 LAYOUTS = [
     ("today: alg protected, x5c unprotected", signed_today),
     ("no protected member", signed_no_protected),
@@ -95,7 +100,13 @@ def load(signed_dict : dict) -> vcon.Vcon:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("label, make_signed", LAYOUTS)
 async def test_layout_verifies(label, make_signed):
-  signed = load(make_signed())
+  signed_dict = make_signed()
+  if(label in NOT_05_LAYOUTS):
+    with pytest.raises(AssertionError, match = "not valid against the vCon CDDL"):
+      tests.common_utils.assert_valid_cddl(signed_dict)
+  else:
+    tests.common_utils.assert_valid_cddl(signed_dict)
+  signed = load(signed_dict)
   await signed.verify([CA_CERT])
   assert(signed.state == vcon.VconStates.VERIFIED), label
   assert(signed.parties[1]["tel"] == "+15552220000"), label

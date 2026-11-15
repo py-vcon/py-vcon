@@ -21,6 +21,8 @@ UUID = "01a07da8-c2bb-83e5-b9a2-279e0d16bc46"
 @pytest.mark.asyncio
 async def test_signed_0_4_0_example_verifies():
   signed_dict = tests.common_utils.load_draft_0_4_0_example(SIGNED)
+  # the 0.4.0 signed form is also a valid -05 signed form
+  tests.common_utils.assert_valid_cddl(signed_dict)
   signature = signed_dict["signatures"][0]
   protected = vcon.security.decode_jws_protected_header(signature["protected"])
   # the 0.4.0 form: typ JWT, alg and x5c in both headers
@@ -39,6 +41,8 @@ async def test_signed_0_4_0_example_verifies():
 @pytest.mark.asyncio
 async def test_encrypted_0_4_0_example_decrypts_and_verifies():
   encrypted_dict = tests.common_utils.load_draft_0_4_0_example(ENCRYPTED)
+  # the 0.4.0 encrypted form is also a valid -05 encrypted form
+  tests.common_utils.assert_valid_cddl(encrypted_dict)
   # the 0.4.0 form: enc in all three headers
   protected = vcon.security.decode_jws_protected_header(encrypted_dict["protected"])
   assert(protected == {"alg": "RSA-OAEP", "enc": "A256CBC-HS512"})

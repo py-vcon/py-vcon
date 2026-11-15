@@ -1,0 +1,11 @@
+; Parameters py-vcon writes which are proposed to the vCon working group but
+; are not in draft-ietf-vcon-vcon-core-05.  They are core rows in
+; vcon.parameter_registry (PROPOSED_PARAMETERS).  The unit tests append this
+; file to the -05 vcon.cddl so that vCons using them validate.
+;
+; Dialog in_reply_to and references: email thread reply headers (draft issue 14)
+$$dialog-ext //= ( ? in_reply_to: [+ tstr], ? references: [+ tstr] )
+; Redacted_string marker: the whole marker string (draft issue 9)
+$$redacted-string-ext //= ( ? marker: tstr )
+; Redacted_segments channel: the redacted recording channel (draft issue 13)
+$$redacted-segments-ext //= ( ? channel: uint )
