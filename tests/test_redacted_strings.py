@@ -135,7 +135,7 @@ def test_redacted_vcon_schema_valid():
   v = make_vcon()
   text = "my number is {}".format(PHONE)
   redacted = v.redact_text(text, spans_of(text, (PHONE, "PHONE_NUMBER")))
-  v.add_dialog_inline_text(redacted, START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline(redacted, START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   tests.common_utils.assert_valid_vcon(v.dumpd())
 
 
@@ -144,7 +144,7 @@ def test_redacted_vcon_schema_valid():
 async def test_jq_redaction_orig(keep):
   v = make_vcon()
   text = "my number is {}".format(PHONE)
-  v.add_dialog_inline_text(v.redact_text(text, spans_of(text, (PHONE, "PHONE_NUMBER"))), START, 0, 0,
+  v.add_text_dialog_inline(v.redact_text(text, spans_of(text, (PHONE, "PHONE_NUMBER"))), START, 0, 0,
     vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   options = {"jq_redaction_query": ".", "redaction_type_label": "PII", "uuid_domain": "example.com"}
   if(keep):

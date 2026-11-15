@@ -46,7 +46,7 @@ async def test_fix_recording_dialog_http_error(
   import datetime
   import os
   fake_body = os.urandom(256)
-  test_vcon.add_dialog_external_recording(
+  test_vcon.add_recording_dialog_external(
     fake_body,
     datetime.datetime.utcnow(),
     0,

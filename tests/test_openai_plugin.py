@@ -284,7 +284,7 @@ async def test_filter_no_key_raises_openai_chat_completion():
   plugin = vcon.filter_plugins.impl.openai.OpenAIChatCompletion(init_options)
 
   in_vcon = vcon.Vcon()
-  in_vcon.add_dialog_inline_text(
+  in_vcon.add_text_dialog_inline(
       "Hello, this is a test.",
       "2024-03-06T20:07:43+00:00",
       5.0,
@@ -358,7 +358,7 @@ def make_text_vcon() -> vcon.Vcon:
   """ Vcon with one text dialog """
   in_vcon = vcon.Vcon()
   in_vcon.set_party_parameter("tel", "+15551234567")
-  in_vcon.add_dialog_inline_text(
+  in_vcon.add_text_dialog_inline(
       "Hello, this is a test.",
       "2024-03-06T20:07:43+00:00",
       5.0,

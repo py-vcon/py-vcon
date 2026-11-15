@@ -16,8 +16,8 @@ def make_vcon(parties = [0, 1]) -> vcon.Vcon:
   v.set_uuid("example.com")
   v.set_party_parameter("tel", "+15551110000")
   v.set_party_parameter("tel", "+15552220000")
-  v.add_dialog_inline_text("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  v.add_dialog_inline_recording(b"\x00\x01", START, 30, 0, "audio/x-wav", "a.wav")
+  v.add_text_dialog_inline("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_recording_dialog_inline(b"\x00\x01", START, 30, 0, "audio/x-wav", "a.wav")
   v._vcon_dict["dialog"][1]["parties"] = parties
   return(v)
 

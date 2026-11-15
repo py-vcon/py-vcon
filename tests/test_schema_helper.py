@@ -15,7 +15,7 @@ def make_valid_vcon_dict() -> dict:
   a_vcon = vcon.Vcon()
   a_vcon.set_uuid("example.com")
   a_vcon.set_party_parameter("tel", "+15551110000")
-  a_vcon.add_dialog_inline_text("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  a_vcon.add_text_dialog_inline("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   return(a_vcon.dumpd())
 
 

@@ -132,7 +132,7 @@ def test_add_inline_recording(two_party_tel_vcon : vcon.Vcon, empty_vcon : vcon.
   media_type = vcon.Vcon.MEDIATYPE_AUDIO_WAV
   file_name = "fake.wav"
   duration = 77.4
-  dialog_index = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
+  dialog_index = vCon.add_recording_dialog_inline(fake_recording_file, call_data['rfc2822'],
     duration, [0, 1], media_type, file_name)
 
   assert(dialog_index == 0)
@@ -183,7 +183,7 @@ def test_decode_dialog_inline_body_no_encoding(two_party_tel_vcon : vcon.Vcon, e
   media_type = vcon.Vcon.MEDIATYPE_AUDIO_WAV
   file_name = "fake.wav"
   duration = 77.4
-  file_length = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
+  file_length = vCon.add_recording_dialog_inline(fake_recording_file, call_data['rfc2822'],
     duration, [0, 1], media_type, file_name)
   assert(vCon.dialog[0]['encoding'] == 'base64url')
   # simulate case where encoding is not set
@@ -204,7 +204,7 @@ def test_add_inline_recording_w_originator(two_party_tel_vcon : vcon.Vcon, empty
   media_type = vcon.Vcon.MEDIATYPE_AUDIO_WAV
   file_name = "fake.wav"
   duration = 77.4
-  dialog_index = vCon.add_dialog_inline_recording(fake_recording_file, call_data['rfc2822'],
+  dialog_index = vCon.add_recording_dialog_inline(fake_recording_file, call_data['rfc2822'],
     duration, [0, 1], media_type, file_name, originator=1)
 
   assert(dialog_index == 0)

@@ -20,13 +20,13 @@ def make_vcon(num_sessions : int = 1) -> vcon.Vcon:
   v.set_party_parameter("tel", "+15552220000")
   v.set_party_parameter("tel", "+15553330000")
   for session_index in range(num_sessions):
-    v.add_dialog_inline_text("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+    v.add_text_dialog_inline("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   return(v)
 
 
 def add_recording(v : vcon.Vcon, parties) -> int:
   """ add a recording Dialog with the given parties, return its index """
-  dialog_index = v.add_dialog_inline_recording(b"\x00\x01", START, 10, 0, "audio/x-wav", "a.wav")
+  dialog_index = v.add_recording_dialog_inline(b"\x00\x01", START, 10, 0, "audio/x-wav", "a.wav")
   v._vcon_dict["dialog"][dialog_index]["parties"] = parties
   return(dialog_index)
 

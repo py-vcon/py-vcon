@@ -459,7 +459,7 @@ def test_add_party_adds_extension():
 def test_set_dialog_parameter_adds_extension():
   """ set_dialog_parameter registers the extension """
   a_vcon = make_vcon()
-  a_vcon.add_dialog_inline_text(
+  a_vcon.add_text_dialog_inline(
     "hello",
     "2024-03-06T20:07:43+00:00",
     5.0,

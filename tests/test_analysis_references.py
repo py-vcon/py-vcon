@@ -15,8 +15,8 @@ def make_vcon() -> vcon.Vcon:
   v = vcon.Vcon()
   v.set_uuid("example.com")
   v.set_party_parameter("tel", "+15551110000")
-  v.add_dialog_inline_text("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  v.add_dialog_inline_text("Again", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Again", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   for index in range(2):
     v.add_attachment_inline(b"notes", START, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, dialog = index)
     v.add_analysis(index, "summary", "summary {}".format(index), "test_vendor", None, "none")

@@ -80,7 +80,7 @@ async def test_get_external_recording(two_party_tel_vcon : vcon.Vcon) -> None:
     print("body length: {}".format(len(file_content)))
     assert(len(file_content) > 10000)
 
-  dialog_index = two_party_tel_vcon.add_dialog_external_recording(file_content,
+  dialog_index = two_party_tel_vcon.add_recording_dialog_external(file_content,
     datetime.datetime.utcnow(),
     0, # duration TODO
     [0,1],
@@ -128,7 +128,7 @@ def test_external_recording_lm_ots(two_party_tel_vcon : vcon.Vcon) -> None:
 
   assert(vcon.Vcon.MEDIATYPE_AUDIO_WAV == "audio/x-wav")
 
-  two_party_tel_vcon.add_dialog_external_recording(data,
+  two_party_tel_vcon.add_recording_dialog_external(data,
     call_data["rfc2822"],
     call_data["duration"],
     0,
@@ -197,7 +197,7 @@ def test_external_recording_sha_512(two_party_tel_vcon : vcon.Vcon) -> None:
 
   assert(vcon.Vcon.MEDIATYPE_AUDIO_WAV == "audio/x-wav")
 
-  two_party_tel_vcon.add_dialog_external_recording(data,
+  two_party_tel_vcon.add_recording_dialog_external(data,
     call_data["rfc2822"],
     call_data["duration"],
     0,
@@ -252,7 +252,7 @@ async def test_get_external_recording_http_error(
     )
   url = "http://{}:{}/rec.wav".format(httpserver.host, httpserver.port)
   data = os.urandom(256)
-  two_party_tel_vcon.add_dialog_external_recording(
+  two_party_tel_vcon.add_recording_dialog_external(
     data,
     call_data["rfc2822"],
     call_data["duration"],
@@ -276,7 +276,7 @@ async def test_get_external_recording_timeout_deprecated(
     data, status=200, content_type=vcon.Vcon.MEDIATYPE_AUDIO_WAV
     )
   url = "http://{}:{}/rec.wav".format(httpserver.host, httpserver.port)
-  two_party_tel_vcon.add_dialog_external_recording(
+  two_party_tel_vcon.add_recording_dialog_external(
     data,
     call_data["rfc2822"],
     call_data["duration"],

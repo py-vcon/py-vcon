@@ -50,7 +50,7 @@ def make_vcon() -> vcon.Vcon:
   v.set_uuid("example.com")
   v.set_party_parameter("tel", "+15551110000")
   v.set_party_parameter("tel", "+15552220000")
-  v.add_dialog_inline_text("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   v.add_session()
   v.add_session_reference(0, 1, "child")
   v.add_join_event(START, 0, 1)

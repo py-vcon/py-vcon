@@ -36,7 +36,7 @@ def make_test_vcon() -> vcon.Vcon:
     v.set_party_parameter("tel", "+15551234567")
     v.set_party_parameter("name", "Test User", 0)
     v.set_subject("Test conversation for timeout testing")
-    v.add_dialog_inline_text(
+    v.add_text_dialog_inline(
         "Hello, this is a test message.",
         "2024-03-06T20:07:43+00:00",
         5.0,

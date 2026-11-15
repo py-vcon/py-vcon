@@ -3338,6 +3338,17 @@ example:
 
 default: None
 
+##### keep_redacted_string_orig (bool)
+keep the orig parameter of the Redacted_string Objects
+the orig parameter of a Redacted_string Object holds the
+        original string which was redacted.  By default it is removed from the
+        redacted vCon.  Set to true to keep it, e.g. for further processing
+        before the final redaction.
+
+example:
+
+default: False
+
 ##### label (str)
 processor documentation label
 Short documentaion label for the processor options. This does not impact the funtionality of this processor. This is mostly useful in the context of a pipeline definition. The label can be used to give a better description of what the processor will achieve with the given set of options. It is recommended that this be short and on the order of 30 characters at most.

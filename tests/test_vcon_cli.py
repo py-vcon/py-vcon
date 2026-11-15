@@ -324,7 +324,7 @@ async def test_in_meet_existing_session(capsys, two_party_tel_vcon):
   """ an import adds its own Session, leaving an existing one unchanged """
   import vcon.cli
 
-  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.add_text_dialog_inline("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   two_party_tel_vcon.set_uuid("vcon.dev")
   first_session = dict(two_party_tel_vcon.sessions[0])
   sys.stdin = io.StringIO(two_party_tel_vcon.dumps())
@@ -560,7 +560,7 @@ async def test_add_event(capsys, two_party_tel_vcon):
   # Importing vcon here so that we catch any junk stdout which will break the CLI
   import vcon.cli
 
-  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.add_text_dialog_inline("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   two_party_tel_vcon.set_uuid("vcon.dev")
 
   # sessions omitted: the only Session Object is used (draft examples Makefile form)
@@ -581,8 +581,8 @@ async def test_add_event_types(capsys, two_party_tel_vcon):
   import vcon.cli
 
   two_party_tel_vcon.set_party_parameter("tel", "+15553330000")
-  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  two_party_tel_vcon.add_dialog_inline_recording(b"\x00", "2022-06-21T13:53:26-04:00", 10, [0, 1],
+  two_party_tel_vcon.add_text_dialog_inline("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.add_recording_dialog_inline(b"\x00", "2022-06-21T13:53:26-04:00", 10, [0, 1],
     "audio/x-wav", "a.wav")
   two_party_tel_vcon.set_uuid("vcon.dev")
   assert(len(two_party_tel_vcon.sessions) == 2)
@@ -611,8 +611,8 @@ async def test_add_event_types(capsys, two_party_tel_vcon):
 async def test_add_event_errors(capsys, two_party_tel_vcon):
   import vcon.cli
 
-  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  two_party_tel_vcon.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.add_text_dialog_inline("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  two_party_tel_vcon.add_text_dialog_inline("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   two_party_tel_vcon.set_uuid("vcon.dev")
   vcon_json = two_party_tel_vcon.dumps()
 

@@ -123,7 +123,7 @@ async def test_whisper_transcribe_external_dialog():
     print("body length: {}".format(len(file_content)))
     assert(len(file_content) > 10000)
 
-  dialog_index = in_vcon.add_dialog_external_recording(file_content,
+  dialog_index = in_vcon.add_recording_dialog_external(file_content,
     constant_date,
     0, # duration TODO
     [0,1],

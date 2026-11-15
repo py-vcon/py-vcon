@@ -39,7 +39,7 @@ def make_inline_audio_vcon(make_2_party_tel_vcon: vcon.Vcon) -> vcon.Vcon:
     print("body length: {}".format(len(file_content)))
     assert(len(file_content) > 10000)
 
-  vCon.add_dialog_inline_recording(file_content,
+  vCon.add_recording_dialog_inline(file_content,
   datetime.datetime.utcnow(),
   0, # duration TODO
   [0,1],

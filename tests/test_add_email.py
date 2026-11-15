@@ -21,7 +21,7 @@ async def test_add_email_multipart():
 
   # add the email message as a dialog along with its paties if not 
   # already in the vcon
-  out_vcon.add_dialog_inline_email_message(
+  out_vcon.add_email_dialog_inline(
     smtp_message_string,
     os.path.basename(SMTP_MESSAGE_W_IMAGE_FILE_NAME)
     )

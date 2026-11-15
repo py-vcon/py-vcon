@@ -90,25 +90,25 @@ def test_sessions_and_events_not_added_until_used():
 
 def test_add_dialog_creates_session():
   v = make_two_party_vcon()
-  dialog_index = v.add_dialog_inline_recording(b"1234", START_1, 4.72, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV)
+  dialog_index = v.add_recording_dialog_inline(b"1234", START_1, 4.72, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV)
   assert(dialog_index == 0)
   assert(len(v.sessions) == 1)
   assert(v.sessions[0] == {"start": START_1_UTC, "duration": 4.72, "parties": [0, 1], "dialog": [0]})
   # core parameters in schema order
   assert(list(v.sessions[0].keys()) == ["start", "duration", "parties", "dialog"])
 
-  dialog_index = v.add_dialog_external_recording(b"1234", START_1, 33.12, [0, 1],
+  dialog_index = v.add_recording_dialog_external(b"1234", START_1, 33.12, [0, 1],
     "https://example.com/rec.wav", vcon.Vcon.MEDIATYPE_AUDIO_WAV)
   assert(dialog_index == 1)
   assert(len(v.sessions) == 2)
   assert(v.sessions[1]["dialog"] == [1])
 
-  dialog_index = v.add_dialog_inline_text("Hi", START_1, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  dialog_index = v.add_text_dialog_inline("Hi", START_1, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(dialog_index == 2)
   assert(len(v.sessions) == 3)
   assert(v.sessions[2] == {"start": START_1_UTC, "duration": 0, "parties": [1], "dialog": [2]})
 
-  dialog_index = v.add_dialog_inline_email_message(SMTP_MESSAGE)
+  dialog_index = v.add_email_dialog_inline(SMTP_MESSAGE)
   assert(dialog_index == 3)
   assert(len(v.sessions) == 4)
   assert(v.sessions[3]["dialog"] == [3])
@@ -118,8 +118,8 @@ def test_add_dialog_creates_session():
 
 def test_add_dialog_to_given_session():
   v = make_two_party_vcon()
-  v.add_dialog_inline_text("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  dialog_index = v.add_dialog_inline_text("Hello", START_LATER_UTC, 0, 1,
+  v.add_text_dialog_inline("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  dialog_index = v.add_text_dialog_inline("Hello", START_LATER_UTC, 0, 1,
     vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   assert(dialog_index == 1)
   assert(len(v.sessions) == 1)
@@ -134,14 +134,14 @@ def test_add_dialog_to_given_session():
 def test_add_dialog_invalid_session_does_not_modify():
   v = make_two_party_vcon()
   with pytest.raises(AttributeError):
-    v.add_dialog_inline_text("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
+    v.add_text_dialog_inline("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   with pytest.raises(AttributeError):
-    v.add_dialog_inline_recording(b"1234", START_1, 4.72, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, session = 0)
+    v.add_recording_dialog_inline(b"1234", START_1, 4.72, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, session = 0)
   with pytest.raises(AttributeError):
-    v.add_dialog_external_recording(b"1234", START_1, 4.72, [0, 1],
+    v.add_recording_dialog_external(b"1234", START_1, 4.72, [0, 1],
       "https://example.com/rec.wav", vcon.Vcon.MEDIATYPE_AUDIO_WAV, session = 0)
   with pytest.raises(AttributeError):
-    v.add_dialog_inline_email_message(SMTP_MESSAGE, session = 0)
+    v.add_email_dialog_inline(SMTP_MESSAGE, session = 0)
   assert(len(v.dialog) == 0)
   assert(len(v.parties) == 2)
   assert("sessions" not in v._vcon_dict)
@@ -149,7 +149,7 @@ def test_add_dialog_invalid_session_does_not_modify():
 
 def test_add_dialog_to_session_no_duplicates():
   v = make_two_party_vcon()
-  v.add_dialog_inline_text("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   v.add_dialog_to_session(0, 0)
   v.add_dialog_to_session(0, 0, receivers = [0, 1])
   assert(v.sessions[0]["dialog"] == [0])
@@ -158,7 +158,7 @@ def test_add_dialog_to_session_no_duplicates():
 
 def test_add_dialog_to_session_invalid_indices():
   v = make_two_party_vcon()
-  v.add_dialog_inline_text("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   with pytest.raises(AttributeError):
     v.add_dialog_to_session(1, 0)
   with pytest.raises(AttributeError):
@@ -169,14 +169,14 @@ def test_add_dialog_to_session_invalid_indices():
 
 def test_receivers_flattened_from_multichannel_parties():
   v = make_three_party_vcon()
-  v.add_dialog_inline_recording(b"1234", START_1, 5, [[0, 2], None, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV)
+  v.add_recording_dialog_inline(b"1234", START_1, 5, [[0, 2], None, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV)
   assert(v.sessions[0]["parties"] == [0, 2, 1])
 
 
 def test_receivers_from_dialog_parties_not_range_checked():
   # Parties may be added after the dialog which references them
   v = vcon.Vcon()
-  v.add_dialog_inline_text("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Hi", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   assert(v.sessions[0]["parties"] == [0])
 
 
@@ -194,17 +194,17 @@ def test_extend_time_widens_only():
   v.add_session(start = START_1, duration = 10)
 
   # dialog within the session start and duration does not change them
-  v.add_dialog_inline_text("a", "2022-06-21T17:53:28.000+00:00", 2, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
+  v.add_text_dialog_inline("a", "2022-06-21T17:53:28.000+00:00", 2, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   assert(v.sessions[0]["start"] == START_1_UTC)
   assert(v.sessions[0]["duration"] == 10)
 
   # dialog starting before the session start moves the start earlier and keeps the end
-  v.add_dialog_inline_text("b", START_EARLIER_UTC, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
+  v.add_text_dialog_inline("b", START_EARLIER_UTC, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   assert(v.sessions[0]["start"] == START_EARLIER_UTC)
   assert(v.sessions[0]["duration"] == 16)
 
   # dialog ending after the session end extends the duration
-  v.add_dialog_inline_text("c", START_LATER_UTC, 1.5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
+  v.add_text_dialog_inline("c", START_LATER_UTC, 1.5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   assert(v.sessions[0]["start"] == START_EARLIER_UTC)
   assert(v.sessions[0]["duration"] == 41.5)
 
@@ -212,7 +212,7 @@ def test_extend_time_widens_only():
 def test_extend_time_false():
   v = make_two_party_vcon()
   v.add_session(start = START_1, duration = 1)
-  dialog_index = v.add_dialog_inline_text("a", START_EARLIER_UTC, 60, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  dialog_index = v.add_text_dialog_inline("a", START_EARLIER_UTC, 60, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   v.add_dialog_to_session(0, dialog_index, extend_time = False)
   assert(v.sessions[0]["start"] == START_1_UTC)
   assert(v.sessions[0]["duration"] == 1)
@@ -221,10 +221,10 @@ def test_extend_time_false():
 def test_extend_time_session_without_duration():
   v = make_two_party_vcon()
   v.add_session(start = START_1)
-  v.add_dialog_inline_text("a", START_LATER_UTC, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
+  v.add_text_dialog_inline("a", START_LATER_UTC, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   assert(v.sessions[0]["start"] == START_1_UTC)
   assert("duration" not in v.sessions[0])
-  v.add_dialog_inline_text("b", START_EARLIER_UTC, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
+  v.add_text_dialog_inline("b", START_EARLIER_UTC, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   assert(v.sessions[0]["start"] == START_EARLIER_UTC)
   assert("duration" not in v.sessions[0])
 
@@ -268,8 +268,8 @@ def test_add_session_reference(caplog):
 
 def test_find_sessions_for_dialog():
   v = make_two_party_vcon()
-  v.add_dialog_inline_text("a", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  v.add_dialog_inline_text("b", START_1, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("a", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("b", START_1, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   v.add_session(dialog = [0, 1])
   assert(v.find_sessions_for_dialog(0) == [0, 2])
   assert(v.find_sessions_for_dialog(1) == [1, 2])
@@ -279,7 +279,7 @@ def test_find_sessions_for_dialog():
 def test_originator_rule_no_session_parties():
   # Rule 2: session has no parties, originator becomes the first party
   v = make_two_party_vcon()
-  v.add_dialog_inline_recording(b"1234", START_1, 5, None, vcon.Vcon.MEDIATYPE_AUDIO_WAV, originator = 1)
+  v.add_recording_dialog_inline(b"1234", START_1, 5, None, vcon.Vcon.MEDIATYPE_AUDIO_WAV, originator = 1)
   assert(v.sessions[0]["parties"] == [1])
   assert("originator" not in v.sessions[0])
   assert("originator" not in v.dialog[0])
@@ -288,7 +288,7 @@ def test_originator_rule_no_session_parties():
 def test_originator_rule_same_originator():
   # Rule 3: originator already the first party, nothing changes
   v = make_two_party_vcon()
-  v.add_dialog_inline_recording(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, originator = 0)
+  v.add_recording_dialog_inline(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, originator = 0)
   assert(v.sessions[0]["parties"] == [0, 1])
   assert("originator" not in v.sessions[0])
   assert("originator" not in v.dialog[0])
@@ -297,13 +297,13 @@ def test_originator_rule_same_originator():
 def test_originator_rule_only_dialog():
   # Rule 4: different originator, only dialog referenced by the session
   v = make_three_party_vcon()
-  v.add_dialog_inline_recording(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, originator = 1)
+  v.add_recording_dialog_inline(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, originator = 1)
   assert(v.sessions[0]["parties"] == [0, 1])
   assert(v.sessions[0]["originator"] == 1)
   assert(list(v.sessions[0].keys()) == ["start", "duration", "parties", "originator", "dialog"])
 
   # originator not in the session parties is added
-  v.add_dialog_inline_recording(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, originator = 2)
+  v.add_recording_dialog_inline(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, originator = 2)
   assert(v.sessions[1]["parties"] == [0, 1, 2])
   assert(v.sessions[1]["originator"] == 2)
 
@@ -311,7 +311,7 @@ def test_originator_rule_only_dialog():
 def test_originator_rule_ambiguous_sessions():
   # Rule 1: dialog not referenced by exactly one session
   v = make_two_party_vcon()
-  v.add_dialog_inline_text("a", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("a", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   v.add_session(dialog = [0])
   with pytest.raises(AttributeError):
     v.set_dialog_parameter("originator", 1, 0)
@@ -320,14 +320,14 @@ def test_originator_rule_ambiguous_sessions():
 def test_originator_rule_conflict_with_other_dialog():
   # Rule 5: different originator and other dialog referenced by the session
   v = make_two_party_vcon()
-  v.add_dialog_inline_recording(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV)
-  v.add_dialog_inline_recording(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, session = 0)
+  v.add_recording_dialog_inline(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV)
+  v.add_recording_dialog_inline(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV, session = 0)
   with pytest.raises(AttributeError):
     v.set_dialog_parameter("originator", 1, 1)
 
   # checked before the new dialog is created
   with pytest.raises(AttributeError):
-    v.add_dialog_inline_recording(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV,
+    v.add_recording_dialog_inline(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV,
       originator = 1, session = 0)
   assert(len(v.dialog) == 2)
   assert(v.sessions[0]["dialog"] == [0, 1])
@@ -335,7 +335,7 @@ def test_originator_rule_conflict_with_other_dialog():
 
 def test_set_dialog_parameter_originator():
   v = make_two_party_vcon()
-  v.add_dialog_inline_recording(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV)
+  v.add_recording_dialog_inline(b"1234", START_1, 5, [0, 1], vcon.Vcon.MEDIATYPE_AUDIO_WAV)
   assert(v.set_dialog_parameter("originator", 1, 0) == 0)
   assert("originator" not in v.dialog[0])
   assert(v.sessions[0]["originator"] == 1)
@@ -356,7 +356,7 @@ def test_new_vcon_version_label():
 
 def test_load_version():
   v = make_two_party_vcon()
-  v.add_dialog_inline_text("a", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("a", START_1, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   v.set_uuid("example.com")
   vcon_dict = v.dumpd()
 
@@ -446,8 +446,8 @@ DAVE = "Dave <d@example.com>"
 def test_email_thread_one_session(caplog):
   v = vcon.Vcon()
   with caplog.at_level(logging.WARNING):
-    v.add_dialog_inline_email_message(make_smtp_message(BOB, ALICE, "<1@example.com>"))
-    v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<2@example.com>"))
+    v.add_email_dialog_inline(make_smtp_message(BOB, ALICE, "<1@example.com>"))
+    v.add_email_dialog_inline(make_smtp_message(ALICE, BOB, "<2@example.com>"))
   assert("do not match" not in caplog.text)
 
   assert(v.parties[0]["name"] == "Bob")
@@ -465,7 +465,7 @@ def test_email_thread_one_session(caplog):
 
 def test_email_cc_receivers_bcc_ignored():
   v = vcon.Vcon()
-  v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<1@example.com>", cc = CAROL, bcc = DAVE))
+  v.add_email_dialog_inline(make_smtp_message(ALICE, BOB, "<1@example.com>", cc = CAROL, bcc = DAVE))
   assert(len(v.parties) == 3)
   assert(v.dialog[0]["parties"] == [0])
   assert(v.sessions[0]["parties"] == [0, 1, 2])
@@ -475,9 +475,9 @@ def test_email_cc_receivers_bcc_ignored():
 
 def test_email_receivers_change_new_session(caplog):
   v = vcon.Vcon()
-  v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<1@example.com>"))
+  v.add_email_dialog_inline(make_smtp_message(ALICE, BOB, "<1@example.com>"))
   with caplog.at_level(logging.WARNING):
-    v.add_dialog_inline_email_message(make_smtp_message(BOB, ALICE, "<2@example.com>", cc = CAROL))
+    v.add_email_dialog_inline(make_smtp_message(BOB, ALICE, "<2@example.com>", cc = CAROL))
   assert("do not match" in caplog.text)
   assert(len(v.sessions) == 2)
   assert(v.sessions[0]["dialog"] == [0])
@@ -489,8 +489,8 @@ def test_email_receivers_change_new_session(caplog):
 
 def test_email_given_session():
   v = vcon.Vcon()
-  v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<1@example.com>"))
-  v.add_dialog_inline_email_message(make_smtp_message(BOB, ALICE, "<2@example.com>", cc = CAROL), session = 0)
+  v.add_email_dialog_inline(make_smtp_message(ALICE, BOB, "<1@example.com>"))
+  v.add_email_dialog_inline(make_smtp_message(BOB, ALICE, "<2@example.com>", cc = CAROL), session = 0)
   assert(len(v.sessions) == 1)
   assert(v.sessions[0]["dialog"] == [0, 1])
   assert(v.sessions[0]["parties"] == [0, 1, 2])
@@ -498,7 +498,7 @@ def test_email_given_session():
 
 def test_email_folded_content_type():
   v = vcon.Vcon()
-  v.add_dialog_inline_email_message(make_smtp_message(ALICE, BOB, "<1@example.com>",
+  v.add_email_dialog_inline(make_smtp_message(ALICE, BOB, "<1@example.com>",
     content_type = "text/plain;\r\n\tcharset=UTF-8"))
   assert(v.dialog[0]["mediatype"] == "text/plain; charset=UTF-8")
 

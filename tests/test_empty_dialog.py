@@ -15,9 +15,9 @@ def make_vcon() -> vcon.Vcon:
   v.set_uuid("example.com")
   v.set_party_parameter("tel", "+15551110000")
   v.set_party_parameter("tel", "+15552220000")
-  v.add_dialog_inline_text("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  v.add_dialog_inline_text("Lost", START, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  v.add_dialog_inline_text("Goodbye", START, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Hello", START, 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Lost", START, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Goodbye", START, 0, 1, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   v.clear_dialog(1)
   return(v)
 
@@ -59,7 +59,7 @@ async def test_openai_skips_empty_dialog(monkeypatch):
 @pytest.mark.asyncio
 async def test_deepgram_skips_empty_dialog():
   v = make_vcon()
-  v.add_dialog_inline_recording(b"\x00\x01", START, 10, [0, 1], "audio/x-wav", "a.wav")
+  v.add_recording_dialog_inline(b"\x00\x01", START, 10, [0, 1], "audio/x-wav", "a.wav")
   # the recording has a transcript, so nothing is sent to Deepgram
   v.add_analysis(3, "transcript", {"results": {}}, "deepgram", "deepgram_prerecorded",
     product = "transcription")
@@ -93,8 +93,8 @@ def test_clear_dialog_default():
   v = vcon.Vcon()
   v.set_uuid("example.com")
   v.set_party_parameter("tel", "+15551110000")
-  v.add_dialog_inline_text("Hello", START, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  v.add_dialog_inline_text("Again", START, 7, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
+  v.add_text_dialog_inline("Hello", START, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Again", START, 7, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   session_before = dict(v.sessions[0])
   second_before = dict(v.dialog[1])
 
@@ -111,8 +111,8 @@ def test_clear_dialog_remove_from_sessions():
   v = vcon.Vcon()
   v.set_uuid("example.com")
   v.set_party_parameter("tel", "+15551110000")
-  v.add_dialog_inline_text("Hello", START, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
-  v.add_dialog_inline_text("Again", START, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
+  v.add_text_dialog_inline("Hello", START, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Again", START, 5, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN, session = 0)
   v.add_session()
   v.add_dialog_to_session(1, 0)
   v.add_analysis(0, "summary", "a summary", "test_vendor", None, "none")

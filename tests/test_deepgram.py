@@ -101,7 +101,7 @@ async def test_deepgram_2_channel_inline_dialog():
   duration = 0
   parties = [0,1]
 
-  in_vcon.add_dialog_inline_recording(
+  in_vcon.add_recording_dialog_inline(
       body_bytes,
       start_time,
       duration,
@@ -152,7 +152,7 @@ async def test_deepgram_transcribe_external_dialog():
     print("body length: {}".format(len(file_content)))
     assert(len(file_content) > 10000)
 
-  dialog_index = in_vcon.add_dialog_external_recording(file_content,
+  dialog_index = in_vcon.add_recording_dialog_external(file_content,
     constant_date,
     0, # duration TODO
     [0,1],
@@ -248,7 +248,7 @@ async def test_deepgram_malformed_wav_header():
   # 24 bytes of junk — enough to parse header fields but not a valid WAV
   bad_wav = b'\x00' * 24
 
-  in_vcon.add_dialog_inline_recording(
+  in_vcon.add_recording_dialog_inline(
     bad_wav,
     "2023-08-31T18:26:36.987+00:00",
     0,
@@ -353,7 +353,7 @@ async def test_get_dialog_text_text_dialog_without_duration():
   text_vcon = vcon.Vcon()
   text_vcon.set_party_parameter("name", "Alice")
   text_vcon.set_party_parameter("name", "Bob")
-  text_vcon.add_dialog_inline_text("hi Bob", "2023-08-31T18:26:36.987+00:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  text_vcon.add_text_dialog_inline("hi Bob", "2023-08-31T18:26:36.987+00:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   del text_vcon.dialog[0]["duration"]
 
   texts = await text_vcon.get_dialog_text(0)
@@ -425,7 +425,7 @@ async def test_deepgram_no_key_in_options():
     )
   in_vcon = vcon.Vcon()
   in_vcon.set_party_parameter("tel", "+1234567890")
-  in_vcon.add_dialog_inline_text("hello", "2023-08-31T18:26:36.987+00:00", 0, [0], "text/plain")
+  in_vcon.add_text_dialog_inline("hello", "2023-08-31T18:26:36.987+00:00", 0, [0], "text/plain")
   options = vcon.filter_plugins.impl.deepgram.DeepgramOptions(deepgram_key="")
   out_vcon = await plugin.filter(in_vcon, options)
   assert(len(out_vcon.analysis) == 0)
@@ -472,7 +472,7 @@ async def test_deepgram_bogus_model(caplog):
   with open(file_path, "rb") as file_handle:
     body_bytes = file_handle.read()
 
-  in_vcon.add_dialog_inline_recording(
+  in_vcon.add_recording_dialog_inline(
     body_bytes,
     "2023-08-31T18:26:36.987+00:00",
     0,
@@ -528,7 +528,7 @@ async def test_deepgram_bogus_language(caplog):
   with open(file_path, "rb") as file_handle:
     body_bytes = file_handle.read()
 
-  in_vcon.add_dialog_inline_recording(
+  in_vcon.add_recording_dialog_inline(
     body_bytes,
     "2023-08-31T18:26:36.987+00:00",
     0,

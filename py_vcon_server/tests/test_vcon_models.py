@@ -81,7 +81,7 @@ def unsigned_0_5_0() -> dict:
   a_vcon._vcon_dict["uuid"] = UUID
   a_vcon.set_party_parameter("tel", "+15551234567")
   a_vcon.set_party_parameter("tel", "+15557654321")
-  a_vcon.add_dialog_inline_text("hello", "2024-03-06T20:07:43+00:00", 5.0, 0,
+  a_vcon.add_text_dialog_inline("hello", "2024-03-06T20:07:43+00:00", 5.0, 0,
     vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   vcon_dict = a_vcon.dumpd()
   vcon_dict["events"] = [

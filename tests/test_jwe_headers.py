@@ -19,7 +19,7 @@ def make_encrypted_dict() -> dict:
   v = vcon.Vcon()
   v.set_party_parameter("tel", "+15551110000")
   v.set_party_parameter("tel", "+15552220000")
-  v.add_dialog_inline_text("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
+  v.add_text_dialog_inline("Hello", "2022-06-21T13:53:26-04:00", 0, 0, vcon.Vcon.MEDIATYPE_TEXT_PLAIN)
   v.set_uuid("example.com")
   v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
   v.encrypt(DIVISION_CERT)
@@ -129,7 +129,7 @@ async def test_large_inline_recording():
   body = bytes(range(256)) * 4096
   v = vcon.Vcon()
   v.set_party_parameter("tel", "+15551110000")
-  v.add_dialog_inline_recording(body, "2022-06-21T13:53:26-04:00", 0, 0, "audio/x-wav", "large.wav")
+  v.add_recording_dialog_inline(body, "2022-06-21T13:53:26-04:00", 0, 0, "audio/x-wav", "large.wav")
   v.set_uuid("example.com")
   v.sign(GROUP_PRIVATE_KEY, CERT_CHAIN)
   v.encrypt(DIVISION_CERT)

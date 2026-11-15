@@ -29,7 +29,7 @@ def make_1_dialog_vcon() -> vcon.Vcon:
   v.set_party_parameter("name", "Bob", 1)
   v.set_subject("Sales inquiry from Alice")
 
-  v.add_dialog_inline_text(
+  v.add_text_dialog_inline(
     "Hello, I would like to discuss pricing.",
     "2024-03-06T20:07:43+00:00",
     5.0,
@@ -47,7 +47,7 @@ def make_2_dialog_vcon() -> vcon.Vcon:
   """
   v = make_1_dialog_vcon()
 
-  v.add_dialog_inline_text(
+  v.add_text_dialog_inline(
     "Thank you for the information.",
     "2024-03-06T20:08:00+00:00",
     3.0,
