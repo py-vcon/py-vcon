@@ -245,21 +245,22 @@ def test_register_extension_missing_field():
 #  legacy 0.4.0 names
 # ============================================================
 
-def test_legacy_names(caplog):
-  """ 0.4.0 names are recognized as core without a warning and marked legacy """
-  legacy = [("-", "redacted"), ("-", "amended"), ("Dialog", "originator"), ("Dialog", "party_history"),
+def test_legacy_names_removed(caplog):
+  """ 0.4.0 vCons are converted on load, so the 0.4.0 names are no longer registered """
+  removed = [("-", "redacted"), ("-", "amended"), ("Dialog", "originator"), ("Dialog", "party_history"),
     ("Dialog", "transferee"), ("Dialog", "transferor"), ("Dialog", "transfer_target"), ("Dialog", "original"),
-    ("Dialog", "consultation"), ("Dialog", "target_dialog"), ("Party_history", "event"),
-    ("Redacted", "type"), ("Amended", "uuid")]
+    ("Dialog", "consultation"), ("Dialog", "target_dialog"), ("Dialog", "recordings"), ("Dialog", "recording_set")]
   a_vcon = make_vcon()
-  with caplog.at_level(logging.WARNING):
-    for object_name, name in legacy:
-      assert(a_vcon.add_parameter_extension(object_name, name) == vcon.Vcon.PARAMETER_CORE)
-      assert(vcon.parameter_registry.is_legacy(object_name, name)), name
-  assert([record for record in caplog.records if(record.levelno >= logging.WARNING)] == [])
-  assert(vcon.parameter_registry.get_value_extension("Dialog", "type", "transfer") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.parameter_registry.is_legacy("Dialog->type", "transfer"))
-  assert(not vcon.parameter_registry.is_legacy("Dialog", "type"))
+  for object_name, name in removed:
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+      assert(a_vcon.add_parameter_extension(object_name, name) is None), name
+    assert(len([record for record in caplog.records if(record.levelno >= logging.WARNING)]) == 1), name
+    assert(not vcon.parameter_registry.is_legacy(object_name, name)), name
+  assert(vcon.parameter_registry.get_value_extension("Dialog", "type", "transfer") is None)
+  for object_name in ["Party_history", "Redacted", "Amended"]:
+    assert(object_name not in vcon.parameter_registry.OBJECT_NAMES)
+  assert(all([row["legacy"] is False for row in vcon.parameter_registry.CORE_ROWS]))
 
 
 # ============================================================

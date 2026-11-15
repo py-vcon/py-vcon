@@ -18,17 +18,16 @@ and two fields which are not IANA columns:
   iana               False for a row with no IANA registry behind it (for
                      example the Civicaddress Object parameters), so that a
                      tool maintaining the IANA tables skips it
-  legacy             True for a vCon 0.4.0 name which is no longer defined.
-                     Legacy names are recognized as core, so that 0.4.0 vCons
-                     do not appear to use unknown parameters, until the 0.4.0
-                     to 0.5.0 converter exists.
+  legacy             True for a name of an earlier vCon version which is no
+                     longer defined, recognized as core so that vCons of that
+                     version do not appear to use unknown parameters.  There
+                     are none: 0.4.0 vCons are converted to 0.5.0 on load.
 
 Object names are those used in draft-ietf-vcon-vcon-core: "-" (the vCon
 Object), "Party", "Civicaddress", "Dialog", "SessionId",
 "Redacted_segments", "Session", "Session_Reference", "Event",
 "Attachment", "Analysis", "Redacted_from", "Amended_from" and
-"Redacted_string".  The legacy 0.4.0 Objects are "Party_history",
-"Redacted" and "Amended".
+"Redacted_string".
 
 An extension is a dict with the fields of the vCon Extensions Names Registry
 (name, description, change_controller, specification) plus critical: True if
@@ -99,10 +98,6 @@ CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
     ("attachments", "Attachment Objects array"),
     ("redacted_strings", "Redacted Strings array")
     ]) +
-  _make_rows(VCON_OBJECT, [
-    ("redacted", "0.4.0 Redacted Object, now redacted_from"),
-    ("amended", "0.4.0 Amended Object, now amended_from")
-    ], legacy = True) +
 
   # Party Object Parameter Names Registry
   _make_rows("Party", [
@@ -164,18 +159,6 @@ CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
     ("in_reply_to", "Message-IDs of the In-Reply-To email header (proposed, not in -05)"),
     ("references", "Message-IDs of the References email header (proposed, not in -05)")
     ], iana = False) +
-  _make_rows("Dialog", [
-    ("originator", "0.4.0 originator party, now in the Session"),
-    ("party_history", "0.4.0 party history, now Event Objects"),
-    ("transferee", "0.4.0 transfer Dialog transferee"),
-    ("transferor", "0.4.0 transfer Dialog transferor"),
-    ("transfer_target", "0.4.0 transfer Dialog transfer target"),
-    ("original", "0.4.0 transfer Dialog original Dialog"),
-    ("consultation", "0.4.0 transfer Dialog consultation Dialog"),
-    ("target_dialog", "0.4.0 transfer Dialog target Dialog"),
-    ("recordings", "0.4.0 recording-set recordings"),
-    ("recording_set", "0.4.0 recording-set")
-    ], legacy = True) +
 
   # Dialog Type Name Registry
   _make_rows("Dialog->type", [
@@ -183,9 +166,6 @@ CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
     ("recording", "recording dialog"),
     ("incomplete", "incomplete dialog")
     ]) +
-  _make_rows("Dialog->type", [
-    ("transfer", "0.4.0 transfer dialog, now transfer Event Objects")
-    ], legacy = True) +
 
   # Dialog disposition values, no IANA registry
   _make_rows("Dialog->disposition", [
@@ -213,14 +193,6 @@ CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
     ("parties", "parties whose media was redacted"),
     ("channel", "index of the redacted recording channel (proposed, not in -05)")
     ], iana = False) +
-
-  # 0.4.0 Dialog party_history Object
-  _make_rows("Party_history", [
-    ("party", "party index"),
-    ("time", "time of the event"),
-    ("event", "event type"),
-    ("button", "button label")
-    ], legacy = True) +
 
   # Session Object Parameter Names Registry
   _make_rows("Session", [
@@ -337,20 +309,7 @@ CORE_ROWS: typing.List[typing.Dict[str, typing.Any]] = (
     ("type", "type of information redacted"),
     ("orig", "the original string before redaction"),
     ("marker", "the marker string which replaced the redacted string (proposed, not in -05)")
-    ], iana = False) +
-
-  # 0.4.0 Redacted and Amended Objects
-  _make_rows("Redacted", [
-    ("uuid", "less redacted vCon UUID"),
-    ("type", "redaction type"),
-    ("url", "referenced less redacted vCon URL"),
-    ("content_hash", "less redacted vCon hash")
-    ], legacy = True) +
-  _make_rows("Amended", [
-    ("uuid", "prior vCon version UUID"),
-    ("url", "referenced prior version vCon URL"),
-    ("content_hash", "prior version vCon hash")
-    ], legacy = True)
+    ], iana = False)
   )
 
 
@@ -626,7 +585,6 @@ OBJECT_LOCATIONS: typing.Dict[str, typing.List[typing.Tuple[str, str]]] = {
     "Dialog": [(VCON_OBJECT, "dialog")],
     "SessionId": [("Dialog", "session_id"), ("Session", "session_id")],
     "Redacted_segments": [("Dialog", "redacted_segments")],
-    "Party_history": [("Dialog", "party_history")],
     "Session": [(VCON_OBJECT, "sessions")],
     "Session_Reference": [("Session", "sessions")],
     "Event": [(VCON_OBJECT, "events")],
@@ -634,9 +592,7 @@ OBJECT_LOCATIONS: typing.Dict[str, typing.List[typing.Tuple[str, str]]] = {
     "Analysis": [(VCON_OBJECT, "analysis")],
     "Redacted_from": [(VCON_OBJECT, "redacted_from")],
     "Amended_from": [(VCON_OBJECT, "amended_from")],
-    "Redacted_string": [(VCON_OBJECT, "redacted_strings")],
-    "Redacted": [(VCON_OBJECT, "redacted")],
-    "Amended": [(VCON_OBJECT, "amended")]
+    "Redacted_string": [(VCON_OBJECT, "redacted_strings")]
   }
 
 

@@ -111,14 +111,16 @@ def test_deprecated_setters():
   assert("amended" not in v._vcon_dict)
 
 
-def test_deprecated_properties_read_0_4_0_members():
+def test_deprecated_properties_return_new_members():
   vcon_dict = make_vcon().dumpd()
   vcon_dict["vcon"] = "0.4.0"
+  vcon_dict.pop("sessions", None)
   vcon_dict["redacted"] = {"uuid": UUID, "type": "PII Redaction"}
   v = vcon.Vcon()
   v.loadd(vcon_dict)
-  # loaded unconverted
-  assert(v.redacted_from is None)
+  # converted on load
+  assert(v.redacted_from == {"uuid": UUID, "type": "PII Redaction"})
+  assert("redacted" not in v._vcon_dict)
   with pytest.warns(DeprecationWarning, match = "redacted attribute is deprecated, use redacted_from"):
     assert(v.redacted == {"uuid": UUID, "type": "PII Redaction"})
   with pytest.warns(DeprecationWarning, match = "amended attribute is deprecated, use amended_from"):

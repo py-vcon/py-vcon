@@ -318,4 +318,8 @@ def test_missing_properties():
 
   minVcon.group.append({ "set": True})
   assert(len(minVcon.group) == 1)
-  assert(minVcon.dumps() == '{"uuid": "01855517-ac4e-8edf-84fd-77776666acbe", "parties": [{"set": true}], "group": [{"set": true}]}')
+  # the 0.0.2 vCon is converted to 0.5.0, which sets updated_at
+  dumped = json.loads(minVcon.dumps())
+  assert(dumped.pop("updated_at", None) is not None)
+  assert(dumped == {"uuid": "01855517-ac4e-8edf-84fd-77776666acbe", "vcon": "0.5.0",
+    "parties": [{"set": True}], "group": [{"set": True}]})

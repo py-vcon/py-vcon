@@ -26,9 +26,10 @@ def test_migrate_0_0_1():
   # Should be converted to RFC3339 format date
   assert(migrated_vcon.dialog[0]['start'] == "2022-05-18T23:05:05.000+00:00")
 
-  # Migrations stack.  0.0.1 migrates to 0.0.2, then the 0.0.2 migration
-  # removes the deprecated vcon parameter.
-  assert(migrated_vcon.vcon is None)
+  # Migrations stack.  0.0.1 migrates to 0.0.2, then 0.0.2 is converted
+  # to 0.5.0 as for 0.4.0.
+  assert(migrated_vcon.vcon == "0.5.0")
+  assert(migrated_vcon.sessions[0]["dialog"] == [0])
 
 
 def test_migrate_0_0_2():
@@ -55,8 +56,8 @@ def test_migrate_0_0_2():
   assert(migrated_vcon.analysis[1]["vendor"] == "openai")
   assert(migrated_vcon.analysis[1]["encoding"] == "none")
 
-  # Last migration in the chain removes the deprecated vcon parameter.
-  assert(migrated_vcon.vcon is None)
+  # The chain ends with the conversion to 0.5.0.
+  assert(migrated_vcon.vcon == "0.5.0")
 
 
 def make_version_dict(version_string = None) -> dict:
@@ -84,15 +85,15 @@ def test_version_absent():
 
 
 @pytest.mark.parametrize("version_string", ["0.0.1", "0.0.2"])
-def test_version_migrated_removes_parameter(version_string):
-  """ The last migration in the chain removes the deprecated vcon parameter """
+def test_version_migrated_converted(version_string):
+  """ The last migration in the chain converts to 0.5.0 """
   checked = vcon.Vcon.check_and_migrate_version(make_version_dict(version_string))
 
-  assert(vcon.Vcon.VCON_VERSION not in checked)
+  assert(checked[vcon.Vcon.VCON_VERSION] == "0.5.0")
   assert(checked["uuid"] == "01855517-ac4e-8edf-84fd-77776666acbe")
 
 
-@pytest.mark.parametrize("version_string", ["0.3.0", "0.4.0"])
+@pytest.mark.parametrize("version_string", ["0.3.0"])
 def test_version_unconverted(version_string):
   """ Accepted as is, warning emitted, vcon parameter left unmodified """
   with pytest.warns(vcon.UnconvertedVconVersionWarning) as warning_list:
@@ -117,7 +118,7 @@ def test_version_unsupported(version_string):
     vcon.Vcon.check_and_migrate_version(make_version_dict(version_string))
 
 
-@pytest.mark.parametrize("version_string", [None, "0.0.1", "0.0.2"])
+@pytest.mark.parametrize("version_string", [None, "0.0.1", "0.0.2", "0.4.0"])
 def test_version_no_warning(version_string):
   """ No unconverted version warning for absent or migratable versions """
   with warnings.catch_warnings(record = True) as warning_list:
@@ -133,10 +134,10 @@ def test_version_unconverted_logged(caplog):
   """ Unconverted version warning is also logged, for server visibility """
   with caplog.at_level(logging.WARNING, logger = "vcon"):
     with pytest.warns(vcon.UnconvertedVconVersionWarning):
-      vcon.Vcon.check_and_migrate_version(make_version_dict("0.4.0"))
+      vcon.Vcon.check_and_migrate_version(make_version_dict("0.3.0"))
 
   warning_records = [record for record in caplog.records
-      if(record.levelname == "WARNING" and "0.4.0" in record.getMessage())]
+      if(record.levelname == "WARNING" and "0.3.0" in record.getMessage())]
   assert(len(warning_records) == 1)
 
 
@@ -144,8 +145,8 @@ def test_version_unconverted_round_trip():
   """ Unconverted vcon parameter survives load and serialization unmodified """
   round_trip_vcon = vcon.Vcon()
   with pytest.warns(vcon.UnconvertedVconVersionWarning):
-    round_trip_vcon.loads(json.dumps(make_version_dict("0.4.0")))
+    round_trip_vcon.loads(json.dumps(make_version_dict("0.3.0")))
 
-  assert(round_trip_vcon.vcon == "0.4.0")
-  assert('"vcon": "0.4.0"' in round_trip_vcon.dumps())
+  assert(round_trip_vcon.vcon == "0.3.0")
+  assert('"vcon": "0.3.0"' in round_trip_vcon.dumps())
 

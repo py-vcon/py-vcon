@@ -13,6 +13,7 @@ import pydantic
 import pytest
 import fastapi.testclient
 import vcon
+import vcon.migrate_0_4_0
 import vcon.pydantic_utils
 import py_vcon_server
 import py_vcon_server.processor
@@ -182,7 +183,7 @@ def test_encrypted_requires_unprotected():
     ("unsigned 0.5.0", unsigned_0_5_0)
   ])
 def test_post_get_unsigned(label, make_dict):
-  """ An unsigned 0.4.0 or 0.5.0 vCon is stored and returned unchanged """
+  """ An unsigned 0.5.0 vCon is returned unchanged, a 0.4.0 one converted to 0.5.0 """
   vcon_dict = make_dict()
   with fastapi.testclient.TestClient(py_vcon_server.restapi) as client:
     post_response = client.post("/vcon", json = vcon_dict)
@@ -190,7 +191,14 @@ def test_post_get_unsigned(label, make_dict):
 
     get_response = client.get("/vcon/{}".format(UUID), headers = {"accept": "application/json"})
     assert(get_response.status_code == 200), label
-    assert(get_response.json() == vcon_dict), label
+    returned = get_response.json()
+    expected = vcon_dict
+    if(vcon_dict.get("vcon", None) == "0.4.0"):
+      # converted when read, which sets updated_at
+      expected = vcon.migrate_0_4_0.migrate_0_4_0_vcon(vcon_dict)
+      assert(returned.pop("updated_at", None) is not None), label
+      expected.pop("updated_at")
+    assert(returned == expected), label
 
     assert(client.delete("/vcon/{}".format(UUID)).status_code == 204)
 

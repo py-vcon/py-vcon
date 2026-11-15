@@ -24,13 +24,26 @@ VCON_SCHEMA_SHA256 = "87285e19c3df2520f9c5bf370f7a31aaad1a2f8e882559ef63d6fb1249
 VCON_DRAFT_PATH = "draft-ietf-vcon-vcon-core.md"
 VCON_DRAFT_SHA256 = "f088a16efd6a72851549229ebaef935e9d1d4a80206253363b845a108c85f779"
 
-# vCon 0.4.0 examples, signed and encrypted by py-vcon before 0.5.0 support,
-# with the certificates in certs/.
+# vCon 0.4.0 examples, created by py-vcon before 0.5.0 support (the signed
+# and encrypted ones with the certificates in certs/).  None has a vcon parameter.
 DRAFT_0_4_0_COMMIT = "fdcf2f5f420b726f7e70d16683ba0977d4610a1f"
 DRAFT_0_4_0_EXAMPLES = {
     "examples/ab_call_ext_rec_signed.vcon": "562c391e189e1772d7bb3b591beff7c1e5197a37e09cec0d44611b0a8021e39b",
-    "examples/ab_call_ext_rec_encrypted.vcon": "9e0a85404e7cfad359e811f7af4b841774c5143871d77e54202fdadecf92ffcb"
+    "examples/ab_call_ext_rec_encrypted.vcon": "9e0a85404e7cfad359e811f7af4b841774c5143871d77e54202fdadecf92ffcb",
+    "examples/ab_call_ext_rec.vcon": "d24202681dca8219c37e91bc62968b21656e77dedf76e680d3e73b5583e6505d",
+    "examples/ab_call_ext_rec_amended.vcon": "f0c787c2a8ab04a2064bdc1a4012c3b895f37cf1acf0fc03c90c3fd4954df36f",
+    "examples/ab_call_ext_rec_analysis.vcon": "afc0c221e5462cea1d717137cb7db13d3e601d5274c0ab8332da960ba1da6a61",
+    "examples/ab_call_ext_rec_redacted.vcon": "c1766bb7bd9d758c3744dae0d8864536208db573d2cd9d270f7eec7476e2fb4b",
+    "examples/ab_call_ext_rec_with_redact.vcon": "7df46c8eee0f152a1f710567c5bb2204f589f4efaa4e59b7acaeecf9520b9b8a",
+    "examples/ab_call_int_rec.vcon": "126652aefde93e64a2346ce305d435e672d281536cc6bb6ad3b3dd83fa9bceca",
+    "examples/ab_email_acct_prob_thread.vcon": "370fe0a1bae2dd63d3df4c2bd55079e6fe2f88f545fb0d5fabac8e8598520e53",
+    "examples/ab_email_prob_followup_text_thread.vcon": "85c78e60ca784cf80ca12356089e67bff4d3da5297403bf9f6fababd9b6d7136",
+    "examples/b_email_acct_prob_image.vcon": "bb3823d91a0d89310342b0bde00f7fdf08ccd61ea41d836edaaacdb0a55766ce"
   }
+
+# The unsigned ones
+DRAFT_0_4_0_UNSIGNED_EXAMPLES = [path for path in DRAFT_0_4_0_EXAMPLES
+  if(not path.endswith("_signed.vcon") and not path.endswith("_encrypted.vcon"))]
 
 
 call_data = {

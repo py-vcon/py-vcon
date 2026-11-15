@@ -377,12 +377,15 @@ def test_load_version():
   assert(loaded.vcon is None)
   assert("vcon" not in loaded.dumpd())
 
-  # 0.4.0 is accepted without conversion
+  # 0.4.0 is converted
   vcon_dict["vcon"] = "0.4.0"
-  with pytest.warns(vcon.UnconvertedVconVersionWarning):
+  del vcon_dict["sessions"]
+  with warnings.catch_warnings():
+    warnings.simplefilter("error", vcon.UnconvertedVconVersionWarning)
     loaded = vcon.Vcon()
     loaded.loadd(vcon_dict)
-  assert(loaded.vcon == "0.4.0")
+  assert(loaded.vcon == "0.5.0")
+  assert(loaded.sessions[0]["dialog"] == [0])
 
 
 def test_load_sessions_only():
@@ -414,9 +417,8 @@ def test_session_registry():
   assert(vcon.Vcon.get_parameter_extension("Analysis", "sessions") == vcon.Vcon.PARAMETER_CORE)
   assert(vcon.Vcon.get_parameter_extension("Analysis", "analysis") == vcon.Vcon.PARAMETER_CORE)
   assert(vcon.Vcon.get_parameter_extension("Attachment", "session") == vcon.Vcon.PARAMETER_CORE)
-  # removed in 0.5.0, retained until the 0.4.0 converter exists
-  assert(vcon.Vcon.get_parameter_extension("Dialog", "originator") == vcon.Vcon.PARAMETER_CORE)
-  assert(vcon.Vcon.get_parameter_extension("Party_history", "event") == vcon.Vcon.PARAMETER_CORE)
+  # removed in 0.5.0; 0.4.0 vCons are converted on load
+  assert(vcon.Vcon.get_parameter_extension("Dialog", "originator") is None)
 
 
 def make_smtp_message(

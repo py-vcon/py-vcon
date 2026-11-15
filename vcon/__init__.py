@@ -43,6 +43,7 @@ import vcon.utils
 import vcon.security
 import vcon.filter_plugins
 import vcon.accessors
+import vcon.migrate_0_4_0
 import vcon.parameter_registry
 import vcon.http_lb
 
@@ -82,6 +83,10 @@ class ExperimentalWarning(Warning):
   Warning for methods which modify or construct vCons with experimental or non-vCon standards
   complient forms or parameters.  Note: these may be depricated.
   """
+
+VconConversionError = vcon.migrate_0_4_0.VconConversionError
+VconConversionWarning = vcon.migrate_0_4_0.VconConversionWarning
+
 
 class UnconvertedVconVersionWarning(Warning):
   """
@@ -369,7 +374,10 @@ class VconDeprecatedDict(VconDict):
       category = DeprecationWarning,
       stacklevel = 2)
     warnings.simplefilter('default', DeprecationWarning)
-    return(super().__get__(instance_object, class_type))
+    # checks the state of the vCon
+    super().__get__(instance_object, class_type)
+    # loaded 0.4.0 vCons are converted, so only the replacement exists
+    return(instance_object._vcon_dict.get(self._replacement, None))
 
 
 class VconDictList(VconAttribute):
@@ -521,10 +529,10 @@ class Vcon():
   CURRENT_VCON_VERSION = "0.5.0"
   # vCon syntax versions accepted on import for which a migration to the
   # current syntax is implemented.
-  MIGRATABLE_VCON_VERSIONS = ["0.0.1", "0.0.2"]
+  MIGRATABLE_VCON_VERSIONS = ["0.0.1", "0.0.2", "0.4.0"]
   # vCon syntax versions accepted on import as is.  No migration is
   # performed and the vcon parameter is left unmodified.
-  UNCONVERTED_VCON_VERSIONS = ["0.3.0", "0.4.0"]
+  UNCONVERTED_VCON_VERSIONS = ["0.3.0"]
 
   # Dict keys
   VCON_VERSION = "vcon"
@@ -583,9 +591,9 @@ class Vcon():
   amended_from = VconDict(doc = "Amended_from Object Dict referencing the prior version of this vCon, to which this vCon adds data")
 
   redacted = VconDeprecatedDict("redacted_from",
-    doc = "deprecated vCon 0.4.0 redacted Dict of a loaded vCon, use redacted_from")
+    doc = "deprecated, returns redacted_from (a loaded 0.4.0 redacted Dict is converted to redacted_from)")
   amended = VconDeprecatedDict("amended_from",
-    doc = "deprecated vCon 0.4.0 amended Dict of a loaded vCon, use amended_from")
+    doc = "deprecated, returns amended_from (a loaded 0.4.0 amended Dict is converted to amended_from)")
 
   group = VconDictList(doc = "List of Dicts referencing or including other vCons to be aggregated by this vCon")
   parties = VconDictList(doc = "List of Dicts, one for each party to this conversation")
@@ -5240,13 +5248,18 @@ class Vcon():
     current syntax if a migration is implemented for that version.
 
     The vcon parameter is deprecated.  A vCon with no vcon parameter is
-    assumed to be of the current syntax and is passed through unmodified.
+    assumed to be of the current syntax and is passed through unmodified,
+    unless its content shows it is a 0.4.0 vCon (see
+    vcon.migrate_0_4_0.is_0_4_0_vcon).  It is then converted and a warning
+    is logged.  A 0.4.0 vCon is converted to 0.5.0 by
+    vcon.migrate_0_4_0.migrate_0_4_0_vcon, which raises VconConversionError
+    for a recording-set Dialog Object.
     A vCon of the CURRENT_VCON_VERSION is passed through unmodified.
     A vCon of a version in UNCONVERTED_VCON_VERSIONS is passed through
     unmodified, with its vcon parameter left as is, and a
     UnconvertedVconVersionWarning is emitted.  A vCon of a version in
     MIGRATABLE_VCON_VERSIONS is migrated, the migrations stack and the
-    last one removes the vcon parameter.
+    last one converts it from 0.4.0 to 0.5.0.
 
     Parameters:
       vcon_dict - unsigned form vCon dict to validate and migrate
@@ -5257,8 +5270,13 @@ class Vcon():
 
     version_string = vcon_dict.get(Vcon.VCON_VERSION, None)
 
-    # vcon parameter is deprecated.  Assume current syntax.
+    # vcon parameter is deprecated.  Assume current syntax, unless it is
+    # an unlabeled 0.4.0 vCon.
     if(version_string is None):
+      if(vcon.migrate_0_4_0.is_0_4_0_vcon(vcon_dict)):
+        logger.warning("vCon: %s has no vcon parameter and is detected as a 0.4.0 vCon."
+          "  It is converted to 0.5.0.", vcon_dict.get(Vcon.UUID, None))
+        return(vcon.migrate_0_4_0.migrate_0_4_0_vcon(vcon_dict))
       return(vcon_dict)
 
     # Current syntax
@@ -5288,6 +5306,8 @@ class Vcon():
       vcon_dict = Vcon.migrate_0_0_1_vcon(vcon_dict)
     if(vcon_dict.get(Vcon.VCON_VERSION, None) == "0.0.2"):
       vcon_dict = Vcon.migrate_0_0_2_vcon(vcon_dict)
+    # 0.0.1 and 0.0.2 vCons have the 0.4.0 structure (no Session Objects)
+    vcon_dict = vcon.migrate_0_4_0.migrate_0_4_0_vcon(vcon_dict)
 
     return(vcon_dict)
 
@@ -5304,8 +5324,7 @@ class Vcon():
       the modified old_vcon in the new format
     """
 
-    # This is the last migration in the chain.  The vcon parameter is
-    # deprecated, so remove it rather than set it to a newer version.
+    # The 0.4.0 to 0.5.0 conversion follows, which labels the result 0.5.0.
     old_vcon.pop(Vcon.VCON_VERSION, None)
     return(old_vcon)
 

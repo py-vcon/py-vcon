@@ -42,6 +42,40 @@ TRANSFER_PARTY_ROLES = ["transferor", "transferee", "transfer_target"]
 TRANSFER_DIALOG_ROLES = ["original", "consultation", "target_dialog"]
 
 
+# Dialog Object parameters defined in 0.4.0 and not in 0.5.0
+DIALOG_0_4_0_PARAMETERS = ["party_history", "originator", "transferee", "transferor", "transfer_target",
+  "original", "consultation", "target_dialog", "recordings", "recording_set"]
+
+
+def is_0_4_0_vcon(vcon_dict : typing.Dict[str, typing.Any]) -> bool:
+  """
+  Detect a 0.4.0 vCon which has no vcon parameter.
+
+  A 0.5.0 vCon with Dialog Objects has at least one Session Object, so a
+  vCon is taken as 0.4.0 if it has a non-empty Dialog Object and no
+  sessions, or uses a parameter or Dialog type defined only in 0.4.0:
+  redacted, amended, a transfer or recording-set Dialog Object or the
+  Dialog parameters of DIALOG_0_4_0_PARAMETERS.
+
+  Parameters:
+    **vcon_dict** (dict) - unsigned form vCon
+
+  Returns:
+    True if the vCon is detected as a 0.4.0 vCon
+  """
+  if("redacted" in vcon_dict or "amended" in vcon_dict):
+    return(True)
+
+  dialogs = vcon_dict.get("dialog", None) or []
+  for dialog in dialogs:
+    if(dialog.get("type", None) in ("transfer", "recording-set") or
+      any([name in dialog for name in DIALOG_0_4_0_PARAMETERS])):
+      return(True)
+
+  return(len(vcon_dict.get("sessions", None) or []) == 0 and
+    any([len(dialog) > 0 for dialog in dialogs]))
+
+
 def migrate_0_4_0_vcon(vcon_dict : typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
   """
   Convert an unsigned 0.4.0 vCon dict to the vCon 0.5.0 syntax.
@@ -483,7 +517,11 @@ class _Converter():
     if(len(self.events) > 0):
       result["events"] = (result.get("events", None) or []) + self.events
 
-    # M22
+    # M22.  An empty redacted or amended Object (as written by early
+    # versions of py-vcon) references nothing, so it is removed.
+    for name in ("redacted", "amended"):
+      if(result.get(name, None) == {}):
+        del result[name]
     if("redacted" in result and "amended" in result):
       self.warn("redacted and amended are both present.  Both are renamed,"
         " though redacted_from and amended_from are mutually exclusive.")
