@@ -62,7 +62,8 @@ async def test_registration(make_2_party_tel_vcon: vcon.Vcon):
 
   proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("impls_min_init")
   assert(proc_inst.title() == "ImplementsMinimalInitOnly")
-  assert(proc_inst.description() == " Attempt to hide abstract class ")
+  # The class docstring, cleaned the same on all Python versions
+  assert(proc_inst.description() == "Attempt to hide abstract class ")
   assert(proc_inst.version() == "0.0.0")
   assert(proc_inst.may_modify_vcons() == True)
 
@@ -95,7 +96,7 @@ async def test_registration(make_2_party_tel_vcon: vcon.Vcon):
   proc_inst = py_vcon_server.processor.VconProcessorRegistry.get_processor_instance("add_party")
   assert(proc_inst.title() == "Add party to Vcon")
   assert(proc_inst.description() ==
-    " adds a new party with the Vcon Party Object parameters provided in the **AddPartyOptions** ")
+    "adds a new party with the Vcon Party Object parameters provided in the **AddPartyOptions** ")
   assert(proc_inst.version() == "0.0.1")
   assert(proc_inst.may_modify_vcons() == True)
 

@@ -9,6 +9,7 @@ import datetime
 import urllib.parse
 import asyncio
 import importlib
+import inspect
 import json
 import string
 import pydantic
@@ -1273,7 +1274,10 @@ class VconProcessor():
       self._title = title
 
     if(description is None or description == ""):
-      self._description = self.__class__.__doc__
+      # cleandoc so the description is the same on all Python versions.
+      # Python 3.13 and later strip the docstring indentation at compile time.
+      class_doc = self.__class__.__doc__
+      self._description = None if(class_doc is None) else inspect.cleandoc(class_doc)
     else:
       self._description = description
 
