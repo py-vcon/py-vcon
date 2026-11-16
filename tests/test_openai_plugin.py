@@ -42,6 +42,7 @@ def test_1_options():
   assert(options.input_dialogs == "")
 
 
+@pytest.mark.requires_api_key("OPENAI_API_KEY")
 @pytest.mark.asyncio
 async def test_3_chat_completion_object_summary():
   """ Test OpenAIChatCompletion FilterPlugin with transcribe ananlysis and chat_completion_object output """
@@ -96,6 +97,7 @@ async def test_3_chat_completion_object_summary():
   print("Response: " + out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"])
 
 
+@pytest.mark.requires_api_key("OPENAI_API_KEY")
 @pytest.mark.asyncio
 async def test_4_diarized_chat_completion_object_summary():
   """ Test OpenAIChatCompletion FilterPlugin with transcribe ananlysis and chat_completion_object output """
@@ -151,6 +153,7 @@ async def test_4_diarized_chat_completion_object_summary():
   print("Response: " + out_vcon.analysis[original_analysis_count]["body"]["choices"][0]["message"]["content"])
 
 
+@pytest.mark.requires_api_key("OPENAI_API_KEY", "DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_5_openai_triggers_transcribe():
   """ Test OpenAIChatCompletion FilterPlugin with missing transcribe ananlysis, should transcribe"""

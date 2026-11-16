@@ -30,6 +30,7 @@ def test_deepgram_key_override_is_optional_in_schema():
   assert(vcon.filter_plugins.impl.deepgram.DeepgramOptions(deepgram_key = None).deepgram_key is None)
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_deepgram_transcribe_inline_dialog():
   """ Test Deepgram plugin with an inline audio dialog """
@@ -83,6 +84,7 @@ async def test_deepgram_transcribe_inline_dialog():
   assert(len(out_vcon2.analysis) == analysis_count + 1)
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_deepgram_2_channel_inline_dialog():
   """ Test Deepgram plugin with an 2 channel inline audio dialog """
@@ -134,6 +136,7 @@ async def test_deepgram_2_channel_inline_dialog():
   print("\n".join(map(str, sorted_texts)))
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_deepgram_transcribe_external_dialog():
   """ Test deepgram plugin with an externally referenced audio dialog """
@@ -238,6 +241,7 @@ def test_deepgram_init_no_key():
   assert(plugin.deepgram_client is None)
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_deepgram_malformed_wav_header():
   """ Test Deepgram plugin logs warning for malformed WAV header and raises on bad response """
@@ -392,6 +396,7 @@ def test_deepgram_transcript_accessor_no_match():
   assert(text_list == [])
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_deepgram_options_override():
   """ Test that model, language and deepgram_key option overrides are passed through """
@@ -444,6 +449,7 @@ async def test_deepgram_dialog_is_none():
   out_vcon = await plugin.filter(in_vcon, options)
   assert(out_vcon is in_vcon)
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_deepgram_bogus_model(caplog):
   """
@@ -455,14 +461,10 @@ async def test_deepgram_bogus_model(caplog):
   observed CI logs); if Deepgram ever starts returning 404 for bad
   model names this test will fail and force us to revisit.
 
-  Skipped when DEEPGRAM_KEY is not set; a real key is required to
+  Needs DEEPGRAM_KEY (see tests/conftest.py); a real key is required to
   exercise Deepgram's request validation path.
   """
   import logging
-
-  deepgram_key = os.getenv("DEEPGRAM_KEY", None)
-  if(deepgram_key is None or deepgram_key == ""):
-    pytest.skip("DEEPGRAM_KEY not set; cannot probe Deepgram response")
 
   in_vcon = vcon.Vcon()
   in_vcon.set_uuid("tests.python-vcon.org")
@@ -503,6 +505,7 @@ async def test_deepgram_bogus_model(caplog):
   # of the retry policy in vcon/filter_plugins/impl/deepgram.py.
   assert("failed: 403" in str(exc_info.value))
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_deepgram_bogus_language(caplog):
   """
@@ -512,13 +515,9 @@ async def test_deepgram_bogus_language(caplog):
   misconfiguration (language code).  Companion to
   test_deepgram_bogus_model; see that test's docstring for rationale.
 
-  Skipped when DEEPGRAM_KEY is not set.
+  Needs DEEPGRAM_KEY (see tests/conftest.py).
   """
   import logging
-
-  deepgram_key = os.getenv("DEEPGRAM_KEY", None)
-  if(deepgram_key is None or deepgram_key == ""):
-    pytest.skip("DEEPGRAM_KEY not set; cannot probe Deepgram response")
 
   in_vcon = vcon.Vcon()
   in_vcon.set_uuid("tests.python-vcon.org")

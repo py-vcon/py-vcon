@@ -82,6 +82,7 @@ async def test_filter_plugin_register(capsys):
     print("Got {}".format(mod_not_impl_error))
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY")
 @pytest.mark.asyncio
 async def test_filter(capsys):
   """ Test cases for the filter command to run filer plugins """

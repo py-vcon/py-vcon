@@ -221,6 +221,14 @@ These can be run using the following command in the current directory:
     export DEEPGRAM_KEY="your_deepgram_key_here"
     pytest -v -rP tests
 
+The unit tests which call the Deepgram or OpenAI services ([Third Party API Keys](#third-party-api-keys)) fail if their API key is not set.
+If you do not have a key, you can skip the tests which need it instead by setting the corresponding variable to 1:
+
+    export VCON_SKIP_DEEPGRAM=1
+    export VCON_SKIP_OPENAI=1
+
+The same applies to the py_vcon_server unit tests.
+
 
 Please also run separately the following unit test as it will check for spurious stdout from the Vcon package that will likely cause the CLI to break:
 

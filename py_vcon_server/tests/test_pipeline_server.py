@@ -53,6 +53,7 @@ PIPELINE_DEFINITION = {
 
 NUM_JOBS_TO_RUN = 4
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY", "OPENAI_API_KEY")
 @pytest.mark.asyncio
 #@pytest.mark.skip(reason="BUG: currently hangs")
 async def test_pipeline(make_inline_audio_vcon):

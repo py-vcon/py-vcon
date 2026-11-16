@@ -7,6 +7,7 @@ import vcon
 import fastapi.testclient
 from common_setup import OPENAI_TEST_MODEL
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY", "OPENAI_API_KEY")
 @pytest.mark.asyncio
 async def test_deepgram_processor_api():
 

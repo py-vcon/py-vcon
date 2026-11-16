@@ -233,6 +233,7 @@ async def test_in_progress_api():
     assert(set_response.status_code == 404)
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY", "OPENAI_API_KEY")
 @pytest.mark.asyncio
 async def test_pipeline_jobber(make_inline_audio_vcon):
   logger.debug("starting test_pipeline_jobber")
@@ -423,6 +424,7 @@ async def test_pipeline_jobber(make_inline_audio_vcon):
     assert(in_progress is None)
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY", "OPENAI_API_KEY")
 #@pytest.mark.skip(reason="BUG: causes \"Event loop is closed\" when run after test_pipeline_jobber") 
 @pytest.mark.asyncio
 async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
@@ -565,6 +567,7 @@ async def test_pipeline_jobber_run_one_job(make_inline_audio_vcon):
 #    get_responses tests with Prometheus ENABLED
 # ============================================================
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY", "OPENAI_API_KEY")
 @pytest.mark.asyncio
 async def test_pipeline_jobber_metrics_with_prometheus(make_inline_audio_vcon):
   """
@@ -674,6 +677,7 @@ async def test_pipeline_jobber_metrics_with_prometheus(make_inline_audio_vcon):
     py_vcon_server.metrics._processor_duration_hist = None
     py_vcon_server.metrics._background_job_heartbeat = None
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY", "OPENAI_API_KEY")
 @pytest.mark.asyncio
 async def test_pipeline_jobber_run_one_job_metrics_with_prometheus(make_inline_audio_vcon):
   """

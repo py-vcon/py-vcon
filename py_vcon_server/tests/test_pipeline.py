@@ -283,6 +283,7 @@ async def test_pipeline_db():
     pass
 
 
+@pytest.mark.requires_api_key("DEEPGRAM_KEY", "OPENAI_API_KEY")
 @pytest.mark.asyncio
 async def test_pipeline_restapi(make_inline_audio_vcon: vcon.Vcon):
 

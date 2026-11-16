@@ -20,7 +20,19 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
+    # GitHub does not pass the repository secrets to pull_request runs from
+    # forks, so skip the tests which need the API key secrets there.  Anywhere
+    # else a missing secret fails those tests (see tests/conftest.py).
+    env:
+      VCON_SKIP_DEEPGRAM: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && '1' || '' }}
+      VCON_SKIP_OPENAI: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && '1' || '' }}
+
     steps:
+    - name: Note the API key tests are skipped for a pull request from a fork
+      if: env.VCON_SKIP_DEEPGRAM == '1' || env.VCON_SKIP_OPENAI == '1'
+      run: |
+        echo "::warning title=API key tests skipped::Pull request from a fork: GitHub does not pass the DEEPGRAM_KEY and OPENAI_API_KEY secrets, so the tests which call Deepgram and OpenAI are skipped."
+
     # 1) Free a bunch of disk space on the runner
     - name: Free disk space
       uses: jlumbroso/free-disk-space@v1.3.1
@@ -110,7 +122,7 @@ jobs:
         # This test gets run by itself as it catches print/stdout that may only
         # occur upon the initial inport that can cause the CLI to fail due to
         # spurious output which can cause the JSON output to contain junk.
-        pytest -v -rP tests/test_vcon_cli.py
+        pytest -v -rsP tests/test_vcon_cli.py
 
     - name: Test Vcon core package with pytest
       # Environment variables
@@ -120,4 +132,4 @@ jobs:
             
       run: |
         # Run all Vcon package unit tests
-        pytest -v -rP tests
+        pytest -v -rsP tests
