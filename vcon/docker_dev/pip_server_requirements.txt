@@ -2,7 +2,6 @@
 aiosmtplib
 fastapi[all]
 fastapi-utils
-nest-asyncio
 packaging
 pkgutil-resolve-name
 psutil

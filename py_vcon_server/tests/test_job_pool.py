@@ -12,11 +12,8 @@ import pytest_asyncio
 import py_vcon_server.job_worker_pool
 #from py_vcon_server.pipeline import PipelineDb
 import logging
-import nest_asyncio
 
 logger = logging.getLogger(__name__)
-
-nest_asyncio.apply()
 
 TOL_FACTOR = 2.5
 

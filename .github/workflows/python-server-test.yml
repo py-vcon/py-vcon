@@ -16,11 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # TODO: add "3.14" once py_vcon_server no longer uses nest_asyncio.
-        # Tasks run by nest_asyncio are not the current task on Python 3.14,
-        # which breaks anything needing the current task (anyio/TestClient,
-        # asyncio and redis timeouts).
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
     # GitHub does not pass the repository secrets to pull_request runs from
     # forks, so skip the tests which need the API key secrets there.  Anywhere

@@ -19,7 +19,7 @@ Tests:
   14. Server entry removed from /servers after shutdown
   15. get_server_states returns dict when key absent
   16. unregister_server does not raise when entry already gone
-  17. nest_asyncio.apply() repeated does not raise
+  17. Importing py_vcon_server leaves asyncio unpatched
   18. Multi-worker ServerState identity (PID divergence via env vars)
   19. Worker-only lifespan path (is_worker=True)
   20. update_server_heartbeat() advances Redis timestamp
@@ -470,26 +470,29 @@ async def test_unregister_server_already_gone_does_not_raise():
 
 
 # ============================================================
-#  Test: nest_asyncio.apply() ValueError is silently swallowed
+#  Test: importing py_vcon_server leaves asyncio unpatched
 # ============================================================
 
-def test_nest_asyncio_apply_repeated_does_not_raise():
+def test_import_does_not_patch_asyncio():
   """
-  Calling nest_asyncio.apply() a second time raises ValueError
-  ("cannot patch a loop that is already running").
-  Our try/except in __init__.py swallows it.
-  Verify that the pattern itself is safe — simulates what happens
-  when a uvicorn worker process re-imports py_vcon_server and
-  nest_asyncio.apply() is already in effect.
+  py_vcon_server used to apply nest_asyncio globally at import, which on
+  Python 3.14 left the tasks it ran without a current task (breaking anyio,
+  asyncio.timeout and redis timeouts).  Verify importing py_vcon_server
+  leaves asyncio unpatched: no nest_asyncio marker on asyncio, and a task
+  run by run_until_complete is the current task.
   """
-  import nest_asyncio
-  # First call already happened at module import time.
-  # A second call should raise ValueError; verify our guard catches it.
+  import asyncio
+  assert not hasattr(asyncio, "_nest_patched")
+
+  async def current_task_is_set():
+    return(asyncio.current_task() is not None)
+
+  # a separate loop, so the current event loop is left as it is
+  loop = asyncio.new_event_loop()
   try:
-    nest_asyncio.apply()
-  except ValueError:
-    pass  # this is the branch our __init__.py now protects against
-  # If we reach here without an unhandled exception, the pattern is correct.
+    assert loop.run_until_complete(current_task_is_set())
+  finally:
+    loop.close()
 
 
 # ============================================================
@@ -879,28 +882,6 @@ async def test_unregister_server_already_gone_does_not_raise():
       pass
     await ss.shutdown_redis()
 
-
-# ============================================================
-#  Test: nest_asyncio.apply() ValueError is safely swallowed
-# ============================================================
-
-def test_nest_asyncio_apply_repeated_does_not_raise():
-  """
-  In multi-worker mode each forked worker re-executes __init__.py,
-  which calls nest_asyncio.apply().  If uvloop is already running,
-  this raises ValueError.  Our try/except must swallow it.
-  Verify the guard pattern is correct — nest_asyncio.apply() called
-  a second time raises ValueError; wrapping it in try/except is safe.
-  """
-  import nest_asyncio
-  # apply() was already called at module import time.
-  # Calling it again raises ValueError on some loop configurations.
-  # Our __init__.py wraps it — this test verifies the pattern is sound.
-  try:
-    nest_asyncio.apply()
-  except ValueError:
-    pass  # expected — this is exactly what our guard catches
-  # Reaching here without an unhandled exception confirms correctness
 
 # ============================================================
 #  Test: unregister_server_after_workers removes entry (clean)

@@ -5,7 +5,6 @@ import sys
 import multiprocessing
 import concurrent.futures
 import asyncio
-import nest_asyncio # 1.5.6
 import pytest
 import psutil
 import redis.asyncio # 5.0.1
@@ -15,8 +14,6 @@ DB_OPTIONS = {"decode_responses": True}
 DB_JUNK = "unit_test_redis_junk"
 
 PARENT_PID = os.getpid()
-
-nest_asyncio.apply()
 
 async def get_things(db_pool):
   print("getting client")
@@ -48,9 +45,9 @@ async def connect_and_get_things():
 
 def do_in_other_process():
   print("other process pid: {}".format(os.getpid()))
-  loop = asyncio.get_event_loop()
-
-  result = loop.run_until_complete(connect_and_get_things())
+  # The forked process inherits the parent's event loop, which looks like it is
+  # still running, so run in a new loop.
+  result = asyncio.run(connect_and_get_things())
 
   return(result)
 

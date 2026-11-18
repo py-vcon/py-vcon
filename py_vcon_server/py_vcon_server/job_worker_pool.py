@@ -7,7 +7,6 @@ import time
 import copy
 import traceback
 import asyncio
-import nest_asyncio
 import concurrent.futures
 import multiprocessing
 import multiprocessing.managers
@@ -33,6 +32,40 @@ VERBOSE = True
 CONTEXT_METHOD = None
 #CONTEXT_METHOD = "fork"
 #CONTEXT_METHOD = "forkserver"
+
+
+# The event loop owned by this process, used to run the scheduler and job
+# coroutines.  See process_event_loop.
+_PROCESS_LOOP = None
+_PROCESS_LOOP_PID = None
+
+
+def process_event_loop() -> asyncio.AbstractEventLoop:
+  """
+  Get the event loop owned by the current process, creating it on first use.
+
+  A forked scheduler or worker process inherits a copy of the parent's event
+  loop, which still looks like it is running (and shares the parent's selector).
+  It cannot be run in the child, so each process creates its own loop
+  instead.  The loop is reused for every job run in the process, as job code
+  may keep async clients (e.g. Redis connection pools) bound to the loop
+  between jobs.
+  """
+  global _PROCESS_LOOP, _PROCESS_LOOP_PID
+  pid = os.getpid()
+  if(_PROCESS_LOOP is None or _PROCESS_LOOP_PID != pid or _PROCESS_LOOP.is_closed()):
+    _PROCESS_LOOP = asyncio.new_event_loop()
+    _PROCESS_LOOP_PID = pid
+    # so that synchronous code in the job calling asyncio.get_event_loop()
+    # gets this loop, not the copy inherited from the parent process
+    asyncio.set_event_loop(_PROCESS_LOOP)
+
+  return(_PROCESS_LOOP)
+
+
+def run_in_process_loop(coro: typing.Coroutine) -> typing.Any:
+  """ Run the coroutine to completion on the event loop owned by this process """
+  return(process_event_loop().run_until_complete(coro))
 
 
 class JobSchedulerFailedToStart(Exception):
@@ -290,9 +323,7 @@ class JobScheduler():
       logger.info("start scheduler time: {}".format(start))
 
       if(asyncio.iscoroutinefunction(func)):
-        nest_asyncio.apply()
-        loop = asyncio.get_event_loop()
-        result = loop.run_until_complete(func(*args, **kwargs))
+        result = run_in_process_loop(func(*args, **kwargs))
       else:
         result = func(*args, **kwargs)
 
@@ -644,16 +675,10 @@ class JobWorkerPool():
       logger.info("start job: {} time: {}".format(job_id, start))
 
       if(asyncio.iscoroutinefunction(func)):
-        nest_asyncio.apply()
-        loop = asyncio.get_event_loop()
-
-        result = loop.run_until_complete(func(*args, **kwargs))
-        # cannot run this before run_until_complete as loop is not started yet
-        try:
-          for task in asyncio.all_tasks():
-            logger.debug("running task in job process: {}".format(task))
-        except RuntimeError as e:
-          logger.debug("no loop in job process to get tasks")
+        result = run_in_process_loop(func(*args, **kwargs))
+        # log any tasks the job left behind on this process's loop
+        for task in asyncio.all_tasks(process_event_loop()):
+          logger.debug("running task in job process: {}".format(task))
 
       else:
         result = func(*args, **kwargs)

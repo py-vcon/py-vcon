@@ -27,8 +27,6 @@ logger = init_logger(__name__)
 logger.debug("root logging handlers: {}".format(logging.getLogger().handlers))
 logger.debug("logging handlers: {}".format(logger.handlers))
 
-import nest_asyncio
-
 import py_vcon_server.db
 import py_vcon_server.states
 import py_vcon_server.queue
@@ -37,11 +35,6 @@ import py_vcon_server.metrics
 
 VERBOSE = False
 
-
-try:
-  nest_asyncio.apply()
-except ValueError:
-  pass  # uvloop already patched this loop; nest_asyncio not needed
 
 __version__ = "0.5.20"
 
@@ -133,8 +126,9 @@ async def heartbeat_loop() -> None:
 def _uvicorn_install_signal_handlers_needs_fix() -> bool:
   """
   Uvicorn < 0.23 uses asyncio.get_event_loop() in install_signal_handlers()
-  which returns the wrong loop when nest_asyncio is applied on Python 3.8,
-  causing signal handlers to never fire in spawned worker processes.
+  which can return a different loop than the one running (seen on Python 3.8
+  when nest_asyncio was applied), causing signal handlers to never fire in
+  spawned worker processes.
   Detect by inspecting the base method source.
   """
   try:
@@ -172,9 +166,9 @@ class Server(uvicorn.Server):
 
       try:
           # Use get_running_loop() rather than get_event_loop() to ensure
-          # we install handlers on the actual running loop.  In Python 3.8
-          # with nest_asyncio, get_event_loop() may return a different loop
-          # than the one actually running, causing signal handlers to never fire.
+          # we install handlers on the actual running loop.  get_event_loop()
+          # may return a different loop than the one actually running,
+          # causing signal handlers to never fire.
           loop = asyncio.get_running_loop()
           for sig in (signal.SIGINT, signal.SIGTERM):
               loop.add_signal_handler(sig, self.handle_exit, sig, None)
